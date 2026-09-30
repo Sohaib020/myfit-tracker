@@ -1,0 +1,62 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Unit tests (calculations)
+        run: gradle testDebugUnitTest --stacktrace
+
+      - name: Restore signing key from secrets
+        env:
+          KS_B64: ${{ secrets.MYFIT_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/myfit.jks"
+            echo "MYFIT_KEYSTORE_FILE=$RUNNER_TEMP/myfit.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No MYFIT_KEYSTORE_B64 secret — APK is debug-signed and future builds may not install over it."
+          fi
+
+      - name: Build release APK
+        env:
+          MYFIT_KEYSTORE_PASSWORD: ${{ secrets.MYFIT_KEYSTORE_PASSWORD }}
+        run: gradle assembleRelease --stacktrace
+
+      - name: Rename APK
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/release/app-release.apk "out/MyFitTracker-v0.1.${{ github.run_number }}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyFitTracker-apk
+          path: out/*.apk
+
+      - name: Publish as GitHub Release (direct phone download)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: MyFit Tracker build ${{ github.run_number }}
+          body: "Automated build from ${{ github.sha }}"
+          files: out/*.apk

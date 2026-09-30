@@ -1,0 +1,427 @@
+package com.myfit.tracker.ui.onboarding
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Female
+import androidx.compose.material.icons.rounded.Male
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.myfit.tracker.AppContainer
+import com.myfit.tracker.data.db.ActivityLevel
+import com.myfit.tracker.data.db.Experience
+import com.myfit.tracker.data.db.FitnessGoal
+import com.myfit.tracker.data.db.Sex
+import com.myfit.tracker.data.db.TargetType
+import com.myfit.tracker.data.db.UserProfile
+import com.myfit.tracker.domain.Clock
+import com.myfit.tracker.domain.EnergyEstimate
+import com.myfit.tracker.domain.Fmt
+import com.myfit.tracker.domain.LengthUnit
+import com.myfit.tracker.domain.UnitPrefs
+import com.myfit.tracker.domain.Units
+import com.myfit.tracker.domain.WeightUnit
+import com.myfit.tracker.ui.components.Caption
+import com.myfit.tracker.ui.components.DataBadge
+import com.myfit.tracker.ui.components.DataKind
+import com.myfit.tracker.ui.components.GlassProgressBar
+import com.myfit.tracker.ui.components.GlassSegmented
+import com.myfit.tracker.ui.components.MinuteOfDayChip
+import com.myfit.tracker.ui.components.NumberInput
+import com.myfit.tracker.ui.components.RulerPicker
+import com.myfit.tracker.ui.components.WheelPicker
+import com.myfit.tracker.ui.pip.Pip
+import com.myfit.tracker.ui.pip.PipMood
+import com.myfit.tracker.ui.theme.AccentButton
+import com.myfit.tracker.ui.theme.FitType
+import com.myfit.tracker.ui.theme.Glass
+import com.myfit.tracker.ui.theme.GlassButton
+import com.myfit.tracker.ui.theme.GlassChip
+import com.myfit.tracker.ui.theme.GlassIconButton
+import com.myfit.tracker.ui.theme.LocalFitTheme
+import kotlin.math.roundToInt
+
+@Stable
+private class SetupState(units: UnitPrefs) {
+    var name by mutableStateOf("")
+    var age by mutableIntStateOf(28)
+    var sex by mutableStateOf<String?>(null)
+    var lengthUnit by mutableStateOf(if (units.length == LengthUnit.CM) LengthUnit.CM else LengthUnit.IN)
+    var heightCm by mutableDoubleStateOf(175.0)
+    var weightUnit by mutableStateOf(units.weight)
+    var weightDisplay by mutableDoubleStateOf(if (units.weight == WeightUnit.KG) 75.0 else 165.0)
+    var hasTarget by mutableStateOf(true)
+    var targetDisplay by mutableDoubleStateOf(if (units.weight == WeightUnit.KG) 72.0 else 159.0)
+    var goals by mutableStateOf(setOf<String>())
+    var activity by mutableStateOf(ActivityLevel.MODERATE)
+    var experience by mutableStateOf(Experience.INTERMEDIATE)
+    var workoutDays by mutableIntStateOf(0b0011111)        // Mon–Fri
+    var workoutTime by mutableIntStateOf(18 * 60)
+    var wake by mutableIntStateOf(7 * 60)
+    var sleep by mutableIntStateOf(23 * 60)
+    var waterL by mutableStateOf("3.0")
+    var steps by mutableStateOf("8000")
+    var calories by mutableStateOf("")
+    var protein by mutableStateOf("")
+    var sleepH by mutableStateOf("8")
+    var suggested by mutableStateOf(false)
+
+    val weightKg get() = Units.toKg(weightDisplay, weightUnit)
+    val targetKg get() = if (hasTarget) Units.toKg(targetDisplay, weightUnit) else null
+}
+
+private const val STEPS = 10
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
+    val th = LocalFitTheme.current
+    val s = remember { SetupState(units) }
+    var step by remember { mutableIntStateOf(0) }
+    var saving by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = step > 0) { step-- }
+
+    val canNext = when (step) {
+        1 -> s.name.isNotBlank()
+        2 -> s.sex != null
+        6 -> s.goals.isNotEmpty()
+        9 -> listOf(s.waterL, s.steps, s.calories, s.protein, s.sleepH).all { it.toDoubleOrNull() != null && it.toDouble() > 0 }
+        else -> true
+    }
+
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
+        if (step > 0) {
+            GlassProgressBar(step / STEPS.toFloat(), th.accent, Modifier.padding(horizontal = 24.dp, vertical = 12.dp), height = 6.dp)
+        }
+        AnimatedContent(
+            targetState = step,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            transitionSpec = {
+                val dir = if (targetState > initialState) 1 else -1
+                (slideInHorizontally(spring(0.85f, 300f)) { it * dir / 3 } + fadeIn(tween(250)))
+                    .togetherWith(slideOutHorizontally(tween(220)) { -it * dir / 3 } + fadeOut(tween(180)))
+            },
+            label = "setup",
+        ) { st ->
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                when (st) {
+                    0 -> Welcome()
+                    1 -> {
+                        Header("What should I call you?", "Your name and age personalise your targets.")
+                        Glass(Modifier.fillMaxWidth().height(64.dp), shape = RoundedCornerShape(22.dp)) {
+                            BasicTextField(
+                                s.name, { s.name = it.take(40) }, singleLine = true,
+                                textStyle = FitType.title.copy(color = th.text),
+                                cursorBrush = SolidColor(th.accent),
+                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                                modifier = Modifier.align(Alignment.CenterStart).padding(horizontal = 20.dp).fillMaxWidth(),
+                                decorationBox = { inner -> Box { if (s.name.isEmpty()) Text("Your name", style = FitType.title, color = th.textFaint); inner() } },
+                            )
+                        }
+                        Spacer(Modifier.height(24.dp))
+                        Text("Age", style = FitType.label, color = th.textDim)
+                        WheelPicker(count = 78, selected = s.age - 13, onSelected = { s.age = it + 13 }, label = { "${it + 13}" }, modifier = Modifier.fillMaxWidth())
+                    }
+                    2 -> {
+                        Header("What's your sex?", "Used for energy estimates and body-composition context.")
+                        SexCard("Male", Icons.Rounded.Male, s.sex == Sex.MALE) { s.sex = Sex.MALE }
+                        Spacer(Modifier.height(16.dp))
+                        SexCard("Female", Icons.Rounded.Female, s.sex == Sex.FEMALE) { s.sex = Sex.FEMALE }
+                    }
+                    3 -> {
+                        Header("What's your height?", "Used for better progress tracking.")
+                        if (s.lengthUnit == LengthUnit.CM) {
+                            WheelPicker(101, (s.heightCm.roundToInt() - 120).coerceIn(0, 100), { s.heightCm = (it + 120).toDouble() }, { "${it + 120} cm" }, Modifier.fillMaxWidth())
+                        } else {
+                            val inches = (s.heightCm / Units.CM_PER_IN).roundToInt()
+                            WheelPicker(43, (inches - 48).coerceIn(0, 42), { s.heightCm = (it + 48) * Units.CM_PER_IN }, { val i = it + 48; "${i / 12}' ${i % 12}\"  ·  $i in" }, Modifier.fillMaxWidth())
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        GlassSegmented(listOf(LengthUnit.CM, LengthUnit.IN), s.lengthUnit, { it.label }, { s.lengthUnit = it }, Modifier.width(180.dp))
+                    }
+                    4 -> {
+                        Header("What's your current weight?", "This becomes your first weigh-in. You can log more any time.")
+                        WeightPicker(s.weightDisplay, s.weightUnit, { s.weightDisplay = it }) { u ->
+                            s.weightDisplay = round1(Units.kgTo(s.weightKg, u)); s.targetDisplay = round1(Units.kgTo(Units.toKg(s.targetDisplay, s.weightUnit), u)); s.weightUnit = u
+                        }
+                    }
+                    5 -> {
+                        Header("Target weight", "Optional. Used only to show distance to goal — never to judge a single weigh-in.")
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            GlassChip("Set a target", s.hasTarget, { s.hasTarget = true })
+                            GlassChip("No target", !s.hasTarget, { s.hasTarget = false })
+                        }
+                        Spacer(Modifier.height(20.dp))
+                        if (s.hasTarget) {
+                            WeightPicker(s.targetDisplay, s.weightUnit, { s.targetDisplay = it }, null)
+                            val diff = s.targetDisplay - s.weightDisplay
+                            Caption("${Fmt.signed(diff)} ${s.weightUnit.label} from today's weight")
+                        }
+                    }
+                    6 -> {
+                        Header("Your fitness goal", "Choose what best matches your training journey.")
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            FitnessGoal.all.forEach { g ->
+                                GlassChip(g, g in s.goals, { s.goals = if (g in s.goals) s.goals - g else s.goals + g })
+                            }
+                        }
+                    }
+                    7 -> {
+                        Header("Activity & experience", "Outside the gym, how active is a normal day?")
+                        listOf(
+                            ActivityLevel.SEDENTARY to "Mostly sitting", ActivityLevel.LIGHT to "Light — some walking",
+                            ActivityLevel.MODERATE to "Moderate — on my feet often", ActivityLevel.ACTIVE to "Active — physical job / lots of walking",
+                            ActivityLevel.VERY_ACTIVE to "Very active — hard physical work daily",
+                        ).forEach { (k, v) -> OptionRow(v, s.activity == k) { s.activity = k }; Spacer(Modifier.height(8.dp)) }
+                        Spacer(Modifier.height(16.dp))
+                        Text("Training experience", style = FitType.label, color = th.textDim)
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(Experience.BEGINNER to "Beginner", Experience.INTERMEDIATE to "Intermediate", Experience.ADVANCED to "Advanced").forEach { (k, v) ->
+                                GlassChip(v, s.experience == k, { s.experience = k })
+                            }
+                        }
+                    }
+                    8 -> {
+                        Header("Your week", "Planned workout days and your daily rhythm. Reminders respect your sleep hours.")
+                        val days = listOf("M", "T", "W", "T", "F", "S", "S")
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            days.forEachIndexed { i, d ->
+                                val on = s.workoutDays and (1 shl i) != 0
+                                GlassChip(d, on, { s.workoutDays = s.workoutDays xor (1 shl i) })
+                            }
+                        }
+                        Spacer(Modifier.height(24.dp))
+                        TimeRow("Typical workout time") { MinuteOfDayChip(s.workoutTime) { s.workoutTime = it } }
+                        TimeRow("Wake-up time") { MinuteOfDayChip(s.wake) { s.wake = it } }
+                        TimeRow("Sleep time") { MinuteOfDayChip(s.sleep) { s.sleep = it } }
+                    }
+                    9 -> {
+                        Header("Daily targets", "Set them yourself, or let me suggest a starting point you can edit.")
+                        GlassButton("Suggest from my profile", {
+                            val male = s.sex == Sex.MALE
+                            val maint = EnergyEstimate.maintenance(s.weightKg, s.heightCm, s.age, male, s.activity)
+                            val adj = when {
+                                "Lose Fat" in s.goals -> -400.0
+                                "Build Muscle" in s.goals -> 250.0
+                                else -> 0.0
+                            }
+                            s.calories = ((maint + adj) / 10).roundToInt().times(10).toString()
+                            s.protein = (s.weightKg * 1.8).roundToInt().toString()
+                            s.waterL = Fmt.num(s.weightKg * 0.035, 1)
+                            s.suggested = true
+                        }, icon = Icons.Rounded.AutoAwesome)
+                        if (s.suggested) {
+                            Spacer(Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                DataBadge(DataKind.ESTIMATED)
+                                Spacer(Modifier.width(8.dp))
+                                Caption("Mifflin–St Jeor × activity; protein 1.8 g/kg; water 35 ml/kg. Starting points, not prescriptions.")
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        TargetField("Water", s.waterL, "L") { s.waterL = it }
+                        TargetField("Steps", s.steps, "steps", decimal = false) { s.steps = it }
+                        TargetField("Calories", s.calories, "kcal", decimal = false) { s.calories = it }
+                        TargetField("Protein", s.protein, "g", decimal = false) { s.protein = it }
+                        TargetField("Sleep", s.sleepH, "hours") { s.sleepH = it }
+                    }
+                    10 -> {
+                        Spacer(Modifier.height(40.dp))
+                        Pip(PipMood.EXCITED, size = 150.dp)
+                        Spacer(Modifier.height(16.dp))
+                        Text("You're all set, ${s.name.trim()}!", style = FitType.display, color = th.text, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(10.dp))
+                        Caption("I'm Pip. I only ever talk about numbers you've actually logged — no guesses dressed up as facts.", Modifier.padding(horizontal = 12.dp))
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+
+        // bottom bar
+        Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (step > 0) GlassIconButton(Icons.AutoMirrored.Rounded.ArrowBack, { step-- }, size = 52.dp)
+            Spacer(Modifier.weight(1f))
+            when (step) {
+                0 -> AccentButton("Get started", { step = 1 }, Modifier.fillMaxWidth(), icon = Icons.AutoMirrored.Rounded.ArrowForward)
+                STEPS -> AccentButton(if (saving) "Saving…" else "Start tracking", {
+                    if (saving) return@AccentButton
+                    saving = true
+                    val today = Clock.dateKey(Clock.today())
+                    val profile = UserProfile(
+                        name = s.name.trim(), age = s.age, ageRecordedOn = today, sex = s.sex ?: Sex.MALE,
+                        heightCm = s.heightCm, startWeightKg = s.weightKg, targetWeightKg = s.targetKg,
+                        activityLevel = s.activity, experience = s.experience, goals = s.goals.joinToString(","),
+                        workoutDaysMask = s.workoutDays, workoutTimeMin = s.workoutTime, wakeTimeMin = s.wake,
+                        sleepTimeMin = s.sleep, createdAt = 0, updatedAt = 0,
+                    )
+                    val targets = mapOf(
+                        TargetType.WATER_ML to s.waterL.toDouble() * 1000.0,
+                        TargetType.STEPS to s.steps.toDouble(),
+                        TargetType.CALORIES to s.calories.toDouble(),
+                        TargetType.PROTEIN_G to s.protein.toDouble(),
+                        TargetType.SLEEP_MIN to s.sleepH.toDouble() * 60.0,
+                        TargetType.WEEKLY_WORKOUTS to Integer.bitCount(s.workoutDays).toDouble(),
+                    )
+                    container.write {
+                        container.settings.setUnits(UnitPrefs(weight = s.weightUnit, length = s.lengthUnit, volume = units.volume, distance = units.distance))
+                        container.profileRepo.createProfile(profile, targets)
+                    }
+                }, Modifier.width(200.dp), enabled = !saving)
+                else -> AccentButton("Next", { if (canNext) step++ }, Modifier.width(150.dp), icon = Icons.AutoMirrored.Rounded.ArrowForward, enabled = canNext)
+            }
+        }
+    }
+}
+
+private fun round1(v: Double) = (v * 10).roundToInt() / 10.0
+
+@Composable
+private fun Welcome() {
+    val th = LocalFitTheme.current
+    Spacer(Modifier.height(60.dp))
+    Pip(PipMood.WAVE, size = 170.dp)
+    Spacer(Modifier.height(24.dp))
+    Text("STEP INTO STRENGTH", style = FitType.overline, color = th.textDim)
+    Spacer(Modifier.height(8.dp))
+    Text("MYFIT\nTRACKER", style = FitType.hero.copy(fontSize = FitType.hero.fontSize * 1.3f, lineHeight = FitType.hero.lineHeight * 1.2f), color = th.text, textAlign = TextAlign.Center)
+    Spacer(Modifier.height(14.dp))
+    Text("Your private logbook for training, food, water, sleep and body — recorded once, calculated honestly.", style = FitType.body, color = th.textDim, textAlign = TextAlign.Center)
+    Spacer(Modifier.height(10.dp))
+    Caption("Everything stays on this phone. No account needed.")
+}
+
+@Composable
+private fun Header(title: String, sub: String) {
+    val th = LocalFitTheme.current
+    Spacer(Modifier.height(28.dp))
+    Text(title, style = FitType.display.copy(fontSize = FitType.title.fontSize * 1.3f), color = th.text, textAlign = TextAlign.Center)
+    Spacer(Modifier.height(8.dp))
+    Text(sub, style = FitType.body, color = th.textDim, textAlign = TextAlign.Center)
+    Spacer(Modifier.height(28.dp))
+}
+
+@Composable
+private fun SexCard(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, selected: Boolean, onClick: () -> Unit) {
+    val th = LocalFitTheme.current
+    Glass(Modifier.size(170.dp), shape = RoundedCornerShape(30.dp), onClick = onClick) {
+        if (selected) {
+            Box(Modifier.matchParentSize().drawBehind {
+                drawRect(Brush.linearGradient(listOf(th.accentBright, th.accent, th.accent.copy(alpha = 0.7f))))
+                drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.25f), Color.Transparent), 0f, size.height * 0.5f))
+            })
+        }
+        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, null, tint = if (selected) th.onAccent else th.text, modifier = Modifier.size(64.dp))
+            Spacer(Modifier.height(10.dp))
+            Text(label, style = FitType.section, color = if (selected) th.onAccent else th.text)
+        }
+    }
+}
+
+@Composable
+private fun WeightPicker(display: Double, unit: WeightUnit, onChange: (Double) -> Unit, onUnit: ((WeightUnit) -> Unit)?) {
+    val th = LocalFitTheme.current
+    Glass(Modifier.size(width = 190.dp, height = 130.dp), shape = RoundedCornerShape(28.dp)) {
+        Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.Bottom) {
+            Text(Fmt.num(display, 1), style = FitType.display.copy(fontSize = FitType.display.fontSize * 1.4f), color = th.text)
+            Spacer(Modifier.width(4.dp))
+            Text(unit.label, style = FitType.label, color = th.textDim, modifier = Modifier.padding(bottom = 10.dp))
+        }
+    }
+    Spacer(Modifier.height(18.dp))
+    val (mn, mx) = if (unit == WeightUnit.KG) 30.0 to 250.0 else 66.0 to 551.0
+    RulerPicker(display, onChange, mn, mx)
+    Caption("Drag the ruler · 0.1 ${unit.label} precision")
+    if (onUnit != null) {
+        Spacer(Modifier.height(16.dp))
+        GlassSegmented(listOf(WeightUnit.KG, WeightUnit.LB), unit, { it.label }, onUnit, Modifier.width(180.dp))
+    }
+}
+
+@Composable
+private fun OptionRow(text: String, selected: Boolean, onClick: () -> Unit) {
+    val th = LocalFitTheme.current
+    Glass(Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(20.dp), onClick = onClick) {
+        if (selected) Box(Modifier.matchParentSize().drawBehind { drawRect(th.accent.copy(alpha = 0.35f)) })
+        Row(Modifier.fillMaxSize().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(text, style = FitType.body, color = th.text, modifier = Modifier.weight(1f))
+            Box(Modifier.size(20.dp).drawBehind {
+                drawCircle(if (selected) th.accentBright else th.textFaint, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+                if (selected) drawCircle(th.accentBright, size.minDimension * 0.28f)
+            })
+        }
+    }
+}
+
+@Composable
+private fun TimeRow(label: String, content: @Composable () -> Unit) {
+    val th = LocalFitTheme.current
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = FitType.body, color = th.text, modifier = Modifier.weight(1f))
+        content()
+    }
+}
+
+@Composable
+private fun TargetField(label: String, value: String, unit: String, decimal: Boolean = true, onChange: (String) -> Unit) {
+    val th = LocalFitTheme.current
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = FitType.section, color = th.text, modifier = Modifier.width(96.dp))
+        NumberInput(value, onChange, unit, Modifier.weight(1f), decimal = decimal, big = false)
+    }
+}
