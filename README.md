@@ -21,6 +21,7 @@ key every time, so a new build installs over the old one and keeps your data.
 |---|---|---|
 | 1 | Database (full schema), profile/onboarding, navigation, liquid-glass design system, themes & wallpapers, dashboard, quick add (weight, water, sleep, steps, measurements, check-in, notes), daily log with edit/delete | ✅ |
 | 2 | Gym Mode (fast set logging, pre-fill, previous/best, rest timer, supersets, stopwatch), templates, repeat workout, history with corrections, 876-exercise photo library + custom exercises | ✅ |
+| 2.5 | Health Connect (Samsung Health / Galaxy Watch) steps, sessions, sleep, HR; phone step sensor; Pip chat (offline data answers + Gemini), Pip v3 mint plush (2.5D, tap reactions, voice), liquid-glass refraction engine, 21 themes (16 animated), blur/refraction controls | ✅ |
 | 3 | Progression graphs, PR detection & PR history | next |
 | 4 | Weight & measurement analytics, progress photos | |
 | 5 | Nutrition, food database (incl. Pakistani foods), saved meals, barcode | |
@@ -29,7 +30,7 @@ key every time, so a new build installs over the old one and keeps your data.
 | 8 | Analysis & charts | |
 | 9 | Reports: PDF / CSV / JSON | |
 | 10 | Backup & restore | |
-| 11 | Voice logging, Pip chat (Gemini), camera calorie estimates | |
+| 11 | Voice logging, camera calorie estimates | |
 | 12 | Widgets, app lock, plate calculator, polish & testing | |
 
 ## Signing (one-time setup)
