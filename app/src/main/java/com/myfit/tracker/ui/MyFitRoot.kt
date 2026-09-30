@@ -1,6 +1,23 @@
 package com.myfit.tracker.ui
 
 import android.app.Activity
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.SportsGymnastics
+import com.myfit.tracker.ui.exercises.ExerciseDetailScreen
+import com.myfit.tracker.ui.exercises.ExerciseEditorScreen
+import com.myfit.tracker.ui.exercises.ExercisesScreen
+import com.myfit.tracker.ui.gym.FinishWorkoutScreen
+import com.myfit.tracker.ui.gym.GymModeScreen
+import com.myfit.tracker.ui.nav.LocalNav
+import com.myfit.tracker.ui.nav.Nav
+import com.myfit.tracker.ui.nav.Overlay
+import com.myfit.tracker.ui.train.TemplateEditorScreen
+import com.myfit.tracker.ui.train.TrainScreen
+import com.myfit.tracker.ui.train.WorkoutDetailScreen
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -137,6 +154,8 @@ private class VmFactory(private val c: AppContainer) : ViewModelProvider.Factory
 
 private val tabs = listOf(
     TabItem("home", "Home", Icons.Rounded.Home),
+    TabItem("train", "Train", Icons.Rounded.FitnessCenter),
+    TabItem("exercises", "Exercises", Icons.Rounded.SportsGymnastics),
     TabItem("log", "Log", Icons.Rounded.ViewTimeline),
     TabItem("me", "Me", Icons.Rounded.Person),
 )
@@ -147,36 +166,72 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
     var sheet by remember { mutableStateOf<Sheet?>(null) }
     var lastSheet by remember { mutableStateOf<Sheet?>(null) }
     if (sheet != null) lastSheet = sheet
+    val nav = remember { Nav() }
     val dashVm: DashboardViewModel = viewModel(factory = remember { VmFactory(container) })
     val dash by dashVm.state.collectAsStateWithLifecycle()
     val bottomPad = 120
+    val top = nav.stack.lastOrNull()
+    val backdrop = LocalBackdrop.current
 
-    Box(Modifier.fillMaxSize()) {
-        AnimatedContent(
-            targetState = tab,
-            transitionSpec = {
-                (fadeIn(tween(260)) + scaleIn(spring(0.8f, 300f), initialScale = 0.96f))
-                    .togetherWith(fadeOut(tween(160)) + scaleOut(tween(160), targetScale = 1.02f))
-            },
-            label = "tabs",
-        ) { t ->
-            when (t) {
-                0 -> DashboardScreen(dash, container, { sheet = it }, bottomPad)
-                1 -> TimelineScreen(container, { sheet = it }, bottomPad)
-                else -> MeScreen(container, { sheet = it }, bottomPad)
+    BackHandler(enabled = top != null) { nav.pop() }
+
+    CompositionLocalProvider(LocalNav provides nav) {
+        Box(Modifier.fillMaxSize()) {
+            AnimatedContent(
+                targetState = tab,
+                transitionSpec = {
+                    (fadeIn(tween(260)) + scaleIn(spring(0.8f, 300f), initialScale = 0.96f))
+                        .togetherWith(fadeOut(tween(160)) + scaleOut(tween(160), targetScale = 1.02f))
+                },
+                label = "tabs",
+            ) { t ->
+                when (t) {
+                    0 -> DashboardScreen(dash, container, { sheet = it }, bottomPad)
+                    1 -> TrainScreen(container, bottomPad)
+                    2 -> ExercisesScreen(container, bottomPad)
+                    3 -> TimelineScreen(container, { sheet = it }, bottomPad)
+                    else -> MeScreen(container, { sheet = it }, bottomPad)
+                }
             }
-        }
-        LiquidTabBar(
-            items = tabs, selected = tab, onSelect = { tab = it }, onQuickAdd = { sheet = Sheet.QuickAdd },
-            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 10.dp),
-        )
-        GlassSheet(visible = sheet != null, onDismiss = { sheet = null }) {
-            // keep showing the last content while the exit animation runs
-            val shown = sheet ?: lastSheet
-            if (shown != null) {
-                AnimatedContent(shown, transitionSpec = { fadeIn(tween(200)).togetherWith(fadeOut(tween(120))) }, label = "sheet") { sh ->
-                    androidx.compose.foundation.layout.Column {
-                        EntrySheetContent(sh, container) { next -> sheet = next }
+            AnimatedVisibility(top == null, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
+                LiquidTabBar(
+                    items = tabs, selected = tab, onSelect = { tab = it }, onQuickAdd = { sheet = Sheet.QuickAdd },
+                    modifier = Modifier.navigationBarsPadding().padding(bottom = 10.dp),
+                )
+            }
+
+            // full-screen overlays (Gym Mode, details, editors) — each sits on its own copy of the backdrop
+            AnimatedContent(
+                targetState = top,
+                transitionSpec = {
+                    (slideInVertically(spring(0.85f, 320f)) { it / 6 } + fadeIn(tween(220)))
+                        .togetherWith(fadeOut(tween(160)))
+                },
+                label = "overlay",
+            ) { o ->
+                if (o != null) Box(Modifier.fillMaxSize()) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        drawBackdrop(backdrop.theme, backdrop.image, backdrop.time.floatValue, size.width, size.height)
+                    }
+                    when (o) {
+                        is Overlay.Gym -> GymModeScreen(container, o.workoutId)
+                        is Overlay.FinishWorkout -> FinishWorkoutScreen(container, o.workoutId)
+                        is Overlay.ExerciseDetail -> ExerciseDetailScreen(container, o.exerciseId)
+                        is Overlay.ExerciseEditor -> ExerciseEditorScreen(container, o.exerciseId)
+                        is Overlay.TemplateEditor -> TemplateEditorScreen(container, o.templateId)
+                        is Overlay.WorkoutDetail -> WorkoutDetailScreen(container, o.workoutId)
+                    }
+                }
+            }
+
+            GlassSheet(visible = sheet != null, onDismiss = { sheet = null }) {
+                // keep showing the last content while the exit animation runs
+                val shown = sheet ?: lastSheet
+                if (shown != null) {
+                    AnimatedContent(shown, transitionSpec = { fadeIn(tween(200)).togetherWith(fadeOut(tween(120))) }, label = "sheet") { sh ->
+                        androidx.compose.foundation.layout.Column {
+                            EntrySheetContent(sh, container) { next -> sheet = next }
+                        }
                     }
                 }
             }

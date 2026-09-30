@@ -5,7 +5,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -20,7 +22,7 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 enum class DashCard(val label: String) {
-    BODY("Body weight"), HYDRATION("Hydration"), RECOVERY("Sleep & recovery"),
+    WORKOUT("Today's workout"), BODY("Body weight"), HYDRATION("Hydration"), RECOVERY("Sleep & recovery"),
     STEPS("Steps & activity"), CHECKIN("Daily check-in"), GOALS("Today's goals")
 }
 
@@ -33,6 +35,12 @@ data class AppSettings(
     val dashCards: Set<DashCard> = DashCard.entries.toSet(),
     val haptics: Boolean = true,
     val pipEnabled: Boolean = true,
+    val restAutoStart: Boolean = true,
+    val restDefaultSec: Int = 90,
+    val restSound: Boolean = true,
+    val restVibrate: Boolean = true,
+    val weightStepKg: Double = 2.5,
+    val keepScreenOn: Boolean = true,
 )
 
 class SettingsStore(private val context: Context) {
@@ -45,7 +53,13 @@ class SettingsStore(private val context: Context) {
         val lu = stringPreferencesKey("unit_length")
         val vu = stringPreferencesKey("unit_volume")
         val du = stringPreferencesKey("unit_distance")
-        val cards = stringSetPreferencesKey("dash_cards")
+        val hidden = stringSetPreferencesKey("dash_hidden")   // stores HIDDEN cards so new cards default to visible
+        val restAuto = booleanPreferencesKey("rest_auto")
+        val restSec = intPreferencesKey("rest_sec")
+        val restSound = booleanPreferencesKey("rest_sound")
+        val restVib = booleanPreferencesKey("rest_vibrate")
+        val wStep = doublePreferencesKey("weight_step_kg")
+        val screenOn = booleanPreferencesKey("keep_screen_on")
         val haptics = booleanPreferencesKey("haptics")
         val pip = booleanPreferencesKey("pip")
     }
@@ -62,10 +76,15 @@ class SettingsStore(private val context: Context) {
                 volume = p[K.vu]?.let { runCatching { VolumeUnit.valueOf(it) }.getOrNull() } ?: VolumeUnit.L,
                 distance = p[K.du]?.let { runCatching { DistanceUnit.valueOf(it) }.getOrNull() } ?: DistanceUnit.KM,
             ),
-            dashCards = p[K.cards]?.mapNotNull { runCatching { DashCard.valueOf(it) }.getOrNull() }?.toSet()
-                ?: DashCard.entries.toSet(),
+            dashCards = DashCard.entries.toSet() - (p[K.hidden]?.mapNotNull { runCatching { DashCard.valueOf(it) }.getOrNull() }?.toSet() ?: emptySet()),
             haptics = p[K.haptics] ?: true,
             pipEnabled = p[K.pip] ?: true,
+            restAutoStart = p[K.restAuto] ?: true,
+            restDefaultSec = p[K.restSec] ?: 90,
+            restSound = p[K.restSound] ?: true,
+            restVibrate = p[K.restVib] ?: true,
+            weightStepKg = p[K.wStep] ?: 2.5,
+            keepScreenOn = p[K.screenOn] ?: true,
         )
     }
 
@@ -78,7 +97,13 @@ class SettingsStore(private val context: Context) {
     suspend fun setUnits(u: UnitPrefs) = context.dataStore.edit {
         it[K.wu] = u.weight.name; it[K.lu] = u.length.name; it[K.vu] = u.volume.name; it[K.du] = u.distance.name
     }
-    suspend fun setDashCards(c: Set<DashCard>) = context.dataStore.edit { it[K.cards] = c.map { x -> x.name }.toSet() }
+    suspend fun setDashCards(c: Set<DashCard>) = context.dataStore.edit { it[K.hidden] = (DashCard.entries.toSet() - c).map { x -> x.name }.toSet() }
+    suspend fun setRestAuto(v: Boolean) = context.dataStore.edit { it[K.restAuto] = v }
+    suspend fun setRestSec(v: Int) = context.dataStore.edit { it[K.restSec] = v }
+    suspend fun setRestSound(v: Boolean) = context.dataStore.edit { it[K.restSound] = v }
+    suspend fun setRestVibrate(v: Boolean) = context.dataStore.edit { it[K.restVib] = v }
+    suspend fun setWeightStep(v: Double) = context.dataStore.edit { it[K.wStep] = v }
+    suspend fun setKeepScreenOn(v: Boolean) = context.dataStore.edit { it[K.screenOn] = v }
     suspend fun setHaptics(v: Boolean) = context.dataStore.edit { it[K.haptics] = v }
     suspend fun setPip(v: Boolean) = context.dataStore.edit { it[K.pip] = v }
 }

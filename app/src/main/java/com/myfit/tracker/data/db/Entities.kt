@@ -78,6 +78,12 @@ data class Exercise(
     val personalNotes: String = "",
     val imageKey: String? = null,        // bundled asset folder, null for custom
     val isCustom: Boolean = false,
+    // v2 — catalogue metadata (strength / stretching / cardio …, beginner …, compound …, push/pull/static)
+    @ColumnInfo(defaultValue = "''") val category: String = "",
+    @ColumnInfo(defaultValue = "''") val level: String = "",
+    @ColumnInfo(defaultValue = "''") val mechanic: String = "",
+    @ColumnInfo(defaultValue = "''") val forceType: String = "",
+    @ColumnInfo(defaultValue = "0") val imageFrames: Int = 0,
     val archivedAt: Long? = null,
     val createdAt: Long,
     val updatedAt: Long,

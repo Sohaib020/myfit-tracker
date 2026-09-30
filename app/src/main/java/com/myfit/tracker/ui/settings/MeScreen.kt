@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Palette
@@ -234,6 +235,30 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
             }
         }
 
+        // ---------- gym mode
+        item {
+            GlassCard {
+                CardHeader(Icons.Rounded.FitnessCenter, "Gym Mode", th.accentBright)
+                Spacer(Modifier.height(10.dp))
+                ToggleRow("Auto-start rest timer", "Starts after every completed set.", settings.restAutoStart) { container.write { container.settings.setRestAuto(it) } }
+                Text("Default rest", style = FitType.body, color = th.text)
+                Spacer(Modifier.height(6.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(30, 60, 90, 120, 180).forEach { r -> GlassChip(if (r < 60) "${r}s" else "${r / 60}:${"%02d".format(r % 60)}", settings.restDefaultSec == r, { container.write { container.settings.setRestSec(r) } }) }
+                }
+                Caption("Templates can set their own rest per exercise.")
+                ToggleRow("Rest-over sound", null, settings.restSound) { container.write { container.settings.setRestSound(it) } }
+                ToggleRow("Rest-over vibration", null, settings.restVibrate) { container.write { container.settings.setRestVibrate(it) } }
+                ToggleRow("Keep screen on in Gym Mode", null, settings.keepScreenOn) { container.write { container.settings.setKeepScreenOn(it) } }
+                Text("Weight +/− step (kg)", style = FitType.body, color = th.text)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(1.0, 1.25, 2.5, 5.0).forEach { st -> GlassChip(Fmt.trim(st, 2), settings.weightStepKg == st, { container.write { container.settings.setWeightStep(st) } }) }
+                }
+                Caption("In pounds the step is always 5 lb. You can always tap the number to type an exact weight.")
+            }
+        }
+
         // ---------- units
         item {
             GlassCard {
@@ -267,7 +292,7 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
             GlassCard {
                 CardHeader(Icons.Rounded.Lock, "Privacy", th.textDim)
                 Spacer(Modifier.height(10.dp))
-                Caption("All data lives only on this phone. No account, no ads, no analytics. Backup & export arrive in a later build.")
+                Caption("All data lives only on this phone. No account, no ads, no analytics. Backup & export arrive in a later build. Exercise photos & instructions: free-exercise-db (public domain).")
                 Spacer(Modifier.height(6.dp))
                 Caption("Version ${BuildConfig.VERSION_NAME}")
             }

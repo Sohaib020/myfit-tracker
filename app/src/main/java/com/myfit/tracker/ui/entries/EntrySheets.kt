@@ -18,6 +18,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.FitnessCenter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DirectionsWalk
 import androidx.compose.material.icons.rounded.EditNote
@@ -162,6 +165,16 @@ private fun QuickAddContent(container: AppContainer, open: (Sheet?) -> Unit) {
     Text("Quick add", style = FitType.title, color = th.text, modifier = Modifier.padding(vertical = 8.dp))
     Caption("Everything is stamped with the exact time and your time zone.")
     Gap()
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    AccentButton("Start workout", {
+        scope.launch {
+            val active = container.workoutRepo.inProgress.first()
+            val id = active?.id ?: container.workoutRepo.startEmpty()
+            open(null); nav.push(com.myfit.tracker.ui.nav.Overlay.Gym(id))
+        }
+    }, Modifier.fillMaxWidth(), icon = Icons.Rounded.FitnessCenter)
+    Gap()
     // one-tap water
     Text("Water — one tap", style = FitType.label, color = th.textDim)
     Gap(8)
@@ -198,7 +211,7 @@ private fun QuickAddContent(container: AppContainer, open: (Sheet?) -> Unit) {
         }
     }
     Gap()
-    Caption("Workouts, food, supplements and photos arrive in the next builds.")
+    Caption("Food, supplements and progress photos arrive in the next builds.")
 }
 
 // ------------------------------------------------------------------ Weight

@@ -165,14 +165,3 @@ interface NoteDao {
     suspend fun softDelete(id: Long, now: Long)
 }
 
-@Dao
-interface ExerciseDao {
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertAll(list: List<Exercise>): List<Long>
-
-    @Query("SELECT COUNT(*) FROM exercise")
-    suspend fun count(): Int
-
-    @Query("SELECT * FROM exercise WHERE archivedAt IS NULL ORDER BY name")
-    fun observeActive(): Flow<List<Exercise>>
-}

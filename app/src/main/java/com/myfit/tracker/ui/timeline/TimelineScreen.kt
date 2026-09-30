@@ -53,6 +53,12 @@ import com.myfit.tracker.ui.components.Caption
 import com.myfit.tracker.ui.components.IconBubble
 import com.myfit.tracker.ui.components.pretty
 import com.myfit.tracker.ui.entries.Sheet
+import com.myfit.tracker.ui.nav.LocalNav
+import com.myfit.tracker.ui.nav.Overlay
+import com.myfit.tracker.ui.exercises.mmss
+import com.myfit.tracker.data.repo.WorkoutView
+import com.myfit.tracker.data.db.WorkoutStatus
+import androidx.compose.material.icons.rounded.FitnessCenter
 import com.myfit.tracker.ui.theme.FitTheme
 import com.myfit.tracker.ui.theme.FitType
 import com.myfit.tracker.ui.theme.Glass
@@ -66,7 +72,7 @@ import java.util.Locale
 
 data class TimelineItem(
     val key: String, val at: Long, val zoneId: String, val icon: ImageVector, val color: Color,
-    val title: String, val detail: String, val sheet: Sheet,
+    val title: String, val detail: String, val sheet: Sheet?, val overlay: Overlay? = null,
 )
 
 fun buildTimeline(d: DayLog, u: UnitPrefs, th: FitTheme): List<TimelineItem> = buildList {
@@ -79,13 +85,29 @@ fun buildTimeline(d: DayLog, u: UnitPrefs, th: FitTheme): List<TimelineItem> = b
     d.notes.forEach { add(TimelineItem("n${it.id}", it.loggedAt, it.zoneId, Icons.Rounded.EditNote, th.textDim, "Note", it.text, Sheet.Note(it.id))) }
 }.sortedBy { it.at }
 
+fun workoutItems(ws: List<WorkoutView>, u: UnitPrefs, th: FitTheme): List<TimelineItem> = ws.flatMap { w ->
+    val t = w.totals
+    val ov = if (w.workout.status == WorkoutStatus.IN_PROGRESS) Overlay.Gym(w.workout.id) else Overlay.WorkoutDetail(w.workout.id)
+    val summary = "${t.exercises} exercises · ${t.sets} sets · ${Fmt.int(t.reps)} reps" + (t.volumeKg?.let { " · ${Fmt.weight(it, u.weight, 0)}" } ?: "")
+    listOfNotNull(
+        TimelineItem("ws${w.workout.id}", w.workout.startedAt, w.workout.zoneId, Icons.Rounded.FitnessCenter, th.accentBright,
+            "Workout started", w.workout.name, null, ov),
+        w.workout.endedAt?.let {
+            TimelineItem("we${w.workout.id}", it, w.workout.zoneId, Icons.Rounded.FitnessCenter, th.success,
+                "Workout finished · ${mmss((it - w.workout.startedAt) / 1000)}", summary, null, ov)
+        },
+    )
+}
+
 @Composable
 fun TimelineScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
     val th = LocalFitTheme.current
     val u = LocalSettings.current.units
     var date by remember { mutableStateOf(Clock.today()) }
+    val nav = LocalNav.current
     val day by remember(date) { container.logRepo.day(date) }.collectAsState(initial = DayLog(date))
-    val items = remember(day, u, th) { buildTimeline(day, u, th) }
+    val workouts by remember(date) { container.workoutRepo.dayViews(Clock.dateKey(date)) }.collectAsState(initial = emptyList())
+    val items = remember(day, workouts, u, th) { (buildTimeline(day, u, th) + workoutItems(workouts, u, th)).sortedBy { it.at } }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -111,7 +133,7 @@ fun TimelineScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 }
             }
         }
-        items(items, key = { it.key }) { row -> TimelineRow(row) { open(row.sheet) } }
+        items(items, key = { it.key }) { row -> TimelineRow(row) { row.sheet?.let(open); row.overlay?.let { nav.push(it) } } }
     }
 }
 

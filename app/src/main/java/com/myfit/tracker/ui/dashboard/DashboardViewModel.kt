@@ -23,6 +23,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import com.myfit.tracker.data.repo.TemplateView
+import com.myfit.tracker.data.repo.WorkoutView
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
 
@@ -64,7 +67,20 @@ data class DashState(
     val calorieTarget: Double? = null,
     val proteinTarget: Double? = null,
     val goals: List<GoalStatus> = emptyList(),
+    // training
+    val workout: WorkoutToday = WorkoutToday(),
 )
+
+data class WorkoutToday(
+    val active: WorkoutView? = null,
+    val done: List<WorkoutView> = emptyList(),
+    val plannedDay: Boolean = false,
+    val next: TemplateView? = null,        // template after the one you used most recently
+    val weeklyDone: Int = 0,               // completed workouts Mon–today
+    val weeklyTarget: Double? = null,
+)
+
+private data class Training(val active: WorkoutView?, val done: List<WorkoutView>, val templates: List<TemplateView>, val last: WorkoutView?, val weekCount: Int)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModel(c: AppContainer) : ViewModel() {
@@ -73,10 +89,28 @@ class DashboardViewModel(c: AppContainer) : ViewModel() {
         val week = today.minusDays(6)
         val dayF = c.logRepo.day(today)
         val sleepWeekF = c.logRepo.sleepRange(week, today)
+        val monday = today.with(java.time.DayOfWeek.MONDAY)
+        val trainingF = combine(
+            c.workoutRepo.inProgress.flatMapLatest { w -> if (w == null) flowOf(null) else c.workoutRepo.workoutView(w.id) },
+            c.workoutRepo.dayViews(Clock.dateKey(today)),
+            c.workoutRepo.templates,
+            c.workoutRepo.recentViews(1),
+            c.workoutRepo.completedRange(Clock.dateKey(monday), Clock.dateKey(today)),
+        ) { active, dayViews, templates, last, week -> Training(active, dayViews.filter { it.workout.status == "COMPLETED" }, templates, last.firstOrNull(), week.size) }
         combine(
             c.profileRepo.profile, c.profileRepo.targets, dayF, c.logRepo.weightsAll(), sleepWeekF,
         ) { profile, targets, day, weights, sleepWeek ->
             build(today, profile, targets, day, weights, sleepWeek.mapNotNull { e -> SleepCalc.minutes(e.startAt, e.endAt)?.let { Clock.parse(e.localDate) to it.toDouble() } })
+        }.combine(trainingF) { st, tr ->
+            val templates = tr.templates
+            val lastIdx = templates.indexOfFirst { it.template.id == tr.last?.workout?.templateId }
+            val next = if (templates.isEmpty()) null else templates[(lastIdx + 1).mod(templates.size)]
+            val bit = 1 shl (today.dayOfWeek.value - 1)
+            st.copy(workout = st.workout.copy(
+                active = tr.active, done = tr.done,
+                plannedDay = st.profile?.let { it.workoutDaysMask and bit != 0 } ?: false,
+                next = next, weeklyDone = tr.weekCount,
+            ))
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashState())
 
@@ -134,6 +168,7 @@ class DashboardViewModel(c: AppContainer) : ViewModel() {
             calorieTarget = Targets.on(targets, TargetType.CALORIES, today),
             proteinTarget = Targets.on(targets, TargetType.PROTEIN_G, today),
             goals = goals,
+            workout = WorkoutToday(weeklyTarget = Targets.on(targets, TargetType.WEEKLY_WORKOUTS, today)),
         )
     }
 }

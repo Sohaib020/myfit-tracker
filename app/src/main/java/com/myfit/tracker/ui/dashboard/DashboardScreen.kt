@@ -93,6 +93,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
     ) {
         item { Box(Modifier.statusBarsPadding()) { Greeting(state) } }
         if (settings.pipEnabled) item { PipCard(state) }
+        if (DashCard.WORKOUT in cards) item { WorkoutCard(state.workout, container) }
         item { RingsCard(state, open) }
         if (DashCard.BODY in cards) item { BodyCard(state) { open(Sheet.Weight()) } }
         if (DashCard.HYDRATION in cards) item { HydrationCard(state, container, open) }

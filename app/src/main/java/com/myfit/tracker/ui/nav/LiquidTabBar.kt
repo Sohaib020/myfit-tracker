@@ -47,6 +47,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.myfit.tracker.ui.theme.FitType
 import com.myfit.tracker.ui.theme.Glass
 import com.myfit.tracker.ui.theme.LocalBackdrop
@@ -168,7 +169,7 @@ fun LiquidTabBar(
                                 val s = 1f + 0.14f * closeness
                                 scaleX = s; scaleY = s
                             })
-                            Text(item.label, style = FitType.caption, color = tint)
+                            Text(item.label, style = FitType.caption.copy(fontSize = 10.sp, letterSpacing = 0.sp), color = tint, maxLines = 1, softWrap = false)
                         }
                     }
                 }

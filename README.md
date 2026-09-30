@@ -20,8 +20,8 @@ key every time, so a new build installs over the old one and keeps your data.
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | Database (full schema), profile/onboarding, navigation, liquid-glass design system, themes & wallpapers, dashboard, quick add (weight, water, sleep, steps, measurements, check-in, notes), daily log with edit/delete | ✅ |
-| 2 | Gym Mode, workouts, sets, exercise library with images | next |
-| 3 | History, progression, PR detection | |
+| 2 | Gym Mode (fast set logging, pre-fill, previous/best, rest timer, supersets, stopwatch), templates, repeat workout, history with corrections, 876-exercise photo library + custom exercises | ✅ |
+| 3 | Progression graphs, PR detection & PR history | next |
 | 4 | Weight & measurement analytics, progress photos | |
 | 5 | Nutrition, food database (incl. Pakistani foods), saved meals, barcode | |
 | 6 | Supplements, fasting timer, Health Connect | |
@@ -38,3 +38,5 @@ The signing key is never committed. Add two repository secrets (Settings → Sec
 with the same key and installs over the previous one without losing data.
 
 Fonts: Montserrat and Anton, SIL Open Font License (see `FONT_LICENSE_OFL.txt`).
+
+Exercise photos and instructions: [free-exercise-db](https://github.com/yuhonas/free-exercise-db), public domain (Unlicense).
