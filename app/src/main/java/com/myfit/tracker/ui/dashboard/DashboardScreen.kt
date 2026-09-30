@@ -344,7 +344,7 @@ private fun HydrationCard(s: DashState, c: AppContainer, open: (Sheet) -> Unit) 
                     val lt = java.time.Instant.ofEpochMilli(e.loggedAt).atZone(runCatching { java.time.ZoneId.of(e.zoneId) }.getOrDefault(java.time.ZoneId.systemDefault())).toLocalTime()
                     Glass(Modifier.height(32.dp), shape = RoundedCornerShape(16.dp), tint = th.water.copy(alpha = 0.16f)) {
                         Row(Modifier.fillMaxHeight().padding(start = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("${Fmt.volume(e.amountMl, units.volume)} · ${Units.clock(lt.hour * 60 + lt.minute)}", style = FitType.caption, color = th.text)
+                            Text("${Fmt.volume(e.amountMl, units.volume)} · ${Fmt.clock(lt.hour * 60 + lt.minute)}", style = FitType.caption, color = th.text)
                             Spacer(Modifier.width(4.dp))
                             Box(
                                 Modifier.size(24.dp).clip(CircleShape).clickableNoRipple {
