@@ -53,19 +53,41 @@ class Gemini(private val context: Context) {
 
     private fun errorMessage(body: String) = runCatching { JSONObject(body).getJSONObject("error").getString("message") }.getOrDefault(body.take(200))
 
-    /** Picks the best available "flash" model for this key (fast and inexpensive). */
-    suspend fun pickModel(key: String): String = withContext(Dispatchers.IO) {
-        val c = open("$base/models?pageSize=200", key, "GET")
+    /**
+     * All text models this key can call, best first: newest stable "flash" (fast, cheap) → the
+     * "flash-latest" alias → other flash/lite → anything Gemini. Nothing is hardcoded, so retired
+     * models drop out automatically.
+     */
+    suspend fun rankedModels(key: String): List<String> = withContext(Dispatchers.IO) {
+        val c = open("$base/models?pageSize=300", key, "GET")
         val (code, body) = readBody(c)
         if (code !in 200..299) throw ApiError(code, errorMessage(body))
         val models = JSONObject(body).optJSONArray("models") ?: JSONArray()
         val names = (0 until models.length()).map { models.getJSONObject(it) }
-            .filter { m -> (m.optJSONArray("supportedGenerationMethods")?.let { a -> (0 until a.length()).any { a.getString(it) == "generateContent" } } == true) }
+            .filter { m -> m.optJSONArray("supportedGenerationMethods")?.let { a -> (0 until a.length()).any { a.getString(it) == "generateContent" } } == true }
             .map { it.getString("name").removePrefix("models/") }
-        val prefs = listOf("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash")
-        prefs.firstOrNull { it in names }
-            ?: names.filter { "flash" in it && "image" !in it && "tts" !in it && "live" !in it && "exp" !in it }.maxOrNull()
-            ?: names.firstOrNull { "gemini" in it } ?: throw ApiError(404, "No text model available for this key")
+            .filter { n -> "gemini" in n && listOf("image", "tts", "audio", "live", "embedding", "vision", "robotics", "computer-use").none { it in n } }
+        fun version(n: String) = Regex("""gemini-(\d+(?:\.\d+)?)""").find(n)?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
+        fun rank(n: String): Int = when {
+            "flash" in n && "lite" !in n && "preview" !in n && "exp" !in n && "latest" !in n -> 0
+            n == "gemini-flash-latest" -> 1
+            "flash" in n && "preview" !in n && "exp" !in n -> 2
+            "flash" in n -> 3
+            else -> 4
+        }
+        names.sortedWith(compareBy<String> { rank(it) }.thenByDescending { version(it) }.thenBy { it.length })
+            .ifEmpty { throw ApiError(404, "No Gemini text model is available for this key") }
+    }
+
+    suspend fun pickModel(key: String): String = rankedModels(key).first()
+
+    /** Model name Google suggests in a "retired / update to models/X" error, if any. */
+    fun suggestedModel(e: ApiError): String? = Regex("""models/([a-z0-9][a-z0-9.\-]*)""").findAll(e.message ?: "")
+        .map { it.groupValues[1].trimEnd('.') }.lastOrNull()
+
+    fun isModelProblem(e: ApiError): Boolean {
+        val m = (e.message ?: "").lowercase()
+        return e.code == 404 || listOf("not found", "no longer available", "deprecated", "not supported", "update your code", "is not available", "retired").any { it in m }
     }
 
     /** One chat turn. `history` is (role, text) with role "user" or "model". */

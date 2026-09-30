@@ -39,27 +39,50 @@ class PipBrain(private val c: AppContainer) {
         }
         val summary = data.summaryFor(q)
         lastShared = summary
-        var model = s.geminiModel.ifBlank { "gemini-2.5-flash" }
         val history = c.healthRepo.lastChat(9).dropLast(1) // exclude the question just stored
             .filter { it.source != "local" }
             .takeLast(8).map { (if (it.role == "user") "user" else "model") to it.text }
         val turn = history + ("user" to "User data (only what's relevant; may be incomplete):\n$summary\n\nQuestion: $q")
         val system = Gemini.systemPrompt("Use the user's units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}.")
-        val text = try {
-            gemini.generate(s.geminiKey, model, system, turn)
-        } catch (e: Gemini.ApiError) {
-            if (e.code == 404 || e.message?.contains("not found", true) == true) {
-                model = gemini.pickModel(s.geminiKey)
-                c.settings.setGeminiModel(model)
-                gemini.generate(s.geminiKey, model, system, turn)
-            } else throw Exception(friendly(e))
-        }
+        val text = generateWithFallback(s.geminiKey, s.geminiModel, system, turn)
         val mood = when {
             listOf("great", "awesome", "well done", "nice", "proud", "🎉", "💪").any { text.contains(it, true) } -> PipMood.EXCITED
             listOf("doctor", "professional", "careful", "injur").any { text.contains(it, true) } -> PipMood.CONCERNED
             else -> PipMood.HAPPY
         }
         return Reply(text, "online", mood, summary)
+    }
+
+    /**
+     * Uses the saved model; if Google says it's retired/unavailable, tries the model Google suggests,
+     * then the best models this key can actually use — and remembers whichever works.
+     */
+    private suspend fun generateWithFallback(key: String, saved: String, system: String, turn: List<Pair<String, String>>): String {
+        val tried = mutableSetOf<String>()
+        var candidates: MutableList<String> = mutableListOf()
+        if (saved.isNotBlank()) candidates += saved
+        var lastError: Gemini.ApiError? = null
+        var listed = false
+        while (tried.size < 5) {
+            if (candidates.isEmpty()) {
+                if (listed) break
+                listed = true
+                candidates = gemini.rankedModels(key).filter { it !in tried }.toMutableList()
+                if (candidates.isEmpty()) break
+            }
+            val m = candidates.removeAt(0)
+            if (!tried.add(m)) continue
+            try {
+                val out = gemini.generate(key, m, system, turn)
+                if (m != saved) c.settings.setGeminiModel(m)
+                return out
+            } catch (e: Gemini.ApiError) {
+                lastError = e
+                if (!gemini.isModelProblem(e)) throw Exception(friendly(e))
+                gemini.suggestedModel(e)?.takeIf { it !in tried }?.let { candidates.add(0, it) }
+            }
+        }
+        throw Exception(lastError?.let { friendly(it) } ?: "no working Gemini model found for this key")
     }
 
     private fun friendly(e: Gemini.ApiError) = when (e.code) {
@@ -71,10 +94,9 @@ class PipBrain(private val c: AppContainer) {
 
     /** Settings "Test key" button. Returns the chosen model name. */
     suspend fun testKey(key: String): String {
-        val m = gemini.pickModel(key)
-        gemini.generate(key, m, "Reply with one short friendly sentence.", listOf("user" to "Say hi as Pip."))
-        c.settings.setGeminiModel(m)
-        return m
+        c.settings.setGeminiModel("")
+        generateWithFallback(key, "", "Reply with one short friendly sentence.", listOf("user" to "Say hi as Pip."))
+        return c.settings.settings.first().geminiModel
     }
 
     val certSha1: String get() = gemini.certSha1
