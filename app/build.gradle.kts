@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.myfit.tracker"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.myfit.tracker"
@@ -88,6 +88,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.1")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation("androidx.health.connect:connect-client:1.1.0")
 
     val room = "2.6.1"
     implementation("androidx.room:room-runtime:$room")

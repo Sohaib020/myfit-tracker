@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.AutoAwesome
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Lock
@@ -234,6 +236,9 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
                 if (!realBlurSupported) Caption("This phone runs Android 11 or older, so glass uses a frosted fallback instead of live blur.")
             }
         }
+
+        // ---------- pip / AI
+        item { PipSettingsCard(container) }
 
         // ---------- gym mode
         item {
@@ -459,4 +464,60 @@ fun EditTargetsForm(c: AppContainer, close: () -> Unit) {
         c.write { vals.forEach { (k, v) -> c.profileRepo.setTarget(k, v!!) } }
         toaster.show("Targets updated from today"); close()
     }, Modifier.fillMaxWidth(), enabled = valid)
+}
+
+
+@Composable
+private fun PipSettingsCard(container: AppContainer) {
+    val th = LocalFitTheme.current
+    val settings = LocalSettings.current
+    val toaster = LocalToaster.current
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var key by remember(settings.geminiKey) { mutableStateOf(settings.geminiKey) }
+    var testing by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<String?>(null) }
+    GlassCard {
+        CardHeader(Icons.Rounded.AutoAwesome, "Pip · AI buddy", th.accentBright)
+        Spacer(Modifier.height(10.dp))
+        Caption("Questions about your logs are answered offline from your own data. General health & fitness questions use Google Gemini with only a short, question-specific summary — never your full history or notes. Online answers are tagged.")
+        Spacer(Modifier.height(12.dp))
+        Text("Gemini API key", style = FitType.label, color = th.textDim)
+        Spacer(Modifier.height(6.dp))
+        Glass(Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(20.dp)) {
+            Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.foundation.text.BasicTextField(
+                    key, { key = it.trim() }, singleLine = true,
+                    textStyle = FitType.body.copy(color = th.text),
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(th.accent),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { inner -> Box { if (key.isEmpty()) Text("Paste your key", style = FitType.body, color = th.textFaint); inner() } },
+                )
+                Text("Paste", style = FitType.label, color = th.accentBright, modifier = Modifier.clickableNoRipple {
+                    clipboard.getText()?.text?.trim()?.let { key = it }
+                }.padding(6.dp))
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GlassButton(if (key != settings.geminiKey) "Save key" else "Saved", {
+                container.write { container.settings.setGeminiKey(key) }; toaster.show(if (key.isBlank()) "Key removed" else "Key saved on this phone")
+            }, height = 44.dp)
+            GlassButton(if (testing) "Testing…" else "Test", {
+                if (testing || key.isBlank()) return@GlassButton
+                testing = true; status = null
+                scope.launch {
+                    status = runCatching { container.settings.setGeminiKey(key); "Working ✓ using ${container.pipBrain.testKey(key)}" }
+                        .getOrElse { "Not working: ${it.message}" }
+                    testing = false
+                }
+            }, height = 44.dp)
+        }
+        status?.let { Spacer(Modifier.height(6.dp)); Caption(it, color = if (it.startsWith("Working")) th.success else th.danger) }
+        Spacer(Modifier.height(6.dp))
+        ToggleRow("Online answers", "Off = Pip only answers from your data, fully offline.", settings.onlineAi) { container.write { container.settings.setOnlineAi(it) } }
+        Spacer(Modifier.height(6.dp))
+        Caption("Recommended: in Google Cloud Console restrict this key to Android app com.myfit.tracker with SHA-1 ${container.pipBrain.certSha1.chunked(2).joinToString(":")}", color = th.textFaint)
+    }
 }

@@ -107,7 +107,20 @@ fun TimelineScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
     val nav = LocalNav.current
     val day by remember(date) { container.logRepo.day(date) }.collectAsState(initial = DayLog(date))
     val workouts by remember(date) { container.workoutRepo.dayViews(Clock.dateKey(date)) }.collectAsState(initial = emptyList())
-    val items = remember(day, workouts, u, th) { (buildTimeline(day, u, th) + workoutItems(workouts, u, th)).sortedBy { it.at } }
+    val hcSessions by remember(date) { container.healthRepo.sessionsRange(date, date) }.collectAsState(initial = emptyList())
+    val hcSleep by remember(date) { container.healthRepo.sleepRange(date, date) }.collectAsState(initial = emptyList())
+    val items = remember(day, workouts, hcSessions, hcSleep, u, th) {
+        val detected = hcSessions.map { s ->
+            TimelineItem("hc${s.id}", s.startAt, s.zoneId, com.myfit.tracker.ui.activity.sessionIcon(s.exerciseType), th.accentBright,
+                com.myfit.tracker.ui.activity.sessionTitle(s) + " · " + com.myfit.tracker.health.HealthSync.sourceLabel(s.sourcePackage),
+                listOfNotNull(mmss((s.endAt - s.startAt) / 1000), s.distanceM?.takeIf { it > 0 }?.let { Fmt.distance(it, u.distance) }, s.avgHr?.let { "avg $it bpm" }).joinToString(" · "),
+                null, Overlay.Activity)
+        } + hcSleep.map { s ->
+            TimelineItem("hs${s.id}", s.endAt, s.zoneId, Icons.Rounded.Bedtime, th.sleep, "Sleep · " + com.myfit.tracker.health.HealthSync.sourceLabel(s.sourcePackage),
+                Fmt.duration((s.endAt - s.startAt) / 60_000) + " · ${Fmt.clock(Clock.minuteOfDay(s.startAt, s.zoneId))}–${Fmt.clock(Clock.minuteOfDay(s.endAt, s.zoneId))}", null, Overlay.Activity)
+        }
+        (buildTimeline(day, u, th) + workoutItems(workouts, u, th) + detected).sortedBy { it.at }
+    }
 
     LazyColumn(
         Modifier.fillMaxSize(),

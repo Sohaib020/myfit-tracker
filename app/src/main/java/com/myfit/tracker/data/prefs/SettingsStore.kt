@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -41,6 +42,11 @@ data class AppSettings(
     val restVibrate: Boolean = true,
     val weightStepKg: Double = 2.5,
     val keepScreenOn: Boolean = true,
+    val lastHealthSync: Long? = null,
+    val lastHealthSyncMsg: String = "",
+    val geminiKey: String = "",
+    val geminiModel: String = "",
+    val onlineAi: Boolean = true,
 )
 
 class SettingsStore(private val context: Context) {
@@ -60,6 +66,11 @@ class SettingsStore(private val context: Context) {
         val restVib = booleanPreferencesKey("rest_vibrate")
         val wStep = doublePreferencesKey("weight_step_kg")
         val screenOn = booleanPreferencesKey("keep_screen_on")
+        val hcSync = longPreferencesKey("hc_last_sync")
+        val hcMsg = stringPreferencesKey("hc_last_msg")
+        val gKey = stringPreferencesKey("gemini_key")       // stored only in this app's private storage
+        val gModel = stringPreferencesKey("gemini_model")
+        val online = booleanPreferencesKey("online_ai")
         val haptics = booleanPreferencesKey("haptics")
         val pip = booleanPreferencesKey("pip")
     }
@@ -85,6 +96,11 @@ class SettingsStore(private val context: Context) {
             restVibrate = p[K.restVib] ?: true,
             weightStepKg = p[K.wStep] ?: 2.5,
             keepScreenOn = p[K.screenOn] ?: true,
+            lastHealthSync = p[K.hcSync],
+            lastHealthSyncMsg = p[K.hcMsg] ?: "",
+            geminiKey = p[K.gKey] ?: "",
+            geminiModel = p[K.gModel] ?: "",
+            onlineAi = p[K.online] ?: true,
         )
     }
 
@@ -104,6 +120,10 @@ class SettingsStore(private val context: Context) {
     suspend fun setRestVibrate(v: Boolean) = context.dataStore.edit { it[K.restVib] = v }
     suspend fun setWeightStep(v: Double) = context.dataStore.edit { it[K.wStep] = v }
     suspend fun setKeepScreenOn(v: Boolean) = context.dataStore.edit { it[K.screenOn] = v }
+    suspend fun setLastHealthSync(at: Long, msg: String) = context.dataStore.edit { it[K.hcSync] = at; it[K.hcMsg] = msg }
+    suspend fun setGeminiKey(v: String) = context.dataStore.edit { if (v.isBlank()) it.remove(K.gKey) else it[K.gKey] = v.trim() }
+    suspend fun setGeminiModel(v: String) = context.dataStore.edit { it[K.gModel] = v }
+    suspend fun setOnlineAi(v: Boolean) = context.dataStore.edit { it[K.online] = v }
     suspend fun setHaptics(v: Boolean) = context.dataStore.edit { it[K.haptics] = v }
     suspend fun setPip(v: Boolean) = context.dataStore.edit { it[K.pip] = v }
 }

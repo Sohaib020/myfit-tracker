@@ -7,6 +7,9 @@ import com.myfit.tracker.data.repo.ExerciseRepository
 import com.myfit.tracker.data.repo.LogRepository
 import com.myfit.tracker.data.repo.WorkoutRepository
 import com.myfit.tracker.gym.RestTimer
+import com.myfit.tracker.health.HealthSync
+import com.myfit.tracker.health.HealthSyncWorker
+import com.myfit.tracker.data.repo.HealthRepository
 import com.myfit.tracker.data.repo.ProfileRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +25,9 @@ class AppContainer(app: Application) {
     val exerciseRepo = ExerciseRepository(db, app)
     val workoutRepo = WorkoutRepository(db)
     val restTimer = RestTimer(app)
+    val healthSync = HealthSync(app, db)
+    val healthRepo = HealthRepository(db)
+    val pipBrain by lazy { com.myfit.tracker.ai.PipBrain(this) }
     val app: Application = app
     val filesDir = app.filesDir
 
@@ -39,5 +45,6 @@ class MyFitApplication : Application() {
         container = AppContainer(this)
         // Bundled exercise catalogue — idempotent, runs off the main thread.
         container.write { container.exerciseRepo.seedIfNeeded() }
+        HealthSyncWorker.schedule(this)
     }
 }

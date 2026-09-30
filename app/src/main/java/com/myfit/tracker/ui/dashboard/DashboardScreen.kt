@@ -98,7 +98,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
         if (DashCard.BODY in cards) item { BodyCard(state) { open(Sheet.Weight()) } }
         if (DashCard.HYDRATION in cards) item { HydrationCard(state, container, open) }
         if (DashCard.RECOVERY in cards) item { RecoveryCard(state, open) }
-        if (DashCard.STEPS in cards) item { StepsCard(state) { open(Sheet.Steps()) } }
+        if (DashCard.STEPS in cards) item { val nav = com.myfit.tracker.ui.nav.LocalNav.current; StepsCard(state) { nav.push(com.myfit.tracker.ui.nav.Overlay.Activity) } }
         if (DashCard.CHECKIN in cards) item { CheckInCard(state) { open(Sheet.CheckIn()) } }
         if (DashCard.GOALS in cards) item { GoalsCard(state) }
     }
@@ -152,16 +152,19 @@ private fun pipLine(s: DashState, variant: Int): Pair<PipMood, String> {
 @Composable
 private fun PipCard(s: DashState) {
     val th = LocalFitTheme.current
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
     var variant by remember { mutableIntStateOf(0) }
     val (mood, line) = pipLine(s, variant)
-    Glass(Modifier.fillMaxWidth().height(120.dp)) {
-        Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Pip(mood, size = 96.dp, onTap = { variant++ })
-            Spacer(Modifier.width(10.dp))
+    Glass(Modifier.fillMaxWidth().height(150.dp), onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.PipChat) }) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Pip(mood, size = 128.dp, onTap = { variant++ })
+            Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f)) {
                 Text("PIP", style = FitType.overline, color = th.accentBright)
                 Spacer(Modifier.height(4.dp))
                 Text(line, style = FitType.body, color = th.text)
+                Spacer(Modifier.height(8.dp))
+                Caption("Tap to chat · stroke Pip to pet", color = th.textDim)
             }
         }
     }
@@ -354,11 +357,15 @@ private fun RecoveryCard(s: DashState, open: (Sheet) -> Unit) {
                 Caption("Last night")
                 Metric(s.sleepMin?.let { Fmt.duration(it) } ?: "—")
                 s.sleepQuality?.let { Caption("Quality $it/10") }
+                s.sleepSource?.let { Caption(it, color = th.textFaint) }
+                s.health.sleep?.takeIf { s.sleepSource != "Logged manually" }?.let { sl ->
+                    if (sl.deepMin != null) Caption("Deep ${sl.deepMin}m · REM ${sl.remMin ?: 0}m · Light ${sl.lightMin ?: 0}m")
+                }
             }
             Column(Modifier.weight(1f)) {
                 Caption("7-day average")
                 Metric(s.sleepAvg7.value?.let { Fmt.duration(it.toLong()) } ?: "—")
-                Caption("${s.sleepAvg7.daysWithData}/7 nights logged")
+                Caption("${s.sleepAvg7.daysWithData}/7 nights recorded")
             }
         }
         s.sleepTarget?.let { t ->
@@ -376,17 +383,29 @@ private fun RecoveryCard(s: DashState, open: (Sheet) -> Unit) {
 private fun StepsCard(s: DashState, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     val units = LocalSettings.current.units
+    val d = s.health.daily
     GlassCard(onClick = onClick) {
-        CardHeader(Icons.Rounded.DirectionsWalk, "Steps & activity", th.steps)
+        CardHeader(Icons.Rounded.DirectionsWalk, "Activity & heart", th.steps) {
+            s.stepsSource?.let { Caption(it) }
+        }
         Spacer(Modifier.height(12.dp))
-        Metric(s.steps?.let { Fmt.int(it) } ?: "—", s.stepTarget?.let { "/ ${Fmt.int(it)}" })
+        Metric(s.steps?.let { Fmt.int(it) } ?: "—", s.stepTarget?.let { "/ ${Fmt.int(it)} steps" })
         Spacer(Modifier.height(10.dp))
         GlassProgressBar(s.steps?.let { st -> s.stepTarget?.let { (st / it).toFloat() } }, th.steps)
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-            Caption("Distance: ${s.distanceM?.let { Fmt.distance(it, units.distance) } ?: "not logged"}")
-            Caption("Active: ${s.activeMin?.let { "$it min" } ?: "not logged"}")
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth()) {
+            Column(Modifier.weight(1f)) { Caption("Distance"); Text(s.distanceM?.let { Fmt.distance(it, units.distance) } ?: "—", style = FitType.section, color = th.text) }
+            Column(Modifier.weight(1f)) { Caption("Active kcal"); Text(d?.activeKcal?.let { Fmt.int(it.toLong()) } ?: "—", style = FitType.section, color = th.text) }
+            Column(Modifier.weight(1f)) { Caption("Floors"); Text(d?.floors?.let { Fmt.trim(it, 0) } ?: "—", style = FitType.section, color = th.text) }
+            Column(Modifier.weight(1f)) { Caption("Resting HR"); Text(d?.restingHr?.let { "$it bpm" } ?: "—", style = FitType.section, color = th.text) }
         }
+        if (s.health.sessions.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Caption("${s.health.sessions.size} activit${if (s.health.sessions.size == 1) "y" else "ies"} detected today: " +
+                s.health.sessions.joinToString(", ") { it.title?.takeIf { t -> t.isNotBlank() } ?: com.myfit.tracker.health.HealthSync.exerciseName(it.exerciseType) }, color = th.textDim)
+        }
+        if (d?.activeKcal != null) { Spacer(Modifier.height(4.dp)); Caption("Calories are estimates from Samsung Health.", color = th.textFaint) }
+        if (s.stepsSource == null) { Spacer(Modifier.height(6.dp)); Caption("Tap to connect Samsung Health & your watch for automatic tracking.", color = th.accentBright) }
     }
 }
 

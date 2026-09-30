@@ -25,6 +25,10 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import com.myfit.tracker.data.repo.TemplateView
+import com.myfit.tracker.data.repo.HealthDay
+import com.myfit.tracker.data.db.HcSleep
+import com.myfit.tracker.domain.StepsSource
+import com.myfit.tracker.health.HealthSync
 import com.myfit.tracker.data.repo.WorkoutView
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
@@ -69,6 +73,11 @@ data class DashState(
     val goals: List<GoalStatus> = emptyList(),
     // training
     val workout: WorkoutToday = WorkoutToday(),
+    // imported (Health Connect / phone sensor)
+    val health: HealthDay = HealthDay(Clock.today()),
+    val stepsSource: String? = null,
+    val sleepSource: String? = null,
+    val sleepWeekManual: Map<LocalDate, Double> = emptyMap(),
 )
 
 data class WorkoutToday(
@@ -111,8 +120,43 @@ class DashboardViewModel(c: AppContainer) : ViewModel() {
                 plannedDay = st.profile?.let { it.workoutDaysMask and bit != 0 } ?: false,
                 next = next, weeklyDone = tr.weekCount,
             ))
+        }.combine(combine(c.healthRepo.day(today), c.healthRepo.sleepRange(week, today)) { a, b -> a to b }) { st, hs ->
+            mergeHealth(st, hs.first, hs.second, today)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashState())
+
+    /** Merges imported data without ever adding sources together (see StepsSource). */
+    private fun mergeHealth(st: DashState, h: HealthDay, hcSleepWeek: List<HcSleep>, today: LocalDate): DashState {
+        val pick = StepsSource.pick(h.daily?.steps, st.steps?.toLong(), h.phoneSteps)
+        val hcSleepMin = h.sleep?.let { (it.endAt - it.startAt) / 60_000 }
+        val sleepMin = st.sleepMin ?: hcSleepMin
+        val sleepSrc = when {
+            st.sleepMin != null -> "Logged manually"
+            h.sleep != null -> HealthSync.sourceLabel(h.sleep.sourcePackage)
+            else -> null
+        }
+        // 7-night average: your manual entry for a night wins; otherwise the watch's sleep for that night
+        val hcByDay = hcSleepWeek.groupBy { Clock.parse(it.localDate) }.mapValues { (_, l) -> l.maxOf { (it.endAt - it.startAt) / 60_000.0 } }
+        val week = hcByDay + st.sleepWeekManual
+        val steps = pick?.steps
+        val goals = st.goals.map { g ->
+            when (g.label) {
+                "Steps" -> st.stepTarget?.let { t -> GoalStatus("Steps", steps?.let { it >= t }, if (steps == null) "Not recorded yet" else "${(steps / t * 100).toInt()}%") } ?: g
+                "Sleep" -> st.sleepTarget?.let { t -> GoalStatus("Sleep", sleepMin?.let { it >= t }, if (sleepMin == null) "Not recorded yet" else "${(sleepMin / t * 100).toInt()}%") } ?: g
+                else -> g
+            }
+        }
+        return st.copy(
+            health = h,
+            steps = steps?.toInt(),
+            stepsSource = pick?.source?.label,
+            distanceM = st.distanceM ?: h.daily?.distanceM,
+            sleepMin = sleepMin,
+            sleepSource = sleepSrc,
+            sleepAvg7 = Stats.windowAverage(week, today, 7),
+            goals = goals,
+        )
+    }
 
     private fun build(
         today: LocalDate,
@@ -160,6 +204,7 @@ class DashboardViewModel(c: AppContainer) : ViewModel() {
             sleepQuality = day.sleep.lastOrNull()?.quality,
             sleepTarget = tSleep,
             sleepAvg7 = Stats.windowAverage(Stats.dailySums(sleepWeek), today, 7),
+            sleepWeekManual = Stats.dailySums(sleepWeek),
             steps = steps,
             stepTarget = tSteps,
             activeMin = activeMin,

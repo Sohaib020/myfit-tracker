@@ -8,7 +8,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    version = 2,
+    version = 3,
     exportSchema = true,
     entities = [
         UserProfile::class, TargetHistory::class,
@@ -18,6 +18,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         WaterEntry::class, WeightEntry::class, BodyMeasurement::class, SleepEntry::class,
         ActivityEntry::class, Supplement::class, SupplementLog::class, DailyCheckIn::class,
         DailyNote::class, ProgressPhoto::class, FastingSession::class, Goal::class, Reminder::class,
+        HcDaily::class, HcSession::class, HcSleep::class, PhoneStepSnapshot::class, ChatMessage::class,
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,6 +34,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao
     abstract fun workoutDao(): WorkoutDao
     abstract fun templateDao(): TemplateDao
+    abstract fun healthDao(): HealthDao
 
     companion object {
         const val NAME = "myfit.db"
@@ -48,9 +50,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v2 → v3: imported health data (Health Connect, phone sensor) and Pip chat. New tables only. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `hc_daily` (`localDate` TEXT NOT NULL, `steps` INTEGER, `distanceM` REAL, `activeKcal` REAL, `totalKcal` REAL, `floors` REAL, `restingHr` INTEGER, `avgHr` INTEGER, `minHr` INTEGER, `maxHr` INTEGER, `hrvMs` REAL, `spo2Pct` REAL, `syncedAt` INTEGER NOT NULL, PRIMARY KEY(`localDate`))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `hc_session` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `externalId` TEXT NOT NULL, `exerciseType` INTEGER NOT NULL, `title` TEXT, `startAt` INTEGER NOT NULL, `endAt` INTEGER NOT NULL, `zoneId` TEXT NOT NULL, `localDate` TEXT NOT NULL, `distanceM` REAL, `activeKcal` REAL, `steps` INTEGER, `avgHr` INTEGER, `maxHr` INTEGER, `segments` TEXT NOT NULL, `sourcePackage` TEXT NOT NULL, `syncedAt` INTEGER NOT NULL)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_hc_session_externalId` ON `hc_session` (`externalId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_hc_session_localDate` ON `hc_session` (`localDate`)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `hc_sleep` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `externalId` TEXT NOT NULL, `startAt` INTEGER NOT NULL, `endAt` INTEGER NOT NULL, `zoneId` TEXT NOT NULL, `localDate` TEXT NOT NULL, `deepMin` INTEGER, `remMin` INTEGER, `lightMin` INTEGER, `awakeMin` INTEGER, `sourcePackage` TEXT NOT NULL, `syncedAt` INTEGER NOT NULL)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_hc_sleep_externalId` ON `hc_sleep` (`externalId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_hc_sleep_localDate` ON `hc_sleep` (`localDate`)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `phone_step_snapshot` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `at` INTEGER NOT NULL, `counter` INTEGER NOT NULL, `zoneId` TEXT NOT NULL, `localDate` TEXT NOT NULL)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_phone_step_snapshot_localDate` ON `phone_step_snapshot` (`localDate`)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `chat_message` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `role` TEXT NOT NULL, `text` TEXT NOT NULL, `source` TEXT NOT NULL, `createdAt` INTEGER NOT NULL)")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, NAME)
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 // No destructive migration fallback: losing personal history is never acceptable.
                 .build()
     }

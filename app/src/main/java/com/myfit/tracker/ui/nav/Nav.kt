@@ -12,6 +12,8 @@ sealed interface Overlay {
     data class TemplateEditor(val templateId: Long?) : Overlay
     data class WorkoutDetail(val workoutId: Long) : Overlay
     data class FinishWorkout(val workoutId: Long) : Overlay
+    data object Activity : Overlay
+    data object PipChat : Overlay
 }
 
 @Stable
