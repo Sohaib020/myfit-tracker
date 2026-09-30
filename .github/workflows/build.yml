@@ -25,7 +25,9 @@ jobs:
           gradle-version: "8.9"
 
       - name: Unit tests (calculations)
-        run: gradle testDebugUnitTest --stacktrace
+        run: |
+          set -o pipefail
+          gradle testDebugUnitTest --stacktrace 2>&1 | tee build.log || { grep -E "^e: |What went wrong|error:|Execution failed|Could not resolve|Could not find|> [A-Z]|\.kt:[0-9]+" build.log | grep -v "^w: " | head -120 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' | sed 's/^/::error title=Build errors::/'; exit 1; }
 
       - name: Restore signing key from secrets
         env:
@@ -41,7 +43,9 @@ jobs:
       - name: Build release APK
         env:
           MYFIT_KEYSTORE_PASSWORD: ${{ secrets.MYFIT_KEYSTORE_PASSWORD }}
-        run: gradle assembleRelease --stacktrace
+        run: |
+          set -o pipefail
+          gradle assembleRelease --stacktrace 2>&1 | tee build.log || { grep -E "^e: |What went wrong|error:|Execution failed|Could not resolve|Could not find|> [A-Z]|\.kt:[0-9]+" build.log | grep -v "^w: " | head -120 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' | sed 's/^/::error title=Build errors::/'; exit 1; }
 
       - name: Rename APK
         run: |
