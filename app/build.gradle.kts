@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.myfit.tracker"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.myfit.tracker"
