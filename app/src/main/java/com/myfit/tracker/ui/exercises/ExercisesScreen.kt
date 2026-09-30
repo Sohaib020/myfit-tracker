@@ -71,7 +71,7 @@ fun ExercisesScreen(container: AppContainer, bottomPad: Int) {
 @Composable
 private fun Header(onCustom: () -> Unit) {
     val th = LocalFitTheme.current
-    Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp, end = 62.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text("Exercises", style = FitType.display, color = th.text)
             Caption("876 exercises with photos · public-domain library + your own")

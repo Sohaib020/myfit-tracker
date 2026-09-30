@@ -57,12 +57,7 @@ class PipBrain(private val c: AppContainer) {
         val turn = history + ("user" to "User data (only what's relevant; may be incomplete):\n$summary\n\nQuestion: $q")
         val system = Gemini.systemPrompt("Use the user's units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}.")
         val text = generateWithFallback(s.geminiKey, s.geminiModel, system, turn)
-        val mood = when {
-            listOf("great", "awesome", "well done", "nice", "proud", "🎉", "💪").any { text.contains(it, true) } -> PipMood.EXCITED
-            listOf("doctor", "professional", "careful", "injur").any { text.contains(it, true) } -> PipMood.CONCERNED
-            else -> PipMood.HAPPY
-        }
-        return Reply(text, "online", mood, summary)
+        return Reply(text, "online", com.myfit.tracker.ui.pip.moodForReply(text, q), summary)
     }
 
     /**

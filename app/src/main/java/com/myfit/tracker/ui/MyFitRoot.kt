@@ -49,6 +49,21 @@ import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import com.myfit.tracker.ui.theme.Glass
+import com.myfit.tracker.ui.theme.LocalFitTheme
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalView
@@ -132,8 +147,13 @@ fun MyFitRoot(container: AppContainer) {
                     .fillMaxSize()
                     .onSizeChanged { backdrop.rootSize = Size(it.width.toFloat(), it.height.toFloat()) }
             ) {
+                // the backdrop is recorded once per frame into a shared layer that every glass surface replays
+                val bgLayer = rememberGraphicsLayer()
+                backdrop.layer = bgLayer
                 Canvas(Modifier.fillMaxSize()) {
-                    drawBackdrop(backdrop.theme, backdrop.image, backdrop.time.floatValue, size.width, size.height)
+                    val t = backdrop.time.floatValue
+                    bgLayer.record { drawBackdrop(backdrop.theme, backdrop.image, t, size.width, size.height) }
+                    drawLayer(bgLayer)
                 }
                 when (val ps = profileState) {
                     ProfileState.Loading -> Unit
@@ -176,7 +196,14 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
     BackHandler(enabled = top != null) { nav.pop() }
 
     CompositionLocalProvider(LocalNav provides nav) {
+        val contentLayer = rememberGraphicsLayer()
+        backdrop.contentLayer = contentLayer
         Box(Modifier.fillMaxSize()) {
+          // tab content is recorded into a layer so the dock's glass can show it (blurred) underneath
+          Box(Modifier.fillMaxSize().drawWithContent {
+              contentLayer.record { this@drawWithContent.drawContent() }
+              drawLayer(contentLayer)
+          }) {
             AnimatedContent(
                 targetState = tab,
                 transitionSpec = {
@@ -193,11 +220,20 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                     else -> MeScreen(container, { sheet = it }, bottomPad)
                 }
             }
+          }
             AnimatedVisibility(top == null, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
                 LiquidTabBar(
-                    items = tabs, selected = tab, onSelect = { tab = it }, onQuickAdd = { sheet = Sheet.QuickAdd },
-                    modifier = Modifier.navigationBarsPadding().padding(bottom = 10.dp),
+                    items = tabs, selected = tab, onSelect = { tab = it },
+                    modifier = Modifier.navigationBarsPadding().padding(bottom = 8.dp),
                 )
+            }
+            // quick add: floating glass orb, top-right on every tab
+            AnimatedVisibility(
+                top == null,
+                modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 10.dp, end = 16.dp),
+                enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
+            ) {
+                QuickAddOrb { sheet = Sheet.QuickAdd }
             }
 
             // full-screen overlays (Gym Mode, details, editors) — each sits on its own copy of the backdrop
@@ -211,7 +247,10 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             ) { o ->
                 if (o != null) Box(Modifier.fillMaxSize()) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawBackdrop(backdrop.theme, backdrop.image, backdrop.time.floatValue, size.width, size.height)
+                        backdrop.time.floatValue
+                        val l = backdrop.layer
+                        if (l != null) drawLayer(l)
+                        else drawBackdrop(backdrop.theme, backdrop.image, backdrop.time.floatValue, size.width, size.height)
                     }
                     when (o) {
                         is Overlay.Gym -> GymModeScreen(container, o.workoutId)
@@ -238,5 +277,25 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 }
             }
         }
+    }
+}
+
+/** Top-right quick-add button: a glass orb with a glossy accent core. */
+@Composable
+private fun QuickAddOrb(onClick: () -> Unit) {
+    val th = LocalFitTheme.current
+    Glass(
+        Modifier.size(52.dp).shadow(14.dp, CircleShape, ambientColor = th.accent, spotColor = th.accent),
+        shape = CircleShape, blur = 16.dp, onClick = onClick, pressScale = 0.86f,
+        tint = th.accent.copy(alpha = 0.55f),
+    ) {
+        Box(
+            Modifier.matchParentSize().drawBehind {
+                drawCircle(Brush.verticalGradient(listOf(th.accentBright.copy(alpha = 0.85f), th.accent.copy(alpha = 0.7f))), radius = size.minDimension * 0.40f)
+                drawCircle(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.Transparent), 0f, size.height * 0.5f), radius = size.minDimension * 0.40f)
+                drawCircle(Color.White.copy(alpha = 0.5f), radius = size.minDimension * 0.40f, style = Stroke(1.dp.toPx()))
+            }
+        )
+        Icon(Icons.Rounded.Add, "Quick add", tint = th.onAccent, modifier = Modifier.align(Alignment.Center).size(28.dp))
     }
 }

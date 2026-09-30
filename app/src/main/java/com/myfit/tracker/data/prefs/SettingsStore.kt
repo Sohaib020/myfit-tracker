@@ -47,6 +47,10 @@ data class AppSettings(
     val geminiKey: String = "",
     val geminiModel: String = "",
     val onlineAi: Boolean = true,
+    val blurAmount: Float = 1f,          // 0 (crystal clear) … 2 (heavy frost)
+    val refraction: Float = 1f,          // 0 (flat) … 2 (strong lens)
+    val pipVoice: Boolean = true,
+    val pipVoiceOnline: Boolean = true,  // realistic Gemini voice when online; offline voice otherwise
 )
 
 class SettingsStore(private val context: Context) {
@@ -71,6 +75,10 @@ class SettingsStore(private val context: Context) {
         val gKey = stringPreferencesKey("gemini_key")       // stored only in this app's private storage
         val gModel = stringPreferencesKey("gemini_model")
         val online = booleanPreferencesKey("online_ai")
+        val blurAmt = floatPreferencesKey("blur_amount")
+        val refr = floatPreferencesKey("refraction")
+        val voice = booleanPreferencesKey("pip_voice")
+        val voiceOnline = booleanPreferencesKey("pip_voice_online")
         val haptics = booleanPreferencesKey("haptics")
         val pip = booleanPreferencesKey("pip")
     }
@@ -101,6 +109,10 @@ class SettingsStore(private val context: Context) {
             geminiKey = p[K.gKey] ?: "",
             geminiModel = p[K.gModel] ?: "",
             onlineAi = p[K.online] ?: true,
+            blurAmount = p[K.blurAmt] ?: 1f,
+            refraction = p[K.refr] ?: 1f,
+            pipVoice = p[K.voice] ?: true,
+            pipVoiceOnline = p[K.voiceOnline] ?: true,
         )
     }
 
@@ -124,6 +136,10 @@ class SettingsStore(private val context: Context) {
     suspend fun setGeminiKey(v: String) = context.dataStore.edit { if (v.isBlank()) it.remove(K.gKey) else it[K.gKey] = v.trim() }
     suspend fun setGeminiModel(v: String) = context.dataStore.edit { it[K.gModel] = v }
     suspend fun setOnlineAi(v: Boolean) = context.dataStore.edit { it[K.online] = v }
+    suspend fun setBlurAmount(v: Float) = context.dataStore.edit { it[K.blurAmt] = v }
+    suspend fun setRefraction(v: Float) = context.dataStore.edit { it[K.refr] = v }
+    suspend fun setPipVoice(v: Boolean) = context.dataStore.edit { it[K.voice] = v }
+    suspend fun setPipVoiceOnline(v: Boolean) = context.dataStore.edit { it[K.voiceOnline] = v }
     suspend fun setHaptics(v: Boolean) = context.dataStore.edit { it[K.haptics] = v }
     suspend fun setPip(v: Boolean) = context.dataStore.edit { it[K.pip] = v }
 }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -25,6 +26,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.ChatBubble
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DirectionsWalk
 import androidx.compose.material.icons.rounded.Flag
@@ -42,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -112,7 +116,7 @@ private fun greetingFor(t: LocalTime) = when (t.hour) {
 private fun Greeting(s: DashState) {
     val th = LocalFitTheme.current
     val name = s.profile?.name?.substringBefore(' ') ?: ""
-    Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp, end = 62.dp), verticalAlignment = Alignment.CenterVertically) {
         Glass(Modifier.size(48.dp), shape = CircleShape) {
             Text(name.take(1).uppercase(), style = FitType.title, color = th.text, modifier = Modifier.align(Alignment.Center))
         }
@@ -155,7 +159,7 @@ private fun PipCard(s: DashState) {
     val nav = com.myfit.tracker.ui.nav.LocalNav.current
     var variant by remember { mutableIntStateOf(0) }
     val (mood, line) = pipLine(s, variant)
-    Glass(Modifier.fillMaxWidth().height(150.dp), onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.PipChat) }) {
+    Glass(Modifier.fillMaxWidth().height(170.dp), onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.PipChat) }) {
         Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Pip(mood, size = 128.dp, onTap = { variant++ })
             Spacer(Modifier.width(6.dp))
@@ -163,8 +167,21 @@ private fun PipCard(s: DashState) {
                 Text("PIP", style = FitType.overline, color = th.accentBright)
                 Spacer(Modifier.height(4.dp))
                 Text(line, style = FitType.body, color = th.text)
-                Spacer(Modifier.height(8.dp))
-                Caption("Tap to chat · stroke Pip to pet", color = th.textDim)
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    Modifier.clip(RoundedCornerShape(18.dp))
+                        .drawBehind {
+                            drawRect(Brush.verticalGradient(listOf(th.accentBright, th.accent)))
+                            drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.Transparent), 0f, size.height * 0.5f))
+                        }
+                        .clickableNoRipple { nav.push(com.myfit.tracker.ui.nav.Overlay.PipChat) }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Rounded.ChatBubble, null, tint = th.onAccent, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Chat with Pip", style = FitType.label, color = th.onAccent)
+                }
             }
         }
     }
@@ -272,6 +289,7 @@ private fun MiniStat(label: String, value: String, sub: String, modifier: Modifi
 
 // ------------------------------------------------------------------ Hydration
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun HydrationCard(s: DashState, c: AppContainer, open: (Sheet) -> Unit) {
     val th = LocalFitTheme.current
@@ -304,6 +322,42 @@ private fun HydrationCard(s: DashState, c: AppContainer, open: (Sheet) -> Unit) 
                     }
                 }
             }
+        }
+        // today's entries — remove one logged by mistake
+        val entries = s.day.water.sortedByDescending { it.loggedAt }
+        if (entries.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("TODAY", style = FitType.overline, color = th.textDim, modifier = Modifier.weight(1f))
+                Text("Undo last", style = FitType.label, color = th.water, modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickableNoRipple {
+                    val e = entries.first()
+                    c.write { c.logRepo.deleteWater(e.id) }
+                    toaster.show("Removed ${Fmt.volume(e.amountMl, units.volume)}", "Undo") { c.write { c.logRepo.addWater(e.amountMl, e.loggedAt) } }
+                }.padding(horizontal = 6.dp, vertical = 4.dp))
+            }
+            Spacer(Modifier.height(6.dp))
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                entries.take(12).forEach { e ->
+                    val lt = java.time.Instant.ofEpochMilli(e.loggedAt).atZone(runCatching { java.time.ZoneId.of(e.zoneId) }.getOrDefault(java.time.ZoneId.systemDefault())).toLocalTime()
+                    Glass(Modifier.height(32.dp), shape = RoundedCornerShape(16.dp), tint = th.water.copy(alpha = 0.16f)) {
+                        Row(Modifier.fillMaxHeight().padding(start = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("${Fmt.volume(e.amountMl, units.volume)} · ${Units.clock(lt.hour * 60 + lt.minute)}", style = FitType.caption, color = th.text)
+                            Spacer(Modifier.width(4.dp))
+                            Box(
+                                Modifier.size(24.dp).clip(CircleShape).clickableNoRipple {
+                                    c.write { c.logRepo.deleteWater(e.id) }
+                                    toaster.show("Removed ${Fmt.volume(e.amountMl, units.volume)}", "Undo") { c.write { c.logRepo.addWater(e.amountMl, e.loggedAt) } }
+                                },
+                                contentAlignment = Alignment.Center,
+                            ) { Icon(Icons.Rounded.Close, "Remove", tint = th.textDim, modifier = Modifier.size(15.dp)) }
+                        }
+                    }
+                }
+            }
+            if (entries.size > 12) Caption("+${entries.size - 12} more in the Log tab")
         }
     }
 }

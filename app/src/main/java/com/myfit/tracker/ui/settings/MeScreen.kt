@@ -121,7 +121,7 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            Column(Modifier.statusBarsPadding().padding(top = 8.dp)) {
+            Column(Modifier.statusBarsPadding().padding(top = 8.dp, end = 62.dp)) {
                 Text("Me", style = FitType.display, color = th.text)
                 Caption("Profile, targets, look & feel.")
             }
@@ -175,8 +175,11 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
             GlassCard {
                 CardHeader(Icons.Rounded.Palette, "Theme", th.fat)
                 Spacer(Modifier.height(14.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Themes.all.forEach { t ->
+                Caption("${Themes.all.size} themes · most of them animate. Swipe to browse.")
+                Spacer(Modifier.height(10.dp))
+                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(Themes.all.size, key = { Themes.all[it].id }) { idx ->
+                        val t = Themes.all[idx]
                         val sel = t.id == settings.themeId
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Box(
@@ -226,13 +229,10 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
                     container.write { container.settings.setAnimated(it) }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Glass intensity", style = FitType.section, color = th.text)
-                var g by remember(settings.glassStrength) { mutableFloatStateOf(settings.glassStrength) }
-                Slider(
-                    g, { g = it }, valueRange = 0.4f..1.6f,
-                    onValueChangeFinished = { container.write { container.settings.setGlassStrength(g) } },
-                    colors = SliderDefaults.colors(thumbColor = th.accentBright, activeTrackColor = th.accent, inactiveTrackColor = th.textFaint.copy(alpha = 0.3f)),
-                )
+                GlassSlider("Glass tint", "How milky the cards are", settings.glassStrength, 0.4f..1.6f) { v -> container.write { container.settings.setGlassStrength(v) } }
+                GlassSlider("Blur amount", "0 = crystal clear, right = heavy frost", settings.blurAmount, 0f..2f) { v -> container.write { container.settings.setBlurAmount(v) } }
+                if (com.myfit.tracker.ui.theme.LiquidGlass.supported)
+                    GlassSlider("Refraction", "How strongly the glass edges bend what's behind", settings.refraction, 0f..2f) { v -> container.write { container.settings.setRefraction(v) } }
                 if (!realBlurSupported) Caption("This phone runs Android 11 or older, so glass uses a frosted fallback instead of live blur.")
             }
         }
@@ -518,6 +518,31 @@ private fun PipSettingsCard(container: AppContainer) {
         Spacer(Modifier.height(6.dp))
         ToggleRow("Online answers", "Off = Pip only answers from your data, fully offline.", settings.onlineAi) { container.write { container.settings.setOnlineAi(it) } }
         Spacer(Modifier.height(6.dp))
+        ToggleRow("Pip speaks", "Pip reads its chat replies aloud. Also a mute button in the chat.", settings.pipVoice) { container.write { container.settings.setPipVoice(it) } }
+        if (settings.pipVoice) {
+            Spacer(Modifier.height(6.dp))
+            ToggleRow("Realistic online voice", "Uses Gemini's natural voice (sends only the reply text). Off = the phone's built-in voice, fully offline.", settings.pipVoiceOnline) { container.write { container.settings.setPipVoiceOnline(it) } }
+        }
+        Spacer(Modifier.height(6.dp))
         Caption("Recommended: in Google Cloud Console restrict this key to Android app com.myfit.tracker with SHA-1 ${container.pipBrain.certSha1.chunked(2).joinToString(":")}", color = th.textFaint)
     }
+}
+
+@Composable
+private fun GlassSlider(title: String, hint: String, value: Float, range: ClosedFloatingPointRange<Float>, onDone: (Float) -> Unit) {
+    val th = LocalFitTheme.current
+    var v by remember(value) { mutableFloatStateOf(value) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = FitType.section, color = th.text)
+            Caption(hint)
+        }
+        Text("${(v * 100).toInt()}%", style = FitType.label, color = th.textDim)
+    }
+    Slider(
+        v, { v = it }, valueRange = range,
+        onValueChangeFinished = { onDone(v) },
+        colors = SliderDefaults.colors(thumbColor = th.accentBright, activeTrackColor = th.accent, inactiveTrackColor = th.textFaint.copy(alpha = 0.3f)),
+    )
+    Spacer(Modifier.height(4.dp))
 }

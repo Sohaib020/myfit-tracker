@@ -28,6 +28,7 @@ class AppContainer(app: Application) {
     val healthSync = HealthSync(app, db)
     val healthRepo = HealthRepository(db)
     val pipBrain by lazy { com.myfit.tracker.ai.PipBrain(this) }
+    val pipVoice by lazy { com.myfit.tracker.ai.PipVoice(app, settings) }
     val app: Application = app
     val filesDir = app.filesDir
 

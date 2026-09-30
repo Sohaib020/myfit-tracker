@@ -30,11 +30,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
@@ -60,9 +61,10 @@ fun rememberTick(): () -> Unit {
 }
 
 /**
- * Liquid-glass panel. On Android 12+ the shared backdrop is re-drawn behind the panel, offset to
- * the panel's on-screen position and blurred with a RenderEffect, then tinted and rimmed with a
- * specular edge. Below Android 12 it falls back to a translucent frosted fill.
+ * Liquid-glass panel. The shared backdrop layer (recorded once per frame) is replayed behind the
+ * panel at its on-screen position, blurred, then bent by the refraction shader near the edges
+ * (Android 13+). `seeContent = true` also shows the scrolling content underneath (used by the dock).
+ * Android 12: blur only. Older: frosted translucent fill.
  */
 @Composable
 fun Glass(
@@ -72,18 +74,24 @@ fun Glass(
     tint: Color? = null,
     onClick: (() -> Unit)? = null,
     pressScale: Float = 0.97f,
+    seeContent: Boolean = false,
+    dispersion: Float = 0.05f,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val b = LocalBackdrop.current
     val th = LocalFitTheme.current
-    val strength = LocalSettings.current.glassStrength
+    val st = LocalSettings.current
+    val strength = st.glassStrength
     val pos = remember { mutableStateOf(Offset.Zero) }
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed && onClick != null) pressScale else 1f, spring(0.45f, 700f), label = "glassPress")
     val glow by animateFloatAsState(if (pressed && onClick != null) 1f else 0f, label = "glassGlow")
     val tick = rememberTick()
-    val blurPx = with(LocalDensity.current) { (blur * strength.coerceIn(0.4f, 1.6f)).toPx() }
+    val density = LocalDensity.current
+    val blurPx = with(density) { (blur * st.blurAmount).toPx() }
+    val refr = st.refraction
+    val shader = remember { LiquidGlass.newShader() }
     val fill = tint ?: if (realBlurSupported) th.glassTint.copy(alpha = (th.glassTint.alpha * strength).coerceIn(0f, 1f)) else th.glassFallback
 
     Box(
@@ -101,13 +109,29 @@ fun Glass(
                 Modifier
                     .matchParentSize()
                     .graphicsLayer {
-                        renderEffect = BlurEffect(blurPx, blurPx, TileMode.Clamp)
+                        val w = size.width; val h = size.height
+                        val corner = when (val o = shape.createOutline(size, LayoutDirection.Ltr, this)) {
+                            is Outline.Rounded -> o.roundRect.topLeftCornerRadius.x
+                            is Outline.Rectangle -> 0f
+                            else -> minOf(w, h) / 2f
+                        }
+                        val bezel = (minOf(w, h) * 0.22f).coerceIn(10.dp.toPx(), 34.dp.toPx())
+                        renderEffect = LiquidGlass.effect(
+                            shader, w, h, corner, blurPx,
+                            bezelPx = bezel, strengthPx = bezel * 0.55f * refr,
+                            dispersion = (dispersion * refr).coerceIn(0f, 0.6f),
+                            highlight = if (th.isLight) 0.10f else 0.16f,
+                        )
                         clip = true
                     }
                     .drawBehind {
                         val p = pos.value
+                        b.time.floatValue // redraw with the animated backdrop
                         translate(-p.x, -p.y) {
-                            drawBackdrop(b.theme, b.image, b.time.floatValue, b.rootSize.width, b.rootSize.height)
+                            val l = b.layer
+                            if (l != null) drawLayer(l)
+                            else drawBackdrop(b.theme, b.image, b.time.floatValue, b.rootSize.width, b.rootSize.height)
+                            if (seeContent) b.contentLayer?.let { drawLayer(it) }
                         }
                     }
             )
@@ -118,22 +142,22 @@ fun Glass(
                 .drawBehind {
                     val outline = shape.createOutline(size, layoutDirection, this)
                     drawOutline(outline, fill)
-                    // specular sheen across the top
+                    // soft specular sheen across the top
                     drawOutline(
                         outline,
                         Brush.verticalGradient(
-                            listOf(Color.White.copy(alpha = if (th.isLight) 0.35f else 0.10f + glow * 0.08f), Color.Transparent),
-                            0f, size.height * 0.55f,
+                            listOf(Color.White.copy(alpha = if (th.isLight) 0.30f else 0.08f + glow * 0.08f), Color.Transparent),
+                            0f, size.height * 0.5f,
                         )
                     )
-                    // rim light: bright top-left, faint in the middle, soft return bottom-right
+                    // thin rim: bright top-left, faint elsewhere (no rainbow on cards)
                     drawOutline(
                         outline,
                         Brush.linearGradient(
-                            listOf(th.rimHigh, th.rimLow, th.rimLow, th.rimHigh.copy(alpha = th.rimHigh.alpha * 0.55f)),
+                            listOf(th.rimHigh, th.rimLow, th.rimLow, th.rimHigh.copy(alpha = th.rimHigh.alpha * 0.5f)),
                             Offset.Zero, Offset(size.width, size.height),
                         ),
-                        style = Stroke(width = 1.2.dp.toPx()),
+                        style = Stroke(width = 1.dp.toPx()),
                     )
                 }
         )

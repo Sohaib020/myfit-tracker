@@ -129,7 +129,7 @@ fun TimelineScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
     ) {
         item {
             Column(Modifier.statusBarsPadding().padding(top = 8.dp)) {
-                Text("Daily log", style = FitType.display, color = th.text)
+                Text("Daily log", modifier = Modifier.padding(end = 62.dp), style = FitType.display, color = th.text)
                 Caption("Every entry, in the order it happened. Tap one to edit or delete.")
                 Spacer(Modifier.height(14.dp))
                 WeekStrip(date) { date = it }

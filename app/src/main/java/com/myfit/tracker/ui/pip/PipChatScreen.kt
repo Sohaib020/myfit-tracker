@@ -27,6 +27,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Insights
@@ -94,7 +96,10 @@ fun PipChatScreen(container: AppContainer) {
     val listState = rememberLazyListState()
     val online = settings.geminiKey.isNotBlank() && settings.onlineAi
 
+    val speaking by container.pipVoice.speaking.collectAsState()
+    var typing by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(2200); if (mood == PipMood.WAVE) mood = PipMood.HAPPY }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { container.pipVoice.stop() } }
     LaunchedEffect(messages.size) { if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex) }
 
     fun send(text: String, retry: Boolean = false) {
@@ -105,20 +110,32 @@ fun PipChatScreen(container: AppContainer) {
             val r = container.pipBrain.ask(q, addUserMessage = !retry)
             if (r.shared != null) sharedFor = r.shared
             thinking = false
-            mood = PipMood.TALKING
+            // Pip reacts to what it's saying while its lips move
+            mood = if (r.source == "error") PipMood.CONCERNED else r.mood
+            typing = true
             typingId = container.healthRepo.lastChat(1).firstOrNull()?.id ?: -1L
-            delay((r.text.length * 18L).coerceIn(900, 4500))
-            mood = r.mood
+            if (r.source != "error") container.pipVoice.speak(r.text)
+            delay((r.text.length * 6L).coerceIn(700, 4000))
+            typing = false
         }
     }
 
     Column(Modifier.fillMaxSize().imePadding()) {
         OverlayTopBar("Pip", { nav.pop() }, if (online) "Your data offline · general questions online" else "Answers from your data (offline)") {
+            GlassIconButton(
+                if (settings.pipVoice) Icons.AutoMirrored.Rounded.VolumeUp else Icons.AutoMirrored.Rounded.VolumeOff,
+                {
+                    val on = !settings.pipVoice
+                    if (!on) container.pipVoice.stop()
+                    container.write { container.settings.setPipVoice(on) }
+                },
+                tint = if (settings.pipVoice) th.accentBright else th.textDim,
+            )
             if (messages.isNotEmpty()) GlassIconButton(Icons.Rounded.DeleteSweep, { confirmClear = true })
         }
         // ---- big, live Pip
         Box(Modifier.fillMaxWidth().height(if (messages.isEmpty()) 250.dp else 170.dp).animateContentSize(), contentAlignment = Alignment.Center) {
-            Pip(mood, size = if (messages.isEmpty()) 230.dp else 160.dp, talking = mood == PipMood.TALKING, onTap = { if (!thinking) mood = listOf(PipMood.HAPPY, PipMood.LOVE, PipMood.EXCITED, PipMood.CURIOUS).random() })
+            Pip(mood, size = if (messages.isEmpty()) 230.dp else 160.dp, talking = speaking || typing, idleActions = !thinking)
         }
         if (messages.isEmpty()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -206,7 +223,7 @@ private fun Bubble(m: ChatMessage, animate: Boolean, onShowShared: (() -> Unit)?
         } else {
             Glass(Modifier.widthIn(max = 320.dp), shape = RoundedCornerShape(22.dp, 22.dp, 22.dp, 6.dp)) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
-                    Text(m.text.take(shown), style = FitType.body, color = th.text)
+                    Text(markdown(m.text.take(shown)), style = FitType.body, color = th.text)
                     Spacer(Modifier.height(6.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val (label, color, icon) = when (m.source) {
@@ -238,5 +255,38 @@ private fun ThinkingBubble() {
         Row(Modifier.align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             repeat(3) { i -> Box(Modifier.size(9.dp).clip(CircleShape).drawBehind { drawCircle(if (phase > i) th.accentBright else th.textFaint) }) }
         }
+    }
+}
+
+/** Renders the bits of Markdown Gemini uses: **bold**, *italic*, `code`, bullets and headings. */
+internal fun markdown(src: String): androidx.compose.ui.text.AnnotatedString = androidx.compose.ui.text.buildAnnotatedString {
+    val lines = src.split('\n')
+    lines.forEachIndexed { li, raw ->
+        var line = raw
+        val heading = Regex("""^\s*#{1,6}\s+""").find(line)
+        if (heading != null) line = line.substring(heading.range.last + 1)
+        val bullet = Regex("""^(\s*)[*\-•]\s+""").find(line)
+        if (bullet != null) { append(bullet.groupValues[1]); append("•  "); line = line.substring(bullet.range.last + 1) }
+        if (heading != null) pushStyle(androidx.compose.ui.text.SpanStyle(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
+        var i = 0
+        var bold = false; var italic = false
+        while (i < line.length) {
+            when {
+                line.startsWith("**", i) || line.startsWith("__", i) -> {
+                    if (!bold) pushStyle(androidx.compose.ui.text.SpanStyle(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)) else pop()
+                    bold = !bold; i += 2
+                }
+                (line[i] == '*' || line[i] == '_') && (italic || (i + 1 < line.length && line[i + 1] != ' ' && (i == 0 || !line[i - 1].isLetterOrDigit()))) -> {
+                    if (!italic) pushStyle(androidx.compose.ui.text.SpanStyle(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)) else pop()
+                    italic = !italic; i += 1
+                }
+                line[i] == '`' -> i += 1
+                else -> { append(line[i]); i += 1 }
+            }
+        }
+        if (italic) pop()
+        if (bold) pop()
+        if (heading != null) pop()
+        if (li < lines.lastIndex) append('\n')
     }
 }

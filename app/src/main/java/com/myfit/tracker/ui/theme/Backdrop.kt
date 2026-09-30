@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import kotlin.math.PI
@@ -34,6 +35,11 @@ class Backdrop {
     var image by mutableStateOf<ImageBitmap?>(null)
     val time = mutableFloatStateOf(0f)          // seconds, advanced by the root when animation is on
     var rootSize by mutableStateOf(Size.Zero)
+    /** The backdrop recorded ONCE per frame; every glass surface replays this layer (cheap). */
+    var layer: GraphicsLayer? = null
+    /** The current tab's content recorded per frame — lets the dock blur what scrolls beneath it. */
+    var contentLayer: GraphicsLayer? = null
+    val frame = mutableFloatStateOf(0f)          // bumps every recorded frame so glass redraws with it
 }
 
 val LocalBackdrop = staticCompositionLocalOf { Backdrop() }
@@ -57,6 +63,7 @@ fun DrawScope.drawBackdrop(theme: FitTheme, image: ImageBitmap?, t: Float, w: Fl
             BackdropArt.WAVES -> waves(theme, t, w, h)
             BackdropArt.LANDSCAPE -> landscape(t, w, h)
             BackdropArt.FROST -> frost(theme, t, w, h)
+            else -> drawAnimatedArt(theme, t, w, h)
         }
     }
 }
@@ -145,6 +152,8 @@ private fun DrawScope.waves(th: FitTheme, t: Float, w: Float, h: Float) {
 
 private fun DrawScope.landscape(t: Float, w: Float, h: Float) {
     val horizon = h * 0.34f
+    // base fill for the whole canvas — nothing underneath may ever show through
+    drawRect(Brush.verticalGradient(listOf(Color(0xFF9ED9D4), Color(0xFF178F92), Color(0xFF2B5E1A)), 0f, h), size = Size(w, h))
     drawRect(Brush.verticalGradient(listOf(Color(0xFFD9F1EE), Color(0xFF9ED9D4)), 0f, horizon), size = Size(w, horizon))
     blob(Color(0xFFFFF6D8), Offset(w * 0.82f, h * 0.08f), w * 0.45f, 0.9f)
     // clouds drifting
@@ -173,7 +182,8 @@ private fun DrawScope.landscape(t: Float, w: Float, h: Float) {
     // hills
     fun hill(y0: Float, y1: Float, top: Color, bottom: Color, sway: Float) {
         val p = Path().apply {
-            moveTo(w * 0.15f, h)
+            moveTo(-w * 0.1f, h)
+            lineTo(-w * 0.1f, y1 + h * 0.12f)
             cubicTo(w * 0.3f, y0 + sway, w * 0.6f, y1, w * 1.1f, y0 - h * 0.05f)
             lineTo(w * 1.1f, h); close()
         }
