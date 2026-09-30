@@ -97,12 +97,12 @@ fun PipChatScreen(container: AppContainer) {
     LaunchedEffect(Unit) { delay(2200); if (mood == PipMood.WAVE) mood = PipMood.HAPPY }
     LaunchedEffect(messages.size) { if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex) }
 
-    fun send(text: String) {
+    fun send(text: String, retry: Boolean = false) {
         val q = text.trim()
         if (q.isEmpty() || thinking) return
-        tick(); input = ""; thinking = true; mood = PipMood.THINKING
+        tick(); if (!retry) input = ""; thinking = true; mood = PipMood.THINKING
         scope.launch {
-            val r = container.pipBrain.ask(q)
+            val r = container.pipBrain.ask(q, addUserMessage = !retry)
             if (r.shared != null) sharedFor = r.shared
             thinking = false
             mood = PipMood.TALKING
@@ -140,6 +140,11 @@ fun PipChatScreen(container: AppContainer) {
         }
         // ---- suggestions + input
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val last = messages.lastOrNull()
+            if (last?.source == "error" && !thinking) {
+                val failedQ = messages.lastOrNull { it.role == "user" }?.text
+                if (failedQ != null) item { GlassChip("↻ Try again", true, { send(failedQ, retry = true) }) }
+            }
             items(suggestions) { sg -> GlassChip(sg, false, { send(sg) }) }
         }
         Row(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
@@ -207,6 +212,7 @@ private fun Bubble(m: ChatMessage, animate: Boolean, onShowShared: (() -> Unit)?
                         val (label, color, icon) = when (m.source) {
                             "data" -> Triple("From your data", th.success, Icons.Rounded.Insights)
                             "online" -> Triple("Online · Gemini", th.water, Icons.Rounded.Cloud)
+                            "error" -> Triple("Couldn't reach Gemini", th.warning, Icons.Rounded.Cloud)
                             else -> Triple("Pip", th.textFaint, Icons.Rounded.Insights)
                         }
                         Icon(icon, null, tint = color, modifier = Modifier.size(12.dp))
