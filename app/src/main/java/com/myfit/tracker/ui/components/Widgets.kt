@@ -75,33 +75,23 @@ fun GlassCard(
     }
 }
 
-/** Duotone glass tile: a frosted rounded square washed with the colour, with a glowing duotone glyph. */
+/** Solid colour tile with a bold white icon (like Samsung Health / iOS Settings) — readable on any theme. */
 @Composable
 fun IconBubble(icon: ImageVector, color: Color, size: Dp = 36.dp) {
-    val th = com.myfit.tracker.ui.theme.LocalFitTheme.current
-    val corner = size * 0.32f
-    val shape = androidx.compose.foundation.shape.RoundedCornerShape(corner)
-    val glyph = if (th.isLight) Color(color.red * 0.8f, color.green * 0.8f, color.blue * 0.8f) else
-        Color(minOf(1f, color.red * 0.55f + 0.45f), minOf(1f, color.green * 0.55f + 0.45f), minOf(1f, color.blue * 0.55f + 0.45f))
+    val corner = size * 0.30f
+    val top = Color(minOf(1f, color.red * 0.85f + 0.15f), minOf(1f, color.green * 0.85f + 0.15f), minOf(1f, color.blue * 0.85f + 0.15f))
+    val bottom = Color(color.red * 0.78f, color.green * 0.78f, color.blue * 0.78f)
     Box(
         Modifier
             .size(size)
-            .clip(shape)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(corner))
             .drawBehind {
                 val r = androidx.compose.ui.geometry.CornerRadius(corner.toPx())
-                // colour wash, brighter at the top-left like light through tinted glass
-                drawRoundRect(Brush.linearGradient(listOf(color.copy(alpha = 0.55f), color.copy(alpha = 0.22f)), androidx.compose.ui.geometry.Offset.Zero,
-                    androidx.compose.ui.geometry.Offset(this.size.width, this.size.height)), cornerRadius = r)
-                drawRoundRect(Color.White.copy(alpha = if (th.isLight) 0.35f else 0.06f), cornerRadius = r)
-                drawRoundRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.30f), Color.Transparent), 0f, this.size.height * 0.5f), cornerRadius = r)
-                // soft glow behind the glyph
-                drawCircle(Brush.radialGradient(listOf(color.copy(alpha = 0.55f), Color.Transparent)), radius = this.size.minDimension * 0.42f)
-                drawRoundRect(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.08f)),
-                    androidx.compose.ui.geometry.Offset.Zero, androidx.compose.ui.geometry.Offset(this.size.width, this.size.height)),
-                    cornerRadius = r, style = Stroke(1.dp.toPx()))
+                drawRoundRect(Brush.verticalGradient(listOf(top, bottom)), cornerRadius = r)
+                drawRoundRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent), 0f, this.size.height * 0.5f), cornerRadius = r)
             },
         contentAlignment = Alignment.Center,
-    ) { Icon(icon, null, tint = glyph, modifier = Modifier.size(size * 0.6f)) }
+    ) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(size * 0.58f)) }
 }
 
 @Composable

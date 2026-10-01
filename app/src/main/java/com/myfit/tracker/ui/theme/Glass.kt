@@ -129,9 +129,14 @@ fun Glass(
                     .drawBehind {
                         val p = pos.value
                         translate(-p.x, -p.y) {
+                            val img = (if (seeContent) b.dockImg else null) ?: b.cardImg
                             val l = (if (seeContent) b.dockLayer else null) ?: b.blurLayer ?: b.layer
-                            if (l != null) drawLayer(l)
-                            else drawBackdrop(b.theme, b.image, 0f, b.rootSize.width, b.rootSize.height)
+                            when {
+                                img != null -> drawBaked(img, b.rootSize)
+                                l != null -> drawLayer(l)
+                                b.bgImg != null -> drawBaked(b.bgImg!!, b.rootSize)
+                                else -> drawBackdrop(b.theme, b.image, b.theme.stillT, b.rootSize.width, b.rootSize.height)
+                            }
                         }
                     }
             )

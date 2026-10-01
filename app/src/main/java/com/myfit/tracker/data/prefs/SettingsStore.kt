@@ -28,7 +28,8 @@ enum class DashCard(val label: String) {
 }
 
 data class AppSettings(
-    val themeId: String = "crimson",
+    val themeId: String = "kinetic",
+    val gentleThemes: Boolean = true,
     val customBackground: String? = null,     // file name in app storage, null = theme art
     val animatedBackground: Boolean = true,
     val glassStrength: Float = 1f,            // 0.4 … 1.4
@@ -64,6 +65,8 @@ data class AppSettings(
 class SettingsStore(private val context: Context) {
     private object K {
         val theme = stringPreferencesKey("theme")
+        val themeV2 = booleanPreferencesKey("theme_v2")
+        val gentle = booleanPreferencesKey("gentle_themes")
         val bg = stringPreferencesKey("custom_bg")
         val animated = booleanPreferencesKey("animated_bg")
         val glass = floatPreferencesKey("glass_strength")
@@ -97,7 +100,8 @@ class SettingsStore(private val context: Context) {
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
         AppSettings(
-            themeId = p[K.theme] ?: "crimson",
+            themeId = p[K.theme]?.takeIf { p[K.themeV2] == true } ?: "kinetic",   // v2: new default for everyone once
+            gentleThemes = p[K.gentle] ?: true,
             customBackground = p[K.bg],
             animatedBackground = p[K.animated] ?: true,
             glassStrength = p[K.glass] ?: 1f,
@@ -132,7 +136,8 @@ class SettingsStore(private val context: Context) {
         )
     }
 
-    suspend fun setTheme(id: String) = context.dataStore.edit { it[K.theme] = id }
+    suspend fun setTheme(id: String) = context.dataStore.edit { it[K.theme] = id; it[K.themeV2] = true }
+    suspend fun setGentleThemes(v: Boolean) = context.dataStore.edit { it[K.gentle] = v }
     suspend fun setCustomBackground(file: String?) = context.dataStore.edit {
         if (file == null) it.remove(K.bg) else it[K.bg] = file
     }

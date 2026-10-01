@@ -37,6 +37,10 @@ class Backdrop {
     var rootSize by mutableStateOf(Size.Zero)
     /** The backdrop recorded ONCE per frame; every glass surface replays this layer (cheap). */
     var layer: GraphicsLayer? = null
+    /** Baked still images (theme at 1/3 size, card blur, dock blur). Null while a gentle theme is live. */
+    var bgImg by mutableStateOf<ImageBitmap?>(null)
+    var cardImg by mutableStateOf<ImageBitmap?>(null)
+    var dockImg by mutableStateOf<ImageBitmap?>(null)
     /** The backdrop blurred with the dock's own (stronger) blur amount. */
     var dockLayer: GraphicsLayer? = null
     /** The backdrop pre-blurred once per frame (shared by every card, instead of one blur per card). */

@@ -54,6 +54,7 @@ import com.myfit.tracker.ui.theme.LiquidGlass
 import com.myfit.tracker.ui.theme.LocalBackdrop
 import com.myfit.tracker.ui.theme.LocalFitTheme
 import com.myfit.tracker.ui.theme.drawBackdrop
+import com.myfit.tracker.ui.theme.drawBaked
 import com.myfit.tracker.ui.theme.realBlurSupported
 import com.myfit.tracker.ui.theme.rememberTick
 import kotlinx.coroutines.launch
@@ -151,9 +152,11 @@ fun LiquidTabBar(
                             val mag = 1.18f + 0.22f * p.coerceIn(0f, 1f)
                             scale(mag, pivot = Offset(size.width / 2, size.height / 2)) {
                                 translate(-lx, -ly) {
+                                    val img = if (p < 0.02f) (backdrop.dockImg ?: backdrop.bgImg) else backdrop.bgImg
                                     val bl = if (p < 0.02f) (backdrop.dockLayer ?: backdrop.layer) else backdrop.layer
-                                    if (bl != null) drawLayer(bl)
-                                    else drawBackdrop(backdrop.theme, backdrop.image, backdrop.time.floatValue, backdrop.rootSize.width, backdrop.rootSize.height)
+                                    if (img != null) drawBaked(img, backdrop.rootSize)
+                                    else if (bl != null) drawLayer(bl)
+                                    else drawBackdrop(backdrop.theme, backdrop.image, backdrop.theme.stillT, backdrop.rootSize.width, backdrop.rootSize.height)
                                 }
                             }
                         }

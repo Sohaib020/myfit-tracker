@@ -50,6 +50,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.drawscope.scale
@@ -124,20 +127,15 @@ fun MyFitRoot(container: AppContainer) {
             withContext(Dispatchers.IO) { BackgroundImages.load(container.filesDir, name)?.asImageBitmap() }
         }
     }
-    // ambient animation clock
-    // Motion: 0 smooth (every frame), 1 balanced (~30 fps, default), 2 battery saver (still).
-    // Only changing `time` triggers a redraw, so skipping updates really skips GPU work.
-    val animate = s.animatedBackground && s.motion != 2
-    LaunchedEffect(animate, s.motion) {
-        if (!animate) return@LaunchedEffect
-        val minStep = if (s.motion == 0) 0L else 48L          // Balanced ≈ 20 fps
-        var last = -1L
-        var acc = 0L
-        while (true) withFrameMillis { now ->
-            if (last >= 0) acc += now - last
-            last = now
-            if (acc >= minStep) { backdrop.time.floatValue += acc.coerceAtMost(100L) / 1000f; acc = 0L }
-        }
+    // Themes are STILL images by default: rendered once (plus their two blurred versions) whenever the
+    // theme, wallpaper, screen size or blur settings change — zero GPU work per frame after that.
+    // A few themes may drift very gently (4 updates/s) if "Gentle motion" is on.
+    val gentle = s.gentleThemes && theme.gentle && s.motion != 2 && backdrop.image == null &&
+        com.myfit.tracker.ui.theme.ThemeShaders.supported && !com.myfit.tracker.CrashGuard.safeMode
+    LaunchedEffect(gentle) {
+        backdrop.time.floatValue = theme.stillT
+        if (!gentle) return@LaunchedEffect
+        while (true) { kotlinx.coroutines.delay(250); backdrop.time.floatValue += 0.25f }
     }
     // status-bar icon colour follows the theme
     val view = LocalView.current
@@ -156,25 +154,38 @@ fun MyFitRoot(container: AppContainer) {
                     .fillMaxSize()
                     .onSizeChanged { backdrop.rootSize = Size(it.width.toFloat(), it.height.toFloat()) }
             ) {
-                // The animated backdrop is rendered ONCE per frame into a small offscreen buffer (1/3 size)
-                // and scaled up — backgrounds are soft, so this looks the same at ~1/9 of the GPU cost.
-                // The two blurs (cards, dock) are also computed on that small buffer.
+                val dens = androidx.compose.ui.platform.LocalDensity.current
+                val cardBlurPx = with(dens) { (26.dp * s.blurAmount).toPx() }
+                val dockBlurPx = with(dens) { (30.dp * s.dockBlur).toPx() }
+                val blurOk = android.os.Build.VERSION.SDK_INT >= 31 && !com.myfit.tracker.CrashGuard.safeMode
+                val gfx = androidx.compose.ui.platform.LocalGraphicsContext.current
+                // ---- still path: bake three small bitmaps (theme, card blur, dock blur)
+                LaunchedEffect(theme.id, backdrop.image, backdrop.rootSize, cardBlurPx, dockBlurPx, gentle, blurOk) {
+                    if (gentle) { backdrop.bgImg = null; backdrop.cardImg = null; backdrop.dockImg = null; return@LaunchedEffect }
+                    val full = backdrop.rootSize
+                    if (full.width < 2f || full.height < 2f) return@LaunchedEffect
+                    runCatching { com.myfit.tracker.ui.theme.BackdropBaker.bake(gfx, dens, theme, backdrop.image, full, cardBlurPx, dockBlurPx, blurOk) }
+                        .onSuccess { (bg, card, dock) -> backdrop.bgImg = bg; backdrop.cardImg = card; backdrop.dockImg = dock }
+                }
+                // ---- gentle path: small live layers, updated only when `time` ticks (4×/s)
                 val small = rememberGraphicsLayer()
                 val smallCard = rememberGraphicsLayer()
                 val smallDock = rememberGraphicsLayer()
                 val bgLayer = rememberGraphicsLayer()
                 val blurLayer = rememberGraphicsLayer()
                 val dockLayer = rememberGraphicsLayer()
-                backdrop.layer = bgLayer
-                backdrop.blurLayer = blurLayer
-                backdrop.dockLayer = dockLayer
-                val dens = androidx.compose.ui.platform.LocalDensity.current
-                val cardBlurPx = with(dens) { (26.dp * s.blurAmount).toPx() }
-                val dockBlurPx = with(dens) { (30.dp * s.dockBlur).toPx() }
-                val blurOk = android.os.Build.VERSION.SDK_INT >= 31 && !com.myfit.tracker.CrashGuard.safeMode
+                backdrop.layer = if (gentle) bgLayer else null
+                backdrop.blurLayer = if (gentle && blurOk) blurLayer else null
+                backdrop.dockLayer = if (gentle && blurOk) dockLayer else null
                 Canvas(Modifier.fillMaxSize()) {
+                    val img = backdrop.bgImg
+                    if (!gentle) {
+                        if (img != null) com.myfit.tracker.ui.theme.drawBaked(img, size)
+                        else drawBackdrop(backdrop.theme, backdrop.image, theme.stillT, size.width, size.height)
+                        return@Canvas
+                    }
                     val t = backdrop.time.floatValue
-                    val k = if (backdrop.image == null) 3f else 1f        // photos stay sharp (and still)
+                    val k = 3f
                     val sw = (size.width / k).coerceAtLeast(1f); val sh = (size.height / k).coerceAtLeast(1f)
                     val smallSize = androidx.compose.ui.unit.IntSize(kotlin.math.ceil(sw).toInt(), kotlin.math.ceil(sh).toInt())
                     small.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
@@ -279,7 +290,9 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 if (o != null) Box(Modifier.fillMaxSize()) {
                     Canvas(Modifier.fillMaxSize()) {
                         val l = backdrop.layer
-                        if (l != null) drawLayer(l)
+                        val bi = backdrop.bgImg
+                        if (bi != null) com.myfit.tracker.ui.theme.drawBaked(bi, size)
+                        else if (l != null) drawLayer(l)
                         else drawBackdrop(backdrop.theme, backdrop.image, backdrop.time.floatValue, size.width, size.height)
                     }
                     when (o) {
@@ -311,22 +324,27 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
     }
 }
 
-/** Top-right quick-add button: a glass orb with a glossy accent core. */
+/** Top-right quick-add button: a clean, solid accent circle with a soft shadow. */
 @Composable
 private fun QuickAddOrb(onClick: () -> Unit) {
     val th = LocalFitTheme.current
-    Glass(
-        Modifier.size(52.dp).shadow(14.dp, CircleShape, ambientColor = th.accent, spotColor = th.accent),
-        shape = CircleShape, blur = 16.dp, onClick = onClick, pressScale = 0.86f,
-        tint = th.accent.copy(alpha = 0.55f),
-    ) {
-        Box(
-            Modifier.matchParentSize().drawBehind {
-                drawCircle(Brush.verticalGradient(listOf(th.accentBright.copy(alpha = 0.85f), th.accent.copy(alpha = 0.7f))), radius = size.minDimension * 0.40f)
-                drawCircle(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.Transparent), 0f, size.height * 0.5f), radius = size.minDimension * 0.40f)
-                drawCircle(Color.White.copy(alpha = 0.5f), radius = size.minDimension * 0.40f, style = Stroke(1.dp.toPx()))
+    val tick = com.myfit.tracker.ui.theme.rememberTick()
+    val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    val sc by androidx.compose.animation.core.animateFloatAsState(if (pressed) 0.88f else 1f, spring(0.45f, 700f), label = "orb")
+    Box(
+        Modifier
+            .size(50.dp)
+            .graphicsLayer { scaleX = sc; scaleY = sc }
+            .shadow(10.dp, CircleShape, ambientColor = th.accent, spotColor = th.accent)
+            .clip(CircleShape)
+            .drawBehind {
+                drawCircle(Brush.verticalGradient(listOf(th.accentBright, th.accent)))
+                drawCircle(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.Transparent), 0f, size.height * 0.5f))
             }
-        )
-        Icon(Duo.Add, "Quick add", tint = th.onAccent, modifier = Modifier.align(Alignment.Center).size(28.dp))
+            .clickable(src, indication = null) { tick(); onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Duo.Add, "Quick add", tint = th.onAccent, modifier = Modifier.size(26.dp))
     }
 }

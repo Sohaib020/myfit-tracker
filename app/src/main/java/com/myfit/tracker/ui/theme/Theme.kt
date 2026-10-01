@@ -3,7 +3,7 @@ package com.myfit.tracker.ui.theme
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 
-enum class BackdropArt { AURORA, GRID, WAVES, LANDSCAPE, FROST, BOREALIS, OCEAN, SAKURA, NEON_CITY, DUNES, GALAXY, FOREST, LAVA, RAIN, MINT, GOLD, ARCTIC, CYBER, DESERT_NIGHT, LOTUS, MONSOON }
+enum class BackdropArt { KINETIC, AURORA, GRID, WAVES, LANDSCAPE, FROST, BOREALIS, OCEAN, SAKURA, NEON_CITY, DUNES, GALAXY, FOREST, LAVA, RAIN, MINT, GOLD, ARCTIC, CYBER, DESERT_NIGHT, LOTUS, MONSOON }
 
 @Immutable
 data class FitTheme(
@@ -33,9 +33,24 @@ data class FitTheme(
     val fat: Color = Color(0xFFB57CFF),
     val sleep: Color = Color(0xFF7C8CFF),
     val steps: Color = Color(0xFF2FD37A),
+    /** May drift very gently when "Gentle motion" is on; otherwise every theme is a still image. */
+    val gentle: Boolean = false,
+    /** The moment of the theme's animation used for its still image. */
+    val stillT: Float = 7f,
 )
 
 object Themes {
+    val Kinetic = FitTheme(
+        id = "kinetic", name = "Kinetic", isLight = false, art = BackdropArt.KINETIC,
+        bgTop = Color(0xFF0B1014), bgBottom = Color(0xFF05080A),
+        blobs = listOf(Color(0xFF1FD99A), Color(0xFF3DF5A6), Color(0xFF0B1014), Color(0xFF7BE33A)),
+        accent = Color(0xFF2EE89C), accentBright = Color(0xFF8DFFD0), onAccent = Color(0xFF042016),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1F9CFFD8), glassFallback = Color(0xE60E1A1A),
+        rimHigh = Color(0x70FFFFFF), rimLow = Color(0x14FFFFFF),
+        success = Color(0xFF2EE89C), steps = Color(0xFF7BE33A), gentle = true, stillT = 4f,
+    )
+
     val Crimson = FitTheme(
         id = "crimson", name = "Crimson Glass", isLight = false, art = BackdropArt.AURORA,
         bgTop = Color(0xFF2A0507), bgBottom = Color(0xFF0B0203),
@@ -90,7 +105,7 @@ object Themes {
 
 
     val Borealis = FitTheme(
-        id = "borealis", name = "Aurora Borealis", isLight = false, art = BackdropArt.BOREALIS,
+        id = "borealis", name = "Aurora Borealis", isLight = false, art = BackdropArt.BOREALIS, gentle = true,
         bgTop = Color(0xFF020716), bgBottom = Color(0xFF06222B),
         blobs = listOf(Color(0xFF3DFFB0), Color(0xFF8CFFD2), Color(0xFF020716), Color(0xFF06222B)),
         accent = Color(0xFF3DFFB0), accentBright = Color(0xFF8CFFD2), onAccent = Color(0xFF10131A),
@@ -100,7 +115,7 @@ object Themes {
     )
 
     val Ocean = FitTheme(
-        id = "ocean", name = "Ocean Depths", isLight = false, art = BackdropArt.OCEAN,
+        id = "ocean", name = "Ocean Depths", isLight = false, art = BackdropArt.OCEAN, gentle = true,
         bgTop = Color(0xFF0B5E8A), bgBottom = Color(0xFF001220),
         blobs = listOf(Color(0xFF22D3EE), Color(0xFF7CEBFF), Color(0xFF0B5E8A), Color(0xFF001220)),
         accent = Color(0xFF22D3EE), accentBright = Color(0xFF7CEBFF), onAccent = Color(0xFF10131A),
@@ -249,6 +264,6 @@ object Themes {
         rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
     )
 
-    val all = listOf(Crimson, Lime, DeepBlue, Nature, Frost, Borealis, Ocean, Sakura, Neon, Dunes, Galaxy, Forest, Lava, Rain, Mint, Gold, Arctic, Cyber, Desertnight, Lotus, Monsoon)
-    fun byId(id: String) = all.firstOrNull { it.id == id } ?: Crimson
+    val all = listOf(Kinetic, Crimson, Lime, DeepBlue, Nature, Frost, Borealis, Ocean, Sakura, Neon, Dunes, Galaxy, Forest, Lava, Rain, Mint, Gold, Arctic, Cyber, Desertnight, Lotus, Monsoon)
+    fun byId(id: String) = all.firstOrNull { it.id == id } ?: Kinetic
 }

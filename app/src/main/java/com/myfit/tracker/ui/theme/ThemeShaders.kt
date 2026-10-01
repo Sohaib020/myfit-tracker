@@ -41,7 +41,7 @@ object ThemeShaders {
         val s = entry.first as RuntimeShader
         s.setFloatUniform("res", w, h)
         s.setFloatUniform("t", t % 3600f)
-        scope.drawRect(entry.second)
+        scope.drawRect(entry.second, size = androidx.compose.ui.geometry.Size(w, h))
         return true
     }
 }

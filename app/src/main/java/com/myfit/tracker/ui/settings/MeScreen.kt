@@ -177,7 +177,7 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
             GlassCard {
                 CardHeader(Duo.Palette, "Theme", th.fat)
                 Spacer(Modifier.height(14.dp))
-                Caption("${Themes.all.size} themes · most of them animate. Swipe to browse.")
+                Caption("${Themes.all.size} themes · swipe to browse. Tap one to apply.")
                 Spacer(Modifier.height(10.dp))
                 androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(Themes.all.size, key = { Themes.all[it].id }) { idx ->
@@ -195,7 +195,7 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
                                     if (full.width > 0) {
                                         val s = size.width / full.width
                                         scale(s, s, pivot = androidx.compose.ui.geometry.Offset.Zero) {
-                                            drawBackdrop(t, null, backdrop.time.floatValue, full.width, full.height)
+                                            drawBackdrop(t, null, t.stillT, full.width, full.height)
                                         }
                                     }
                                     drawRoundRect(t.glassFallback.copy(alpha = 0.55f), topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.1f, size.height * 0.62f),
@@ -227,8 +227,12 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
                     GlassButton("Choose a different photo", { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, height = 44.dp)
                 }
                 Spacer(Modifier.height(14.dp))
+                ToggleRow("Gentle motion", "Kinetic, Aurora Borealis and Ocean Depths drift very slowly (4 updates a second). Off = every theme is a still image.", settings.gentleThemes) {
+                    container.write { container.settings.setGentleThemes(it) }
+                }
+                Spacer(Modifier.height(12.dp))
                 Text("Motion", style = FitType.section, color = th.text)
-                Caption("Balanced runs the living wallpaper at 30 fps — smooth, cool and easy on battery.")
+                Caption("Pip, glass effects and gentle themes. Battery saver keeps everything still.")
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Smooth", "Balanced", "Battery saver").forEachIndexed { i, label ->
