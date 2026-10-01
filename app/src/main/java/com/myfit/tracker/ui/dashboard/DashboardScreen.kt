@@ -187,7 +187,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
                         DashCard.WORKOUT -> WorkoutCard(state.workout, container)
                         DashCard.RINGS -> RingsCard(state, open)
                         DashCard.NUTRITION -> NutritionCard(container)
-                        DashCard.BODY -> BodyCard(state) { open(Sheet.Weight()) }
+                        DashCard.BODY -> { val nav = com.myfit.tracker.ui.nav.LocalNav.current; BodyCard(state) { nav.push(com.myfit.tracker.ui.nav.Overlay.Body) } }
                         DashCard.HYDRATION -> HydrationCard(state, container, open)
                         DashCard.RECOVERY -> RecoveryCard(state, open)
                         DashCard.STEPS -> { val nav = com.myfit.tracker.ui.nav.LocalNav.current; StepsCard(state) { nav.push(com.myfit.tracker.ui.nav.Overlay.Activity) } }
@@ -378,7 +378,7 @@ private fun BodyCard(s: DashState, onClick: () -> Unit) {
         Spacer(Modifier.height(14.dp))
         val lw = s.latestWeight
         if (lw == null) {
-            Caption("No weigh-ins yet. Tap to log your first.")
+            Caption("No weigh-ins yet. Tap for body trends, measurements and progress photos.")
             return@GlassCard
         }
         Row(verticalAlignment = Alignment.Bottom) {

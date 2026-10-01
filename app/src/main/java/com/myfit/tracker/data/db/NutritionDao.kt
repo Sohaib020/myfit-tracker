@@ -102,3 +102,13 @@ interface HealthImportDao {
     @androidx.room.Insert(onConflict = androidx.room.OnConflictStrategy.IGNORE) suspend fun insertWeight(e: WeightEntry): Long
     @androidx.room.Insert(onConflict = androidx.room.OnConflictStrategy.IGNORE) suspend fun insertWater(e: WaterEntry): Long
 }
+
+/** Private progress photos (files live in app storage, never uploaded). */
+@androidx.room.Dao
+interface ProgressPhotoDao {
+    @androidx.room.Insert suspend fun insert(p: ProgressPhoto): Long
+    @androidx.room.Query("SELECT * FROM progress_photo WHERE deletedAt IS NULL ORDER BY takenAt DESC")
+    fun observeAll(): kotlinx.coroutines.flow.Flow<List<ProgressPhoto>>
+    @androidx.room.Query("UPDATE progress_photo SET deletedAt = :now, updatedAt = :now WHERE id = :id")
+    suspend fun softDelete(id: Long, now: Long)
+}

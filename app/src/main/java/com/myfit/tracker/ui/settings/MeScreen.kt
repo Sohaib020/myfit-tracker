@@ -335,6 +335,13 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit) {
 
             item { HealthStatusCard(container) }
             item {
+                GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Body) }) {
+                    CardHeader(Duo.MonitorWeight, "Body & progress photos", th.fat) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
+                    Spacer(Modifier.height(6.dp))
+                    Caption("Weight and body-fat trends, weekly averages, measurements and private before/after photos.")
+                }
+            }
+            item {
                 GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Social) }) {
                     CardHeader(Duo.Flag, "Friends & leaderboard", th.accent) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
                     Spacer(Modifier.height(6.dp))

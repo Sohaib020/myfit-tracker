@@ -317,6 +317,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.ArrangeDash -> com.myfit.tracker.ui.dashboard.ArrangeDashScreen(container)
                         Overlay.Records -> com.myfit.tracker.ui.exercises.RecordsScreen(container)
                         Overlay.Social -> com.myfit.tracker.ui.social.SocialScreen(container)
+                        Overlay.Body -> com.myfit.tracker.ui.body.BodyScreen(container) { sheet = it }
                         is Overlay.Food -> com.myfit.tracker.ui.food.FoodDiaryScreen(container, o.date)
                         is Overlay.FoodAdd -> com.myfit.tracker.ui.food.FoodAddScreen(container, o.mealType, o.date, o.tab)
                         is Overlay.FoodPhoto -> com.myfit.tracker.ui.food.FoodPhotoScreen(container, o.mealType, o.date)
