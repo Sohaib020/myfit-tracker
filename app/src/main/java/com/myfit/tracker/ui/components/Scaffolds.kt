@@ -34,6 +34,9 @@ import com.myfit.tracker.ui.theme.Glass
 import com.myfit.tracker.ui.theme.GlassIconButton
 import com.myfit.tracker.ui.theme.LocalFitTheme
 
+/** Space reserved under the status bar for the floating Me button and quick-add orb on tab screens. */
+val TopBarSpace = 66.dp
+
 /** Title row used by full-screen overlays: glass back button, title, optional actions. */
 @Composable
 fun OverlayTopBar(title: String, onBack: () -> Unit, subtitle: String? = null, actions: @Composable RowScope.() -> Unit = {}) {

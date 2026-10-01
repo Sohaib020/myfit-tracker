@@ -1,0 +1,17 @@
+// Golden Hour: deep indigo night above a warm golden horizon
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(0.04, 0.045, 0.11), float3(0.10, 0.07, 0.14), smoothstep(0.0, 0.7, uv.y));
+    c = mix(c, float3(0.55, 0.30, 0.14), smoothstep(0.72, 1.05, uv.y) * 0.8);
+    float r = length(p - float2(ar * 0.3, 1.02));
+    c += float3(1.0, 0.75, 0.35) * exp(-r * r * 6.0) * 0.45;
+    // distant ridge
+    float ridge = 0.86 + 0.025 * sin(p.x * 5.0 + 0.7) + 0.015 * sin(p.x * 13.0) + 0.02 * fbm3(float2(p.x * 3.0, 1.0));
+    c = mix(c, float3(0.05, 0.04, 0.07), smoothstep(ridge, ridge + 0.004, uv.y) * 0.85);
+    float st = stars(p * 70.0, 0.06, 0.0) * (1.0 - smoothstep(0.0, 0.55, uv.y));
+    c += st * 0.4;
+    c += (hash(fc + 9.9) - 0.5) * 0.012;
+    return outc(c);
+}

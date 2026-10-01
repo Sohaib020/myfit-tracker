@@ -84,3 +84,10 @@ interface NutritionDao {
 
 data class DayTotal(val date: String, val kcal: Double, val protein: Double)
 data class SavedSummary(val savedId: Long, val items: Int, val kcal: Double)
+
+/** Inserts records imported from Health Connect; the "hc:<id>" uuid makes re-syncs idempotent. */
+@androidx.room.Dao
+interface HealthImportDao {
+    @androidx.room.Insert(onConflict = androidx.room.OnConflictStrategy.IGNORE) suspend fun insertWeight(e: WeightEntry): Long
+    @androidx.room.Insert(onConflict = androidx.room.OnConflictStrategy.IGNORE) suspend fun insertWater(e: WaterEntry): Long
+}

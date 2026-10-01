@@ -130,7 +130,7 @@ fun TimelineScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            Column(Modifier.statusBarsPadding().padding(top = 8.dp)) {
+            Column(Modifier.statusBarsPadding().padding(top = com.myfit.tracker.ui.components.TopBarSpace)) {
                 Text("Daily log", modifier = Modifier.padding(end = 62.dp), style = FitType.display, color = th.text)
                 Caption("Every entry, in the order it happened. Tap one to edit or delete.")
                 Spacer(Modifier.height(14.dp))

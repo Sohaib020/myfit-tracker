@@ -17,6 +17,11 @@ import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.HydrationRecord
+import com.myfit.tracker.data.db.WeightEntry
+import com.myfit.tracker.data.db.WaterEntry
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -62,6 +67,7 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
         p(TotalCaloriesBurnedRecord::class), p(FloorsClimbedRecord::class), p(ExerciseSessionRecord::class),
         p(HeartRateRecord::class), p(RestingHeartRateRecord::class), p(HeartRateVariabilityRmssdRecord::class),
         p(OxygenSaturationRecord::class), p(SleepSessionRecord::class),
+        p(WeightRecord::class), p(BodyFatRecord::class), p(HydrationRecord::class),
     )
     val backgroundPermission = "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"
     val historyPermission = "android.permission.health.READ_HEALTH_DATA_HISTORY"
@@ -189,7 +195,39 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
             sleepCount = list.size
         }.onFailure { errors += "sleep: ${it.message}" }
 
-        return if (errors.isEmpty()) Result(true, "Synced ${keepDays.size} days · $sessionCount activities · $sleepCount sleeps", keepDays.size, sessionCount, sleepCount)
+        // ---------------- weight / body fat (Galaxy Watch body composition, smart scales) and water
+        var bodyCount = 0
+        runCatching {
+            if (p(WeightRecord::class) in g) {
+                val fats = if (p(BodyFatRecord::class) in g) readAll(BodyFatRecord::class, start, end) else emptyList()
+                readAll(WeightRecord::class, start, end).forEach { w ->
+                    val off = w.zoneOffset ?: zone.rules.getOffset(w.time)
+                    val fat = fats.minByOrNull { kotlin.math.abs(it.time.epochSecond - w.time.epochSecond) }
+                        ?.takeIf { kotlin.math.abs(it.time.epochSecond - w.time.epochSecond) < 15 * 60 }?.percentage?.value
+                    val id = db.healthImportDao().insertWeight(WeightEntry(
+                        uuid = "hc:" + w.metadata.id, weightKg = w.weight.inKilograms, bodyFatPct = fat,
+                        loggedAt = w.time.toEpochMilli(), zoneId = off.id, localDate = Clock.dateKey(w.time.atOffset(off).toLocalDate()),
+                        note = "From " + sourceLabel(w.metadata.dataOrigin.packageName), createdAt = now, updatedAt = now,
+                    ))
+                    if (id > 0) bodyCount++
+                }
+            }
+        }.onFailure { errors += "weight: ${it.message}" }
+        runCatching {
+            if (p(HydrationRecord::class) in g) {
+                readAll(HydrationRecord::class, start, end)
+                    .filter { it.metadata.dataOrigin.packageName != context.packageName }
+                    .forEach { h ->
+                        val off = h.startZoneOffset ?: zone.rules.getOffset(h.startTime)
+                        db.healthImportDao().insertWater(WaterEntry(
+                            uuid = "hc:" + h.metadata.id, amountMl = h.volume.inMilliliters, loggedAt = h.startTime.toEpochMilli(),
+                            zoneId = off.id, localDate = Clock.dateKey(h.startTime.atOffset(off).toLocalDate()), createdAt = now, updatedAt = now,
+                        ))
+                    }
+            }
+        }.onFailure { errors += "water: ${it.message}" }
+
+        return if (errors.isEmpty()) Result(true, "Synced ${keepDays.size} days · $sessionCount activities · $sleepCount sleeps" + (if (bodyCount > 0) " · $bodyCount weigh-ins" else ""), keepDays.size, sessionCount, sleepCount)
         else Result(keepDays.isNotEmpty() || sessionCount > 0, "Partly synced — " + errors.joinToString("; "), keepDays.size, sessionCount, sleepCount)
     }
 

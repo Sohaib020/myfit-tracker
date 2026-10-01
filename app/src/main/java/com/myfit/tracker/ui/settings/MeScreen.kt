@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -102,7 +103,7 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
+fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
     val th = LocalFitTheme.current
     val settings = LocalSettings.current
     val profile by container.profileRepo.profile.collectAsState(initial = null)
@@ -123,52 +124,9 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            Column(Modifier.statusBarsPadding().padding(top = 8.dp, end = 62.dp)) {
-                Text("Me", style = FitType.display, color = th.text)
-                Caption("Profile, targets, look & feel.")
-            }
-        }
-
-        // ---------- profile
-        item {
-            val p = profile
-            GlassCard(onClick = { open(Sheet.EditProfile) }) {
-                CardHeader(Duo.Person, p?.name ?: "Profile", th.accentBright) {
-                    Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.Edit, null, tint = th.textDim) }
-                }
-                if (p != null) {
-                    val age = p.age + ChronoUnit.YEARS.between(LocalDate.parse(p.ageRecordedOn), Clock.today()).toInt()
-                    Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                        KV("Age", "$age")
-                        KV("Sex", if (p.sex == Sex.MALE) "Male" else "Female")
-                        KV("Height", Fmt.length(p.heightCm, settings.units.length))
-                        KV("Target", p.targetWeightKg?.let { Fmt.weight(it, settings.units.weight) } ?: "—")
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Caption("Profile created ${Clock.localDateOf(p.createdAt)} · editing it never changes past entries.")
-                }
-            }
-        }
-
-        // ---------- targets
-        item {
-            GlassCard(onClick = { open(Sheet.EditTargets) }) {
-                CardHeader(Duo.TrackChanges, "Daily targets", th.success) {
-                    Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.Edit, null, tint = th.textDim) }
-                }
-                Spacer(Modifier.height(12.dp))
-                val today = Clock.today()
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    KV("Water", Targets.on(targets, TargetType.WATER_ML, today)?.let { Fmt.volume(it, settings.units.volume) } ?: "—")
-                    KV("Steps", Targets.on(targets, TargetType.STEPS, today)?.let { Fmt.int(it) } ?: "—")
-                    KV("Calories", Targets.on(targets, TargetType.CALORIES, today)?.let { "${Fmt.int(it)} kcal" } ?: "—")
-                    KV("Protein", Targets.on(targets, TargetType.PROTEIN_G, today)?.let { "${Fmt.int(it)} g" } ?: "—")
-                    KV("Sleep", Targets.on(targets, TargetType.SLEEP_MIN, today)?.let { Fmt.duration(it.toLong()) } ?: "—")
-                    KV("Workouts/wk", Targets.on(targets, TargetType.WEEKLY_WORKOUTS, today)?.let { Fmt.int(it) } ?: "—")
-                }
-                Spacer(Modifier.height(8.dp))
-                Caption("Target changes apply from today. Past days keep the target that applied then.")
+            Column(Modifier.statusBarsPadding().padding(top = com.myfit.tracker.ui.components.TopBarSpace)) {
+                Text("Settings", style = FitType.display, color = th.text)
+                Caption("Look & feel, Pip, AI, voice, Gym Mode and units.")
             }
         }
 
@@ -177,7 +135,7 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
             GlassCard {
                 CardHeader(Duo.Palette, "Theme", th.fat)
                 Spacer(Modifier.height(14.dp))
-                Caption("${Themes.all.size} themes · swipe to browse. Tap one to apply.")
+                Caption("${Themes.all.size} themes · all still images, zero battery cost. Tap one to apply.")
                 Spacer(Modifier.height(10.dp))
                 androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(Themes.all.size, key = { Themes.all[it].id }) { idx ->
@@ -227,12 +185,9 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
                     GlassButton("Choose a different photo", { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, height = 44.dp)
                 }
                 Spacer(Modifier.height(14.dp))
-                ToggleRow("Gentle motion", "Kinetic, Aurora Borealis and Ocean Depths drift very slowly (4 updates a second). Off = every theme is a still image.", settings.gentleThemes) {
-                    container.write { container.settings.setGentleThemes(it) }
-                }
                 Spacer(Modifier.height(12.dp))
                 Text("Motion", style = FitType.section, color = th.text)
-                Caption("Pip, glass effects and gentle themes. Battery saver keeps everything still.")
+                Caption("Pip and glass effects. Themes are always still images. Battery saver keeps everything still.")
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Smooth", "Balanced", "Battery saver").forEachIndexed { i, label ->
@@ -296,12 +251,11 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
             GlassCard {
                 CardHeader(Duo.Tune, "Dashboard & behaviour", th.steps)
                 Spacer(Modifier.height(10.dp))
-                DashCard.entries.forEach { card ->
-                    ToggleRow(card.label, null, card in settings.dashCards) { on ->
-                        container.write { container.settings.setDashCards(if (on) settings.dashCards + card else settings.dashCards - card) }
-                    }
-                }
-                ToggleRow("Pip on the dashboard", "Your buddy. Only ever quotes numbers you've logged.", settings.pipEnabled) { container.write { container.settings.setPip(it) } }
+                val navS = com.myfit.tracker.ui.nav.LocalNav.current
+                Caption("${settings.dashCards.size} of ${DashCard.entries.size} cards shown. Reorder them or switch them off.")
+                Spacer(Modifier.height(8.dp))
+                GlassButton("Arrange dashboard cards", { navS.push(com.myfit.tracker.ui.nav.Overlay.ArrangeDash) }, icon = Duo.Tune, height = 44.dp)
+                Spacer(Modifier.height(6.dp))
                 ToggleRow("Haptic feedback", null, settings.haptics) { container.write { container.settings.setHaptics(it) } }
             }
         }
@@ -314,6 +268,86 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
                 Spacer(Modifier.height(6.dp))
                 Caption("Version ${BuildConfig.VERSION_NAME}")
             }
+        }
+    }
+}
+
+
+/** Me: your profile, body numbers and daily targets (opened from the top-left of every tab). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun MeScreen(container: AppContainer, open: (Sheet) -> Unit) {
+    val th = LocalFitTheme.current
+    val settings = LocalSettings.current
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
+    val profile by container.profileRepo.profile.collectAsState(initial = null)
+    val targets by container.profileRepo.targets.collectAsState(initial = emptyList())
+    Column(Modifier.fillMaxSize()) {
+        com.myfit.tracker.ui.components.OverlayTopBar("Me", { nav.pop() }, "Profile, body & daily targets")
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 40.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+        // ---------- profile
+        item {
+            val p = profile
+            GlassCard(onClick = { open(Sheet.EditProfile) }) {
+                CardHeader(Duo.Person, p?.name ?: "Profile", th.accentBright) {
+                    Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.Edit, null, tint = th.textDim) }
+                }
+                if (p != null) {
+                    val age = p.age + ChronoUnit.YEARS.between(LocalDate.parse(p.ageRecordedOn), Clock.today()).toInt()
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                        KV("Age", "$age")
+                        KV("Sex", if (p.sex == Sex.MALE) "Male" else "Female")
+                        KV("Height", Fmt.length(p.heightCm, settings.units.length))
+                        KV("Target", p.targetWeightKg?.let { Fmt.weight(it, settings.units.weight) } ?: "—")
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Caption("Profile created ${Clock.localDateOf(p.createdAt)} · editing it never changes past entries.")
+                }
+            }
+        }
+
+        // ---------- targets
+        item {
+            GlassCard(onClick = { open(Sheet.EditTargets) }) {
+                CardHeader(Duo.TrackChanges, "Daily targets", th.success) {
+                    Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.Edit, null, tint = th.textDim) }
+                }
+                Spacer(Modifier.height(12.dp))
+                val today = Clock.today()
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    KV("Water", Targets.on(targets, TargetType.WATER_ML, today)?.let { Fmt.volume(it, settings.units.volume) } ?: "—")
+                    KV("Steps", Targets.on(targets, TargetType.STEPS, today)?.let { Fmt.int(it) } ?: "—")
+                    KV("Calories", Targets.on(targets, TargetType.CALORIES, today)?.let { "${Fmt.int(it)} kcal" } ?: "—")
+                    KV("Protein", Targets.on(targets, TargetType.PROTEIN_G, today)?.let { "${Fmt.int(it)} g" } ?: "—")
+                    KV("Sleep", Targets.on(targets, TargetType.SLEEP_MIN, today)?.let { Fmt.duration(it.toLong()) } ?: "—")
+                    KV("Workouts/wk", Targets.on(targets, TargetType.WEEKLY_WORKOUTS, today)?.let { Fmt.int(it) } ?: "—")
+                }
+                Spacer(Modifier.height(8.dp))
+                Caption("Target changes apply from today. Past days keep the target that applied then.")
+            }
+        }
+
+            item { HealthStatusCard(container) }
+            item {
+                GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Food(null)) }) {
+                    CardHeader(Duo.ForkKnife, "Food diary", th.protein) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
+                    Spacer(Modifier.height(6.dp))
+                    Caption("Every meal you've logged, day by day, with calories and macros.")
+                }
+            }
+            item {
+                GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Archive) }) {
+                    CardHeader(Duo.Inventory2, "Archive", th.textDim) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
+                    Spacer(Modifier.height(6.dp))
+                    Caption("Archived exercises and templates.")
+                }
+            }
+            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 }
@@ -651,6 +685,43 @@ private fun VoiceSettingsCard(container: AppContainer) {
             GlassButton("Test voice", { voice.speak("Hi! I'm Pip, your fitness buddy. Ready to crush today's goals?", force = true) }, height = 44.dp)
             Spacer(Modifier.width(10.dp))
             lastEngine?.let { Caption("Last spoke with: $it") }
+        }
+    }
+}
+
+/** Health Connect / sensors status with a one-tap fix if something isn't allowed yet. */
+@Composable
+private fun HealthStatusCard(container: AppContainer) {
+    val th = LocalFitTheme.current
+    val settings = LocalSettings.current
+    val ctx = LocalContext.current
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val hs = container.healthSync
+    var granted by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var tick by remember { mutableIntStateOf(0) }
+    androidx.compose.runtime.LaunchedEffect(tick) { granted = hs.granted() }
+    val runtime = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { tick++ }
+    val health = rememberLauncherForActivityResult(androidx.health.connect.client.PermissionController.createRequestPermissionResultContract()) { res ->
+        granted = res
+        runtime.launch(com.myfit.tracker.ui.onboarding.runtimePermissions())
+        if (res.isNotEmpty()) scope.launch { val r = hs.sync(30); container.settings.setLastHealthSync(Clock.now(), r.message) }
+    }
+    val allHc = hs.isAvailable && hs.dataPermissions.all { it in granted }
+    val allRuntime = com.myfit.tracker.ui.onboarding.runtimePermissions().all { com.myfit.tracker.ui.onboarding.hasPerm(ctx, it) }
+    GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Activity) }) {
+        CardHeader(Duo.Watch, "Samsung Health & sensors", th.accent) {
+            if (allHc && allRuntime) androidx.compose.material3.Icon(Duo.CheckCircle, null, tint = th.success, modifier = Modifier.size(22.dp))
+        }
+        Spacer(Modifier.height(8.dp))
+        Caption(when {
+            !hs.isAvailable -> "Health Connect isn't available on this phone — steps come from the phone sensor."
+            allHc && allRuntime -> "Everything is connected. Data syncs by itself every 30 minutes" + (settings.lastHealthSync?.let { " · last ${Clock.localDateOf(it)}" } ?: "") + "."
+            else -> "Some data isn't allowed yet, so it can't sync automatically."
+        })
+        if (hs.isAvailable && !(allHc && allRuntime)) {
+            Spacer(Modifier.height(10.dp))
+            GlassButton("Allow everything", { runCatching { health.launch(hs.allPermissions) } }, icon = Duo.Check, height = 44.dp)
         }
     }
 }

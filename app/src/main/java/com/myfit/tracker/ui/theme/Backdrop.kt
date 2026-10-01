@@ -31,7 +31,7 @@ import kotlin.random.Random
  */
 @Stable
 class Backdrop {
-    var theme by mutableStateOf(Themes.Crimson)
+    var theme by mutableStateOf(Themes.Kinetic)
     var image by mutableStateOf<ImageBitmap?>(null)
     val time = mutableFloatStateOf(0f)          // seconds, advanced by the root when animation is on
     var rootSize by mutableStateOf(Size.Zero)

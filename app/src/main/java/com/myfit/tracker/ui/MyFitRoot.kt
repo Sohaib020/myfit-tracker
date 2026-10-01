@@ -97,6 +97,7 @@ import com.myfit.tracker.ui.nav.TabItem
 import com.myfit.tracker.ui.onboarding.OnboardingScreen
 import com.myfit.tracker.ui.settings.BackgroundImages
 import com.myfit.tracker.ui.settings.MeScreen
+import com.myfit.tracker.ui.settings.SettingsScreen
 import com.myfit.tracker.ui.theme.Backdrop
 import com.myfit.tracker.ui.theme.LocalBackdrop
 import com.myfit.tracker.ui.theme.MyFitTheme
@@ -132,13 +133,8 @@ fun MyFitRoot(container: AppContainer) {
     // Themes are STILL images by default: rendered once (plus their two blurred versions) whenever the
     // theme, wallpaper, screen size or blur settings change — zero GPU work per frame after that.
     // A few themes may drift very gently (4 updates/s) if "Gentle motion" is on.
-    val gentle = s.gentleThemes && theme.gentle && s.motion != 2 && backdrop.image == null &&
-        com.myfit.tracker.ui.theme.ThemeShaders.supported && !com.myfit.tracker.CrashGuard.safeMode
-    LaunchedEffect(gentle) {
-        backdrop.time.floatValue = theme.stillT
-        if (!gentle) return@LaunchedEffect
-        while (true) { kotlinx.coroutines.delay(250); backdrop.time.floatValue += 0.25f }
-    }
+    val gentle = false   // every theme is a still image
+    LaunchedEffect(theme.id) { backdrop.time.floatValue = theme.stillT }
     // status-bar icon colour follows the theme
     val view = LocalView.current
     SideEffect {
@@ -209,6 +205,7 @@ fun MyFitRoot(container: AppContainer) {
                     ProfileState.Loading -> Unit
                     is ProfileState.Ready ->
                         if (ps.profile == null) OnboardingScreen(container, s.units)
+                        else if (!s.permsAsked) com.myfit.tracker.ui.onboarding.PermissionsScreen(container)
                         else MainShell(container, s)
                 }
                 ToastHost(toaster, Modifier.align(Alignment.TopCenter))
@@ -227,7 +224,7 @@ private val tabs = listOf(
     TabItem("train", "Train", Duo.FitnessCenter),
     TabItem("exercises", "Exercises", Duo.SportsGymnastics),
     TabItem("log", "Log", Duo.ViewTimeline),
-    TabItem("me", "Me", Duo.Person),
+    TabItem("settings", "Settings", Duo.Gear),
 )
 
 @Composable
@@ -261,7 +258,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                     1 -> TrainScreen(container, bottomPad)
                     2 -> ExercisesScreen(container, bottomPad)
                     3 -> TimelineScreen(container, { sheet = it }, bottomPad)
-                    else -> MeScreen(container, { sheet = it }, bottomPad)
+                    else -> SettingsScreen(container, { sheet = it }, bottomPad)
                 }
             }
           }
@@ -278,6 +275,14 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
             ) {
                 QuickAddOrb { sheet = Sheet.QuickAdd }
+            }
+            // Me: profile, body & targets — top-left on every tab
+            AnimatedVisibility(
+                top == null,
+                modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(top = 10.dp, start = 16.dp),
+                enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
+            ) {
+                MePill(dash.profile?.name ?: "") { nav.push(Overlay.Me) }
             }
 
             // full-screen overlays (Gym Mode, details, editors) — each sits on its own copy of the backdrop
@@ -307,6 +312,8 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.Activity -> com.myfit.tracker.ui.activity.ActivityScreen(container)
                         Overlay.PipChat -> com.myfit.tracker.ui.pip.PipChatScreen(container)
                         Overlay.Archive -> com.myfit.tracker.ui.exercises.ArchiveScreen(container)
+                        Overlay.Me -> MeScreen(container) { sheet = it }
+                        Overlay.ArrangeDash -> com.myfit.tracker.ui.dashboard.ArrangeDashScreen(container)
                         is Overlay.Food -> com.myfit.tracker.ui.food.FoodDiaryScreen(container, o.date)
                         is Overlay.FoodAdd -> com.myfit.tracker.ui.food.FoodAddScreen(container, o.mealType, o.date, o.tab)
                         is Overlay.FoodPhoto -> com.myfit.tracker.ui.food.FoodPhotoScreen(container, o.mealType, o.date)
@@ -351,5 +358,31 @@ private fun QuickAddOrb(onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(Duo.Add, "Quick add", tint = th.onAccent, modifier = Modifier.size(26.dp))
+    }
+}
+
+/** Top-left "Me" button: your initial in an accent circle + label, on a glass capsule. */
+@Composable
+private fun MePill(name: String, onClick: () -> Unit) {
+    val th = LocalFitTheme.current
+    val tick = com.myfit.tracker.ui.theme.rememberTick()
+    com.myfit.tracker.ui.theme.Glass(
+        Modifier.height(50.dp), shape = CircleShape, onClick = { tick(); onClick() }, pressScale = 0.92f,
+    ) {
+        androidx.compose.foundation.layout.Row(
+            Modifier.padding(start = 5.dp, end = 16.dp).align(Alignment.CenterStart),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(40.dp).clip(CircleShape).drawBehind { drawCircle(Brush.verticalGradient(listOf(th.accentBright, th.accent))) },
+                contentAlignment = Alignment.Center,
+            ) {
+                val ini = name.trim().take(1).uppercase()
+                if (ini.isNotEmpty()) androidx.compose.material3.Text(ini, style = com.myfit.tracker.ui.theme.FitType.section, color = th.onAccent)
+                else Icon(Duo.Person, null, tint = th.onAccent, modifier = Modifier.size(22.dp))
+            }
+            androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+            androidx.compose.material3.Text("Me", style = com.myfit.tracker.ui.theme.FitType.section, color = th.text)
+        }
     }
 }

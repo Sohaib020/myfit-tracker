@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 enum class DashCard(val label: String) {
-    WORKOUT("Today's workout"), NUTRITION("Food & calories"), BODY("Body weight"), HYDRATION("Hydration"), RECOVERY("Sleep & recovery"),
+    PIP("Pip"), SNAP("Snap a meal"), WORKOUT("Today's workout"), RINGS("Today's rings"), NUTRITION("Food & calories"), BODY("Body weight"), HYDRATION("Hydration"), RECOVERY("Sleep & recovery"),
     STEPS("Steps & activity"), CHECKIN("Daily check-in"), GOALS("Today's goals")
 }
 
@@ -56,10 +56,24 @@ data class AppSettings(
     val refraction: Float = 1f,          // 0 (flat) … 2 (strong lens)
     val pipVoice: Boolean = true,
     val pipVoiceOnline: Boolean = true,  // realistic Gemini voice when online; offline voice otherwise
+    val dashOrder: List<DashCard> = DashCard.entries.toList(),
+    val groqKey: String = "",
+    val openRouterKey: String = "",
+    val mistralKey: String = "",
+    val azureKey: String = "",
+    val azureRegion: String = "",
+    val aiPrimary: String = "auto",      // auto | gemini | groq | openrouter | mistral
+    val liveAi: Boolean = false,         // camera: name foods live while aiming (uses AI quota)
+    val permsAsked: Boolean = false,     // first-launch permission walk-through done
 ) {
     /** The user's own key if they added one, otherwise the key built into this build (from CI secrets). */
     val geminiKeyEff: String get() = geminiKey.ifBlank { com.myfit.tracker.BuildConfig.GEMINI_KEY }
     val elevenKeyEff: String get() = elevenKey.ifBlank { com.myfit.tracker.BuildConfig.ELEVEN_KEY }
+    val groqKeyEff: String get() = groqKey.ifBlank { com.myfit.tracker.BuildConfig.GROQ_KEY }
+    val openRouterKeyEff: String get() = openRouterKey.ifBlank { com.myfit.tracker.BuildConfig.OPENROUTER_KEY }
+    val mistralKeyEff: String get() = mistralKey.ifBlank { com.myfit.tracker.BuildConfig.MISTRAL_KEY }
+    val azureKeyEff: String get() = azureKey.ifBlank { com.myfit.tracker.BuildConfig.AZURE_SPEECH_KEY }
+    val azureRegionEff: String get() = azureRegion.ifBlank { com.myfit.tracker.BuildConfig.AZURE_SPEECH_REGION }
 }
 
 class SettingsStore(private val context: Context) {
@@ -96,6 +110,15 @@ class SettingsStore(private val context: Context) {
         val voiceOnline = booleanPreferencesKey("pip_voice_online")
         val haptics = booleanPreferencesKey("haptics")
         val pip = booleanPreferencesKey("pip")
+        val order = stringPreferencesKey("dash_order")
+        val groq = stringPreferencesKey("groq_key")
+        val orKey = stringPreferencesKey("openrouter_key")
+        val mistral = stringPreferencesKey("mistral_key")
+        val azure = stringPreferencesKey("azure_key")
+        val azureRegion = stringPreferencesKey("azure_region")
+        val aiPrimary = stringPreferencesKey("ai_primary")
+        val liveAi = booleanPreferencesKey("live_ai")
+        val perms = booleanPreferencesKey("perms_asked")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -133,6 +156,18 @@ class SettingsStore(private val context: Context) {
             refraction = p[K.refr] ?: 1f,
             pipVoice = p[K.voice] ?: true,
             pipVoiceOnline = p[K.voiceOnline] ?: true,
+            dashOrder = run {
+                val saved = p[K.order]?.split(',')?.mapNotNull { n -> runCatching { DashCard.valueOf(n) }.getOrNull() }?.distinct() ?: emptyList()
+                saved + DashCard.entries.filter { it !in saved }
+            },
+            groqKey = p[K.groq] ?: "",
+            openRouterKey = p[K.orKey] ?: "",
+            mistralKey = p[K.mistral] ?: "",
+            azureKey = p[K.azure] ?: "",
+            azureRegion = p[K.azureRegion] ?: "",
+            aiPrimary = p[K.aiPrimary] ?: "auto",
+            liveAi = p[K.liveAi] ?: false,
+            permsAsked = p[K.perms] ?: false,
         )
     }
 
@@ -167,4 +202,12 @@ class SettingsStore(private val context: Context) {
     suspend fun setPipVoiceOnline(v: Boolean) = context.dataStore.edit { it[K.voiceOnline] = v }
     suspend fun setHaptics(v: Boolean) = context.dataStore.edit { it[K.haptics] = v }
     suspend fun setPip(v: Boolean) = context.dataStore.edit { it[K.pip] = v }
+    suspend fun setDashOrder(o: List<DashCard>) = context.dataStore.edit { it[K.order] = o.joinToString(",") { c -> c.name } }
+    suspend fun setAiKey(provider: String, v: String) = context.dataStore.edit {
+        val k = when (provider) { "groq" -> K.groq; "openrouter" -> K.orKey; "mistral" -> K.mistral; "azure" -> K.azure; "azure_region" -> K.azureRegion; else -> return@edit }
+        if (v.isBlank()) it.remove(k) else it[k] = v.trim()
+    }
+    suspend fun setAiPrimary(v: String) = context.dataStore.edit { it[K.aiPrimary] = v }
+    suspend fun setLiveAi(v: Boolean) = context.dataStore.edit { it[K.liveAi] = v }
+    suspend fun setPermsAsked(v: Boolean) = context.dataStore.edit { it[K.perms] = v }
 }

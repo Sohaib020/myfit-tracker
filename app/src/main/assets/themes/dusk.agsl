@@ -1,0 +1,19 @@
+// Plum Dusk: aubergine sky melting into a rose horizon glow
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 top = float3(0.07, 0.035, 0.11);
+    float3 mid = float3(0.22, 0.07, 0.20);
+    float3 low = float3(0.55, 0.20, 0.30);
+    float3 c = mix(top, mid, smoothstep(0.0, 0.6, uv.y));
+    c = mix(c, low, smoothstep(0.6, 1.05, uv.y) * 0.75);
+    float r = length(p - float2(ar * 0.7, 1.05));
+    c += float3(1.0, 0.55, 0.55) * exp(-r * r * 4.0) * 0.30;
+    float cl = fbm3(float2(p.x * 1.5, p.y * 5.0) + 3.0);
+    c = mix(c, c * 1.25 + float3(0.05, 0.02, 0.04), smoothstep(0.55, 0.8, cl) * 0.35 * smoothstep(0.25, 0.75, uv.y));
+    float st = stars(p * 60.0, 0.05, 0.0) * (1.0 - smoothstep(0.0, 0.45, uv.y));
+    c += st * 0.35;
+    c += (hash(fc + 6.2) - 0.5) * 0.012;
+    return outc(c);
+}

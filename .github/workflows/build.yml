@@ -51,6 +51,11 @@ jobs:
           MYFIT_KEYSTORE_PASSWORD: ${{ secrets.MYFIT_KEYSTORE_PASSWORD }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
+          AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
         run: |
           set -o pipefail
           gradle assembleRelease --stacktrace 2>&1 | tee build.log || { grep -E "^e: |What went wrong|error:|Execution failed|Could not resolve|Could not find|Dependency|depends on|requires|compileSdk|AGP|minCompileSdk|> [A-Z]|\.kt:[0-9]+" build.log | grep -v "^w: " | head -120 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' | sed 's/^/::error title=Build errors::/'; exit 1; }

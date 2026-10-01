@@ -19,6 +19,11 @@ android {
         // API keys come from CI secrets (never committed); empty if not configured
         buildConfigField("String", "GEMINI_KEY", "\"" + (System.getenv("GEMINI_API_KEY") ?: "").trim() + "\"")
         buildConfigField("String", "ELEVEN_KEY", "\"" + (System.getenv("ELEVENLABS_API_KEY") ?: "").trim() + "\"")
+        buildConfigField("String", "GROQ_KEY", "\"" + (System.getenv("GROQ_API_KEY") ?: "").trim() + "\"")
+        buildConfigField("String", "OPENROUTER_KEY", "\"" + (System.getenv("OPENROUTER_API_KEY") ?: "").trim() + "\"")
+        buildConfigField("String", "MISTRAL_KEY", "\"" + (System.getenv("MISTRAL_API_KEY") ?: "").trim() + "\"")
+        buildConfigField("String", "AZURE_SPEECH_KEY", "\"" + (System.getenv("AZURE_SPEECH_KEY") ?: "").trim() + "\"")
+        buildConfigField("String", "AZURE_SPEECH_REGION", "\"" + (System.getenv("AZURE_SPEECH_REGION") ?: "").trim() + "\"")
         ndk { abiFilters += (System.getenv("MYFIT_ABIS") ?: "arm64-v8a").split(",") }
     }
 

@@ -1,0 +1,17 @@
+// Porcelain (light): cool off-white with a faint blue-lilac mesh glow
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(0.975, 0.978, 0.988), float3(0.925, 0.932, 0.955), uv.y);
+    float r1 = length(p - float2(ar * 0.05, 0.08));
+    c = mix(c, float3(0.74, 0.80, 1.0), exp(-r1 * r1 * 3.0) * 0.75);
+    float r2 = length(p - float2(ar * 1.0, 0.45));
+    c = mix(c, float3(0.88, 0.80, 1.0), exp(-r2 * r2 * 4.0) * 0.6);
+    float r3 = length(p - float2(ar * 0.35, 1.0));
+    c = mix(c, float3(0.82, 0.93, 1.0), exp(-r3 * r3 * 3.5) * 0.40);
+    float w = fbm3(p * 1.6 + 2.0);
+    c += (w - 0.5) * 0.025;
+    c += (hash(fc + 5.1) - 0.5) * 0.008;
+    return outc(c);
+}

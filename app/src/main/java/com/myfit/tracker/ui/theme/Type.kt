@@ -37,7 +37,7 @@ object FitType {
     val overline = TextStyle(fontFamily = Montserrat, fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 12.sp, letterSpacing = 1.2.sp)
 }
 
-val LocalFitTheme = staticCompositionLocalOf { Themes.Crimson }
+val LocalFitTheme = staticCompositionLocalOf { Themes.Kinetic }
 val LocalSettings = staticCompositionLocalOf { AppSettings() }
 
 @Composable

@@ -1,0 +1,18 @@
+// Evergreen: deep forest green to near-black, warm gold light from the top left
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(0.035, 0.085, 0.065), float3(0.010, 0.025, 0.020), smoothstep(0.0, 1.0, uv.y));
+    float r1 = length(p - float2(ar * 0.0, 0.0));
+    c += float3(1.0, 0.74, 0.38) * exp(-r1 * r1 * 9.0) * 0.26;
+    float r2 = length(p - float2(ar * 0.9, 0.85));
+    c += float3(0.08, 0.40, 0.28) * exp(-r2 * r2 * 3.0) * 0.20;
+    // faint leaf-vein texture
+    float w = fbm(p * 3.0 + 9.0);
+    c += float3(0.1, 0.25, 0.15) * smoothstep(0.55, 0.75, w) * 0.10;
+    float2 vv = uv - float2(0.45, 0.4);
+    c *= 1.0 - 0.6 * dot(vv, vv);
+    c += (hash(fc + 4.4) - 0.5) * 0.012;
+    return outc(c);
+}

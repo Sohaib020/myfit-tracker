@@ -92,7 +92,7 @@ fun TrainScreen(container: AppContainer, bottomPad: Int) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            Column(Modifier.statusBarsPadding().padding(top = 8.dp, end = 62.dp)) {
+            Column(Modifier.statusBarsPadding().padding(top = com.myfit.tracker.ui.components.TopBarSpace)) {
                 Text("Train", style = FitType.display, color = th.text)
                 Caption("Templates, Gym Mode and your workout history.")
             }

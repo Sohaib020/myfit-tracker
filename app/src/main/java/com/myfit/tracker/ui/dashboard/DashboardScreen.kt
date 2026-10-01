@@ -53,6 +53,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -98,17 +99,29 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = bottomPad.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item { Box(Modifier.statusBarsPadding()) { Greeting(state) } }
-        if (settings.pipEnabled) item { PipCard(state) }
-        if (DashCard.WORKOUT in cards) item { WorkoutCard(state.workout, container) }
-        item { RingsCard(state, open) }
-        if (DashCard.NUTRITION in cards) item { NutritionCard(container) }
-        if (DashCard.BODY in cards) item { BodyCard(state) { open(Sheet.Weight()) } }
-        if (DashCard.HYDRATION in cards) item { HydrationCard(state, container, open) }
-        if (DashCard.RECOVERY in cards) item { RecoveryCard(state, open) }
-        if (DashCard.STEPS in cards) item { val nav = com.myfit.tracker.ui.nav.LocalNav.current; StepsCard(state) { nav.push(com.myfit.tracker.ui.nav.Overlay.Activity) } }
-        if (DashCard.CHECKIN in cards) item { CheckInCard(state) { open(Sheet.CheckIn()) } }
-        if (DashCard.GOALS in cards) item { GoalsCard(state) }
+        item(key = "greeting") { Box(Modifier.statusBarsPadding()) { Greeting(state) } }
+        settings.dashOrder.forEach { c ->
+            if (c !in cards) return@forEach
+            when (c) {
+                DashCard.PIP -> if (settings.pipEnabled) item(key = "pip") { PipCard(state) }
+                DashCard.SNAP -> item(key = "snap") { SnapHeroCard() }
+                DashCard.WORKOUT -> item(key = "workout") { WorkoutCard(state.workout, container) }
+                DashCard.RINGS -> item(key = "rings") { RingsCard(state, open) }
+                DashCard.NUTRITION -> item(key = "nutrition") { NutritionCard(container) }
+                DashCard.BODY -> item(key = "body") { BodyCard(state) { open(Sheet.Weight()) } }
+                DashCard.HYDRATION -> item(key = "hydration") { HydrationCard(state, container, open) }
+                DashCard.RECOVERY -> item(key = "recovery") { RecoveryCard(state, open) }
+                DashCard.STEPS -> item(key = "steps") { val nav = com.myfit.tracker.ui.nav.LocalNav.current; StepsCard(state) { nav.push(com.myfit.tracker.ui.nav.Overlay.Activity) } }
+                DashCard.CHECKIN -> item(key = "checkin") { CheckInCard(state) { open(Sheet.CheckIn()) } }
+                DashCard.GOALS -> item(key = "goals") { GoalsCard(state) }
+            }
+        }
+        item(key = "arrange") {
+            val nav = com.myfit.tracker.ui.nav.LocalNav.current
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                com.myfit.tracker.ui.theme.GlassButton("Arrange cards", { nav.push(com.myfit.tracker.ui.nav.Overlay.ArrangeDash) }, icon = Duo.Tune, height = 44.dp)
+            }
+        }
     }
 }
 
@@ -120,11 +133,7 @@ private fun greetingFor(t: LocalTime) = when (t.hour) {
 private fun Greeting(s: DashState) {
     val th = LocalFitTheme.current
     val name = s.profile?.name?.substringBefore(' ') ?: ""
-    Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp, end = 62.dp), verticalAlignment = Alignment.CenterVertically) {
-        Glass(Modifier.size(48.dp), shape = CircleShape) {
-            Text(name.take(1).uppercase(), style = FitType.title, color = th.text, modifier = Modifier.align(Alignment.Center))
-        }
-        Spacer(Modifier.width(12.dp))
+    Row(Modifier.fillMaxWidth().padding(top = com.myfit.tracker.ui.components.TopBarSpace, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text("${greetingFor(LocalTime.now())}, $name", style = FitType.title, color = th.text)
             Caption(s.today.format(DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.US)))
@@ -551,6 +560,50 @@ private fun NutritionCard(c: AppContainer) {
             val meal = com.myfit.tracker.ui.food.mealForNow()
             com.myfit.tracker.ui.theme.GlassButton("Snap meal", { nav.push(com.myfit.tracker.ui.nav.Overlay.FoodPhoto(meal, key)) }, Modifier.weight(1f), icon = Duo.Camera, height = 44.dp)
             com.myfit.tracker.ui.theme.GlassButton("Log food", { nav.push(com.myfit.tracker.ui.nav.Overlay.FoodAdd(meal, key, 0)) }, Modifier.weight(1f), icon = Duo.ForkKnife, height = 44.dp)
+        }
+    }
+}
+
+/** The headline feature: a big, friendly entry point to the food camera. */
+@Composable
+private fun SnapHeroCard() {
+    val th = LocalFitTheme.current
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val pip = androidx.compose.runtime.remember {
+        runCatching { ctx.assets.open("pip/still_fuel.webp").use { android.graphics.BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
+    }
+    val go = { nav.push(com.myfit.tracker.ui.nav.Overlay.FoodPhoto(com.myfit.tracker.ui.food.mealForNow(), Clock.dateKey(Clock.today()))) }
+    Glass(Modifier.fillMaxWidth().height(206.dp), onClick = go) {
+        Canvas(Modifier.matchParentSize()) {
+            drawRect(androidx.compose.ui.graphics.Brush.radialGradient(
+                listOf(th.accent.copy(alpha = 0.38f), Color.Transparent),
+                center = androidx.compose.ui.geometry.Offset(size.width * 0.82f, size.height * 0.45f), radius = size.height * 0.95f,
+            ))
+            // viewfinder corners around Pip
+            val cx = size.width * 0.79f; val cy = size.height * 0.5f; val half = size.height * 0.36f; val arm = half * 0.32f
+            val sw = 3.dp.toPx(); val col = th.accentBright
+            listOf(-1f to -1f, 1f to -1f, -1f to 1f, 1f to 1f).forEach { (sx, sy) ->
+                val x = cx + sx * half; val y = cy + sy * half
+                drawLine(col, androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Offset(x - sx * arm, y), sw, androidx.compose.ui.graphics.StrokeCap.Round)
+                drawLine(col, androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Offset(x, y - sy * arm), sw, androidx.compose.ui.graphics.StrokeCap.Round)
+            }
+        }
+        if (pip != null) androidx.compose.foundation.Image(
+            pip, null,
+            Modifier.align(Alignment.CenterEnd).padding(end = 6.dp).size(150.dp),
+        )
+        Column(Modifier.fillMaxHeight().fillMaxWidth(0.62f).padding(18.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Column {
+                Text("AI CALORIE SCANNER", style = FitType.overline, color = th.accentBright)
+                Spacer(Modifier.height(4.dp))
+                Text("Snap a meal", style = FitType.title, color = th.text)
+                Spacer(Modifier.height(4.dp))
+                Caption("Point at your plate — Pip names each dish and counts calories & macros.")
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                com.myfit.tracker.ui.theme.AccentButton("Open camera", go, icon = Duo.Camera, height = 44.dp)
+            }
         }
     }
 }
