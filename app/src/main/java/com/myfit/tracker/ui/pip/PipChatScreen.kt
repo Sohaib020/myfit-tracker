@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui.pip
 
+import com.myfit.tracker.ui.theme.Duo
+
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

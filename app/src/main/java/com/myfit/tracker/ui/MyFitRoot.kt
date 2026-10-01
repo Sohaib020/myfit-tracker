@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui
 
+import com.myfit.tracker.ui.theme.Duo
+
 import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility

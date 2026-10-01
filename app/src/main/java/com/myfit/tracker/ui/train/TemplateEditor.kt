@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui.train
 
+import com.myfit.tracker.ui.theme.Duo
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

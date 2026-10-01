@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui.dashboard
 
+import com.myfit.tracker.ui.theme.Duo
+
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState

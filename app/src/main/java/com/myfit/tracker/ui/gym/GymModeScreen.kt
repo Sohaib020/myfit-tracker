@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui.gym
 
+import com.myfit.tracker.ui.theme.Duo
+
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.BackHandler

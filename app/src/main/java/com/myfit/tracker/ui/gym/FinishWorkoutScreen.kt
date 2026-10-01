@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui.gym
 
+import com.myfit.tracker.ui.theme.Duo
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

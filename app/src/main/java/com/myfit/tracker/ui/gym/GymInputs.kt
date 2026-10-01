@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui.gym
 
+import com.myfit.tracker.ui.theme.Duo
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn

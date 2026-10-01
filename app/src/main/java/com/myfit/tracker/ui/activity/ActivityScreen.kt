@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui.activity
 
+import com.myfit.tracker.ui.theme.Duo
+
 import android.content.Intent
 import android.net.Uri
 import android.os.Build

@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui.exercises
 
+import com.myfit.tracker.ui.theme.Duo
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

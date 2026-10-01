@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui.settings
 
+import com.myfit.tracker.ui.theme.Duo
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts

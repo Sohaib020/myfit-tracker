@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui.onboarding
 
+import com.myfit.tracker.ui.theme.Duo
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.spring

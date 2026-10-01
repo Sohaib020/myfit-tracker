@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui.dashboard
 
+import com.myfit.tracker.ui.theme.Duo
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
