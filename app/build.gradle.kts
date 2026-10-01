@@ -118,6 +118,7 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$camerax")
     implementation("androidx.camera:camera-view:$camerax")
     implementation("com.google.mlkit:image-labeling:17.0.9")
+    implementation("com.google.guava:guava:33.3.1-android")
 
     testImplementation("junit:junit:4.13.2")
 }

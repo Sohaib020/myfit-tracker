@@ -728,6 +728,7 @@ private fun HealthStatusCard(container: AppContainer) {
 }
 
 /** Backup AI services: Pip and food photos switch to these automatically when Gemini is slow or busy. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AiProvidersCard(container: AppContainer) {
     val th = LocalFitTheme.current
