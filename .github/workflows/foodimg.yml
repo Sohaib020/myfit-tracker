@@ -1,0 +1,32 @@
+name: Food images
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'tools/foodimg/**' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pillow
+      - run: python tools/foodimg/fetch.py
+      - name: Pack
+        run: |
+          cd out && zip -qr foodimg.zip foodimg && ls -la
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: foodimg-${{ github.run_number }}
+          name: Food images ${{ github.run_number }}
+          body: "Wikimedia Commons food photos (see credits.json)"
+          prerelease: true
+          files: |
+            out/foodimg.zip
+            out/contact.jpg
+            out/failed.txt
