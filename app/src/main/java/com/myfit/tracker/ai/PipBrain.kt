@@ -11,7 +11,8 @@ import kotlinx.coroutines.flow.first
  */
 class PipBrain(private val c: AppContainer) {
     private val data = DataBrain(c)
-    private val gemini = Gemini(c.app)
+    private val router get() = c.aiRouter
+    private val gemini get() = router.gemini
 
     data class Reply(
         val text: String, val source: String, val mood: PipMood, val shared: String? = null,
@@ -46,10 +47,11 @@ class PipBrain(private val c: AppContainer) {
     private suspend fun answer(q: String): Reply {
         data.answer(q)?.let { return Reply(it.text, "data", it.mood) }
         val s = c.settings.settings.first()
-        if (s.geminiKeyEff.isBlank() || !s.onlineAi) {
+        val chain = router.chain(s)
+        if (chain.isEmpty() || !s.onlineAi) {
             return Reply(
-                if (s.geminiKeyEff.isBlank()) "That one needs my online brain, which isn't set up yet 🌱 Add your Gemini key in Me → Pip. Offline I can answer things like \"How many times did I train legs this month?\", \"Average sleep last week\" or \"How much did my bench improve?\""
-                else "Online answers are switched off, and that's not something I can work out from your logs alone. You can turn online answers on in Me → Pip.",
+                if (chain.isEmpty()) "That one needs my online brain, which isn't set up yet 🌱 Add an AI key in Settings → AI. Offline I can answer things like \"How many times did I train legs this month?\", \"Average sleep last week\" or \"How much did my bench improve?\""
+                else "Online answers are switched off, and that's not something I can work out from your logs alone. You can turn online answers on in Settings → Pip.",
                 "local", PipMood.CURIOUS,
             )
         }
@@ -60,7 +62,21 @@ class PipBrain(private val c: AppContainer) {
             .takeLast(8).map { (if (it.role == "user") "user" else "model") to it.text }
         val turn = history + ("user" to "User data (only what's relevant; may be incomplete):\n$summary\n\nQuestion: $q")
         val system = Gemini.systemPrompt("Use the user's units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}.")
-        val text = generateWithFallback(s.geminiKeyEff, s.geminiModel, system, turn)
+        var firstError: PipError? = null
+        var text: String? = null
+        for (p in chain) {
+            try {
+                text = if (p.id == "gemini") generateWithFallback(p.key, s.geminiModel, system, turn, budgetMs = if (chain.size > 1) 18_000L else 45_000L)
+                else router.chatCompat(p.id, p.key, system, turn)
+                router.lastProvider = p.label
+                break
+            } catch (e: PipError) {
+                if (firstError == null) firstError = e
+            } catch (e: Exception) {
+                if (firstError == null) firstError = PipError("${p.label} couldn't answer (${AiRouter.shortMsg(e)}). Tap Try again in a moment.", true)
+            }
+        }
+        if (text == null) throw (firstError ?: PipError("No AI service answered. Tap Try again in a moment.", true))
         val (display, ur, hi) = splitSpeech(text)
         return Reply(display, "online", com.myfit.tracker.ui.pip.moodForReply(display, q), summary, ur, hi)
     }
@@ -73,7 +89,7 @@ class PipBrain(private val c: AppContainer) {
      *  - bad key / not allowed: stop and explain.
      * Remembers a new model only when the saved one is retired (a busy model stays the favourite).
      */
-    private suspend fun generateWithFallback(key: String, saved: String, system: String, turn: List<Pair<String, String>>): String {
+    private suspend fun generateWithFallback(key: String, saved: String, system: String, turn: List<Pair<String, String>>, budgetMs: Long = 45_000L): String {
         val tried = mutableSetOf<String>()
         val candidates = ArrayDeque<String>()
         if (saved.isNotBlank()) candidates.addLast(saved)
@@ -84,7 +100,7 @@ class PipBrain(private val c: AppContainer) {
         val started = System.currentTimeMillis()
         var savedRetired = saved.isBlank()
 
-        while (tried.size < 4 && System.currentTimeMillis() - started < 45_000) {
+        while (tried.size < 4 && System.currentTimeMillis() - started < budgetMs) {
             if (candidates.isEmpty()) {
                 if (listed) break
                 listed = true
@@ -134,8 +150,8 @@ class PipBrain(private val c: AppContainer) {
     }
 
     private fun friendly(e: Gemini.ApiError) = when (e.code) {
-        400 -> if (e.message?.contains("API key", true) == true) "That Gemini key looks invalid. Check it in Me → Pip." else "Gemini rejected the request: ${e.message}"
-        401, 403 -> "This Gemini key isn't allowed to be used here. If you restricted it, make sure it allows Android app com.myfit.tracker with the SHA-1 shown in Me → Pip."
+        400 -> if (e.message?.contains("API key", true) == true) "That Gemini key looks invalid. Check it in Settings → AI." else "Gemini rejected the request: ${e.message}"
+        401, 403 -> "This Gemini key isn't allowed to be used here. If you restricted it, make sure it allows Android app com.myfit.tracker with the SHA-1 shown in Settings → AI."
         429 -> "Your free Gemini quota is used up for now — try again later."
         else -> "Gemini error ${e.code}: ${e.message}"
     }

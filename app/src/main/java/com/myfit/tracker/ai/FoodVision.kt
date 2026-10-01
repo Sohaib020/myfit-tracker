@@ -14,7 +14,6 @@ import java.io.ByteArrayOutputStream
  * Every number here is an ESTIMATE; the UI labels it so and the user adjusts before saving.
  */
 class FoodVision(private val c: AppContainer) {
-    private val gemini = Gemini(c.app)
 
     data class Item(
         val name: String, val portion: String, val grams: Double,
@@ -26,34 +25,27 @@ class FoodVision(private val c: AppContainer) {
     class NotFood(msg: String) : Exception(msg)
 
     suspend fun analyze(photo: Bitmap, hint: String = ""): Result {
-        val s = c.settings.settings.first()
-        val key = s.geminiKeyEff
-        if (key.isBlank()) throw IllegalStateException("Food photos need Pip's online brain (Gemini). Add a key in Me → Pip.")
-        val jpeg = withContext(Dispatchers.Default) { compress(photo) }
+        val jpeg = withContext(Dispatchers.Default) { compress(photo, 1024f, 82) }
         val prompt = PROMPT + (if (hint.isNotBlank()) "\nUser note about this meal: $hint" else "")
-        val models = buildList { if (s.geminiModel.isNotBlank()) add(s.geminiModel); addAll(gemini.rankedModels(key)) }.distinct().take(4)
-        var last: Exception? = null
-        for (m in models) {
-            for (attempt in 0..1) {
-                try {
-                    return parse(gemini.generateVision(key, m, prompt, jpeg))
-                } catch (e: Gemini.ApiError) {
-                    last = e
-                    if (e.code in listOf(500, 502, 503, 504) && attempt == 0) { delay(1500); continue }
-                    if (e.code == 400 && e.message?.contains("API key", true) == true) throw IllegalStateException("The Gemini key isn't valid.")
-                    break
-                } catch (e: NotFood) { throw e }
-                catch (e: Exception) { last = e; break }
-            }
-        }
-        throw IllegalStateException("Couldn't analyse the photo right now (${last?.message ?: "no model available"}). Try again in a moment.")
+        return parse(c.aiRouter.vision(prompt, jpeg))
     }
 
-    private fun compress(b: Bitmap): ByteArray {
-        val max = 1024f
+    /** Quick live guess while aiming the camera: just dish names (small image, fastest provider). */
+    suspend fun quickNames(frame: Bitmap): List<String> {
+        val jpeg = withContext(Dispatchers.Default) { compress(frame, 512f, 70) }
+        val raw = c.aiRouter.vision(QUICK, jpeg, fast = true, perProviderMs = 9_000)
+        val txt = raw.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+        val o = JSONObject(txt.substring(txt.indexOf('{').coerceAtLeast(0), txt.lastIndexOf('}') + 1))
+        val arr = o.optJSONArray("foods") ?: return emptyList()
+        return (0 until arr.length()).map { arr.optString(it) }.filter { it.isNotBlank() }.take(4)
+    }
+
+    val lastProvider: String? get() = c.aiRouter.lastProvider
+
+    private fun compress(b: Bitmap, max: Float, q: Int): ByteArray {
         val sc = minOf(1f, max / maxOf(b.width, b.height))
         val img = if (sc < 1f) Bitmap.createScaledBitmap(b, (b.width * sc).toInt(), (b.height * sc).toInt(), true) else b
-        return ByteArrayOutputStream().also { img.compress(Bitmap.CompressFormat.JPEG, 82, it) }.toByteArray()
+        return ByteArrayOutputStream().also { img.compress(Bitmap.CompressFormat.JPEG, q, it) }.toByteArray()
     }
 
     private fun parse(raw: String): Result {
@@ -75,6 +67,7 @@ class FoodVision(private val c: AppContainer) {
     }
 
     companion object {
+        private const val QUICK = "Name the foods or dishes clearly visible in this photo (Pakistani / South Asian dishes by their usual names). Reply ONLY with JSON: {\"foods\": [\"name\", ...]} — at most 4, empty list if there is no food."
         private val PROMPT = """
 You are a careful nutrition estimator inside a fitness app used mostly in Pakistan.
 Look at the photo and identify every distinct food or drink item that is clearly visible.

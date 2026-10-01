@@ -23,6 +23,7 @@ import java.util.Locale
 /**
  * Pip's voice, hybrid:
  *  1. ElevenLabs (if you add a key and have credits) — most realistic, streams in ~0.3 s, speaks Urdu.
+ *  1b. Azure neural voices (free 500k characters/month) — natural English and real Urdu.
  *  2. On-device neural voice (Supertonic, after the one-time voice-pack download) — instant, free,
  *     offline; Urdu replies are spoken through its Hindustani voice.
  *  3. The phone's own text-to-speech as a last resort.
@@ -32,6 +33,8 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val pack = VoicePack(context)
     private val eleven = ElevenLabs()
+    private val azure = com.myfit.tracker.ai.voice.AzureTts()
+    @Volatile private var azureOff = false
     private var job: Job? = null
     private var player: PcmPlayer? = null
     private var tts: TextToSpeech? = null
@@ -55,7 +58,7 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
 
     fun installPack() = pack.install(scope)
 
-    fun resetEleven() { elevenOff = false; lastError.value = null }
+    fun resetEleven() { elevenOff = false; azureOff = false; lastError.value = null }
 
     suspend fun checkEleven(key: String) = eleven.check(key)
 
@@ -79,6 +82,15 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
                         if (e is ElevenLabs.Failure) {
                             lastError.value = if (e.quota) "ElevenLabs credits used up — using the on-device voice." else "ElevenLabs: ${e.message}"
                             if (e.permanent || e.quota) elevenOff = true
+                        }
+                        false
+                    }
+                }
+                if (!done && isActive && s.voiceEngine == 0 && s.azureKeyEff.isNotBlank() && s.azureRegionEff.isNotBlank() && !azureOff) {
+                    done = runCatching { viaAzure(s.azureKeyEff, s.azureRegionEff, if (urdu) clean(ur!!) else en, urdu) }.getOrElse { e ->
+                        if (e is com.myfit.tracker.ai.voice.AzureTts.Failure) {
+                            this@PipVoice.lastError.value = "Azure voice: ${e.message}"
+                            if (e.permanent || e.quota) azureOff = true
                         }
                         false
                     }
@@ -118,6 +130,16 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
         if (got == 0) { p.abort(); return false }
         p.finish()
         lastEngine.value = "ElevenLabs"
+        return true
+    }
+
+    private suspend fun viaAzure(key: String, region: String, text: String, urdu: Boolean): Boolean {
+        val p = PcmPlayer(com.myfit.tracker.ai.voice.AzureTts.RATE, level).also { player = it }
+        var got = 0
+        azure.stream(key, region, text.take(1500), urdu) { buf, n -> got += n; p.writeBytes(buf, n) }
+        if (got == 0) { p.abort(); return false }
+        p.finish()
+        lastEngine.value = "Azure"
         return true
     }
 

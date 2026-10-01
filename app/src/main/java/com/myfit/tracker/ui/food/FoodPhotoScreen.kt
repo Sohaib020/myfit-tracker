@@ -110,7 +110,6 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
     var stage by remember { mutableStateOf<Stage>(Stage.Pick) }
     var hint by remember { mutableStateOf("") }
     val items = remember { mutableStateListOf<PhotoItem>() }
-    val camUri = remember { photoUri(ctx) }
 
     fun analyse() {
         val b = photo ?: return
@@ -138,13 +137,26 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
         }
     }
 
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) load(camUri) }
-    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) load(uri) }
-    fun snap() = runCatching { camera.launch(camUri) }.onFailure { toaster.show("No camera app available") }
+    var showCamera by remember { mutableStateOf(true) }
+    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) { showCamera = false; load(uri) } }
+    val camPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        if (!ok) { showCamera = false; toaster.show("Camera not allowed — you can pick a photo from the gallery") }
+    }
+    fun snap() { showCamera = true }
     fun pick() = gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    val hasCam = com.myfit.tracker.ui.onboarding.hasPerm(ctx, android.Manifest.permission.CAMERA)
+    LaunchedEffect(showCamera) { if (showCamera && !hasCam) camPerm.launch(android.Manifest.permission.CAMERA) }
 
-    // open the camera straight away the first time
-    LaunchedEffect(Unit) { if (photo == null) snap() }
+    if (showCamera && hasCam) {
+        androidx.activity.compose.BackHandler { if (photo == null) nav.pop() else showCamera = false }
+        FoodCamera(
+            container, "${mealLabel(mealType)} · ${if (date == Clock.today()) "today" else dateKey}",
+            onCaptured = { b -> photo = b; showCamera = false; analyse() },
+            onGallery = { pick() },
+            onClose = { if (photo == null) nav.pop() else showCamera = false },
+        )
+        return
+    }
 
     Column(Modifier.fillMaxSize()) {
         OverlayTopBar("Snap a meal", { nav.pop() }, "${mealLabel(mealType)} · ${if (date == Clock.today()) "today" else dateKey}")
@@ -181,7 +193,7 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
             }
             when (val s = stage) {
                 Stage.Pick -> item {
-                    Caption("The photo is sent to Google Gemini for analysis. Results are estimates — check portions before saving.", color = th.textFaint)
+                    Caption("The photo is sent to an online AI (Gemini, or a backup service if it is busy) for analysis. Results are estimates — check portions before saving.", color = th.textFaint)
                 }
                 Stage.Working -> item {
                     Glass(Modifier.fillMaxWidth()) {
@@ -219,6 +231,7 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
                     }
                     itemsIndexed(items, key = { i, _ -> i }) { _, it -> PhotoItemRow(it) }
                     s.note?.let { n -> item { Caption("Pip: $n", color = th.textDim) } }
+                    container.aiRouter.lastProvider?.let { pv -> item { Caption("Analysed by $pv", color = th.textFaint) } }
                     item {
                         Glass(Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(16.dp)) {

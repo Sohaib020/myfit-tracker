@@ -206,6 +206,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
 
         // ---------- pip / AI
         item { PipSettingsCard(container) }
+        item { AiProvidersCard(container) }
         item { VoiceSettingsCard(container) }
 
         // ---------- gym mode
@@ -606,7 +607,7 @@ private fun VoiceSettingsCard(container: AppContainer) {
     GlassCard {
         CardHeader(Duo.AutoAwesome, "Pip's voice", th.water)
         Spacer(Modifier.height(8.dp))
-        Caption("Auto uses ElevenLabs when you add a key (most realistic, speaks Urdu), otherwise the on-device voice — instant and fully offline.")
+        Caption("Auto tries ElevenLabs (most realistic), then Azure (natural English + real Urdu, free 500k characters a month), then the on-device voice — instant and fully offline.")
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Auto", "On-device", "Phone voice").forEachIndexed { i, label ->
@@ -723,5 +724,96 @@ private fun HealthStatusCard(container: AppContainer) {
             Spacer(Modifier.height(10.dp))
             GlassButton("Allow everything", { runCatching { health.launch(hs.allPermissions) } }, icon = Duo.Check, height = 44.dp)
         }
+    }
+}
+
+/** Backup AI services: Pip and food photos switch to these automatically when Gemini is slow or busy. */
+@Composable
+private fun AiProvidersCard(container: AppContainer) {
+    val th = LocalFitTheme.current
+    val settings = LocalSettings.current
+    val toaster = LocalToaster.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val router = container.aiRouter
+    GlassCard {
+        CardHeader(Duo.Cloud, "AI services", th.water)
+        Spacer(Modifier.height(8.dp))
+        Caption("Pip's chat and food photos use the first service that answers. If one is slow, busy or out of free quota, the next one takes over automatically.")
+        Spacer(Modifier.height(10.dp))
+        Text("Try first", style = FitType.label, color = th.textDim)
+        Spacer(Modifier.height(6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("auto" to "Auto (Gemini)", "groq" to "Groq", "openrouter" to "OpenRouter", "mistral" to "Mistral").forEach { (id, label) ->
+                GlassChip(label, settings.aiPrimary == id, { container.write { container.settings.setAiPrimary(id) } })
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Caption("Groq is the fastest. Order after your pick: Gemini → Groq → OpenRouter → Mistral.", color = th.textFaint)
+        listOf(
+            Triple("groq", "Groq", settings.groqKey to com.myfit.tracker.BuildConfig.GROQ_KEY),
+            Triple("openrouter", "OpenRouter", settings.openRouterKey to com.myfit.tracker.BuildConfig.OPENROUTER_KEY),
+            Triple("mistral", "Mistral", settings.mistralKey to com.myfit.tracker.BuildConfig.MISTRAL_KEY),
+            Triple("azure", "Azure Speech (voice)", settings.azureKey to com.myfit.tracker.BuildConfig.AZURE_SPEECH_KEY),
+        ).forEach { (id, label, keys) ->
+            val (own, builtIn) = keys
+            var key by remember(own) { mutableStateOf(own) }
+            var status by remember { mutableStateOf<String?>(null) }
+            Spacer(Modifier.height(14.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(label, style = FitType.section, color = th.text, modifier = Modifier.weight(1f))
+                val active = own.isNotBlank() || builtIn.isNotBlank()
+                Text(if (own.isNotBlank()) "Your key" else if (builtIn.isNotBlank()) "Built-in ✓" else "Not set", style = FitType.caption, color = if (active) th.success else th.textFaint)
+            }
+            Spacer(Modifier.height(6.dp))
+            Glass(Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(18.dp)) {
+                Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.foundation.text.BasicTextField(
+                        key, { key = it.trim() }, singleLine = true,
+                        textStyle = FitType.body.copy(color = th.text),
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(th.accent),
+                        modifier = Modifier.weight(1f),
+                        decorationBox = { inner -> Box { if (key.isEmpty()) Text(if (builtIn.isNotBlank()) "Using built-in key" else "Paste $label key", style = FitType.body, color = th.textFaint); inner() } },
+                    )
+                    if (key != own) Text("Save", style = FitType.label, color = th.accentBright, modifier = Modifier.clickableNoRipple {
+                        container.write { container.settings.setAiKey(id, key) }
+                        if (id == "azure") container.pipVoice.resetEleven() else router.compat(id).reset()
+                        toaster.show(if (key.isBlank()) "Key removed" else "$label key saved on this phone")
+                    }.padding(6.dp))
+                }
+            }
+            if (id == "azure") {
+                var region by remember(settings.azureRegion) { mutableStateOf(settings.azureRegion) }
+                Spacer(Modifier.height(6.dp))
+                Glass(Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(18.dp)) {
+                    Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.foundation.text.BasicTextField(
+                            region, { region = it.trim().lowercase() }, singleLine = true,
+                            textStyle = FitType.body.copy(color = th.text), cursorBrush = androidx.compose.ui.graphics.SolidColor(th.accent), modifier = Modifier.weight(1f),
+                            decorationBox = { inner -> Box { if (region.isEmpty()) Text(com.myfit.tracker.BuildConfig.AZURE_SPEECH_REGION.ifBlank { "Region, e.g. centralindia" }, style = FitType.body, color = th.textFaint); inner() } },
+                        )
+                        if (region != settings.azureRegion) Text("Save", style = FitType.label, color = th.accentBright, modifier = Modifier.clickableNoRipple {
+                            container.write { container.settings.setAiKey("azure_region", region) }; container.pipVoice.resetEleven(); toaster.show("Region saved")
+                        }.padding(6.dp))
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                GlassButton("Test voice", { container.pipVoice.speak("Hi! I'm Pip. Chalo, aaj workout karte hain!", force = true) }, height = 40.dp)
+            } else {
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    GlassButton("Test", {
+                        val k = key.ifBlank { builtIn }
+                        if (k.isBlank()) { status = "Add a key first"; return@GlassButton }
+                        status = "Testing…"
+                        scope.launch { status = runCatching { "Working ✓ ${router.test(id, k)}" }.getOrElse { "Not working: ${com.myfit.tracker.ai.AiRouter.shortMsg(it)}" } }
+                    }, height = 40.dp)
+                    Spacer(Modifier.width(10.dp))
+                    status?.let { Caption(it, color = if (it.startsWith("Working")) th.success else th.textDim) }
+                }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        router.lastProvider?.let { Caption("Last answer came from $it.", color = th.textFaint) }
     }
 }
