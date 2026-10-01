@@ -151,21 +151,21 @@ fun FoodCamera(
     DisposableEffect(Unit) {
         var lastRun = 0L
         var lastLive = 0L
-        var busy = false
+        val busy = java.util.concurrent.atomic.AtomicBoolean(false)
         var prevGrid: FloatArray? = null
         var foodStreak = 0
         analysis.setAnalyzer(exec) { proxy ->
             val now = SystemClock.elapsedRealtime()
-            if (busy || now - lastRun < 450) { proxy.close(); return@setAnalyzer }
+            if (busy.get() || now - lastRun < 450) { proxy.close(); return@setAnalyzer }
             lastRun = now
             val (luma, grid) = lumaStats(proxy)
             val motion = prevGrid?.let { p -> grid.indices.sumOf { i -> abs(grid[i] - p[i]).toDouble() } / grid.size } ?: 0.0
             prevGrid = grid
             val media = proxy.image
             if (media == null) { proxy.close(); return@setAnalyzer }
-            busy = true
+            busy.set(true)
             labeler.process(InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees))
-                .addOnCompleteListener(exec) { task ->
+                .addOnCompleteListener(main) { task ->
                     val labels = if (task.isSuccessful) task.result.orEmpty() else emptyList()
                     val food = labels.filter { it.text.lowercase() in FOOD_LABELS }.maxOfOrNull { it.confidence } ?: 0f
                     val table = labels.any { it.text.lowercase() in TABLE_LABELS }
@@ -181,7 +181,7 @@ fun FoodCamera(
                     val wantLive = live && g == Guide.FOOD && foodStreak >= 2 && now - lastLive > 3500 && !liveBusy
                     val frame = if (wantLive) runCatching { rotate(proxy.toBitmap(), proxy.imageInfo.rotationDegrees) }.getOrNull() else null
                     proxy.close()
-                    busy = false
+                    busy.set(false)
                     main.execute {
                         guide = g
                         if (g != Guide.FOOD && g != Guide.SHAKY) liveNames = emptyList()
