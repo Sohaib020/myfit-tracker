@@ -188,11 +188,12 @@ fun Pip(
         val job = scope.launch {
             val d = withContext(Dispatchers.IO) { if (Build.VERSION.SDK_INT >= 28) runCatching { decode(ctx, clip) }.getOrNull() else null }
             if (!alive) return@launch
-            if (d != null && Build.VERSION.SDK_INT >= 28) {
+            if (d != null && Build.VERSION.SDK_INT >= 28 && runCatching {
                 start(d, loop = loopNow, onEnd = {
                     if (reaction == clip) reaction = null
                     else if (clip == baseAnim) baseDone = true
                 }, invalidate = { redraw++ })
+            }.isSuccess) {
                 stopClip(drawable)
                 drawable = d
             } else {
@@ -349,10 +350,11 @@ private fun decode(ctx: android.content.Context, name: String): Drawable =
 private fun start(d: Drawable, loop: Boolean, onEnd: () -> Unit, invalidate: () -> Unit) {
     if (d !is AnimatedImageDrawable) return
     d.repeatCount = if (loop) AnimatedImageDrawable.REPEAT_INFINITE else 0
+    val handler = android.os.Handler(android.os.Looper.getMainLooper())
     d.callback = object : Drawable.Callback {
         override fun invalidateDrawable(who: Drawable) = invalidate()
-        override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) {}
-        override fun unscheduleDrawable(who: Drawable, what: Runnable) {}
+        override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) { handler.postAtTime(what, who, `when`) }
+        override fun unscheduleDrawable(who: Drawable, what: Runnable) { handler.removeCallbacks(what, who) }
     }
     d.registerAnimationCallback(object : Animatable2.AnimationCallback() {
         override fun onAnimationEnd(drawable: Drawable?) { onEnd() }
