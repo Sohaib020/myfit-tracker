@@ -10,3 +10,4 @@ app/*.jks
 *.keystore
 
 app/libs/
+app/google-services.json

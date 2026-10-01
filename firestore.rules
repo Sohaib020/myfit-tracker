@@ -1,0 +1,67 @@
+rules_version = '2';
+// MyFit Tracker — paste this into Firebase console → Firestore Database → Rules → Publish.
+// Everyone can only write their own data; numbers must be within human limits.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isMe(uid) { return signedIn() && request.auth.uid == uid; }
+    function isFriend(uid) { return signedIn() && exists(/databases/$(database)/documents/users/$(uid)/friends/$(request.auth.uid)); }
+    // weekly totals: at most 7 days × (100k steps, 1,440 workout min, 150 km)
+    function saneWeek(d) {
+      return d.steps is int && d.steps >= 0 && d.steps <= 700000
+        && d.activeMin is int && d.activeMin >= 0 && d.activeMin <= 10080
+        && d.distanceM is number && d.distanceM >= 0 && d.distanceM <= 1050000
+        && d.name is string && d.name.size() <= 24;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isMe(uid) && request.resource.data.name is string && request.resource.data.name.size() <= 24;
+      allow delete: if isMe(uid);
+      match /friends/{fid} {
+        allow read: if isMe(uid);
+        // either side of a friendship may create or remove both directions
+        allow create, delete: if isMe(uid) || isMe(fid);
+      }
+    }
+
+    match /codes/{code} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /weekly/{week}/entries/{uid} {
+      allow read: if isMe(uid) || isFriend(uid);
+      allow write: if isMe(uid) && saneWeek(request.resource.data);
+      allow delete: if isMe(uid);
+    }
+
+    match /weeklyPublic/{week}/entries/{uid} {
+      allow read: if signedIn();
+      allow write: if isMe(uid) && saneWeek(request.resource.data);
+      allow delete: if isMe(uid);
+    }
+
+    match /challenges/{cid} {
+      allow read: if signedIn() && request.auth.uid in resource.data.members;
+      allow create: if signedIn() && request.resource.data.creator == request.auth.uid
+        && request.auth.uid in request.resource.data.members && request.resource.data.members.size() <= 20;
+      // members may only remove themselves
+      allow update: if signedIn() && request.auth.uid in resource.data.members
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+        && resource.data.members.removeAll(request.resource.data.members).hasOnly([request.auth.uid]);
+      allow delete: if signedIn() && resource.data.creator == request.auth.uid;
+
+      match /progress/{uid} {
+        allow read: if signedIn() && request.auth.uid in get(/databases/$(database)/documents/challenges/$(cid)).data.members;
+        allow write: if isMe(uid) && request.auth.uid in get(/databases/$(database)/documents/challenges/$(cid)).data.members
+          && request.resource.data.keys().hasAny(['steps', 'activeMin', 'distanceM'])
+          && (!('steps' in request.resource.data) || (request.resource.data.steps >= 0 && request.resource.data.steps <= 3100000))
+          && (!('activeMin' in request.resource.data) || (request.resource.data.activeMin >= 0 && request.resource.data.activeMin <= 43200))
+          && (!('distanceM' in request.resource.data) || (request.resource.data.distanceM >= 0 && request.resource.data.distanceM <= 4500000));
+      }
+    }
+  }
+}

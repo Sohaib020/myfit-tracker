@@ -29,6 +29,7 @@ class AppContainer(app: Application) {
     val healthRepo = HealthRepository(db)
     val nutritionRepo = com.myfit.tracker.data.repo.NutritionRepository(db, app)
     val aiRouter by lazy { com.myfit.tracker.ai.AiRouter(this) }
+    val social by lazy { com.myfit.tracker.social.Social(this) }
     val pipBrain by lazy { com.myfit.tracker.ai.PipBrain(this) }
     val pipVoice by lazy { com.myfit.tracker.ai.PipVoice(app, settings) }
     val app: Application = app
@@ -53,6 +54,8 @@ class MyFitApplication : Application() {
         container.write { container.exerciseRepo.seedIfNeeded() }
         container.write { container.nutritionRepo.seedIfNeeded() }
         HealthSyncWorker.schedule(this)
+        runCatching { container.social.start() }
+        container.write { runCatching { container.social.uploadNow() } }
         if (!java.io.File(filesDir, "voice/" + com.myfit.tracker.ai.voice.VoicePack.MODEL + "/.complete").exists())
             com.myfit.tracker.ai.voice.VoicePackWorker.schedule(this)
     }

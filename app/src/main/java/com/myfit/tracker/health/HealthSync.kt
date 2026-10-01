@@ -231,6 +231,55 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
         else Result(keepDays.isNotEmpty() || sessionCount > 0, "Partly synced — " + errors.joinToString("; "), keepDays.size, sessionCount, sleepCount)
     }
 
+    /** One day of activity that counts for competitions: only data a device recorded by itself. */
+    data class AutoDay(val date: LocalDate, val steps: Long, val distanceM: Double, val activeMin: Long, val workouts: Int)
+
+    /**
+     * Competition-grade numbers: steps and distance de-duplicated by Health Connect (watch + phone are not
+     * double-counted), MINUS anything typed in by hand; workout minutes only from sessions a watch or
+     * phone actually recorded. Manual entries never count, so nobody can type their way up a leaderboard.
+     */
+    suspend fun autoDays(from: LocalDate, to: LocalDate): List<AutoDay> {
+        if (!isAvailable) return emptyList()
+        val g = granted()
+        val zone = Clock.zone()
+        val start = from.atStartOfDay(zone).toInstant()
+        val end = to.plusDays(1).atStartOfDay(zone).toInstant()
+        val steps = HashMap<LocalDate, Long>(); val dist = HashMap<LocalDate, Double>()
+        if (p(StepsRecord::class) in g || p(DistanceRecord::class) in g) runCatching {
+            client.aggregateGroupByPeriod(AggregateGroupByPeriodRequest(
+                metrics = buildSet { if (p(StepsRecord::class) in g) add(StepsRecord.COUNT_TOTAL); if (p(DistanceRecord::class) in g) add(DistanceRecord.DISTANCE_TOTAL) },
+                timeRangeFilter = TimeRangeFilter.between(from.atStartOfDay(), to.plusDays(1).atStartOfDay()), timeRangeSlicer = Period.ofDays(1),
+            )).forEach { grp ->
+                val d = grp.startTime.toLocalDate()
+                grp.result[StepsRecord.COUNT_TOTAL]?.let { steps[d] = it }
+                grp.result[DistanceRecord.DISTANCE_TOTAL]?.let { dist[d] = it.inMeters }
+            }
+        }
+        // subtract hand-typed entries
+        if (p(StepsRecord::class) in g) runCatching {
+            readAll(StepsRecord::class, start, end).filter { it.metadata.recordingMethod == androidx.health.connect.client.records.metadata.Metadata.RECORDING_METHOD_MANUAL_ENTRY }
+                .forEach { r -> val d = r.startTime.atZone(zone).toLocalDate(); steps[d] = ((steps[d] ?: 0L) - r.count).coerceAtLeast(0L) }
+        }
+        if (p(DistanceRecord::class) in g) runCatching {
+            readAll(DistanceRecord::class, start, end).filter { it.metadata.recordingMethod == androidx.health.connect.client.records.metadata.Metadata.RECORDING_METHOD_MANUAL_ENTRY }
+                .forEach { r -> val d = r.startTime.atZone(zone).toLocalDate(); dist[d] = ((dist[d] ?: 0.0) - r.distance.inMeters).coerceAtLeast(0.0) }
+        }
+        val mins = HashMap<LocalDate, Long>(); val count = HashMap<LocalDate, Int>()
+        if (p(ExerciseSessionRecord::class) in g) runCatching {
+            readAll(ExerciseSessionRecord::class, start, end)
+                .filter { it.metadata.recordingMethod != androidx.health.connect.client.records.metadata.Metadata.RECORDING_METHOD_MANUAL_ENTRY && it.metadata.dataOrigin.packageName != context.packageName }
+                .forEach { s ->
+                    val d = s.startTime.atZone(zone).toLocalDate()
+                    val m = Duration.between(s.startTime, s.endTime).toMinutes().coerceIn(0, 600)
+                    mins[d] = (mins[d] ?: 0L) + m; count[d] = (count[d] ?: 0) + 1
+                }
+        }
+        return generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.map { d ->
+            AutoDay(d, steps[d] ?: 0L, dist[d] ?: 0.0, (mins[d] ?: 0L).coerceAtMost(1440), count[d] ?: 0)
+        }.toList()
+    }
+
     private suspend fun <T : Record> readAll(type: KClass<T>, start: Instant, end: Instant): List<T> {
         val out = ArrayList<T>()
         var token: String? = null

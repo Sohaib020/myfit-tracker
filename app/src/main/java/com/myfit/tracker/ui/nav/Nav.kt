@@ -18,6 +18,7 @@ sealed interface Overlay {
     data object Me : Overlay
     data object ArrangeDash : Overlay
     data object Records : Overlay
+    data object Social : Overlay
     data class Food(val date: String? = null) : Overlay
     data class FoodAdd(val mealType: String, val date: String, val tab: Int) : Overlay
     data class FoodPhoto(val mealType: String, val date: String) : Overlay

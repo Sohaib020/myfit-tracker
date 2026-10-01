@@ -335,6 +335,14 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit) {
 
             item { HealthStatusCard(container) }
             item {
+                GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Social) }) {
+                    CardHeader(Duo.Flag, "Friends & leaderboard", th.accent) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
+                    Spacer(Modifier.height(6.dp))
+                    val u = container.social.user.collectAsState().value
+                    Caption(if (u != null) "Signed in as ${u.email ?: u.displayName ?: "you"} · challenges and weekly boards." else "Sign in with Google or email to compete with friends.")
+                }
+            }
+            item {
                 GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Records) }) {
                     CardHeader(Duo.EmojiEvents, "Personal records", th.warning) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
                     Spacer(Modifier.height(6.dp))

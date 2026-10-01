@@ -88,6 +88,7 @@ class HealthSyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker
                 c.settings.setLastHealthSync(Clock.now(), r.message)
             }
         }
+        runCatching { c.social.start(); c.social.uploadNow() }
         return Result.success()
     }
 

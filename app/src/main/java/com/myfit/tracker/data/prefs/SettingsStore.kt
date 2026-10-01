@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 enum class DashCard(val label: String) {
-    PIP("Pip"), SNAP("Snap a meal"), WORKOUT("Today's workout"), RINGS("Today's rings"), NUTRITION("Food & calories"), BODY("Body weight"), HYDRATION("Hydration"), RECOVERY("Sleep & recovery"),
+    PIP("Pip"), SNAP("Snap a meal"), WORKOUT("Today's workout"), RINGS("Today's rings"), SOCIAL("Compete with friends"), NUTRITION("Food & calories"), BODY("Body weight"), HYDRATION("Hydration"), RECOVERY("Sleep & recovery"),
     STEPS("Steps & activity"), CHECKIN("Daily check-in"), GOALS("Today's goals")
 }
 

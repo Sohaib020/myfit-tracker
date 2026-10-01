@@ -193,6 +193,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
                         DashCard.STEPS -> { val nav = com.myfit.tracker.ui.nav.LocalNav.current; StepsCard(state) { nav.push(com.myfit.tracker.ui.nav.Overlay.Activity) } }
                         DashCard.CHECKIN -> CheckInCard(state) { open(Sheet.CheckIn()) }
                         DashCard.GOALS -> GoalsCard(state)
+                        DashCard.SOCIAL -> CompeteCard(container)
                     }
                 }
             }
@@ -723,6 +724,42 @@ private fun SnapHeroCard() {
                     }
                 }
                 if (pip != null) androidx.compose.foundation.Image(pip, null, Modifier.size(104.dp))
+            }
+        }
+    }
+}
+
+/** Your place on this week's friends board, or an invite to sign in. */
+@Composable
+private fun CompeteCard(container: AppContainer) {
+    val th = LocalFitTheme.current
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
+    val social = container.social
+    val user by social.user.collectAsState()
+    val board by androidx.compose.runtime.produceState<List<com.myfit.tracker.social.BoardRow>?>(null, user) {
+        value = if (user != null) runCatching { social.friendsBoard(com.myfit.tracker.social.Metric.STEPS) }.getOrNull() else null
+    }
+    GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Social) }) {
+        CardHeader(Duo.EmojiEvents, "Compete", th.warning) { Caption("This week") }
+        Spacer(Modifier.height(10.dp))
+        val b = board
+        when {
+            !social.available -> Caption("Online challenges arrive once Firebase is connected to this build.")
+            user == null -> {
+                Caption("Sign in with Google or email to race friends on steps, distance and watch-recorded workouts.")
+                Spacer(Modifier.height(10.dp))
+                com.myfit.tracker.ui.theme.AccentButton("Sign in", { nav.push(com.myfit.tracker.ui.nav.Overlay.Social) }, icon = Duo.Person, height = 44.dp)
+            }
+            b == null -> Caption("Loading…")
+            b.size <= 1 -> Caption("Add a friend with your code to start competing.")
+            else -> b.take(3).forEachIndexed { i, r ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("${i + 1}", style = FitType.label, color = th.textDim, modifier = Modifier.width(22.dp))
+                    com.myfit.tracker.ui.social.Avatar(r.name, r.color, 28)
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (r.me) "${r.name} (you)" else r.name, style = FitType.body, color = th.text, modifier = Modifier.weight(1f))
+                    Text(Fmt.int(r.value), style = FitType.section, color = th.text)
+                }
             }
         }
     }
