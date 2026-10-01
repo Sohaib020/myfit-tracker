@@ -97,6 +97,7 @@ fun PipChatScreen(container: AppContainer) {
     val online = settings.geminiKey.isNotBlank() && settings.onlineAi
 
     val speaking by container.pipVoice.speaking.collectAsState()
+    val voiceLevel by container.pipVoice.level.collectAsState()
     var typing by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(2200); if (mood == PipMood.WAVE) mood = PipMood.HAPPY }
     androidx.compose.runtime.DisposableEffect(Unit) {
@@ -138,7 +139,7 @@ fun PipChatScreen(container: AppContainer) {
         }
         // ---- big, live Pip
         Box(Modifier.fillMaxWidth().height(if (messages.isEmpty()) 250.dp else 170.dp).animateContentSize(), contentAlignment = Alignment.Center) {
-            Pip(mood, size = if (messages.isEmpty()) 230.dp else 160.dp, talking = speaking || typing, idleActions = !thinking)
+            Pip(mood, size = if (messages.isEmpty()) 230.dp else 160.dp, talking = speaking || typing, idleActions = !thinking, level = if (speaking) voiceLevel else -1f)
         }
         if (messages.isEmpty()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
