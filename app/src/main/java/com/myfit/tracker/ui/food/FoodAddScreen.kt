@@ -70,7 +70,9 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
     var mealType by remember { mutableStateOf(mealType0) }
     var tab by remember { mutableIntStateOf(if (tab0 == 2) 2 else 0) }
     var query by remember { mutableStateOf("") }
+    var cat by remember { mutableStateOf<String?>(null) }
     val results by remember(query) { container.nutritionRepo.search(query) }.collectAsState(initial = emptyList())
+    val catFoods by remember(cat) { cat?.let { container.nutritionRepo.inCategory(it) } ?: kotlinx.coroutines.flow.flowOf(emptyList()) }.collectAsState(initial = emptyList())
     val recent by container.nutritionRepo.recent.collectAsState(initial = emptyList())
     val saved by container.nutritionRepo.savedMeals.collectAsState(initial = emptyList())
     val savedSum by container.nutritionRepo.savedSummaries.collectAsState(initial = emptyList())
@@ -123,7 +125,14 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
         busy?.let { Caption(it, Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) }
         if (tab == 0) {
             Spacer(Modifier.height(10.dp))
-            GlassSearchField(query, { query = it }, "Search biryani, roti, egg, whey…", Modifier.padding(horizontal = 16.dp))
+            GlassSearchField(query, { query = it }, "Search nihari, kadhi pakora, zinger, roti…", Modifier.padding(horizontal = 16.dp))
+            if (query.isBlank()) {
+                Spacer(Modifier.height(8.dp))
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item { GlassChip("Recent", cat == null, { cat = null }) }
+                    items(container.nutritionRepo.categories) { c -> GlassChip(c, cat == c, { cat = c }) }
+                }
+            }
         }
         LazyColumn(
             Modifier.weight(1f).fillMaxWidth(),
@@ -131,9 +140,13 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (tab == 0) {
-                val list = if (query.isBlank()) recent.ifEmpty { results } else results
-                item { Text(if (query.isBlank() && recent.isNotEmpty()) "RECENT" else if (query.isBlank()) "FOODS" else "RESULTS", style = FitType.overline, color = th.textDim) }
-                items(list, key = { "f" + it.id }) { f -> FoodRow(f) { picked = f } }
+                val list = when {
+                    query.isNotBlank() -> results
+                    cat != null -> catFoods
+                    else -> recent.ifEmpty { results }
+                }
+                item { Text(when { query.isNotBlank() -> "RESULTS"; cat != null -> cat!!.uppercase() + " · ${list.size}"; recent.isNotEmpty() -> "RECENT"; else -> "FOODS" }, style = FitType.overline, color = th.textDim) }
+                items(list, key = { "f" + it.id }) { f -> FoodRow(f, container.nutritionRepo.meta(f)?.photo) { picked = f } }
                 if (query.isNotBlank() && results.isEmpty()) item {
                     Caption("No match. Try another spelling, snap a photo, or add it as a custom food.")
                 }
@@ -167,9 +180,17 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
             val byWeight = f.servingUnit == "g" || f.servingUnit == "ml"
             var amount by remember(f.id) { mutableStateOf(if (byWeight) Fmt.trim(f.servingSize, 0) else "1") }
             val q = (amount.toDoubleOrNull() ?: 0.0).let { if (byWeight) it / f.servingSize else it }
+            val meta = container.nutritionRepo.meta(f)
+            if (meta?.photo != null) {
+                FoodThumb(meta.photo, 140.dp, 24.dp, Modifier.fillMaxWidth().height(140.dp))
+                container.nutritionRepo.credit(meta.photo)?.let { cr ->
+                    Caption("Photo: ${cr.artist.ifBlank { "Wikimedia Commons" }} · ${cr.license} · Wikimedia Commons", color = th.textFaint)
+                }
+                Spacer(Modifier.height(8.dp))
+            }
             Text(f.name, style = FitType.title, color = th.text)
             Caption(listOfNotNull(f.brand, "${Fmt.int(f.calories)} kcal per ${Fmt.trim(f.servingSize, 1)} ${f.servingUnit}" + (f.servingGrams?.takeIf { !byWeight }?.let { " (~${Fmt.int(it)} g)" } ?: "")).joinToString(" · "))
-            if (f.source == NutritionSource.DATABASE) Caption("Typical values — recipes and portions vary.", color = th.textFaint)
+            if (f.source == NutritionSource.DATABASE) Caption(f.sourceRef ?: "Typical values — recipes and portions vary.", color = th.textFaint)
             Spacer(Modifier.height(12.dp))
             NumberInput(amount, { amount = it }, if (byWeight) f.servingUnit else "servings")
             Spacer(Modifier.height(10.dp))
@@ -233,10 +254,12 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
 }
 
 @Composable
-private fun FoodRow(f: Food, onClick: () -> Unit) {
+private fun FoodRow(f: Food, photo: String?, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), onClick = onClick) {
-        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(horizontal = 10.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            FoodThumb(photo, 48.dp)
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(f.name, style = FitType.body, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Caption(listOfNotNull(f.brand, "${Fmt.trim(f.servingSize, 1)} ${f.servingUnit}", "P ${Fmt.int(f.proteinG)} · C ${Fmt.int(f.carbsG)} · F ${Fmt.int(f.fatG)}").joinToString(" · "))

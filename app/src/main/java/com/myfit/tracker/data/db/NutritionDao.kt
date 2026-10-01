@@ -29,6 +29,17 @@ interface NutritionDao {
     @Query("SELECT COUNT(*) FROM food WHERE uuid LIKE 'pkfood:%'")
     suspend fun seededCount(): Int
 
+    /** Refreshes a built-in food's values when the bundled list is updated (your own foods are never touched). */
+    @Query("""UPDATE food SET name = :name, servingSize = :size, servingUnit = :unit, servingGrams = :grams, calories = :kcal,
+              proteinG = :p, carbsG = :c, fatG = :f, fiberG = :fiber, sourceRef = :ref, updatedAt = :now WHERE uuid = :uuid""")
+    suspend fun refreshSeeded(uuid: String, name: String, size: Double, unit: String, grams: Double?, kcal: Double, p: Double, c: Double, f: Double, fiber: Double?, ref: String, now: Long)
+
+    @Query("SELECT * FROM food WHERE uuid IN (:uuids) AND archivedAt IS NULL")
+    fun byUuids(uuids: List<String>): Flow<List<Food>>
+
+    @Query("SELECT * FROM food WHERE uuid LIKE 'pkfood:%' AND archivedAt IS NULL ORDER BY name")
+    fun builtIn(): Flow<List<Food>>
+
     @Query("""SELECT * FROM food WHERE archivedAt IS NULL AND (name LIKE '%' || :q || '%' OR brand LIKE '%' || :q || '%')
               ORDER BY CASE WHEN name LIKE :q || '%' THEN 0 ELSE 1 END, length(name) LIMIT 60""")
     fun search(q: String): Flow<List<Food>>

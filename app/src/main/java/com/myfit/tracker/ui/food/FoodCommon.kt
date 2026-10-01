@@ -14,6 +14,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -104,4 +109,29 @@ private fun MacroBar(label: String, v: Double, target: Double?, color: Color) {
 fun EstimateTag() {
     val th = LocalFitTheme.current
     Text("ESTIMATE", style = FitType.overline, color = th.warning, modifier = Modifier.padding(start = 6.dp))
+}
+
+/** Small in-memory cache of decoded food photos (assets/foodimg, 256 px). */
+object FoodPhotos {
+    private val cache = object : android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(60) {}
+    fun load(ctx: android.content.Context, slug: String): androidx.compose.ui.graphics.ImageBitmap? =
+        cache.get(slug) ?: runCatching {
+            ctx.assets.open("foodimg/$slug.webp").use { android.graphics.BitmapFactory.decodeStream(it) }.asImageBitmap()
+        }.getOrNull()?.also { cache.put(slug, it) }
+}
+
+/** Food photo thumbnail, or a coloured icon tile when there's no photo. */
+@Composable
+fun FoodThumb(photo: String?, size: androidx.compose.ui.unit.Dp, corner: androidx.compose.ui.unit.Dp = 14.dp, modifier: Modifier = Modifier) {
+    val th = LocalFitTheme.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val img by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, photo) {
+        value = photo?.let { p -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { FoodPhotos.load(ctx, p) } }
+    }
+    val m = if (modifier == Modifier) Modifier.size(size) else modifier
+    Box(m.clip(androidx.compose.foundation.shape.RoundedCornerShape(corner)), contentAlignment = Alignment.Center) {
+        val i = img
+        if (i != null) androidx.compose.foundation.Image(i, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+        else com.myfit.tracker.ui.components.IconBubble(com.myfit.tracker.ui.theme.Duo.ForkKnife, th.protein, size)
+    }
 }

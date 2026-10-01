@@ -13,6 +13,7 @@ import com.myfit.tracker.domain.Clock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import java.time.LocalDate
 import java.time.ZoneId
@@ -27,7 +28,35 @@ data class LogLine(
 class NutritionRepository(private val db: AppDatabase, private val context: Context) {
     private val dao = db.nutritionDao()
 
-    fun search(q: String) = dao.search(q.trim())
+    /** Extra info for built-in foods: category, search aliases, photo and how solid the numbers are. */
+    data class FoodMeta(val category: String, val aliases: List<String>, val photo: String?, val reference: Boolean)
+    data class Credit(val artist: String, val license: String, val url: String)
+
+    private val metaMap: Map<String, FoodMeta> by lazy {
+        val credits = runCatching { org.json.JSONObject(context.assets.open("foodimg/credits.json").bufferedReader().use { it.readText() }) }.getOrNull()
+        val arr = JSONArray(context.assets.open("foods_pk.json").bufferedReader().use { it.readText() })
+        (0 until arr.length()).associate { i ->
+            val o = arr.getJSONObject(i)
+            val wiki = o.optString("wiki").takeIf { it.isNotBlank() && it != "null" }
+            val slug = wiki?.lowercase()?.replace(Regex("[^a-z0-9]+"), "_")?.trim('_')
+            val al = o.optJSONArray("aliases")?.let { a -> (0 until a.length()).map { a.getString(it).lowercase() } } ?: emptyList()
+            ("pkfood:" + o.getString("id")) to FoodMeta(o.optString("category", "Basics"), al, slug?.takeIf { credits?.has(it) == true }, o.optString("basis") == "reference")
+        }
+    }
+    private val creditMap: org.json.JSONObject? by lazy { runCatching { org.json.JSONObject(context.assets.open("foodimg/credits.json").bufferedReader().use { it.readText() }) }.getOrNull() }
+
+    fun meta(f: Food): FoodMeta? = metaMap[f.uuid]
+    fun credit(slug: String): Credit? = creditMap?.optJSONObject(slug)?.let { Credit(it.optString("artist"), it.optString("license"), it.optString("url")) }
+    val categories: List<String> get() = listOf("Breakfast", "Breads", "Rice", "Curries", "Daal & Beans", "BBQ & Kebabs", "Vegetables", "Street food", "Fast food", "Restaurant", "Indian", "Sweets", "Drinks", "Fruit", "Dairy & Eggs", "Meat & Fish", "Snacks & Nuts", "Basics")
+
+    /** Name/brand search plus Roman-Urdu aliases ("kardi", "nehari", "anda"). */
+    fun search(q: String): kotlinx.coroutines.flow.Flow<List<Food>> {
+        val t = q.trim().lowercase()
+        val aliasHits = if (t.length < 2) emptyList() else metaMap.filter { (_, m) -> m.aliases.any { it.contains(t) } }.keys.toList().take(40)
+        if (aliasHits.isEmpty()) return dao.search(q.trim())
+        return kotlinx.coroutines.flow.combine(dao.search(q.trim()), dao.byUuids(aliasHits)) { a, b -> (a + b.filter { x -> a.none { it.id == x.id } }).take(80) }
+    }
+    fun inCategory(cat: String): kotlinx.coroutines.flow.Flow<List<Food>> = dao.builtIn().map { l -> l.filter { metaMap[it.uuid]?.category == cat } }
     val recent = dao.recent()
     val savedMeals = dao.savedMeals()
     val savedSummaries = dao.savedSummaries()
@@ -39,21 +68,32 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
 
     /** Seeds the built-in food list (typical values for common Pakistani dishes and staples). Idempotent. */
     suspend fun seedIfNeeded() = withContext(Dispatchers.IO) {
-        val arr = JSONArray(context.assets.open("foods_pk.json").bufferedReader().use { it.readText() })
-        if (dao.seededCount() >= arr.length()) return@withContext
+        val text = context.assets.open("foods_pk.json").bufferedReader().use { it.readText() }
+        val prefs = context.getSharedPreferences("food_seed", Context.MODE_PRIVATE)
+        val hash = text.hashCode()
+        if (prefs.getInt("hash", 0) == hash && dao.seededCount() > 0) return@withContext
+        val arr = JSONArray(text)
         val now = Clock.now()
         val foods = (0 until arr.length()).map { i ->
             val o = arr.getJSONObject(i)
+            val ref = if (o.optString("basis") == "reference") "Based on published food-composition data — recipes and portions vary"
+                      else "MyFit typical values — varies by recipe and portion"
             Food(
                 uuid = "pkfood:" + o.getString("id"), name = o.getString("name"),
                 servingSize = o.getDouble("serving"), servingUnit = o.getString("unit"), servingGrams = o.optDouble("grams").takeIf { !it.isNaN() },
                 calories = o.getDouble("kcal"), proteinG = o.getDouble("p"), carbsG = o.getDouble("c"), fatG = o.getDouble("f"),
                 fiberG = o.optDouble("fiber").takeIf { !it.isNaN() },
-                source = NutritionSource.DATABASE, sourceRef = "MyFit typical values — varies by recipe and portion",
+                source = NutritionSource.DATABASE, sourceRef = ref,
                 createdAt = now, updatedAt = now,
             )
         }
-        dao.insertFoods(foods)
+        db.withTransaction {
+            dao.insertFoods(foods)       // new items
+            foods.forEach { f ->         // updated values for items that already existed (logged meals keep their own copy)
+                dao.refreshSeeded(f.uuid, f.name, f.servingSize, f.servingUnit, f.servingGrams, f.calories, f.proteinG, f.carbsG, f.fatG, f.fiberG, f.sourceRef ?: "", now)
+            }
+        }
+        prefs.edit().putInt("hash", hash).apply()
     }
 
     suspend fun addFood(f: Food): Long = dao.insertFood(f)
