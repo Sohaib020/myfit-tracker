@@ -248,7 +248,7 @@ fun BodyScreen(container: AppContainer, open: (Sheet) -> Unit) {
 
     if (addPhoto) AddPhotoSheet(container, days.lastOrNull()?.second?.weightKg) { addPhoto = false }
     compare?.let { (a, b) -> CompareSheet(container, photos, a, b, { compare = null }) }
-    viewPhoto?.let { p -> ViewPhotoSheet(container, p, onCompare = { other -> viewPhoto = null; compare = other to p }, onClose = { viewPhoto = null }, all = photos) }
+    viewPhoto?.let { p -> ViewPhotoSheet(container, p, onCompare = { other -> viewPhoto = null; compare = if (other.takenAt <= p.takenAt) other to p else p to other }, onClose = { viewPhoto = null }, all = photos) }
 }
 
 @Composable
@@ -323,7 +323,7 @@ private fun PhotoThumb(container: AppContainer, p: ProgressPhoto, modifier: Modi
     }
 }
 
-/** Copies a picked/captured image into private storage, downscaled to ≤ 1600 px and orientation-corrected. */
+/** Copies a picked/captured image into private storage, downscaled to ≤ 1600 px (orientation-corrected on Android 9+). */
 private fun importPhoto(ctx: android.content.Context, uri: Uri): String? = runCatching {
     val bmp: Bitmap = if (android.os.Build.VERSION.SDK_INT >= 28) {
         android.graphics.ImageDecoder.decodeBitmap(android.graphics.ImageDecoder.createSource(ctx.contentResolver, uri)) { d, info, _ ->
@@ -359,7 +359,8 @@ private fun AddPhotoSheet(container: AppContainer, weightKg: Double?, close: () 
     }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) save(camUri) }
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) save(uri) }
-    val camPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> if (ok) camera.launch(camUri) else toaster.show("Camera not allowed — use the gallery") }
+    fun shoot() { try { camera.launch(camUri) } catch (e: Exception) { toaster.show("No camera app found — use the gallery") } }
+    val camPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> if (ok) shoot() else toaster.show("Camera not allowed — use the gallery") }
     GlassSheet(visible = true, onDismiss = close) {
         Text("Add progress photo", style = FitType.title, color = th.text)
         Spacer(Modifier.height(10.dp))
@@ -370,7 +371,7 @@ private fun AddPhotoSheet(container: AppContainer, weightKg: Double?, close: () 
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             AccentButton("Camera", {
-                if (com.myfit.tracker.ui.onboarding.hasPerm(ctx, android.Manifest.permission.CAMERA)) camera.launch(camUri) else camPerm.launch(android.Manifest.permission.CAMERA)
+                if (com.myfit.tracker.ui.onboarding.hasPerm(ctx, android.Manifest.permission.CAMERA)) shoot() else camPerm.launch(android.Manifest.permission.CAMERA)
             }, Modifier.weight(1f), icon = Duo.Camera, height = 48.dp)
             GlassButton("Gallery", { gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, Modifier.weight(1f), icon = Duo.Images, height = 48.dp)
         }

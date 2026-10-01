@@ -100,11 +100,14 @@ class Social(private val c: AppContainer) {
     /** Deletes your public data and account. */
     suspend fun deleteAccount() {
         val u = auth.currentUser ?: return
+        val last = u.metadata?.lastSignInTimestamp ?: 0L
+        if (System.currentTimeMillis() - last > 5 * 60_000L) throw IllegalStateException("For safety, sign out and sign in again, then delete within 5 minutes.")
         val p = profile()
         runCatching { db.collection("weeklyPublic").document(weekKey()).collection("entries").document(u.uid).delete().await() }
         runCatching { db.collection("weekly").document(weekKey()).collection("entries").document(u.uid).delete().await() }
         runCatching { friends().forEach { removeFriend(it.uid) } }
-        p?.code?.let { runCatching { db.collection("codes").document(it).delete().await() } }
+        p?.code?.takeIf { it.isNotBlank() }?.let { runCatching { db.collection("codes").document(it).delete().await() } }
+        runCatching { db.collection("users").document(u.uid).collection("private").document("me").delete().await() }
         runCatching { db.collection("users").document(u.uid).delete().await() }
         u.delete().await()
     }
@@ -121,26 +124,41 @@ class Social(private val c: AppContainer) {
         val u = auth.currentUser ?: return null
         val ref = db.collection("users").document(u.uid)
         val snap = ref.get().await()
-        if (snap.exists()) return toProfile(u.uid, snap.data ?: emptyMap())
+        if (snap.exists()) return toProfile(u.uid, snap.data ?: emptyMap(), myCode())
         var code = newCode()
         repeat(5) { if (db.collection("codes").document(code).get().await().exists()) code = newCode() }
         val localName = runCatching { c.profileRepo.profile.firstOrNull()?.name }.getOrNull()
         val name = (nameHint ?: u.displayName ?: localName ?: u.email?.substringBefore('@') ?: "Athlete").take(24)
         val color = listOf(0xFFFF7A1AL, 0xFF4C8DFFL, 0xFF2FD37AL, 0xFFB57CFFL, 0xFFFF4F86L, 0xFFFFC857L).random()
-        val data = mapOf("name" to name, "code" to code, "public" to true, "color" to color, "createdAt" to FieldValue.serverTimestamp())
+        val data = mapOf("name" to name, "public" to true, "color" to color, "createdAt" to FieldValue.serverTimestamp())
         ref.set(data).await()
         db.collection("codes").document(code).set(mapOf("uid" to u.uid)).await()
+        ref.collection("private").document("me").set(mapOf("code" to code)).await()
         return Profile(u.uid, name, code, true, color)
     }
 
-    private fun toProfile(uid: String, m: Map<String, Any?>) = Profile(
-        uid, (m["name"] as? String) ?: "Athlete", (m["code"] as? String) ?: "", (m["public"] as? Boolean) ?: true, (m["color"] as? Number)?.toLong() ?: 0xFFFF7A1AL,
+    private fun toProfile(uid: String, m: Map<String, Any?>, code: String = "") = Profile(
+        uid, (m["name"] as? String) ?: "Athlete", code, (m["public"] as? Boolean) ?: true, (m["color"] as? Number)?.toLong() ?: 0xFFFF7A1AL,
     )
 
+    /** Your own friend code (kept in a private document only you can read). */
+    private suspend fun myCode(): String {
+        val u = auth.currentUser ?: return ""
+        val priv = db.collection("users").document(u.uid).collection("private").document("me")
+        priv.get().await().getString("code")?.let { return it }
+        // first run after the code moved to the private doc: make a new one
+        var code = newCode()
+        repeat(5) { if (db.collection("codes").document(code).get().await().exists()) code = newCode() }
+        db.collection("codes").document(code).set(mapOf("uid" to u.uid)).await()
+        priv.set(mapOf("code" to code)).await()
+        return code
+    }
+
     suspend fun profile(uid: String? = null): Profile? {
-        val id = uid ?: auth.currentUser?.uid ?: return null
+        val me = auth.currentUser?.uid
+        val id = uid ?: me ?: return null
         val s = db.collection("users").document(id).get().await()
-        return if (s.exists()) toProfile(id, s.data ?: emptyMap()) else null
+        return if (s.exists()) toProfile(id, s.data ?: emptyMap(), if (id == me) myCode() else "") else null
     }
 
     suspend fun updateProfile(name: String? = null, isPublic: Boolean? = null) {
@@ -160,7 +178,7 @@ class Social(private val c: AppContainer) {
         if (owner == u.uid) throw IllegalArgumentException("That's your own code")
         val now = FieldValue.serverTimestamp()
         db.collection("users").document(u.uid).collection("friends").document(owner).set(mapOf("since" to now)).await()
-        db.collection("users").document(owner).collection("friends").document(u.uid).set(mapOf("since" to now)).await()
+        db.collection("users").document(owner).collection("friends").document(u.uid).set(mapOf("since" to now, "code" to c2)).await()
         return profile(owner) ?: Profile(owner, "Friend", c2, false, 0xFF4C8DFFL)
     }
 
@@ -220,10 +238,15 @@ class Social(private val c: AppContainer) {
 
     suspend fun myChallenges(): List<Challenge> {
         val me = auth.currentUser?.uid ?: return emptyList()
+        val friendIds = runCatching { db.collection("users").document(me).collection("friends").get().await().documents.map { it.id }.toSet() }.getOrDefault(emptySet())
         return db.collection("challenges").whereArrayContains("members", me).get().await().documents.mapNotNull { d ->
             val m = Metric.entries.firstOrNull { it.key == d.getString("metric") } ?: return@mapNotNull null
+            val start = d.getString("start")?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return@mapNotNull null
+            val end = d.getString("end")?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return@mapNotNull null
+            val creator = d.getString("creator") ?: return@mapNotNull null
+            if (creator != me && creator !in friendIds) return@mapNotNull null   // only challenges from you or your friends
             @Suppress("UNCHECKED_CAST")
-            Challenge(d.id, d.getString("title") ?: "", m, d.getString("start") ?: "", d.getString("end") ?: "", d.getString("creator") ?: "", (d.get("members") as? List<String>) ?: emptyList())
+            Challenge(d.id, d.getString("title") ?: "", m, start.toString(), end.toString(), creator, ((d.get("members") as? List<*>)?.filterIsInstance<String>()) ?: emptyList())
         }.sortedByDescending { it.end }
     }
 

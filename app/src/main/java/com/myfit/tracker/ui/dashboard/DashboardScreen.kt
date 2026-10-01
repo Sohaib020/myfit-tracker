@@ -104,8 +104,9 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
     val tick = com.myfit.tracker.ui.theme.rememberTick()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     // local copy so cards can move live while you drag; saved when you let go
-    var order by androidx.compose.runtime.remember(settings.dashOrder) { androidx.compose.runtime.mutableStateOf(settings.dashOrder) }
+    var order by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(settings.dashOrder) }
     var dragKey by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<DashCard?>(null) }
+    androidx.compose.runtime.LaunchedEffect(settings.dashOrder) { if (dragKey == null) order = settings.dashOrder }
     var dragDy by androidx.compose.runtime.remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     var hinted by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 

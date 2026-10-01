@@ -302,7 +302,7 @@ private fun SignedIn(container: AppContainer) {
                 else if (cs.isEmpty()) item { Caption("No challenges yet. Start one with your friends — steps this weekend, workout minutes this month…") }
                 else cs.forEach { ch ->
                     item(key = ch.id) {
-                        val ended = java.time.LocalDate.parse(ch.end).isBefore(com.myfit.tracker.domain.Clock.today())
+                        val ended = runCatching { java.time.LocalDate.parse(ch.end).isBefore(com.myfit.tracker.domain.Clock.today()) }.getOrDefault(false)
                         Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), onClick = { openChallenge = ch }) {
                             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 IconBubble(Duo.Flag, if (ended) th.textDim else th.accent, 40.dp)
@@ -357,7 +357,7 @@ private fun SignedIn(container: AppContainer) {
                                     Spacer(Modifier.width(10.dp))
                                     Text(f.name, style = FitType.section, color = th.text, modifier = Modifier.weight(1f))
                                     Text("Remove", style = FitType.caption, color = th.textDim, modifier = Modifier.clickableNoRipple {
-                                        scope.launch { social.removeFriend(f.uid); refresh++ }
+                                        scope.launch { runCatching { social.removeFriend(f.uid) }; refresh++ }
                                     }.padding(6.dp))
                                 }
                             }
@@ -382,11 +382,11 @@ private fun SignedIn(container: AppContainer) {
                         Field(name, { name = it.take(24) }, "Display name")
                         if (p != null && name.isNotBlank() && name != p.name) {
                             Spacer(Modifier.height(8.dp))
-                            GlassButton("Save name", { scope.launch { social.updateProfile(name = name); refresh++; toaster.show("Name saved") } }, height = 44.dp)
+                            GlassButton("Save name", { scope.launch { runCatching { social.updateProfile(name = name) }.onSuccess { refresh++; toaster.show("Name saved") }.onFailure { toaster.show("Couldn't save — check your connection") } } }, height = 44.dp)
                         }
                         Spacer(Modifier.height(6.dp))
                         if (p != null) ToggleRow("Show me on the global leaderboard", "Only your display name and weekly totals. Friends always see you.", p.isPublic) { v ->
-                            scope.launch { social.updateProfile(isPublic = v); refresh++ }
+                            scope.launch { runCatching { social.updateProfile(isPublic = v) }.onFailure { toaster.show("Couldn't update — check your connection") }; refresh++ }
                         }
                     }
                 }
@@ -398,7 +398,7 @@ private fun SignedIn(container: AppContainer) {
                             if (!confirm) confirm = true
                             else scope.launch {
                                 runCatching { social.deleteAccount() }.onSuccess { toaster.show("Online account deleted — your logs on this phone are untouched") }
-                                    .onFailure { toaster.show("Please sign in again, then delete (Google requires a recent sign-in)") }
+                                    .onFailure { toaster.show(it.message ?: "Please sign in again, then delete") }
                             }
                         }.padding(8.dp))
                 }

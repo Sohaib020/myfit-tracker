@@ -88,7 +88,8 @@ class HealthSyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker
                 c.settings.setLastHealthSync(Clock.now(), r.message)
             }
         }
-        runCatching { c.social.start(); c.social.uploadNow() }
+        // background reads need the background permission; otherwise wait until the app is opened
+        runCatching { if (c.healthSync.backgroundPermission in c.healthSync.granted()) { c.social.start(); c.social.uploadNow() } }
         return Result.success()
     }
 

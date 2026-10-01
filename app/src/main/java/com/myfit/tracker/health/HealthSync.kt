@@ -245,8 +245,9 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
         val zone = Clock.zone()
         val start = from.atStartOfDay(zone).toInstant()
         val end = to.plusDays(1).atStartOfDay(zone).toInstant()
+        if (p(StepsRecord::class) !in g) return emptyList()     // nothing trustworthy to report
         val steps = HashMap<LocalDate, Long>(); val dist = HashMap<LocalDate, Double>()
-        if (p(StepsRecord::class) in g || p(DistanceRecord::class) in g) runCatching {
+        runCatching {
             client.aggregateGroupByPeriod(AggregateGroupByPeriodRequest(
                 metrics = buildSet { if (p(StepsRecord::class) in g) add(StepsRecord.COUNT_TOTAL); if (p(DistanceRecord::class) in g) add(DistanceRecord.DISTANCE_TOTAL) },
                 timeRangeFilter = TimeRangeFilter.between(from.atStartOfDay(), to.plusDays(1).atStartOfDay()), timeRangeSlicer = Period.ofDays(1),
@@ -255,7 +256,7 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
                 grp.result[StepsRecord.COUNT_TOTAL]?.let { steps[d] = it }
                 grp.result[DistanceRecord.DISTANCE_TOTAL]?.let { dist[d] = it.inMeters }
             }
-        }
+        }.onFailure { return emptyList() }     // never upload zeros because a read failed
         // subtract hand-typed entries
         if (p(StepsRecord::class) in g) runCatching {
             readAll(StepsRecord::class, start, end).filter { it.metadata.recordingMethod == androidx.health.connect.client.records.metadata.Metadata.RECORDING_METHOD_MANUAL_ENTRY }
