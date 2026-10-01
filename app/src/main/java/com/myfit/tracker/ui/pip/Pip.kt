@@ -338,8 +338,20 @@ fun Pip(
     }
 }
 
+/** End-callbacks of clips that were replaced; muted so a late "animation ended" can't act on the new clip. */
+private val clipCallbacks = java.util.WeakHashMap<Drawable, ClipCallback>()
+
+private class ClipCallback(val onEnd: () -> Unit) : Animatable2.AnimationCallback() {
+    @Volatile var active = true
+    override fun onAnimationEnd(drawable: Drawable?) { if (active) onEnd() }
+}
+
 private fun stopClip(d: Drawable?) {
-    if (Build.VERSION.SDK_INT >= 28) (d as? AnimatedImageDrawable)?.let { it.stop(); it.clearAnimationCallbacks(); it.callback = null }
+    if (d == null || Build.VERSION.SDK_INT < 28) return
+    // NB: never call clearAnimationCallbacks() — Android posts the end event and then reads the
+    // callback list, which clearAnimationCallbacks() sets to null (crash on Android 14–16).
+    clipCallbacks.remove(d)?.active = false
+    (d as? AnimatedImageDrawable)?.let { runCatching { it.stop() } }
 }
 
 @RequiresApi(28)
@@ -356,9 +368,9 @@ private fun start(d: Drawable, loop: Boolean, onEnd: () -> Unit, invalidate: () 
         override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) { handler.postAtTime(what, who, `when`) }
         override fun unscheduleDrawable(who: Drawable, what: Runnable) { handler.removeCallbacks(what, who) }
     }
-    d.registerAnimationCallback(object : Animatable2.AnimationCallback() {
-        override fun onAnimationEnd(drawable: Drawable?) { onEnd() }
-    })
+    val cb = ClipCallback(onEnd)
+    clipCallbacks[d] = cb
+    d.registerAnimationCallback(cb)
     d.start()
 }
 
