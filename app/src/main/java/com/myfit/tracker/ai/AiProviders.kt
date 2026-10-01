@@ -28,7 +28,7 @@ class OpenAiCompat(val id: String, val label: String, private val base: String, 
     private fun open(path: String, key: String, method: String, timeout: Int): HttpURLConnection =
         (URL(base + path).openConnection() as HttpURLConnection).apply {
             requestMethod = method
-            connectTimeout = 10_000
+            connectTimeout = minOf(10_000, timeout)
             readTimeout = timeout
             setRequestProperty("Authorization", "Bearer $key")
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
@@ -206,6 +206,10 @@ class AiRouter(private val c: AppContainer) {
                 }
                 lastProvider = p.label
                 return out
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                errors += "${p.label}: too slow"
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 errors += "${p.label}: ${shortMsg(e)}"
             }

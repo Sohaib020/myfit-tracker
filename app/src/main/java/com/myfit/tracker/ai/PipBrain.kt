@@ -72,6 +72,8 @@ class PipBrain(private val c: AppContainer) {
                 break
             } catch (e: PipError) {
                 if (firstError == null) firstError = e
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                if (e is kotlinx.coroutines.TimeoutCancellationException) { if (firstError == null) firstError = PipError("${p.label} was too slow. Tap Try again.", true) } else throw e
             } catch (e: Exception) {
                 if (firstError == null) firstError = PipError("${p.label} couldn't answer (${AiRouter.shortMsg(e)}). Tap Try again in a moment.", true)
             }

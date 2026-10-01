@@ -88,6 +88,7 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
                 }
                 if (!done && isActive && s.voiceEngine == 0 && s.azureKeyEff.isNotBlank() && s.azureRegionEff.isNotBlank() && !azureOff) {
                     done = runCatching { viaAzure(s.azureKeyEff, s.azureRegionEff, if (urdu) clean(ur!!) else en, urdu) }.getOrElse { e ->
+                        if (e is java.net.UnknownHostException) azureOff = true
                         if (e is com.myfit.tracker.ai.voice.AzureTts.Failure) {
                             this@PipVoice.lastError.value = "Azure voice: ${e.message}"
                             if (e.permanent || e.quota) azureOff = true
@@ -126,7 +127,11 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
     private suspend fun viaEleven(key: String, text: String, urdu: Boolean): Boolean {
         val p = PcmPlayer(ElevenLabs.RATE, level).also { player = it }
         var got = 0
-        eleven.stream(key, text.take(1200), urdu) { buf, n -> got += n; p.writeBytes(buf, n) }
+        try {
+            eleven.stream(key, text.take(1200), urdu) { buf, n -> got += n; p.writeBytes(buf, n) }
+        } catch (e: Throwable) {
+            if (got == 0) { p.abort(); throw e }   // nothing played yet → let the next engine speak
+        }
         if (got == 0) { p.abort(); return false }
         p.finish()
         lastEngine.value = "ElevenLabs"
@@ -136,7 +141,11 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
     private suspend fun viaAzure(key: String, region: String, text: String, urdu: Boolean): Boolean {
         val p = PcmPlayer(com.myfit.tracker.ai.voice.AzureTts.RATE, level).also { player = it }
         var got = 0
-        azure.stream(key, region, text.take(1500), urdu) { buf, n -> got += n; p.writeBytes(buf, n) }
+        try {
+            azure.stream(key, region, text.take(1500), urdu) { buf, n -> got += n; p.writeBytes(buf, n) }
+        } catch (e: Throwable) {
+            if (got == 0) { p.abort(); throw e }
+        }
         if (got == 0) { p.abort(); return false }
         p.finish()
         lastEngine.value = "Azure"

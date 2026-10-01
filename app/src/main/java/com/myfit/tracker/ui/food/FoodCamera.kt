@@ -202,7 +202,9 @@ fun FoodCamera(
         }
         val future = ProcessCameraProvider.getInstance(ctx)
         var provider: ProcessCameraProvider? = null
+        var disposed = false
         future.addListener({
+            if (disposed) return@addListener
             runCatching {
                 val p = future.get().also { provider = it }
                 val pv = Preview.Builder().setResolutionSelector(selector).build().also { it.setSurfaceProvider(preview.surfaceProvider) }
@@ -211,6 +213,7 @@ fun FoodCamera(
             }
         }, main)
         onDispose {
+            disposed = true
             analysis.clearAnalyzer()
             runCatching { provider?.unbindAll() }
             exec.shutdown()

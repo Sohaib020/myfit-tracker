@@ -111,17 +111,21 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
     var hint by remember { mutableStateOf("") }
     val items = remember { mutableStateListOf<PhotoItem>() }
 
+    var job by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     fun analyse() {
         val b = photo ?: return
+        job?.cancel()
         stage = Stage.Working
         items.clear()
-        scope.launch {
+        job = scope.launch {
             stage = try {
                 val r = FoodVision(container).analyze(b, hint)
                 items.addAll(r.items.map { PhotoItem(it) })
                 Stage.Done(r.note)
             } catch (e: FoodVision.NotFood) {
                 Stage.Failed(e.message ?: "No food found", true)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Stage.Failed(e.message ?: "Something went wrong", false)
             }
@@ -139,13 +143,15 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
 
     var showCamera by remember { mutableStateOf(true) }
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) { showCamera = false; load(uri) } }
+    var hasCam by remember { mutableStateOf(com.myfit.tracker.ui.onboarding.hasPerm(ctx, android.Manifest.permission.CAMERA)) }
     val camPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-        if (!ok) { showCamera = false; toaster.show("Camera not allowed — you can pick a photo from the gallery") }
+        hasCam = ok
+        if (ok) showCamera = true
+        else { showCamera = false; toaster.show("Camera not allowed — you can pick a photo from the gallery") }
     }
-    fun snap() { showCamera = true }
+    fun snap() { if (hasCam) showCamera = true else camPerm.launch(android.Manifest.permission.CAMERA) }
     fun pick() = gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-    val hasCam = com.myfit.tracker.ui.onboarding.hasPerm(ctx, android.Manifest.permission.CAMERA)
-    LaunchedEffect(showCamera) { if (showCamera && !hasCam) camPerm.launch(android.Manifest.permission.CAMERA) }
+    LaunchedEffect(Unit) { if (!hasCam) camPerm.launch(android.Manifest.permission.CAMERA) }
 
     if (showCamera && hasCam) {
         androidx.activity.compose.BackHandler { if (photo == null) nav.pop() else showCamera = false }
@@ -316,11 +322,6 @@ private fun PhotoItemRow(it: PhotoItem) {
     }
 }
 
-private fun photoUri(ctx: Context): Uri {
-    val dir = File(ctx.cacheDir, "photos").apply { mkdirs() }
-    val f = File(dir, "meal.jpg")
-    return FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f)
-}
 
 /** Decodes at a sensible size (≤ ~1600 px) with orientation applied. */
 private fun decode(ctx: Context, uri: Uri): Bitmap {
@@ -336,5 +337,14 @@ private fun decode(ctx: Context, uri: Uri): Bitmap {
     ctx.contentResolver.openInputStream(uri)!!.use { BitmapFactory.decodeStream(it, null, bounds) }
     var sample = 1
     while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= 1200) sample *= 2
-    return ctx.contentResolver.openInputStream(uri)!!.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }!!
+    val bmp = ctx.contentResolver.openInputStream(uri)!!.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }!!
+    val deg = runCatching {
+        ctx.contentResolver.openInputStream(uri)!!.use {
+            when (android.media.ExifInterface(it).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1)) {
+                android.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90; android.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                android.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270; else -> 0
+            }
+        }
+    }.getOrDefault(0)
+    return if (deg == 0) bmp else Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, android.graphics.Matrix().apply { postRotate(deg.toFloat()) }, true)
 }

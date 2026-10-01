@@ -100,6 +100,7 @@ fun ArrangeDashScreen(container: AppContainer) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             order.forEachIndexed { i, c ->
+              androidx.compose.runtime.key(c) {
                 val dragging = i == dragIdx
                 val on = if (c == DashCard.PIP) pipOn && c in shown else c in shown
                 Glass(
@@ -152,6 +153,7 @@ fun ArrangeDashScreen(container: AppContainer) {
                         )
                     }
                 }
+              }
             }
             Spacer(Modifier.height(4.dp))
             Caption("Reset puts every card back in the default order.", Modifier.padding(horizontal = 4.dp))

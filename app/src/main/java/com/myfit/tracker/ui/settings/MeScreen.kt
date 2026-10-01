@@ -723,13 +723,15 @@ private fun HealthStatusCard(container: AppContainer) {
         }
         Spacer(Modifier.height(8.dp))
         Caption(when {
-            !hs.isAvailable -> "Health Connect isn't available on this phone — steps come from the phone sensor."
+            !hs.isAvailable -> "Health Connect isn't available on this phone — steps come from the phone sensor." + if (!allRuntime) " Some phone permissions are still off." else ""
             allHc && allRuntime -> "Everything is connected. Data syncs by itself every 30 minutes" + (settings.lastHealthSync?.let { " · last ${Clock.localDateOf(it)}" } ?: "") + "."
             else -> "Some data isn't allowed yet, so it can't sync automatically."
         })
-        if (hs.isAvailable && !(allHc && allRuntime)) {
+        if (!(allHc && allRuntime) && (hs.isAvailable || !allRuntime)) {
             Spacer(Modifier.height(10.dp))
-            GlassButton("Allow everything", { runCatching { health.launch(hs.allPermissions) } }, icon = Duo.Check, height = 44.dp)
+            GlassButton("Allow everything", {
+                if (hs.isAvailable) runCatching { health.launch(hs.allPermissions) } else runtime.launch(com.myfit.tracker.ui.onboarding.runtimePermissions())
+            }, icon = Duo.Check, height = 44.dp)
         }
     }
 }

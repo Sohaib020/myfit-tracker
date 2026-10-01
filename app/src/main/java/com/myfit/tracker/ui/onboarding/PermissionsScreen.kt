@@ -79,7 +79,10 @@ fun PermissionsScreen(container: AppContainer) {
     var hcGranted by remember { mutableStateOf<Set<String>>(emptySet()) }
     var refresh by remember { mutableIntStateOf(0) }
 
+    var finishing by remember { mutableStateOf(false) }
     fun finish() {
+        if (finishing) return
+        finishing = true
         scope.launch {
             runCatching { PhoneSteps.snapshot(ctx, container.db) }
             if (hcGranted.any { it in hs.dataPermissions }) {
