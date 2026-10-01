@@ -70,7 +70,7 @@ fun GlassCard(
     padding: Dp = 18.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Glass(modifier, onClick = onClick) {
+    Glass(modifier.fillMaxWidth(), onClick = onClick) {
         Column(Modifier.padding(padding), content = content)
     }
 }

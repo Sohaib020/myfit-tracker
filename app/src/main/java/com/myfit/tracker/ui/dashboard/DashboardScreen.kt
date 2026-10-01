@@ -53,6 +53,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -94,33 +100,146 @@ import kotlin.math.sin
 fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
     val settings = LocalSettings.current
     val cards = settings.dashCards
+    val toaster = com.myfit.tracker.ui.components.LocalToaster.current
+    val tick = com.myfit.tracker.ui.theme.rememberTick()
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    // local copy so cards can move live while you drag; saved when you let go
+    var order by androidx.compose.runtime.remember(settings.dashOrder) { androidx.compose.runtime.mutableStateOf(settings.dashOrder) }
+    var dragKey by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<DashCard?>(null) }
+    var dragDy by androidx.compose.runtime.remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    var hinted by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    fun keyOf(c: DashCard) = "card_" + c.name
+    fun onDrag(dy: Float) {
+        val dk = dragKey ?: return
+        dragDy += dy
+        val info = listState.layoutInfo
+        val cur = info.visibleItemsInfo.firstOrNull { it.key == keyOf(dk) } ?: return
+        // auto-scroll near the top / bottom edge
+        val top = cur.offset + dragDy
+        val bottom = top + cur.size
+        val edge = 120f
+        val scroll = when {
+            top < info.viewportStartOffset + edge -> -18f
+            bottom > info.viewportEndOffset - edge -> 18f
+            else -> 0f
+        }
+        if (scroll != 0f) { val used = listState.dispatchRawDelta(scroll); dragDy += used }
+        val center = cur.offset + dragDy + cur.size / 2f
+        val target = info.visibleItemsInfo.firstOrNull { t ->
+            val k = t.key as? String ?: return@firstOrNull false
+            k.startsWith("card_") && k != keyOf(dk) && center > t.offset && center < t.offset + t.size
+        } ?: return
+        val tc = runCatching { DashCard.valueOf((target.key as String).removePrefix("card_")) }.getOrNull() ?: return
+        val list = order.toMutableList()
+        val from = list.indexOf(dk); val to = list.indexOf(tc)
+        if (from < 0 || to < 0) return
+        list.removeAt(from); list.add(to, dk)
+        order = list
+        val newOffset = if (to > from) target.offset + target.size - cur.size else target.offset
+        dragDy -= (newOffset - cur.offset)
+        tick()
+    }
+
+    @Composable
+    fun Modifier.movable(c: DashCard): Modifier {
+        val dragging = dragKey == c
+        return this
+            .zIndex(if (dragging) 1f else 0f)
+            .graphicsLayer {
+                if (dragging) { translationY = dragDy; scaleX = 1.03f; scaleY = 1.03f; shadowElevation = 28f; shape = RoundedCornerShape(28.dp); clip = false }
+            }
+            .pointerInput(c) {
+                detectLongPressDrag(
+                    onStart = {
+                        tick(); dragKey = c; dragDy = 0f
+                        if (!hinted) { hinted = true; toaster.show("Drag to move the card · let go to drop") }
+                    },
+                    onDrag = { onDrag(it) },
+                    onEnd = {
+                        if (dragKey != null) {
+                            dragKey = null; dragDy = 0f
+                            val o = order
+                            container.write { container.settings.setDashOrder(o) }
+                        }
+                    },
+                )
+            }
+    }
+
     LazyColumn(
         Modifier.fillMaxSize(),
+        state = listState,
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = bottomPad.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item(key = "greeting") { Box(Modifier.statusBarsPadding()) { Greeting(state) } }
-        settings.dashOrder.forEach { c ->
+        order.forEach { c ->
             if (c !in cards) return@forEach
-            when (c) {
-                DashCard.PIP -> if (settings.pipEnabled) item(key = "pip") { PipCard(state) }
-                DashCard.SNAP -> item(key = "snap") { SnapHeroCard() }
-                DashCard.WORKOUT -> item(key = "workout") { WorkoutCard(state.workout, container) }
-                DashCard.RINGS -> item(key = "rings") { RingsCard(state, open) }
-                DashCard.NUTRITION -> item(key = "nutrition") { NutritionCard(container) }
-                DashCard.BODY -> item(key = "body") { BodyCard(state) { open(Sheet.Weight()) } }
-                DashCard.HYDRATION -> item(key = "hydration") { HydrationCard(state, container, open) }
-                DashCard.RECOVERY -> item(key = "recovery") { RecoveryCard(state, open) }
-                DashCard.STEPS -> item(key = "steps") { val nav = com.myfit.tracker.ui.nav.LocalNav.current; StepsCard(state) { nav.push(com.myfit.tracker.ui.nav.Overlay.Activity) } }
-                DashCard.CHECKIN -> item(key = "checkin") { CheckInCard(state) { open(Sheet.CheckIn()) } }
-                DashCard.GOALS -> item(key = "goals") { GoalsCard(state) }
+            if (c == DashCard.PIP && !settings.pipEnabled) return@forEach
+            item(key = keyOf(c)) {
+                val place: androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset>? =
+                    if (dragKey == c) null else androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow, visibilityThreshold = androidx.compose.ui.unit.IntOffset.VisibilityThreshold)
+                Box(Modifier.animateItem(placementSpec = place).movable(c)) {
+                    when (c) {
+                        DashCard.PIP -> PipCard(state)
+                        DashCard.SNAP -> SnapHeroCard()
+                        DashCard.WORKOUT -> WorkoutCard(state.workout, container)
+                        DashCard.RINGS -> RingsCard(state, open)
+                        DashCard.NUTRITION -> NutritionCard(container)
+                        DashCard.BODY -> BodyCard(state) { open(Sheet.Weight()) }
+                        DashCard.HYDRATION -> HydrationCard(state, container, open)
+                        DashCard.RECOVERY -> RecoveryCard(state, open)
+                        DashCard.STEPS -> { val nav = com.myfit.tracker.ui.nav.LocalNav.current; StepsCard(state) { nav.push(com.myfit.tracker.ui.nav.Overlay.Activity) } }
+                        DashCard.CHECKIN -> CheckInCard(state) { open(Sheet.CheckIn()) }
+                        DashCard.GOALS -> GoalsCard(state)
+                    }
+                }
             }
         }
         item(key = "arrange") {
             val nav = com.myfit.tracker.ui.nav.LocalNav.current
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                com.myfit.tracker.ui.theme.GlassButton("Arrange cards", { nav.push(com.myfit.tracker.ui.nav.Overlay.ArrangeDash) }, icon = Duo.Tune, height = 44.dp)
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Caption("Tip: long-press any card and drag to move it.")
+                Spacer(Modifier.height(8.dp))
+                com.myfit.tracker.ui.theme.GlassButton("Show / hide cards", { nav.push(com.myfit.tracker.ui.nav.Overlay.ArrangeDash) }, icon = Duo.Tune, height = 44.dp)
             }
+        }
+    }
+}
+
+/**
+ * Long-press then drag, detected in the Initial pass so it works on top of cards full of buttons.
+ * A normal tap or scroll (movement before the long-press timeout) is left untouched.
+ */
+private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.detectLongPressDrag(
+    onStart: () -> Unit, onDrag: (Float) -> Unit, onEnd: () -> Unit,
+) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+        val slop = viewConfiguration.touchSlop
+        val early = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+            while (true) {
+                val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                val ch = ev.changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull true
+                if (!ch.pressed || ch.isConsumed) return@withTimeoutOrNull true
+                if ((ch.position - down.position).getDistance() > slop) return@withTimeoutOrNull true
+            }
+            @Suppress("UNREACHABLE_CODE") true
+        }
+        if (early != null) return@awaitEachGesture
+        onStart()
+        try {
+            while (true) {
+                val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                val dy = ch.position.y - ch.previousPosition.y
+                ch.consume()
+                if (!ch.pressed) break
+                onDrag(dy)
+            }
+        } finally {
+            onEnd()
         }
     }
 }
@@ -553,7 +672,7 @@ private fun NutritionCard(c: AppContainer) {
             com.myfit.tracker.domain.Targets.on(targets, com.myfit.tracker.data.db.TargetType.PROTEIN_G, today),
             com.myfit.tracker.domain.Targets.on(targets, com.myfit.tracker.data.db.TargetType.CARBS_G, today),
             com.myfit.tracker.domain.Targets.on(targets, com.myfit.tracker.data.db.TargetType.FAT_G, today),
-            ringSize = 96,
+            ringSize = 104,
         )
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -574,35 +693,36 @@ private fun SnapHeroCard() {
         runCatching { ctx.assets.open("pip/still_fuel.webp").use { android.graphics.BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
     }
     val go = { nav.push(com.myfit.tracker.ui.nav.Overlay.FoodPhoto(com.myfit.tracker.ui.food.mealForNow(), Clock.dateKey(Clock.today()))) }
-    Glass(Modifier.fillMaxWidth().height(206.dp), onClick = go) {
+    Glass(Modifier.fillMaxWidth(), onClick = go) {
         Canvas(Modifier.matchParentSize()) {
             drawRect(androidx.compose.ui.graphics.Brush.radialGradient(
-                listOf(th.accent.copy(alpha = 0.38f), Color.Transparent),
-                center = androidx.compose.ui.geometry.Offset(size.width * 0.82f, size.height * 0.45f), radius = size.height * 0.95f,
+                listOf(th.accent.copy(alpha = 0.30f), Color.Transparent),
+                center = androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height * 0.5f), radius = size.height * 0.9f,
             ))
-            // viewfinder corners around Pip
-            val cx = size.width * 0.79f; val cy = size.height * 0.5f; val half = size.height * 0.36f; val arm = half * 0.32f
-            val sw = 3.dp.toPx(); val col = th.accentBright
-            listOf(-1f to -1f, 1f to -1f, -1f to 1f, 1f to 1f).forEach { (sx, sy) ->
-                val x = cx + sx * half; val y = cy + sy * half
-                drawLine(col, androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Offset(x - sx * arm, y), sw, androidx.compose.ui.graphics.StrokeCap.Round)
-                drawLine(col, androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Offset(x, y - sy * arm), sw, androidx.compose.ui.graphics.StrokeCap.Round)
-            }
         }
-        if (pip != null) androidx.compose.foundation.Image(
-            pip, null,
-            Modifier.align(Alignment.CenterEnd).padding(end = 6.dp).size(150.dp),
-        )
-        Column(Modifier.fillMaxHeight().fillMaxWidth(0.62f).padding(18.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Column {
+        Row(Modifier.fillMaxWidth().padding(start = 18.dp, top = 18.dp, bottom = 18.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
                 Text("AI CALORIE SCANNER", style = FitType.overline, color = th.accentBright)
                 Spacer(Modifier.height(4.dp))
                 Text("Snap a meal", style = FitType.title, color = th.text)
                 Spacer(Modifier.height(4.dp))
                 Caption("Point at your plate — Pip names each dish and counts calories & macros.")
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.height(14.dp))
                 com.myfit.tracker.ui.theme.AccentButton("Open camera", go, icon = Duo.Camera, height = 44.dp)
+            }
+            Spacer(Modifier.width(10.dp))
+            Box(Modifier.size(120.dp), contentAlignment = Alignment.Center) {
+                Canvas(Modifier.matchParentSize()) {
+                    // viewfinder corners framing Pip
+                    val arm = size.width * 0.18f; val sw = 3.dp.toPx(); val col = th.accentBright; val i = sw
+                    listOf(0f to 0f, 1f to 0f, 0f to 1f, 1f to 1f).forEach { (fx, fy) ->
+                        val x = if (fx == 0f) i else size.width - i; val y = if (fy == 0f) i else size.height - i
+                        val dx = if (fx == 0f) arm else -arm; val dy = if (fy == 0f) arm else -arm
+                        drawLine(col, androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Offset(x + dx, y), sw, androidx.compose.ui.graphics.StrokeCap.Round)
+                        drawLine(col, androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Offset(x, y + dy), sw, androidx.compose.ui.graphics.StrokeCap.Round)
+                    }
+                }
+                if (pip != null) androidx.compose.foundation.Image(pip, null, Modifier.size(104.dp))
             }
         }
     }

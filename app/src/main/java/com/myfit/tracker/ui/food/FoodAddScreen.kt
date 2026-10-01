@@ -111,9 +111,9 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
         }
         Spacer(Modifier.height(10.dp))
         Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GlassButton("Photo", { nav.replace(Overlay.FoodPhoto(mealType, dateKey)) }, Modifier.weight(1f), icon = Duo.Camera, height = 46.dp)
-            GlassButton("Barcode", { scan() }, Modifier.weight(1f), icon = Duo.Barcode, height = 46.dp)
-            GlassButton("Custom", { custom = "" }, Modifier.weight(1f), icon = Duo.Add, height = 46.dp)
+            ActionTile("Snap photo", Duo.Camera, th.protein, Modifier.weight(1f)) { nav.replace(Overlay.FoodPhoto(mealType, dateKey)) }
+            ActionTile("Scan barcode", Duo.Barcode, th.carbs, Modifier.weight(1f)) { scan() }
+            ActionTile("Add your own", Duo.Add, th.fat, Modifier.weight(1f)) { custom = "" }
         }
         Spacer(Modifier.height(10.dp))
         Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -243,6 +243,18 @@ private fun FoodRow(f: Food, onClick: () -> Unit) {
             }
             Text(Fmt.int(f.calories), style = FitType.section, color = th.text)
             Text(" kcal", style = FitType.caption, color = th.textDim)
+        }
+    }
+}
+
+@Composable
+private fun ActionTile(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: androidx.compose.ui.graphics.Color, modifier: Modifier, onClick: () -> Unit) {
+    val th = LocalFitTheme.current
+    Glass(modifier.height(84.dp), shape = RoundedCornerShape(22.dp), onClick = onClick, pressScale = 0.94f) {
+        Column(Modifier.align(Alignment.Center).padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            com.myfit.tracker.ui.components.IconBubble(icon, color, 34.dp)
+            Spacer(Modifier.height(6.dp))
+            Text(label, style = FitType.caption, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
