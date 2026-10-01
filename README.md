@@ -23,15 +23,16 @@ key every time, so a new build installs over the old one and keeps your data.
 | 2 | Gym Mode (fast set logging, pre-fill, previous/best, rest timer, supersets, stopwatch), templates, repeat workout, history with corrections, 876-exercise photo library + custom exercises | ✅ |
 | 2.5 | Health Connect (Samsung Health / Galaxy Watch) steps, sessions, sleep, HR; phone step sensor; Pip chat (offline data answers + Gemini); liquid-glass refraction engine | ✅ |
 | 2.6 | Pip v4 — 3D plush rendered in Blender (18 animations + lip-sync frames); hybrid voice (ElevenLabs streaming → on-device Supertonic neural voice → phone TTS) with Urdu; 21 GPU-shader animated themes; heat fixes (one shared blur per frame, 30 fps Balanced motion); archive screen; new icon | ✅ |
-| 3 | Progression graphs, PR detection & PR history | next |
+| 2.7 | Static themes (Kinetic + 9 new), Me/Settings split, arrangeable dashboard, food camera with on-device guidance + live AI, backup AIs (Groq / OpenRouter / Mistral), Azure voice, first-launch permissions, Health Connect weight/body fat/water | ✅ |
+| 3 | Progression graphs, PR detection & PR history | ✅ |
 | 4 | Weight & measurement analytics, progress photos | |
-| 5 | Nutrition, food database (incl. Pakistani foods), saved meals, barcode | |
+| 5 | Nutrition, food database (incl. Pakistani foods), saved meals, barcode | ✅ |
 | 6 | Supplements, fasting timer, Health Connect | |
 | 7 | Reminders & notifications | |
 | 8 | Analysis & charts | |
 | 9 | Reports: PDF / CSV / JSON | |
 | 10 | Backup & restore | |
-| 11 | Voice logging, camera calorie estimates | |
+| 11 | Voice logging, camera calorie estimates (camera ✅) | |
 | 12 | Widgets, app lock, plate calculator, polish & testing | |
 
 ## Signing (one-time setup)
