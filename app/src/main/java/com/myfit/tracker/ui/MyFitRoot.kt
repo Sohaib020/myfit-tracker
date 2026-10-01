@@ -50,6 +50,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import com.myfit.tracker.ui.theme.drawBaked
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.clickable
@@ -180,7 +182,7 @@ fun MyFitRoot(container: AppContainer) {
                 Canvas(Modifier.fillMaxSize()) {
                     val img = backdrop.bgImg
                     if (!gentle) {
-                        if (img != null) com.myfit.tracker.ui.theme.drawBaked(img, size)
+                        if (img != null) drawBaked(img, size)
                         else drawBackdrop(backdrop.theme, backdrop.image, theme.stillT, size.width, size.height)
                         return@Canvas
                     }
@@ -291,7 +293,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                     Canvas(Modifier.fillMaxSize()) {
                         val l = backdrop.layer
                         val bi = backdrop.bgImg
-                        if (bi != null) com.myfit.tracker.ui.theme.drawBaked(bi, size)
+                        if (bi != null) drawBaked(bi, size)
                         else if (l != null) drawLayer(l)
                         else drawBackdrop(backdrop.theme, backdrop.image, backdrop.time.floatValue, size.width, size.height)
                     }
