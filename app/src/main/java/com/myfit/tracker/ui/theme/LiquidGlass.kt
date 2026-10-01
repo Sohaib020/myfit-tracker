@@ -67,7 +67,7 @@ half4 main(float2 coord) {
         shaderObj: Any?, w: Float, h: Float, cornerPx: Float, blurPx: Float,
         bezelPx: Float, strengthPx: Float, dispersion: Float, highlight: Float,
     ): RenderEffect? {
-        if (w < 2f || h < 2f) return null
+        if (w < 2f || h < 2f || com.myfit.tracker.CrashGuard.safeMode) return null
         if (supported && shaderObj != null) {
             return runCatching { build(shaderObj as RuntimeShader, w, h, cornerPx, blurPx, bezelPx, strengthPx, dispersion, highlight) }.getOrNull()
         }

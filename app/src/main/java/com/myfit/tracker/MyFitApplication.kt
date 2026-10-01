@@ -43,6 +43,8 @@ class MyFitApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CrashGuard.install(this)
+        CrashGuard.loadSafe(this)
         container = AppContainer(this)
         com.myfit.tracker.ui.theme.ThemeShaders.init(this)
         // Bundled exercise catalogue — idempotent, runs off the main thread.

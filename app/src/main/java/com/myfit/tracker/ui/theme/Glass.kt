@@ -50,7 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-val realBlurSupported: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+val realBlurSupported: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !com.myfit.tracker.CrashGuard.safeMode
 
 /** Haptic tick that respects the user's setting. */
 @Composable

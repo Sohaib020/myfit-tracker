@@ -24,7 +24,7 @@ object ThemeShaders {
 
     /** Draws the theme shader; returns false if unavailable so the caller can use the static art. */
     fun draw(scope: DrawScope, themeId: String, t: Float, w: Float, h: Float): Boolean {
-        if (!supported || themeId in failed) return false
+        if (!supported || themeId in failed || com.myfit.tracker.CrashGuard.safeMode) return false
         return runCatching { drawImpl(scope, themeId, t, w, h) }.getOrElse { failed += themeId; false }
     }
 

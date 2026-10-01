@@ -164,7 +164,7 @@ fun MyFitRoot(container: AppContainer) {
                     bgLayer.record { drawBackdrop(backdrop.theme, backdrop.image, t, size.width, size.height) }
                     drawLayer(bgLayer)
                     // one blur per frame, shared by every glass card (Android 12+)
-                    if (android.os.Build.VERSION.SDK_INT >= 31) {
+                    if (android.os.Build.VERSION.SDK_INT >= 31 && !com.myfit.tracker.CrashGuard.safeMode) {
                         blurLayer.renderEffect = if (blurPx > 0.5f) androidx.compose.ui.graphics.BlurEffect(blurPx, blurPx, androidx.compose.ui.graphics.TileMode.Clamp) else null
                         blurLayer.record { drawLayer(bgLayer) }
                     }
