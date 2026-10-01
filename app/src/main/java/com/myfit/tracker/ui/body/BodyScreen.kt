@@ -418,10 +418,11 @@ private fun CompareSheet(container: AppContainer, all: List<ProgressPhoto>, a0: 
         Text("Compare", style = FitType.title, color = th.text)
         Spacer(Modifier.height(8.dp))
         BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(0.75f).clip(RoundedCornerShape(20.dp))) {
-            val wPx = with(LocalDensity.current) { maxWidth.toPx() }
+            val fullW = maxWidth
+            val wPx = with(LocalDensity.current) { fullW.toPx() }
             if (ib != null) Image(ib, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Box(Modifier.fillMaxHeight().fillMaxWidth(split.coerceIn(0.02f, 0.98f)).clip(RoundedCornerShape(0.dp))) {
-                if (ia != null) Image(ia, null, Modifier.wrapContentWidth(Alignment.Start, unbounded = true).width(maxWidth).fillMaxHeight(), contentScale = ContentScale.Crop)
+                if (ia != null) Image(ia, null, Modifier.wrapContentWidth(Alignment.Start, unbounded = true).width(fullW).fillMaxHeight(), contentScale = ContentScale.Crop)
             }
             Canvas(Modifier.fillMaxSize().pointerInput(Unit) {
                 detectDragGestures { ch, d -> ch.consume(); split = (split + d.x / wPx).coerceIn(0f, 1f) }
@@ -438,9 +439,10 @@ private fun CompareSheet(container: AppContainer, all: List<ProgressPhoto>, a0: 
         val dA = LocalDate.parse(a.localDate); val dB = LocalDate.parse(b.localDate)
         val daysBetween = abs(java.time.temporal.ChronoUnit.DAYS.between(dA, dB))
         Text("${dA.format(dFmt)} → ${dB.format(dFmt)} · $daysBetween days", style = FitType.section, color = th.text)
-        if (a.weightKg != null && b.weightKg != null) {
-            val ch = b.weightKg - a.weightKg
-            Caption("Weight then ${Fmt.weight(a.weightKg, u.weight, 1)} → ${Fmt.weight(b.weightKg, u.weight, 1)} (" + (if (ch >= 0) "+" else "−") + Fmt.weight(abs(ch), u.weight, 1) + ")")
+        val wa = a.weightKg; val wb = b.weightKg
+        if (wa != null && wb != null) {
+            val ch = wb - wa
+            Caption("Weight then ${Fmt.weight(wa, u.weight, 1)} → ${Fmt.weight(wb, u.weight, 1)} (" + (if (ch >= 0) "+" else "−") + Fmt.weight(abs(ch), u.weight, 1) + ")")
         }
         Spacer(Modifier.height(10.dp))
         Text("Before", style = FitType.label, color = th.textDim)
