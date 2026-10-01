@@ -1,0 +1,30 @@
+// Coastline: bright sky with drifting clouds, layered green hills, glittering sea
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float3 sky = mix(float3(0.55, 0.82, 0.95), float3(0.85, 0.94, 0.93), uv.y * 1.6);
+    float3 c = sky;
+    // clouds
+    float cl = fbm(float2(uv.x * ar * 2.2 + t * 0.012, uv.y * 4.0));
+    c = mix(c, float3(1.0), smoothstep(0.52, 0.8, cl) * (1.0 - smoothstep(0.25, 0.5, uv.y)) * 0.9);
+    // sea band
+    float sea = 0.42;
+    if (uv.y > sea) {
+        float3 water = mix(float3(0.12, 0.62, 0.66), float3(0.04, 0.36, 0.42), (uv.y - sea) * 3.0);
+        float gl = noise(float2(uv.x * 120.0, uv.y * 300.0 - t * 2.0));
+        water += float3(1.0) * smoothstep(0.93, 1.0, gl) * 0.5 * (1.0 - (uv.y - sea) * 2.5);
+        c = water;
+    }
+    // hills (three layers, front-most darker), gentle parallax sway of the grass tone
+    for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        float base = 0.6 + fi * 0.1;
+        float hgt = base - 0.05 * sin(uv.x * (3.0 + fi) + fi * 1.7) - 0.035 * fbm3(float2(uv.x * 4.0 + fi * 10.0, fi));
+        float3 g = mix(float3(0.44, 0.72, 0.27), float3(0.13, 0.36, 0.12), fi / 2.0);
+        g += 0.04 * (fbm3(float2(uv.x * 12.0 + t * 0.15, uv.y * 30.0 + fi)) - 0.5);
+        if (uv.y > hgt) c = mix(g * (0.95 + 0.1 * fbm3(uv * float2(30.0, 60.0) + fi)), g * 0.7, (uv.y - hgt) * 1.5);
+    }
+    // sun glow
+    c += float3(1.0, 0.95, 0.75) * exp(-length((uv - float2(0.8, 0.08)) * float2(ar, 1.0)) * 6.0) * 0.6;
+    return outc(c);
+}

@@ -148,7 +148,6 @@ fun LiquidTabBar(
                             val lx = dockPos.value.x + insetPx + itemWPx * pos.value
                             val ly = dockPos.value.y + insetPx
                             val mag = 1.18f + 0.22f * p.coerceIn(0f, 1f)
-                            backdrop.time.floatValue
                             scale(mag, pivot = Offset(size.width / 2, size.height / 2)) {
                                 translate(-lx, -ly) {
                                     val bl = backdrop.layer
@@ -229,7 +228,7 @@ fun LiquidTabBar(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        val tint = lerpColor(th.textDim, if (th.isLight) th.accent else Color.White, closeness)
+                        val tint = lerpColor(th.text.copy(alpha = 0.86f), if (th.isLight) th.accent else Color.White, closeness)
                         val lift = pop.value.coerceIn(0f, 1f) * closeness
                         Icon(item.icon, item.label, tint = tint, modifier = Modifier.size(26.dp).graphicsLayer {
                             val s = 1f + 0.12f * closeness + 0.22f * lift

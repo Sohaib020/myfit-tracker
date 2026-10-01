@@ -1,16 +1,18 @@
 package com.myfit.tracker.ai
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import com.myfit.tracker.ai.voice.ElevenLabs
+import com.myfit.tracker.ai.voice.PcmPlayer
+import com.myfit.tracker.ai.voice.VoicePack
 import com.myfit.tracker.data.prefs.SettingsStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -19,121 +21,165 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 /**
- * Pip's voice. Realistic Gemini speech (bright, youthful "Leda" voice) when online voice is on and a
- * key is set — only the reply text is sent. Otherwise, or if that fails, the phone's own
- * text-to-speech with a slightly raised pitch. [speaking] drives Pip's lip-sync.
+ * Pip's voice, hybrid:
+ *  1. ElevenLabs (if you add a key and have credits) — most realistic, streams in ~0.3 s, speaks Urdu.
+ *  2. On-device neural voice (Supertonic, after the one-time voice-pack download) — instant, free,
+ *     offline; Urdu replies are spoken through its Hindustani voice.
+ *  3. The phone's own text-to-speech as a last resort.
+ * Only the reply text ever leaves the phone, and only for option 1.
  */
 class PipVoice(private val context: Context, private val settings: SettingsStore) {
-    private val gemini = Gemini(context)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val pack = VoicePack(context)
+    private val eleven = ElevenLabs()
     private var job: Job? = null
-    private var track: AudioTrack? = null
+    private var player: PcmPlayer? = null
     private var tts: TextToSpeech? = null
     private var ttsReady = false
-    private var ttsModel: String? = null
-    private var onlineBroken = false
+    /** ElevenLabs disabled for this app session after a permanent/quota error. */
+    @Volatile private var elevenOff = false
 
     private val _speaking = MutableStateFlow(false)
     val speaking: StateFlow<Boolean> = _speaking
+    /** 0..1 loudness of what's playing — drives Pip's mouth. */
+    val level = MutableStateFlow(0f)
+    /** Which engine spoke last ("ElevenLabs", "On-device", "Phone voice") — shown in settings. */
+    val lastEngine = MutableStateFlow<String?>(null)
+    val lastError = MutableStateFlow<String?>(null)
 
-    fun speak(raw: String) {
+    /** Warm up the on-device engine while the chat is open, so the first reply is instant. */
+    fun prepare() { scope.launch { if (pack.ready) pack.engine() } }
+
+    /** Free the on-device engine's memory when the chat closes. */
+    fun release() { stop(); scope.launch { pack.release() } }
+
+    fun installPack() = pack.install(scope)
+
+    fun resetEleven() { elevenOff = false; lastError.value = null }
+
+    suspend fun checkEleven(key: String) = eleven.check(key)
+
+    /**
+     * @param text what's shown (English or Roman Urdu)
+     * @param ur same reply in Urdu script (speech only), [hi] in Devanagari (speech only)
+     */
+    fun speak(text: String, ur: String? = null, hi: String? = null, force: Boolean = false) {
         stop()
-        val text = clean(raw)
-        if (text.isBlank()) return
+        val en = clean(text)
+        if (en.isBlank()) return
         job = scope.launch {
             val s = settings.settings.first()
-            if (!s.pipVoice) return@launch
+            if (!s.pipVoice && !force) return@launch
             _speaking.value = true
-            val done = if (s.pipVoiceOnline && s.geminiKey.isNotBlank() && s.onlineAi && !onlineBroken) {
-                runCatching { speakOnline(s.geminiKey, text.take(900)) }.getOrElse { e ->
-                    if (e is Gemini.ApiError && e.code in listOf(400, 401, 403, 404)) onlineBroken = true
-                    false
+            run {
+                val urdu = ur != null
+                var done = false
+                if (s.voiceEngine == 0 && s.elevenKey.isNotBlank() && !elevenOff) {
+                    done = runCatching { viaEleven(s.elevenKey, if (urdu) clean(ur!!) else en, urdu) }.getOrElse { e ->
+                        if (e is ElevenLabs.Failure) {
+                            lastError.value = if (e.quota) "ElevenLabs credits used up — using the on-device voice." else "ElevenLabs: ${e.message}"
+                            if (e.permanent || e.quota) elevenOff = true
+                        }
+                        false
+                    }
                 }
-            } else false
-            if (!done && isActive) speakLocal(text) else _speaking.value = false
+                if (!done && isActive && s.voiceEngine != 2 && pack.ready) {
+                    val (txt, lang) = when {
+                        hi != null -> clean(hi) to "hi"
+                        urdu -> "" to "ur"          // no Devanagari copy → phone voice handles Urdu
+                        else -> en to "en"
+                    }
+                    if (txt.isNotBlank()) done = runCatching { viaOnDevice(txt, lang) }.getOrDefault(false)
+                }
+                if (!done && isActive) {
+                    viaPhone(if (urdu) clean(ur!!) else en, urdu)
+                    return@launch        // phone engine reports its own speaking state
+                }
+            }
+            _speaking.value = false
+            level.value = 0f
         }
     }
 
     fun stop() {
         job?.cancel(); job = null
-        runCatching { track?.pause(); track?.flush(); track?.release() }
-        track = null
+        player?.abort(); player = null
         runCatching { tts?.stop() }
         _speaking.value = false
+        level.value = 0f
     }
 
-    private suspend fun speakOnline(key: String, text: String): Boolean {
-        val model = ttsModel ?: gemini.ttsModels(key).firstOrNull()?.also { ttsModel = it } ?: return false
-        val (pcm, rate) = gemini.speak(key, model, text, VOICE, "Say in a bright, cheerful, youthful and friendly voice, like an upbeat cartoon buddy")
-        if (!scope.isActive || pcm.isEmpty()) return false
-        val minBuf = AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
-        val t = AudioTrack.Builder()
-            .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
-            .setAudioFormat(AudioFormat.Builder().setSampleRate(rate).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
-            .setBufferSizeInBytes(maxOf(minBuf, 8192) * 2)
-            .setTransferMode(AudioTrack.MODE_STREAM)
-            .build()
-        track = t
-        t.play()
-        var off = 0
-        val chunk = 4096
-        while (off < pcm.size) {
-            if (job?.isActive == false || track !== t) return true
-            val n = t.write(pcm, off, minOf(chunk, pcm.size - off))
-            if (n <= 0) break
-            off += n
-        }
-        // wait for the buffer to drain, then finish
-        val frames = pcm.size / 2
-        while (track === t && runCatching { t.playbackHeadPosition }.getOrDefault(frames) < frames && job?.isActive != false) {
-            kotlinx.coroutines.delay(40)
-        }
-        if (track === t) { runCatching { t.stop(); t.release() }; track = null }
-        _speaking.value = false
+    // ---------------------------------------------------------------- engines
+
+    private suspend fun viaEleven(key: String, text: String, urdu: Boolean): Boolean {
+        val p = PcmPlayer(ElevenLabs.RATE, level).also { player = it }
+        var got = 0
+        eleven.stream(key, text.take(1200), urdu) { buf, n -> got += n; p.writeBytes(buf, n) }
+        if (got == 0) { p.abort(); return false }
+        p.finish()
+        lastEngine.value = "ElevenLabs"
         return true
     }
 
-    private fun speakLocal(text: String) {
+    /** Sentence-by-sentence: the next sentence is synthesised while the current one plays. */
+    private suspend fun viaOnDevice(text: String, lang: String): Boolean {
+        val engine = pack.engine() ?: return false
+        val parts = sentences(text)
+        if (parts.isEmpty()) return false
+        val ch = Channel<FloatArray>(capacity = 2)
+        var rate = 44_100
+        val first = pack.synth(engine, parts[0], lang).also { rate = it.second }.first
+        val p = PcmPlayer(rate, level).also { player = it }
+        val producer = scope.launch {
+            try {
+                for (i in 1 until parts.size) { if (!isActive) break; ch.send(pack.synth(engine, parts[i], lang).first) }
+            } finally { ch.close() }
+        }
+        try {
+            p.writeFloats(first)
+            for (chunk in ch) { if (p.aborted) break; p.writeFloats(chunk) }
+            p.finish()
+        } finally {
+            if (producer.isActive) producer.cancelAndJoin()
+        }
+        lastEngine.value = "On-device"
+        return true
+    }
+
+    private fun viaPhone(text: String, urdu: Boolean) {
         val engine = tts
-        if (engine != null && ttsReady) { say(engine, text); return }
+        if (engine != null && ttsReady) { say(engine, text, urdu); return }
         tts = TextToSpeech(context) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
             val e = tts ?: return@TextToSpeech
             if (!ttsReady) { _speaking.value = false; return@TextToSpeech }
-            runCatching {
-                e.language = Locale.US
-                // prefer a female-sounding English voice when the engine lists one
-                e.voices?.filter { it.locale.language == "en" && !it.isNetworkConnectionRequired }
-                    ?.sortedByDescending { v ->
-                        val n = v.name.lowercase()
-                        (if ("female" in n) 4 else 0) + (if (listOf("sfg", "tpf", "iob", "tpc", "smtf").any { it in n }) 3 else 0) + (if (v.locale.country == "US") 1 else 0) + v.quality / 100
-                    }?.firstOrNull()?.let { e.voice = it }
-            }
-            e.setPitch(1.22f)
-            e.setSpeechRate(1.03f)
+            e.setPitch(1.2f); e.setSpeechRate(1.02f)
             e.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(id: String?) { _speaking.value = true }
-                override fun onDone(id: String?) { _speaking.value = false }
-                @Deprecated("Deprecated in Java") override fun onError(id: String?) { _speaking.value = false }
+                override fun onStart(id: String?) { _speaking.value = true; level.value = 0.6f }
+                override fun onDone(id: String?) { if (id?.startsWith("last") == true) { _speaking.value = false; level.value = 0f } }
+                @Deprecated("Deprecated in Java") override fun onError(id: String?) { _speaking.value = false; level.value = 0f }
             })
-            say(e, text)
+            say(e, text, urdu)
         }
     }
 
-    private fun say(e: TextToSpeech, text: String) {
-        _speaking.value = true
-        // long replies go in sentence-sized pieces (engines limit utterance length)
-        val parts = text.split(Regex("(?<=[.!?])\\s+")).fold(mutableListOf<String>()) { acc, s ->
-            if (acc.isNotEmpty() && acc.last().length + s.length < 350) acc[acc.lastIndex] = acc.last() + " " + s else acc += s
-            acc
+    private fun say(e: TextToSpeech, text: String, urdu: Boolean) {
+        runCatching {
+            val loc = if (urdu) Locale("ur", "PK") else Locale.US
+            if (e.isLanguageAvailable(loc) >= TextToSpeech.LANG_AVAILABLE) e.language = loc else e.language = Locale.US
+            if (!urdu) e.voices?.filter { it.locale.language == "en" && !it.isNetworkConnectionRequired }
+                ?.maxByOrNull { v -> val n = v.name.lowercase(); (if ("female" in n) 4 else 0) + (if (listOf("sfg", "tpf", "iob", "tpc").any { it in n }) 3 else 0) + v.quality / 100 }
+                ?.let { e.voice = it }
         }
-        parts.forEachIndexed { i, p -> e.speak(p, if (i == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, "pip$i") }
+        _speaking.value = true
+        val parts = sentences(text)
+        parts.forEachIndexed { i, p ->
+            e.speak(p, if (i == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, if (i == parts.lastIndex) "last$i" else "pip$i")
+        }
+        lastEngine.value = "Phone voice"
     }
 
     companion object {
-        /** Gemini prebuilt voice: youthful, bright. */
-        const val VOICE = "Leda"
-
         /** Markdown and emoji removed so Pip reads sentences, not symbols. */
         fun clean(s: String): String = s
             .replace(Regex("""\[([^\]]+)]\([^)]*\)"""), "$1")
@@ -141,7 +187,26 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
             .replace(Regex("""(?m)^\s*[-•]\s+"""), "")
             .replace(Regex("""[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{FE0F}\x{200D}\x{2B50}\x{2705}]"""), "")
             .replace("≈", "about ")
+            .replace(Regex("""\s*\n+\s*"""), ". ")
+            .replace(Regex("""\.\s*\."""), ".")
             .replace(Regex("""\s+"""), " ")
             .trim()
+
+        /** Splits into sentence-sized pieces (merging very short ones) for fast first audio. */
+        fun sentences(text: String): List<String> {
+            val raw = text.split(Regex("""(?<=[.!?।۔؟])\s+""")).map { it.trim() }.filter { it.isNotEmpty() }
+            val out = mutableListOf<String>()
+            for (s in raw) {
+                if (out.isNotEmpty() && (out.last().length < 28 || s.length < 12) && out.last().length + s.length < 220) out[out.lastIndex] = out.last() + " " + s
+                else out += s
+            }
+            // keep the very first piece short so speech starts quickly
+            if (out.isNotEmpty() && out[0].length > 160) {
+                val f = out[0]
+                val cut = f.lastIndexOf(',', 120).takeIf { it > 30 } ?: f.lastIndexOf(' ', 120).takeIf { it > 30 }
+                if (cut != null) { out[0] = f.substring(0, cut + 1).trim(); out.add(1, f.substring(cut + 1).trim()) }
+            }
+            return out
+        }
     }
 }

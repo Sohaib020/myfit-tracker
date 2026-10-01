@@ -1,0 +1,40 @@
+// Lotus pond: dark teal water, expanding ripples, floating pads and pink lotus glow
+half4 main(float2 fc) {
+    float2 uv = fc / res.y;
+    float3 c = mix(float3(0.06, 0.25, 0.28), float3(0.01, 0.08, 0.1), fc.y / res.y);
+    c += float3(0.2, 0.5, 0.5) * fbm3(uv * 3.0 + t * 0.03) * 0.15;
+    // ripples from 4 drop points
+    for (int i = 0; i < 4; i++) {
+        float fi = float(i);
+        float per = 5.0 + fi;
+        float k = floor((t + fi * 1.7) / per);
+        float ph = fract((t + fi * 1.7) / per);
+        float2 o = float2(hash(float2(k, fi)) * res.x / res.y, hash(float2(fi, k)) );
+        float d = length(uv - o);
+        float rr = ph * 0.6;
+        float ring = exp(-abs(d - rr) * 60.0) * (1.0 - ph);
+        float ring2 = exp(-abs(d - rr * 0.7) * 70.0) * (1.0 - ph) * 0.6;
+        c += float3(0.6, 0.9, 0.9) * (ring + ring2) * 0.35;
+    }
+    // lily pads
+    float2 p = uv * 3.2;
+    float2 ip = floor(p);
+    float h = hash(ip + 2.0);
+    float2 o = (hash2(ip) - 0.5) * 0.2 + float2(0.03 * sin(t * 0.3 + h * 9.0), 0.02 * cos(t * 0.25 + h * 7.0));
+    float2 q = fract(p) - 0.5 - o;
+    float r = 0.14 + 0.12 * h;
+    float ang = atan(q.y, q.x);
+    float notch = smoothstep(0.25, 0.0, abs(ang - h * 6.0 + 3.0));
+    float pad = smoothstep(r, r - 0.015, length(q)) * (1.0 - notch) * step(h, 0.55);
+    float3 padc = mix(float3(0.1, 0.45, 0.2), float3(0.2, 0.62, 0.3), smoothstep(-r, r, q.x + q.y));
+    c = mix(c, padc, pad);
+    // lotus flowers on some pads
+    if (h < 0.18) {
+        float fl = length(q - float2(0.02, -0.02));
+        float petals = 0.06 + 0.03 * cos(atan(q.y, q.x) * 8.0);
+        float flower = smoothstep(petals, petals - 0.01, fl);
+        c = mix(c, mix(float3(1.0, 0.55, 0.72), float3(1.0, 0.92, 0.6), smoothstep(0.04, 0.0, fl)), flower);
+        c += float3(1.0, 0.5, 0.7) * exp(-fl * 12.0) * 0.15;
+    }
+    return outc(c);
+}

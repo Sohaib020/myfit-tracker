@@ -1,0 +1,19 @@
+// Galaxy: slowly rotating spiral nebula with dust lanes and twinkling stars
+half4 main(float2 fc) {
+    float2 uv = (fc - res * float2(0.5, 0.42)) / res.y;
+    float a = t * 0.012;
+    float2 r = float2(uv.x * cos(a) - uv.y * sin(a), uv.x * sin(a) + uv.y * cos(a));
+    float rad = length(r * float2(1.0, 1.6));
+    float ang = atan(r.y * 1.6, r.x);
+    float arms = sin(ang * 2.0 - log(rad + 0.05) * 5.0) * 0.5 + 0.5;
+    float neb = fbm(r * 3.0 + float2(arms * 1.2, t * 0.01));
+    float3 c = float3(0.015, 0.005, 0.05);
+    float body = smoothstep(0.9, 0.05, rad) * (0.35 + 0.65 * arms) * smoothstep(0.25, 0.75, neb);
+    c += mix(float3(0.45, 0.15, 0.85), float3(1.0, 0.45, 0.75), arms) * body * 1.1;
+    c += float3(0.25, 0.55, 1.0) * smoothstep(0.55, 0.85, fbm3(r * 5.0 - 3.0)) * smoothstep(1.0, 0.2, rad) * 0.45;
+    c -= float3(0.25) * smoothstep(0.55, 0.75, fbm3(r * 7.0 + 9.0)) * body;
+    c += float3(1.0, 0.85, 0.7) * exp(-rad * 9.0) * 1.1;
+    c += float3(1.0) * stars(fc / res.y * 90.0, 0.3, 2.5) * 0.9;
+    c += float3(0.8, 0.9, 1.0) * stars(fc / res.y * 35.0 + 7.0, 0.06, 1.5) * 1.2;
+    return outc(c);
+}

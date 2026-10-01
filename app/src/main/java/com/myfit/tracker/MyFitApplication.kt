@@ -44,6 +44,7 @@ class MyFitApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        com.myfit.tracker.ui.theme.ThemeShaders.init(this)
         // Bundled exercise catalogue — idempotent, runs off the main thread.
         container.write { container.exerciseRepo.seedIfNeeded() }
         HealthSyncWorker.schedule(this)

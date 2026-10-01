@@ -1,0 +1,26 @@
+// Arctic ice: glacier cliffs, shimmering ice, snowfall
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float3 c = mix(float3(0.62, 0.84, 0.96), float3(0.85, 0.94, 1.0), uv.y * 2.0);
+    float hz = 0.5;
+    // icebergs
+    float m = hz - 0.15 * abs(sin(uv.x * ar * 1.7 + 0.5)) * step(0.0, sin(uv.x * ar * 1.7 + 0.5)) - 0.03 * fbm3(float2(uv.x * 20.0, 0.0));
+    if (uv.y > m && uv.y < hz) c = mix(float3(0.92, 0.97, 1.0), float3(0.5, 0.75, 0.9), (uv.y - m) / (hz - m + 0.001) * 0.8);
+    if (uv.y >= hz) {
+        float d = uv.y - hz;
+        float3 water = mix(float3(0.2, 0.5, 0.7), float3(0.04, 0.16, 0.3), d * 2.0);
+        float rip = noise(float2(uv.x * 60.0, d * 200.0 - t * 1.5));
+        water += float3(0.8, 0.95, 1.0) * smoothstep(0.85, 1.0, rip) * 0.25;
+        // ice floe reflections
+        water += float3(0.5, 0.75, 0.9) * smoothstep(0.6, 0.8, fbm3(float2(uv.x * ar * 3.0, d * 8.0))) * 0.25;
+        c = water;
+    }
+    // snowfall: two layers
+    for (int L = 0; L < 2; L++) {
+        float fl = float(L);
+        float2 sp = fc / res.y * (12.0 + fl * 14.0) + float2(sin(t * 0.3 + fl) * 1.5, -t * (1.0 + fl * 0.8));
+        c += float3(1.0) * stars(sp, 0.25, 0.0) * (0.7 - fl * 0.3);
+    }
+    return outc(c);
+}

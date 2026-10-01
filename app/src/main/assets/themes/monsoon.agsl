@@ -1,0 +1,20 @@
+// Monsoon: churning storm clouds, heavy rain streaks, distant lightning
+half4 main(float2 fc) {
+    float2 uv = fc / res.y;
+    float v = fc.y / res.y;
+    float2 w = float2(fbm3(uv * 1.5 + t * 0.02), fbm3(uv * 1.5 - t * 0.015 + 4.0));
+    float cl = fbm(uv * 2.2 + 1.5 * w + float2(t * 0.03, 0.0));
+    float3 c = mix(float3(0.42, 0.48, 0.58), float3(0.08, 0.10, 0.14), smoothstep(0.35, 0.7, cl));
+    c = mix(c, float3(0.6, 0.66, 0.75), pow(smoothstep(0.55, 0.3, cl), 2.0) * 0.4);
+    c = mix(c, float3(0.04, 0.05, 0.07), smoothstep(0.4, 1.0, v) * 0.7);
+    float k = floor(t / 6.0);
+    float ph = t - k * 6.0 - 3.0 * hash(float2(k, 1.0));
+    float flash = exp(-max(ph, 0.0) * 7.0) * step(0.0, ph) * (0.6 + 0.4 * sin(ph * 60.0));
+    float2 fp = float2(hash(float2(k, 2.0)) * res.x / res.y, 0.2);
+    c += float3(0.8, 0.85, 1.0) * flash * (0.2 + 0.8 * exp(-length(uv - fp) * 2.5)) * smoothstep(0.3, 0.7, cl);
+    float2 rp = float2(uv.x * 70.0 + uv.y * 14.0, uv.y * 5.0 + t * 7.0);
+    float h = hash(float2(floor(rp.x), 3.0));
+    float streak = smoothstep(0.9, 1.0, fract(rp.y * 0.5 + h * 10.0)) * smoothstep(0.4, 0.0, abs(fract(rp.x) - 0.5));
+    c += float3(0.75, 0.8, 0.9) * streak * 0.22 * step(0.4, h);
+    return outc(c);
+}

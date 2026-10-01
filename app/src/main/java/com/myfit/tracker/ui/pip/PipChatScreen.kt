@@ -99,7 +99,10 @@ fun PipChatScreen(container: AppContainer) {
     val speaking by container.pipVoice.speaking.collectAsState()
     var typing by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(2200); if (mood == PipMood.WAVE) mood = PipMood.HAPPY }
-    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { container.pipVoice.stop() } }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        container.pipVoice.prepare()
+        onDispose { container.pipVoice.release() }
+    }
     LaunchedEffect(messages.size) { if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex) }
 
     fun send(text: String, retry: Boolean = false) {
@@ -114,7 +117,7 @@ fun PipChatScreen(container: AppContainer) {
             mood = if (r.source == "error") PipMood.CONCERNED else r.mood
             typing = true
             typingId = container.healthRepo.lastChat(1).firstOrNull()?.id ?: -1L
-            if (r.source != "error") container.pipVoice.speak(r.text)
+            if (r.source != "error") container.pipVoice.speak(r.text, r.speakUr, r.speakHi)
             delay((r.text.length * 6L).coerceIn(700, 4000))
             typing = false
         }

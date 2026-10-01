@@ -48,6 +48,10 @@ data class AppSettings(
     val geminiModel: String = "",
     val onlineAi: Boolean = true,
     val blurAmount: Float = 1f,          // 0 (crystal clear) … 2 (heavy frost)
+    val dockBlur: Float = 1.6f,          // dock has its own blur; heavy by default
+    val motion: Int = 1,                 // 0 smooth (60 fps), 1 balanced (30 fps), 2 battery saver (still)
+    val elevenKey: String = "",
+    val voiceEngine: Int = 0,            // 0 auto (ElevenLabs → on-device → phone), 1 on-device only, 2 phone voice
     val refraction: Float = 1f,          // 0 (flat) … 2 (strong lens)
     val pipVoice: Boolean = true,
     val pipVoiceOnline: Boolean = true,  // realistic Gemini voice when online; offline voice otherwise
@@ -76,6 +80,10 @@ class SettingsStore(private val context: Context) {
         val gModel = stringPreferencesKey("gemini_model")
         val online = booleanPreferencesKey("online_ai")
         val blurAmt = floatPreferencesKey("blur_amount")
+        val dockBlur = floatPreferencesKey("dock_blur")
+        val motion = androidx.datastore.preferences.core.intPreferencesKey("motion")
+        val elevenKey = stringPreferencesKey("eleven_key")
+        val voiceEngine = androidx.datastore.preferences.core.intPreferencesKey("voice_engine")
         val refr = floatPreferencesKey("refraction")
         val voice = booleanPreferencesKey("pip_voice")
         val voiceOnline = booleanPreferencesKey("pip_voice_online")
@@ -110,6 +118,10 @@ class SettingsStore(private val context: Context) {
             geminiModel = p[K.gModel] ?: "",
             onlineAi = p[K.online] ?: true,
             blurAmount = p[K.blurAmt] ?: 1f,
+            dockBlur = p[K.dockBlur] ?: 1.6f,
+            motion = p[K.motion] ?: 1,
+            elevenKey = p[K.elevenKey] ?: "",
+            voiceEngine = p[K.voiceEngine] ?: 0,
             refraction = p[K.refr] ?: 1f,
             pipVoice = p[K.voice] ?: true,
             pipVoiceOnline = p[K.voiceOnline] ?: true,
@@ -137,6 +149,10 @@ class SettingsStore(private val context: Context) {
     suspend fun setGeminiModel(v: String) = context.dataStore.edit { it[K.gModel] = v }
     suspend fun setOnlineAi(v: Boolean) = context.dataStore.edit { it[K.online] = v }
     suspend fun setBlurAmount(v: Float) = context.dataStore.edit { it[K.blurAmt] = v }
+    suspend fun setDockBlur(v: Float) = context.dataStore.edit { it[K.dockBlur] = v }
+    suspend fun setMotion(v: Int) = context.dataStore.edit { it[K.motion] = v; it[K.animated] = v != 2 }
+    suspend fun setElevenKey(v: String) = context.dataStore.edit { it[K.elevenKey] = v.trim() }
+    suspend fun setVoiceEngine(v: Int) = context.dataStore.edit { it[K.voiceEngine] = v }
     suspend fun setRefraction(v: Float) = context.dataStore.edit { it[K.refr] = v }
     suspend fun setPipVoice(v: Boolean) = context.dataStore.edit { it[K.voice] = v }
     suspend fun setPipVoiceOnline(v: Boolean) = context.dataStore.edit { it[K.voiceOnline] = v }

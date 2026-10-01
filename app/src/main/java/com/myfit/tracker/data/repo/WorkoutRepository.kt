@@ -27,6 +27,7 @@ class ExerciseRepository(private val db: AppDatabase, private val context: Conte
 
     val active: Flow<List<Exercise>> = dao.observeActive()
     val all: Flow<List<Exercise>> = dao.observeAll()
+    val archived: Flow<List<Exercise>> = dao.observeArchived()
     fun observe(id: Long) = dao.observe(id)
     suspend fun get(id: Long) = dao.get(id)
 
@@ -278,6 +279,8 @@ class WorkoutRepository(private val db: AppDatabase) {
     }
 
     suspend fun archiveTemplate(id: Long) = tdao.archive(id, Clock.now())
+    suspend fun unarchiveTemplate(id: Long) = tdao.unarchive(id, Clock.now())
+    val archivedTemplates: Flow<List<WorkoutTemplate>> = tdao.observeArchivedTemplates()
 
     /**
      * Optional starter split (user-initiated). Creates templates only — no workouts, sets or targets

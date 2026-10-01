@@ -1,0 +1,38 @@
+float caustic(float2 uv, float tt) {
+    float2 p = mod(uv * 6.28318, 6.28318) - 250.0;
+    float2 i = p;
+    float c = 1.0;
+    float inten = 0.005;
+    for (int n = 0; n < 4; n++) {
+        float t2 = tt * (1.0 - (3.5 / float(n + 1)));
+        i = p + float2(cos(t2 - i.x) + sin(t2 + i.y), sin(t2 - i.y) + cos(t2 + i.x));
+        c += 1.0 / length(float2(p.x / (sin(i.x + t2) / inten), p.y / (cos(i.y + t2) / inten)));
+    }
+    c /= 4.0;
+    c = 1.17 - pow(c, 1.4);
+    return clamp(pow(abs(c), 8.0), 0.0, 1.0);
+}
+
+// Ocean depths: bright surface caustics, light beams and rising bubbles
+half4 main(float2 fc) {
+    float2 uv = fc / res.y;
+    float v = fc.y / res.y;
+    float3 c = mix(float3(0.04, 0.6, 0.75), float3(0.0, 0.06, 0.13), smoothstep(0.0, 0.95, v));
+    float cs = caustic(uv * 1.2, t * 0.4 + 7.0);
+    c += float3(0.7, 1.0, 1.0) * cs * 0.8 * exp(-v * 1.8);
+    float2 d = uv - float2(res.x / res.y * 0.3, -0.3);
+    float ang = atan(d.x, d.y);
+    c += float3(0.4, 0.9, 1.0) * pow(fbm3(float2(ang * 8.0, t * 0.12)), 3.5) * 0.7 * exp(-length(d) * 0.9);
+    float2 bp = uv * 9.0 + float2(0.0, t * 0.5);
+    float2 bi = floor(bp);
+    float2 bf = fract(bp) - 0.5;
+    float h = hash(bi);
+    if (h < 0.18) {
+        float2 o = (hash2(bi) - 0.5) * 0.4 + float2(0.06 * sin(t * 2.0 + h * 30.0), 0.0);
+        float r = 0.05 + h * 0.4;
+        float dd = length(bf - o);
+        c += float3(0.7, 0.95, 1.0) * (smoothstep(r, r - 0.02, dd) - smoothstep(r - 0.02, r - 0.05, dd)) * 0.5;
+        c += float3(1.0) * smoothstep(0.02, 0.0, length(bf - o + float2(r * 0.35, r * 0.35))) * 0.4;
+    }
+    return outc(c);
+}

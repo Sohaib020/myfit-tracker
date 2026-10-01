@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material3.Icon
@@ -62,20 +63,22 @@ fun ExercisesScreen(container: AppContainer, bottomPad: Int) {
     val nav = LocalNav.current
     ExerciseBrowser(
         container = container,
-        header = { Header(onCustom = { nav.push(Overlay.ExerciseEditor(null)) }) },
+        header = { Header(onCustom = { nav.push(Overlay.ExerciseEditor(null)) }, onArchive = { nav.push(Overlay.Archive) }) },
         bottomPad = bottomPad,
         onOpen = { nav.push(Overlay.ExerciseDetail(it.id)) },
     )
 }
 
 @Composable
-private fun Header(onCustom: () -> Unit) {
+private fun Header(onCustom: () -> Unit, onArchive: () -> Unit) {
     val th = LocalFitTheme.current
     Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp, end = 62.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text("Exercises", style = FitType.display, color = th.text)
             Caption("876 exercises with photos · public-domain library + your own")
         }
+        com.myfit.tracker.ui.theme.GlassIconButton(Icons.Rounded.Inventory2, onArchive)
+        androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
         GlassButton("Custom", onCustom, icon = Icons.Rounded.Add, height = 44.dp)
     }
 }

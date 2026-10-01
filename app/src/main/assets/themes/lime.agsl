@@ -1,0 +1,31 @@
+// Lime night: dark carbon room, moving lime light beams + perspective floor grid
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float3 c = mix(float3(0.11, 0.11, 0.11), float3(0.03, 0.03, 0.03), uv.y);
+    // floor grid (bottom 40%)
+    float horizon = 0.62;
+    if (uv.y > horizon) {
+        float d = (uv.y - horizon) / (1.0 - horizon);
+        float z = 1.0 / max(d, 0.02);
+        float x = (uv.x - 0.5) * z * 2.0;
+        float gz = fract(z * 0.5 - t * 0.35);
+        float gx = fract(x * 0.5);
+        float line = smoothstep(0.06 * z * 0.2, 0.0, min(min(gz, 1.0 - gz), min(gx, 1.0 - gx)) * 1.0) ;
+        c += float3(0.78, 0.96, 0.25) * line * 0.35 * d;
+    }
+    // diagonal light beams sweeping
+    for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        float a = 0.6 + 0.25 * sin(t * 0.15 + fi * 2.1);
+        float2 o = float2(0.15 + fi * 0.35, -0.1);
+        float2 p = uv - o;
+        float d = abs(p.x * cos(a) - p.y * sin(a) * 0.5);
+        c += float3(0.84, 0.96, 0.25) * exp(-d * 28.0) * 0.18 * (1.0 - uv.y * 0.6);
+    }
+    // floating lime dust
+    float2 sp = fc / res.y * 22.0 + float2(0.0, t * 0.4);
+    c += float3(0.85, 1.0, 0.4) * stars(sp, 0.12, 1.0) * 0.6;
+    float glow = exp(-length(uv - float2(0.5, horizon)) * 3.0);
+    c += float3(0.55, 0.7, 0.1) * glow * 0.25;
+    return outc(c);
+}

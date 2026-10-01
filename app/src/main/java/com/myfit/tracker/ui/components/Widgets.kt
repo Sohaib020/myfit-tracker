@@ -80,8 +80,13 @@ fun IconBubble(icon: ImageVector, color: Color, size: Dp = 34.dp) {
             .size(size)
             .clip(CircleShape)
             .drawBehind {
-                drawCircle(Brush.radialGradient(listOf(color.copy(alpha = 0.55f), color.copy(alpha = 0.18f))))
-                drawCircle(Color.White.copy(alpha = 0.25f), style = Stroke(1.dp.toPx()))
+                // solid, glossy bubble so icons read clearly on any theme
+                drawCircle(Brush.verticalGradient(listOf(
+                    Color(minOf(1f, color.red * 1.12f + 0.06f), minOf(1f, color.green * 1.12f + 0.06f), minOf(1f, color.blue * 1.12f + 0.06f)),
+                    Color(color.red * 0.72f, color.green * 0.72f, color.blue * 0.72f),
+                )))
+                drawCircle(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.38f), Color.Transparent), 0f, size.height * 0.55f))
+                drawCircle(Color.White.copy(alpha = 0.35f), style = Stroke(1.dp.toPx()))
             },
         contentAlignment = Alignment.Center,
     ) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(size * 0.55f)) }

@@ -97,7 +97,7 @@ class Gemini(private val context: Context) {
             history.forEach { (role, text) ->
                 contents.put(JSONObject().put("role", role).put("parts", JSONArray().put(JSONObject().put("text", text))))
             }
-            val gen = JSONObject().put("temperature", 0.7).put("maxOutputTokens", 900)
+            val gen = JSONObject().put("temperature", 0.7).put("maxOutputTokens", 1600)
             if (noThinking && "flash" in model) gen.put("thinkingConfig", JSONObject().put("thinkingBudget", 0))
             val req = JSONObject()
                 .put("system_instruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", system))))
@@ -118,43 +118,9 @@ class Gemini(private val context: Context) {
                 .ifEmpty { throw ApiError(code, "Empty reply (${cand.optString("finishReason")})") }
         }
 
-    /** Text-to-speech models this key can use, best first (flash before pro, newest first). */
-    suspend fun ttsModels(key: String): List<String> = withContext(Dispatchers.IO) {
-        val c = open("$base/models?pageSize=300", key, "GET")
-        val (code, body) = readBody(c)
-        if (code !in 200..299) throw ApiError(code, errorMessage(body))
-        val models = JSONObject(body).optJSONArray("models") ?: JSONArray()
-        val names = (0 until models.length()).map { models.getJSONObject(it).getString("name").removePrefix("models/") }
-            .filter { "tts" in it && "gemini" in it }
-        fun version(n: String) = Regex("""gemini-(\d+(?:\.\d+)?)""").find(n)?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
-        names.sortedWith(compareBy<String> { if ("flash" in it) 0 else 1 }.thenByDescending { version(it) })
-    }
-
-    /** Speaks [text] with a prebuilt Gemini voice. Returns raw PCM (16-bit mono) and its sample rate. */
-    suspend fun speak(key: String, model: String, text: String, voice: String, style: String): Pair<ByteArray, Int> = withContext(Dispatchers.IO) {
-        val req = JSONObject()
-            .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", "$style: $text")))))
-            .put(
-                "generationConfig", JSONObject()
-                    .put("responseModalities", JSONArray().put("AUDIO"))
-                    .put("speechConfig", JSONObject().put("voiceConfig", JSONObject().put("prebuiltVoiceConfig", JSONObject().put("voiceName", voice))))
-            )
-        val c = open("$base/models/$model:generateContent", key, "POST")
-        c.readTimeout = 60_000
-        c.doOutput = true
-        c.outputStream.use { it.write(req.toString().toByteArray()) }
-        val (code, body) = readBody(c)
-        if (code !in 200..299) throw ApiError(code, errorMessage(body))
-        val part = JSONObject(body).optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)
-            ?.optJSONObject("inlineData") ?: throw ApiError(code, "No audio returned")
-        val mime = part.optString("mimeType")
-        val rate = Regex("""rate=(\d+)""").find(mime)?.groupValues?.get(1)?.toIntOrNull() ?: 24_000
-        android.util.Base64.decode(part.getString("data"), android.util.Base64.DEFAULT) to rate
-    }
-
     companion object {
         fun systemPrompt(unitsLine: String) = """
-You are Pip, the cheerful little buddy inside "MyFit Tracker", a private fitness logbook app. You look like a glossy peach mochi with a green sprout.
+You are Pip, the cheerful little buddy inside "MyFit Tracker", a private fitness logbook app. You look like a soft mint plush with a navy striped sweatband, a curly antenna and little sneakers.
 Personality: playful yet professional, warm, encouraging, concise and practical. At most 2 emoji per reply.
 Rules you must follow:
 1. For the user's personal numbers, use ONLY the "User data" block in the message. If it doesn't contain what's needed, say there isn't enough recorded data. Never guess or invent the user's numbers.
@@ -163,6 +129,10 @@ Rules you must follow:
 4. General fitness, training and nutrition knowledge is welcome — give specific, actionable guidance.
 5. Keep replies under 150 words unless the user asks for detail. Use short bullet lists for plans.
 6. $unitsLine
+7. Language: if the user writes in Urdu or Roman Urdu, reply in natural Roman Urdu. Then, so the app can speak it, add exactly two more lines at the very end:
+[[ur]] the same reply written in Urdu script
+[[hi]] the same reply written in Devanagari script (same Hindustani words, pronounced the Urdu way, with nukta letters like ज़ ख़ ग़ फ़ क़)
+No emoji, bullets or markdown in those two lines. For English questions reply in English and do NOT add these lines.
 """.trim()
     }
 }

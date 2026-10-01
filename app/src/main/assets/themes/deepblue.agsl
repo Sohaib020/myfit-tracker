@@ -1,0 +1,28 @@
+float caustic(float2 uv, float tt) {
+    float2 p = mod(uv * 6.28318, 6.28318) - 250.0;
+    float2 i = p;
+    float c = 1.0;
+    float inten = 0.005;
+    for (int n = 0; n < 4; n++) {
+        float t2 = tt * (1.0 - (3.5 / float(n + 1)));
+        i = p + float2(cos(t2 - i.x) + sin(t2 + i.y), sin(t2 - i.y) + cos(t2 + i.x));
+        c += 1.0 / length(float2(p.x / (sin(i.x + t2) / inten), p.y / (cos(i.y + t2) / inten)));
+    }
+    c /= 4.0;
+    c = 1.17 - pow(c, 1.4);
+    return clamp(pow(abs(c), 8.0), 0.0, 1.0);
+}
+
+// Deep blue: sunlight caustics and light shafts in deep water
+half4 main(float2 fc) {
+    float2 uv = fc / res.y;
+    float v = fc.y / res.y;
+    float3 c = mix(float3(0.04, 0.22, 0.75), float3(0.0, 0.02, 0.10), smoothstep(0.0, 1.0, v));
+    float cs = caustic(uv * 0.9, t * 0.35 + 23.0);
+    c += float3(0.45, 0.7, 1.0) * cs * (0.75 - v * 0.6);
+    float2 d = uv - float2(res.x / res.y * 0.5, -0.25);
+    float ang = atan(d.x, d.y);
+    c += float3(0.3, 0.55, 1.0) * pow(fbm3(float2(ang * 7.0, t * 0.12)), 3.0) * 0.7 * exp(-length(d) * 1.0);
+    c += float3(0.6, 0.8, 1.0) * stars(uv * 30.0 + float2(sin(t * 0.2) * 0.5, -t * 0.25), 0.08, 0.6) * 0.5;
+    return outc(c);
+}

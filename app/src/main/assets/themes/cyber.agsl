@@ -1,0 +1,25 @@
+// Cyber grid: neon tunnel rushing forward with streaming data columns
+half4 main(float2 fc) {
+    float2 uv = (fc - res * 0.5) / res.y;
+    float r = length(uv * float2(1.0, 0.8));
+    float a = atan(uv.y, uv.x);
+    float z = 0.35 / max(r, 0.03) + t * 0.8;
+    float fz = abs(fract(z) - 0.5);
+    float fa = abs(fract(a / 6.2831 * 18.0) - 0.5);
+    float ring = smoothstep(0.03 * (1.0 + 1.0 / max(r, 0.05) * 0.05), 0.0, 0.5 - fz) ;
+    ring = exp(-(0.5 - fz) * 18.0);
+    float spoke = exp(-(0.5 - fa) * 40.0);
+    float3 c = mix(float3(0.02, 0.0, 0.06), float3(0.12, 0.01, 0.22), smoothstep(0.0, 0.8, r));
+    float fade = smoothstep(0.03, 0.45, r);
+    c += float3(0.0, 0.9, 1.0) * ring * fade * 0.55;
+    c += float3(0.75, 0.15, 1.0) * spoke * fade * 0.45;
+    float2 cp = fc / res.y * float2(26.0, 1.0);
+    float col = floor(cp.x);
+    float h = hash(float2(col, 2.0));
+    float y = fract(fc.y / res.y * 1.2 - t * (0.15 + h * 0.3) - h);
+    float cell = step(0.45, hash(floor(float2(cp.x, fc.y / res.y * 55.0)) + floor(t * 5.0)));
+    float glyph = step(0.2, fract(cp.x)) * step(fract(cp.x), 0.8) * step(0.25, fract(fc.y / res.y * 55.0));
+    c += float3(0.2, 1.0, 0.9) * pow(y, 5.0) * cell * glyph * step(0.6, h) * 0.55;
+    c += float3(0.0, 0.7, 1.0) * exp(-r * 7.0) * 0.5;
+    return outc(c);
+}

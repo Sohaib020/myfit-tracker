@@ -1,0 +1,28 @@
+// Aurora borealis: rippling green/teal curtains over stars and snowy peaks
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float3 c = mix(float3(0.01, 0.03, 0.09), float3(0.02, 0.12, 0.15), uv.y);
+    c += float3(1.0) * stars(fc / res.y * 70.0, 0.25, 2.0) * 0.8 * (1.0 - uv.y);
+    // curtains: bands along x with vertical streaks
+    for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        float x = uv.x * ar;
+        float center = 0.22 + fi * 0.09 + 0.06 * sin(x * 2.0 + t * 0.12 + fi * 2.0) + 0.04 * fbm3(float2(x * 1.5 + t * 0.05, fi));
+        float dy = uv.y - center;
+        float streak = fbm3(float2(x * 9.0 + fi * 7.0 + t * 0.15, t * 0.05));
+        float band = exp(-max(dy, 0.0) * 18.0);
+        float up = exp(-max(-dy, 0.0) * 3.0) * smoothstep(-0.35, -0.02, dy) + smoothstep(0.0, -0.02, dy) * 0.0;
+        float a = band * up * (0.25 + 1.1 * streak * streak * 1.6);
+        float3 col = mix(float3(0.15, 1.0, 0.62), float3(0.35, 0.7, 1.0), fi / 2.0);
+        col = mix(col, float3(0.85, 0.3, 0.9), smoothstep(0.0, -0.12, dy) * 0.5);
+        c += col * a * 0.55;
+    }
+    // mountains
+    float m = 0.78 - 0.08 * abs(sin(uv.x * ar * 3.1)) - 0.05 * fbm3(float2(uv.x * ar * 6.0, 1.0));
+    if (uv.y > m) {
+        float3 snow = mix(float3(0.62, 0.78, 0.82), float3(0.04, 0.09, 0.12), smoothstep(m, m + 0.12, uv.y));
+        c = snow;
+    }
+    return outc(c);
+}

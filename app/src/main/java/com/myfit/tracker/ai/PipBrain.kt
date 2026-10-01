@@ -13,7 +13,11 @@ class PipBrain(private val c: AppContainer) {
     private val data = DataBrain(c)
     private val gemini = Gemini(c.app)
 
-    data class Reply(val text: String, val source: String, val mood: PipMood, val shared: String? = null)
+    data class Reply(
+        val text: String, val source: String, val mood: PipMood, val shared: String? = null,
+        /** Speech-only versions of a Roman Urdu reply: Urdu script and Devanagari (never shown). */
+        val speakUr: String? = null, val speakHi: String? = null,
+    )
 
     /** What was sent with the most recent online answer (shown on request, for transparency). */
     var lastShared: String? = null
@@ -57,7 +61,8 @@ class PipBrain(private val c: AppContainer) {
         val turn = history + ("user" to "User data (only what's relevant; may be incomplete):\n$summary\n\nQuestion: $q")
         val system = Gemini.systemPrompt("Use the user's units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}.")
         val text = generateWithFallback(s.geminiKey, s.geminiModel, system, turn)
-        return Reply(text, "online", com.myfit.tracker.ui.pip.moodForReply(text, q), summary)
+        val (display, ur, hi) = splitSpeech(text)
+        return Reply(display, "online", com.myfit.tracker.ui.pip.moodForReply(display, q), summary, ur, hi)
     }
 
     /**
@@ -117,6 +122,15 @@ class PipBrain(private val c: AppContainer) {
             quota > 0 -> PipError("Your free Gemini quota is used up for the moment. It resets automatically — try again later. Questions about your own logs still work offline.", true)
             else -> PipError(lastError?.let { friendly(it) } ?: "I couldn't find a working Gemini model for this key.", true)
         }
+    }
+
+    /** Separates the hidden [[ur]] / [[hi]] speech lines Gemini appends to Roman Urdu replies. */
+    private fun splitSpeech(raw: String): Triple<String, String?, String?> {
+        val ur = Regex("""\[\[ur]]\s*(.+?)(?=\[\[hi]]|$)""", RegexOption.DOT_MATCHES_ALL).find(raw)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotBlank() }
+        val hi = Regex("""\[\[hi]]\s*(.+)$""", RegexOption.DOT_MATCHES_ALL).find(raw)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotBlank() }
+        val cut = listOf(raw.indexOf("[[ur]]"), raw.indexOf("[[hi]]")).filter { it >= 0 }.minOrNull()
+        val display = (if (cut != null) raw.substring(0, cut) else raw).trim()
+        return Triple(display.ifBlank { raw.trim() }, ur, hi)
     }
 
     private fun friendly(e: Gemini.ApiError) = when (e.code) {

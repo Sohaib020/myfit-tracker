@@ -56,6 +56,9 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercise WHERE archivedAt IS NULL ORDER BY name")
     fun observeActive(): Flow<List<Exercise>>
 
+    @Query("SELECT * FROM exercise WHERE archivedAt IS NOT NULL ORDER BY archivedAt DESC")
+    fun observeArchived(): Flow<List<Exercise>>
+
     @Query("SELECT * FROM exercise ORDER BY name")
     fun observeAll(): Flow<List<Exercise>>
 
@@ -184,6 +187,12 @@ interface TemplateDao {
 
     @Query("UPDATE workout_template SET archivedAt = :now, updatedAt = :now WHERE id = :id")
     suspend fun archive(id: Long, now: Long)
+
+    @Query("UPDATE workout_template SET archivedAt = NULL, updatedAt = :now WHERE id = :id")
+    suspend fun unarchive(id: Long, now: Long)
+
+    @Query("SELECT * FROM workout_template WHERE archivedAt IS NOT NULL ORDER BY archivedAt DESC")
+    fun observeArchivedTemplates(): Flow<List<WorkoutTemplate>>
 
     @Transaction
     suspend fun replaceItems(templateId: Long, items: List<WorkoutTemplateExercise>) {

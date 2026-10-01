@@ -1,0 +1,21 @@
+// Royal gold: molten metallic gold folds with moving highlights
+half4 main(float2 fc) {
+    float2 uv = fc / res.y;
+    float tt = t * 0.05;
+    float2 q = float2(fbm3(uv * 1.6 + tt), fbm3(uv * 1.6 - tt + 7.0));
+    float2 base = uv * 1.3 + 2.2 * q;
+    float f = fbm(base);
+    float e = 0.01;
+    float fx = fbm(base + float2(e, 0.0)) - f;
+    float fy = fbm(base + float2(0.0, e)) - f;
+    float3 n = normalize(float3(-fx / e * 0.5, -fy / e * 0.5, 1.0));
+    float3 L = normalize(float3(0.4 + 0.3 * sin(t * 0.2), -0.6, 0.7));
+    float diff = max(dot(n, L), 0.0);
+    float spec = pow(max(dot(reflect(-L, n), float3(0.0, 0.0, 1.0)), 0.0), 16.0);
+    float g = clamp((f - 0.2) * 3.4, 0.0, 1.0);
+    float3 gold = mix(float3(0.16, 0.09, 0.02), float3(0.95, 0.70, 0.28), g);
+    float3 c = gold * (0.35 + 0.75 * diff) + float3(1.0, 0.93, 0.72) * spec * 0.9 * g;
+    float2 vv = fc / res - 0.5;
+    c *= 1.0 - 0.8 * dot(vv, vv);
+    return outc(c);
+}

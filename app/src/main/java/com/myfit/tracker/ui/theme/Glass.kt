@@ -89,7 +89,9 @@ fun Glass(
     val glow by animateFloatAsState(if (pressed && onClick != null) 1f else 0f, label = "glassGlow")
     val tick = rememberTick()
     val density = LocalDensity.current
-    val blurPx = with(density) { (blur * st.blurAmount).toPx() }
+    // Cards sample the shared pre-blurred backdrop (one blur per frame for the whole app).
+    // Surfaces that show live content underneath (the dock) blur themselves with their own amount.
+    val ownBlurPx = with(density) { (blur * (if (seeContent) st.dockBlur else 0f)).toPx() }
     val refr = st.refraction
     val shader = remember { LiquidGlass.newShader() }
     val fill = tint ?: if (realBlurSupported) th.glassTint.copy(alpha = (th.glassTint.alpha * strength).coerceIn(0f, 1f)) else th.glassFallback
@@ -117,7 +119,7 @@ fun Glass(
                         }
                         val bezel = (minOf(w, h) * 0.22f).coerceIn(10.dp.toPx(), 34.dp.toPx())
                         renderEffect = LiquidGlass.effect(
-                            shader, w, h, corner, blurPx,
+                            shader, w, h, corner, ownBlurPx,
                             bezelPx = bezel, strengthPx = bezel * 0.55f * refr,
                             dispersion = (dispersion * refr).coerceIn(0f, 0.6f),
                             highlight = if (th.isLight) 0.10f else 0.16f,
@@ -126,12 +128,15 @@ fun Glass(
                     }
                     .drawBehind {
                         val p = pos.value
-                        b.time.floatValue // redraw with the animated backdrop
                         translate(-p.x, -p.y) {
-                            val l = b.layer
-                            if (l != null) drawLayer(l)
-                            else drawBackdrop(b.theme, b.image, b.time.floatValue, b.rootSize.width, b.rootSize.height)
-                            if (seeContent) b.contentLayer?.let { drawLayer(it) }
+                            if (seeContent) {
+                                b.layer?.let { drawLayer(it) }
+                                b.contentLayer?.let { drawLayer(it) }
+                            } else {
+                                val l = b.blurLayer ?: b.layer
+                                if (l != null) drawLayer(l)
+                                else drawBackdrop(b.theme, b.image, 0f, b.rootSize.width, b.rootSize.height)
+                            }
                         }
                     }
             )
@@ -231,8 +236,11 @@ fun GlassButton(
 @Composable
 fun GlassIconButton(icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 44.dp, tint: Color? = null) {
     val th = LocalFitTheme.current
-    Glass(modifier.size(size), shape = CircleShape, onClick = onClick, pressScale = 0.88f) {
-        Icon(icon, null, tint = tint ?: th.text, modifier = Modifier.align(Alignment.Center).size(size * 0.46f))
+    Glass(
+        modifier.size(size), shape = CircleShape, onClick = onClick, pressScale = 0.88f,
+        tint = if (th.isLight) Color.White.copy(alpha = 0.78f) else Color.White.copy(alpha = 0.16f),
+    ) {
+        Icon(icon, null, tint = tint ?: th.text, modifier = Modifier.align(Alignment.Center).size(size * 0.5f))
     }
 }
 

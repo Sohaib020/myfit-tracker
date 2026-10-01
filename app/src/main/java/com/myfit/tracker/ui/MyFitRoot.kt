@@ -122,12 +122,18 @@ fun MyFitRoot(container: AppContainer) {
         }
     }
     // ambient animation clock
-    LaunchedEffect(s.animatedBackground) {
-        if (!s.animatedBackground) return@LaunchedEffect
+    // Motion: 0 smooth (every frame), 1 balanced (~30 fps, default), 2 battery saver (still).
+    // Only changing `time` triggers a redraw, so skipping updates really skips GPU work.
+    val animate = s.animatedBackground && s.motion != 2
+    LaunchedEffect(animate, s.motion) {
+        if (!animate) return@LaunchedEffect
+        val minStep = if (s.motion == 0) 0L else 32L
         var last = -1L
+        var acc = 0L
         while (true) withFrameMillis { now ->
-            if (last >= 0) backdrop.time.floatValue += (now - last) / 1000f
+            if (last >= 0) acc += now - last
             last = now
+            if (acc >= minStep) { backdrop.time.floatValue += acc.coerceAtMost(100L) / 1000f; acc = 0L }
         }
     }
     // status-bar icon colour follows the theme
@@ -149,11 +155,19 @@ fun MyFitRoot(container: AppContainer) {
             ) {
                 // the backdrop is recorded once per frame into a shared layer that every glass surface replays
                 val bgLayer = rememberGraphicsLayer()
+                val blurLayer = rememberGraphicsLayer()
                 backdrop.layer = bgLayer
+                backdrop.blurLayer = blurLayer
+                val blurPx = with(androidx.compose.ui.platform.LocalDensity.current) { (26.dp * s.blurAmount).toPx() }
                 Canvas(Modifier.fillMaxSize()) {
                     val t = backdrop.time.floatValue
                     bgLayer.record { drawBackdrop(backdrop.theme, backdrop.image, t, size.width, size.height) }
                     drawLayer(bgLayer)
+                    // one blur per frame, shared by every glass card (Android 12+)
+                    if (android.os.Build.VERSION.SDK_INT >= 31) {
+                        blurLayer.renderEffect = if (blurPx > 0.5f) androidx.compose.ui.graphics.BlurEffect(blurPx, blurPx, androidx.compose.ui.graphics.TileMode.Clamp) else null
+                        blurLayer.record { drawLayer(bgLayer) }
+                    }
                 }
                 when (val ps = profileState) {
                     ProfileState.Loading -> Unit
@@ -247,7 +261,6 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             ) { o ->
                 if (o != null) Box(Modifier.fillMaxSize()) {
                     Canvas(Modifier.fillMaxSize()) {
-                        backdrop.time.floatValue
                         val l = backdrop.layer
                         if (l != null) drawLayer(l)
                         else drawBackdrop(backdrop.theme, backdrop.image, backdrop.time.floatValue, size.width, size.height)
@@ -261,6 +274,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         is Overlay.WorkoutDetail -> WorkoutDetailScreen(container, o.workoutId)
                         Overlay.Activity -> com.myfit.tracker.ui.activity.ActivityScreen(container)
                         Overlay.PipChat -> com.myfit.tracker.ui.pip.PipChatScreen(container)
+                        Overlay.Archive -> com.myfit.tracker.ui.exercises.ArchiveScreen(container)
                     }
                 }
             }

@@ -225,12 +225,18 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
                     GlassButton("Choose a different photo", { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, height = 44.dp)
                 }
                 Spacer(Modifier.height(14.dp))
-                ToggleRow("Animated background", "Slowly drifting light. Turn off to save battery.", settings.animatedBackground) {
-                    container.write { container.settings.setAnimated(it) }
+                Text("Motion", style = FitType.section, color = th.text)
+                Caption("Balanced runs the living wallpaper at 30 fps — smooth, cool and easy on battery.")
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Smooth", "Balanced", "Battery saver").forEachIndexed { i, label ->
+                        GlassChip(label, settings.motion == i, { container.write { container.settings.setMotion(i) } })
+                    }
                 }
                 Spacer(Modifier.height(12.dp))
                 GlassSlider("Glass tint", "How milky the cards are", settings.glassStrength, 0.4f..1.6f) { v -> container.write { container.settings.setGlassStrength(v) } }
                 GlassSlider("Blur amount", "0 = crystal clear, right = heavy frost", settings.blurAmount, 0f..2f) { v -> container.write { container.settings.setBlurAmount(v) } }
+                GlassSlider("Dock blur", "How frosted the bottom bar is", settings.dockBlur, 0f..2.5f) { v -> container.write { container.settings.setDockBlur(v) } }
                 if (com.myfit.tracker.ui.theme.LiquidGlass.supported)
                     GlassSlider("Refraction", "How strongly the glass edges bend what's behind", settings.refraction, 0f..2f) { v -> container.write { container.settings.setRefraction(v) } }
                 if (!realBlurSupported) Caption("This phone runs Android 11 or older, so glass uses a frosted fallback instead of live blur.")
@@ -239,6 +245,7 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
 
         // ---------- pip / AI
         item { PipSettingsCard(container) }
+        item { VoiceSettingsCard(container) }
 
         // ---------- gym mode
         item {
@@ -519,10 +526,6 @@ private fun PipSettingsCard(container: AppContainer) {
         ToggleRow("Online answers", "Off = Pip only answers from your data, fully offline.", settings.onlineAi) { container.write { container.settings.setOnlineAi(it) } }
         Spacer(Modifier.height(6.dp))
         ToggleRow("Pip speaks", "Pip reads its chat replies aloud. Also a mute button in the chat.", settings.pipVoice) { container.write { container.settings.setPipVoice(it) } }
-        if (settings.pipVoice) {
-            Spacer(Modifier.height(6.dp))
-            ToggleRow("Realistic online voice", "Uses Gemini's natural voice (sends only the reply text). Off = the phone's built-in voice, fully offline.", settings.pipVoiceOnline) { container.write { container.settings.setPipVoiceOnline(it) } }
-        }
         Spacer(Modifier.height(6.dp))
         Caption("Recommended: in Google Cloud Console restrict this key to Android app com.myfit.tracker with SHA-1 ${container.pipBrain.certSha1.chunked(2).joinToString(":")}", color = th.textFaint)
     }
@@ -545,4 +548,101 @@ private fun GlassSlider(title: String, hint: String, value: Float, range: Closed
         colors = SliderDefaults.colors(thumbColor = th.accentBright, activeTrackColor = th.accent, inactiveTrackColor = th.textFaint.copy(alpha = 0.3f)),
     )
     Spacer(Modifier.height(4.dp))
+}
+
+@Composable
+private fun VoiceSettingsCard(container: AppContainer) {
+    val th = LocalFitTheme.current
+    val settings = LocalSettings.current
+    val toaster = LocalToaster.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val voice = container.pipVoice
+    val packState by voice.pack.state.collectAsState()
+    val lastEngine by voice.lastEngine.collectAsState()
+    val lastError by voice.lastError.collectAsState()
+    var key by remember(settings.elevenKey) { mutableStateOf(settings.elevenKey) }
+    var status by remember { mutableStateOf<String?>(null) }
+    GlassCard {
+        CardHeader(Icons.Rounded.AutoAwesome, "Pip's voice", th.water)
+        Spacer(Modifier.height(8.dp))
+        Caption("Auto uses ElevenLabs when you add a key (most realistic, speaks Urdu), otherwise the on-device voice — instant and fully offline.")
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Auto", "On-device", "Phone voice").forEachIndexed { i, label ->
+                GlassChip(label, settings.voiceEngine == i, { container.write { container.settings.setVoiceEngine(i) } })
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Text("On-device voice pack", style = FitType.section, color = th.text)
+        when (val st = packState) {
+            com.myfit.tracker.ai.voice.VoicePack.State.Missing -> {
+                Caption("Bright, youthful neural voice (English + Hindustani for Urdu). One-time download, about ${com.myfit.tracker.ai.voice.VoicePack.SIZE_MB} MB — use Wi-Fi.")
+                Spacer(Modifier.height(8.dp))
+                GlassButton("Download voice pack", { voice.installPack() }, height = 44.dp)
+            }
+            is com.myfit.tracker.ai.voice.VoicePack.State.Downloading -> {
+                Caption("Downloading & installing… ${(st.progress * 100).toInt()}%")
+                Spacer(Modifier.height(6.dp))
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { st.progress }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                    color = th.accent, trackColor = th.textFaint.copy(alpha = 0.25f),
+                )
+                Spacer(Modifier.height(6.dp))
+                Text("Cancel", style = FitType.label, color = th.textDim, modifier = Modifier.clickableNoRipple { voice.pack.cancel() }.padding(4.dp))
+            }
+            com.myfit.tracker.ai.voice.VoicePack.State.Ready -> {
+                Caption("Installed ✓ — works offline.", color = th.success)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GlassButton("Remove", { voice.pack.delete(); toaster.show("Voice pack removed") }, height = 40.dp)
+                }
+            }
+            is com.myfit.tracker.ai.voice.VoicePack.State.Failed -> {
+                Caption(st.message, color = th.danger)
+                Spacer(Modifier.height(8.dp))
+                GlassButton("Try again", { voice.installPack() }, height = 44.dp)
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Text("ElevenLabs key (optional)", style = FitType.section, color = th.text)
+        Caption("Free plan ≈ 10,000 characters a month (roughly 100–150 replies). When it runs out Pip switches to the on-device voice by itself.")
+        Spacer(Modifier.height(6.dp))
+        Glass(Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(20.dp)) {
+            Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.foundation.text.BasicTextField(
+                    key, { key = it.trim() }, singleLine = true,
+                    textStyle = FitType.body.copy(color = th.text),
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(th.accent),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { inner -> Box { if (key.isEmpty()) Text("Paste your ElevenLabs key", style = FitType.body, color = th.textFaint); inner() } },
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GlassButton(if (key != settings.elevenKey) "Save key" else "Saved", {
+                container.write { container.settings.setElevenKey(key) }; voice.resetEleven()
+                toaster.show(if (key.isBlank()) "Key removed" else "Key saved on this phone")
+            }, height = 44.dp)
+            GlassButton("Check", {
+                if (key.isBlank()) return@GlassButton
+                status = "Checking…"
+                scope.launch {
+                    status = runCatching { voice.checkEleven(key) }.fold(
+                        { q -> if (q == null) "Key works ✓" else "Key works ✓ · ${q.second - q.first} of ${q.second} characters left this month" },
+                        { e -> "Not working: ${e.message}" },
+                    )
+                }
+            }, height = 44.dp)
+        }
+        status?.let { Spacer(Modifier.height(6.dp)); Caption(it, color = if (it.startsWith("Key works")) th.success else th.textDim) }
+        lastError?.let { Spacer(Modifier.height(6.dp)); Caption(it, color = th.warning) }
+        Spacer(Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            GlassButton("Test voice", { voice.speak("Hi! I'm Pip, your fitness buddy. Ready to crush today's goals?", force = true) }, height = 44.dp)
+            Spacer(Modifier.width(10.dp))
+            lastEngine?.let { Caption("Last spoke with: $it") }
+        }
+    }
 }

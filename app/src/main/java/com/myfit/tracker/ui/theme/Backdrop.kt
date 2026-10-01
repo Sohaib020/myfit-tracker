@@ -39,7 +39,8 @@ class Backdrop {
     var layer: GraphicsLayer? = null
     /** The current tab's content recorded per frame — lets the dock blur what scrolls beneath it. */
     var contentLayer: GraphicsLayer? = null
-    val frame = mutableFloatStateOf(0f)          // bumps every recorded frame so glass redraws with it
+    /** The backdrop pre-blurred once per frame (shared by every card, instead of one blur per card). */
+    var blurLayer: GraphicsLayer? = null
 }
 
 val LocalBackdrop = staticCompositionLocalOf { Backdrop() }
@@ -57,6 +58,7 @@ fun DrawScope.drawBackdrop(theme: FitTheme, image: ImageBitmap?, t: Float, w: Fl
             drawRect(if (theme.isLight) Color(0x40FFFFFF) else Color(0x59000000), size = full)
             return@clipRect
         }
+        if (ThemeShaders.draw(this, theme.id, t, w, h)) return@clipRect
         when (theme.art) {
             BackdropArt.AURORA -> aurora(theme, t, w, h)
             BackdropArt.GRID -> grid(theme, t, w, h)

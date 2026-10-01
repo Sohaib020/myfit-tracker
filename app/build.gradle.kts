@@ -16,6 +16,7 @@ android {
         versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
         versionName = "0.1." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
         vectorDrawables { useSupportLibrary = true }
+        ndk { abiFilters += listOf("arm64-v8a") }
     }
 
     // Release signing comes from CI secrets (never committed). Without them the build falls back
@@ -96,6 +97,10 @@ dependencies {
     ksp("androidx.room:room-compiler:$room")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // On-device neural voice (Supertonic via sherpa-onnx; AAR fetched by CI) + .tar.bz2 extraction
+    implementation(files("libs/sherpa-onnx.aar"))
+    implementation("org.apache.commons:commons-compress:1.27.1")
 
     testImplementation("junit:junit:4.13.2")
 }
