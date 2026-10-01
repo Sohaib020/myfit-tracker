@@ -137,7 +137,7 @@ fun TemplateEditorScreen(container: AppContainer, templateId: Long?) {
                     onMove = { d -> val j = i + d; if (j in items.indices) { val a = items[i]; items[i] = items[j]; items[j] = a } },
                     onRemove = { items.removeAt(i) })
             }
-            GlassButton("Add exercises", { picking = true }, Modifier.fillMaxWidth(), icon = Icons.Rounded.Add)
+            GlassButton("Add exercises", { picking = true }, Modifier.fillMaxWidth(), icon = Duo.Add)
             AccentButton("Save template", {
                 var group = 0
                 val out = items.mapIndexed { i, it ->
@@ -177,11 +177,11 @@ private fun ItemCard(
                 ExerciseImage(ex, Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)))
                 Spacer(Modifier.width(10.dp))
                 Text(ex.name, style = FitType.label, color = th.text, modifier = Modifier.weight(1f), maxLines = 2)
-                GlassIconButton(Icons.Rounded.ArrowUpward, { onMove(-1) }, size = 34.dp)
+                GlassIconButton(Duo.ArrowUpward, { onMove(-1) }, size = 34.dp)
                 Spacer(Modifier.width(4.dp))
-                GlassIconButton(Icons.Rounded.ArrowDownward, { onMove(1) }, size = 34.dp)
+                GlassIconButton(Duo.ArrowDownward, { onMove(1) }, size = 34.dp)
                 Spacer(Modifier.width(4.dp))
-                GlassIconButton(Icons.Rounded.Close, onRemove, size = 34.dp, tint = th.danger)
+                GlassIconButton(Duo.Close, onRemove, size = 34.dp, tint = th.danger)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Sets", style = FitType.body, color = th.text, modifier = Modifier.weight(1f))
@@ -201,7 +201,7 @@ private fun ItemCard(
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(listOf(30, 45, 60, 90, 120, 150, 180, 240)) { r -> GlassChip(if (r < 60) "${r}s" else "${r / 60}:${"%02d".format(r % 60)}", it.rest == r, { onChange(it.copy(rest = r)) }) }
             }
-            if (!isLast) GlassChip(if (it.superset) "Superset with next ✓" else "Superset with next", it.superset, { onChange(it.copy(superset = !it.superset)) }, icon = Icons.Rounded.Link)
+            if (!isLast) GlassChip(if (it.superset) "Superset with next ✓" else "Superset with next", it.superset, { onChange(it.copy(superset = !it.superset)) }, icon = Duo.Link)
         }
     }
 }

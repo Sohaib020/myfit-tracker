@@ -113,8 +113,8 @@ fun FinishWorkoutScreen(container: AppContainer, workoutId: Long) {
                 }
                 toaster.show("Saved · ${t.sets} sets" + (t.volumeKg?.let { " · ${Fmt.weight(it, u.weight, 0)}" } ?: ""))
                 nav.clear()
-            }, Modifier.fillMaxWidth(), icon = Icons.Rounded.Check, enabled = t.sets > 0)
-            GlassButton("Discard workout", { confirmDiscard = true }, Modifier.fillMaxWidth(), icon = Icons.Rounded.DeleteOutline)
+            }, Modifier.fillMaxWidth(), icon = Duo.Check, enabled = t.sets > 0)
+            GlassButton("Discard workout", { confirmDiscard = true }, Modifier.fillMaxWidth(), icon = Duo.DeleteOutline)
             Spacer(Modifier.height(20.dp))
         }
     }

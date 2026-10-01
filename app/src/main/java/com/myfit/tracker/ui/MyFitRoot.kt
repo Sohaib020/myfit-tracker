@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -127,7 +128,7 @@ fun MyFitRoot(container: AppContainer) {
     val animate = s.animatedBackground && s.motion != 2
     LaunchedEffect(animate, s.motion) {
         if (!animate) return@LaunchedEffect
-        val minStep = if (s.motion == 0) 0L else 32L
+        val minStep = if (s.motion == 0) 0L else 48L          // Balanced ≈ 20 fps
         var last = -1L
         var acc = 0L
         while (true) withFrameMillis { now ->
@@ -153,20 +154,40 @@ fun MyFitRoot(container: AppContainer) {
                     .fillMaxSize()
                     .onSizeChanged { backdrop.rootSize = Size(it.width.toFloat(), it.height.toFloat()) }
             ) {
-                // the backdrop is recorded once per frame into a shared layer that every glass surface replays
+                // The animated backdrop is rendered ONCE per frame into a small offscreen buffer (1/3 size)
+                // and scaled up — backgrounds are soft, so this looks the same at ~1/9 of the GPU cost.
+                // The two blurs (cards, dock) are also computed on that small buffer.
+                val small = rememberGraphicsLayer()
+                val smallCard = rememberGraphicsLayer()
+                val smallDock = rememberGraphicsLayer()
                 val bgLayer = rememberGraphicsLayer()
                 val blurLayer = rememberGraphicsLayer()
+                val dockLayer = rememberGraphicsLayer()
                 backdrop.layer = bgLayer
                 backdrop.blurLayer = blurLayer
-                val blurPx = with(androidx.compose.ui.platform.LocalDensity.current) { (26.dp * s.blurAmount).toPx() }
+                backdrop.dockLayer = dockLayer
+                val dens = androidx.compose.ui.platform.LocalDensity.current
+                val cardBlurPx = with(dens) { (26.dp * s.blurAmount).toPx() }
+                val dockBlurPx = with(dens) { (30.dp * s.dockBlur).toPx() }
+                val blurOk = android.os.Build.VERSION.SDK_INT >= 31 && !com.myfit.tracker.CrashGuard.safeMode
                 Canvas(Modifier.fillMaxSize()) {
                     val t = backdrop.time.floatValue
-                    bgLayer.record { drawBackdrop(backdrop.theme, backdrop.image, t, size.width, size.height) }
+                    val k = if (backdrop.image == null) 3f else 1f        // photos stay sharp (and still)
+                    val sw = (size.width / k).coerceAtLeast(1f); val sh = (size.height / k).coerceAtLeast(1f)
+                    val smallSize = androidx.compose.ui.unit.IntSize(kotlin.math.ceil(sw).toInt(), kotlin.math.ceil(sh).toInt())
+                    small.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
+                    small.record(smallSize) { drawBackdrop(backdrop.theme, backdrop.image, t, sw, sh) }
+                    bgLayer.record { scale(k, k, pivot = androidx.compose.ui.geometry.Offset.Zero) { drawLayer(small) } }
                     drawLayer(bgLayer)
-                    // one blur per frame, shared by every glass card (Android 12+)
-                    if (android.os.Build.VERSION.SDK_INT >= 31 && !com.myfit.tracker.CrashGuard.safeMode) {
-                        blurLayer.renderEffect = if (blurPx > 0.5f) androidx.compose.ui.graphics.BlurEffect(blurPx, blurPx, androidx.compose.ui.graphics.TileMode.Clamp) else null
-                        blurLayer.record { drawLayer(bgLayer) }
+                    if (blurOk) {
+                        smallCard.renderEffect = if (cardBlurPx / k > 0.5f) androidx.compose.ui.graphics.BlurEffect(cardBlurPx / k, cardBlurPx / k, androidx.compose.ui.graphics.TileMode.Clamp) else null
+                        smallCard.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
+                        smallCard.record(smallSize) { drawLayer(small) }
+                        blurLayer.record { scale(k, k, pivot = androidx.compose.ui.geometry.Offset.Zero) { drawLayer(smallCard) } }
+                        smallDock.renderEffect = if (dockBlurPx / k > 0.5f) androidx.compose.ui.graphics.BlurEffect(dockBlurPx / k, dockBlurPx / k, androidx.compose.ui.graphics.TileMode.Clamp) else null
+                        smallDock.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
+                        smallDock.record(smallSize) { drawLayer(small) }
+                        dockLayer.record { scale(k, k, pivot = androidx.compose.ui.geometry.Offset.Zero) { drawLayer(smallDock) } }
                     }
                 }
                 when (val ps = profileState) {
@@ -187,11 +208,11 @@ private class VmFactory(private val c: AppContainer) : ViewModelProvider.Factory
 }
 
 private val tabs = listOf(
-    TabItem("home", "Home", Icons.Rounded.Home),
-    TabItem("train", "Train", Icons.Rounded.FitnessCenter),
-    TabItem("exercises", "Exercises", Icons.Rounded.SportsGymnastics),
-    TabItem("log", "Log", Icons.Rounded.ViewTimeline),
-    TabItem("me", "Me", Icons.Rounded.Person),
+    TabItem("home", "Home", Duo.Home),
+    TabItem("train", "Train", Duo.FitnessCenter),
+    TabItem("exercises", "Exercises", Duo.SportsGymnastics),
+    TabItem("log", "Log", Duo.ViewTimeline),
+    TabItem("me", "Me", Duo.Person),
 )
 
 @Composable
@@ -210,14 +231,8 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
     BackHandler(enabled = top != null) { nav.pop() }
 
     CompositionLocalProvider(LocalNav provides nav) {
-        val contentLayer = rememberGraphicsLayer()
-        backdrop.contentLayer = contentLayer
         Box(Modifier.fillMaxSize()) {
-          // tab content is recorded into a layer so the dock's glass can show it (blurred) underneath
-          Box(Modifier.fillMaxSize().drawWithContent {
-              contentLayer.record { this@drawWithContent.drawContent() }
-              drawLayer(contentLayer)
-          }) {
+          Box(Modifier.fillMaxSize()) {
             AnimatedContent(
                 targetState = tab,
                 transitionSpec = {
@@ -310,6 +325,6 @@ private fun QuickAddOrb(onClick: () -> Unit) {
                 drawCircle(Color.White.copy(alpha = 0.5f), radius = size.minDimension * 0.40f, style = Stroke(1.dp.toPx()))
             }
         )
-        Icon(Icons.Rounded.Add, "Quick add", tint = th.onAccent, modifier = Modifier.align(Alignment.Center).size(28.dp))
+        Icon(Duo.Add, "Quick add", tint = th.onAccent, modifier = Modifier.align(Alignment.Center).size(28.dp))
     }
 }

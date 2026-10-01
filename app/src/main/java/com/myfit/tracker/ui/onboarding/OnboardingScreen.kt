@@ -177,9 +177,9 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                     }
                     2 -> {
                         Header("What's your sex?", "Used for energy estimates and body-composition context.")
-                        SexCard("Male", Icons.Rounded.Male, s.sex == Sex.MALE) { s.sex = Sex.MALE }
+                        SexCard("Male", Duo.Male, s.sex == Sex.MALE) { s.sex = Sex.MALE }
                         Spacer(Modifier.height(16.dp))
-                        SexCard("Female", Icons.Rounded.Female, s.sex == Sex.FEMALE) { s.sex = Sex.FEMALE }
+                        SexCard("Female", Duo.Female, s.sex == Sex.FEMALE) { s.sex = Sex.FEMALE }
                     }
                     3 -> {
                         Header("What's your height?", "Used for better progress tracking.")
@@ -263,7 +263,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                             s.protein = (s.weightKg * 1.8).roundToInt().toString()
                             s.waterL = Fmt.num(s.weightKg * 0.035, 1)
                             s.suggested = true
-                        }, icon = Icons.Rounded.AutoAwesome)
+                        }, icon = Duo.AutoAwesome)
                         if (s.suggested) {
                             Spacer(Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -294,10 +294,10 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
 
         // bottom bar
         Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (step > 0) GlassIconButton(Icons.AutoMirrored.Rounded.ArrowBack, { step-- }, size = 52.dp)
+            if (step > 0) GlassIconButton(Duo.ArrowBack, { step-- }, size = 52.dp)
             Spacer(Modifier.weight(1f))
             when (step) {
-                0 -> AccentButton("Get started", { step = 1 }, Modifier.fillMaxWidth(), icon = Icons.AutoMirrored.Rounded.ArrowForward)
+                0 -> AccentButton("Get started", { step = 1 }, Modifier.fillMaxWidth(), icon = Duo.ArrowForward)
                 STEPS -> AccentButton(if (saving) "Saving…" else "Start tracking", {
                     if (saving) return@AccentButton
                     saving = true
@@ -322,7 +322,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         container.profileRepo.createProfile(profile, targets)
                     }
                 }, Modifier.width(200.dp), enabled = !saving)
-                else -> AccentButton("Next", { if (canNext) step++ }, Modifier.width(150.dp), icon = Icons.AutoMirrored.Rounded.ArrowForward, enabled = canNext)
+                else -> AccentButton("Next", { if (canNext) step++ }, Modifier.width(150.dp), icon = Duo.ArrowForward, enabled = canNext)
             }
         }
     }

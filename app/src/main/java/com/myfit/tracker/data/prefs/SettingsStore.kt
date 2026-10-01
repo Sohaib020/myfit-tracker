@@ -55,7 +55,11 @@ data class AppSettings(
     val refraction: Float = 1f,          // 0 (flat) … 2 (strong lens)
     val pipVoice: Boolean = true,
     val pipVoiceOnline: Boolean = true,  // realistic Gemini voice when online; offline voice otherwise
-)
+) {
+    /** The user's own key if they added one, otherwise the key built into this build (from CI secrets). */
+    val geminiKeyEff: String get() = geminiKey.ifBlank { com.myfit.tracker.BuildConfig.GEMINI_KEY }
+    val elevenKeyEff: String get() = elevenKey.ifBlank { com.myfit.tracker.BuildConfig.ELEVEN_KEY }
+}
 
 class SettingsStore(private val context: Context) {
     private object K {

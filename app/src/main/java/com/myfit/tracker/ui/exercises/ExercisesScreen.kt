@@ -77,9 +77,9 @@ private fun Header(onCustom: () -> Unit, onArchive: () -> Unit) {
             Text("Exercises", style = FitType.display, color = th.text)
             Caption("876 exercises with photos · public-domain library + your own")
         }
-        com.myfit.tracker.ui.theme.GlassIconButton(Icons.Rounded.Inventory2, onArchive)
+        com.myfit.tracker.ui.theme.GlassIconButton(Duo.Inventory2, onArchive)
         androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
-        GlassButton("Custom", onCustom, icon = Icons.Rounded.Add, height = 44.dp)
+        GlassButton("Custom", onCustom, icon = Duo.Add, height = 44.dp)
     }
 }
 
@@ -141,7 +141,7 @@ fun ExerciseBrowser(
                 item(span = { GridItemSpan(2) }) {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.History, null, tint = th.textDim, modifier = Modifier.size(16.dp))
+                            Icon(Duo.History, null, tint = th.textDim, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text("YOU'VE LOGGED THESE", style = FitType.overline, color = th.textDim)
                         }
@@ -167,7 +167,7 @@ fun ExerciseBrowser(
             Box(Modifier.align(Alignment.BottomCenter).padding(16.dp).padding(bottom = bottomPad.dp)) {
                 AccentButton(
                     if (selected.isNullOrEmpty()) "Select exercises" else "Add ${selected.size} exercise${if (selected.size == 1) "" else "s"}",
-                    onConfirm, Modifier.fillMaxWidth(), icon = Icons.Rounded.Check, enabled = !selected.isNullOrEmpty(),
+                    onConfirm, Modifier.fillMaxWidth(), icon = Duo.Check, enabled = !selected.isNullOrEmpty(),
                 )
             }
         }

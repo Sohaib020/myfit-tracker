@@ -105,7 +105,7 @@ fun TrainScreen(container: AppContainer, bottomPad: Int) {
                         Text("Ready when you are", style = FitType.section, color = th.text)
                         Caption("Start from a template below, or go freestyle.")
                         Spacer(Modifier.height(10.dp))
-                        AccentButton("Empty workout", { start { container.workoutRepo.startEmpty() } }, icon = Icons.Rounded.PlayArrow, height = 46.dp)
+                        AccentButton("Empty workout", { start { container.workoutRepo.startEmpty() } }, icon = Duo.PlayArrow, height = 46.dp)
                     }
                 }
             }
@@ -114,7 +114,7 @@ fun TrainScreen(container: AppContainer, bottomPad: Int) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SectionTitle("Templates", Modifier.weight(1f))
-                GlassButton("New", { nav.push(Overlay.TemplateEditor(null)) }, icon = Icons.Rounded.Add, height = 40.dp)
+                GlassButton("New", { nav.push(Overlay.TemplateEditor(null)) }, icon = Duo.Add, height = 40.dp)
             }
         }
         if (templates.isEmpty()) item {
@@ -125,7 +125,7 @@ fun TrainScreen(container: AppContainer, bottomPad: Int) {
                     Spacer(Modifier.height(12.dp))
                     GlassButton("Add Push / Pull / Legs", {
                         container.write { val n = container.workoutRepo.createStarterTemplates(); toaster.show("Added $n templates") }
-                    }, icon = Icons.Rounded.AutoAwesome, height = 44.dp)
+                    }, icon = Duo.AutoAwesome, height = 44.dp)
                 }
             }
         }
@@ -156,7 +156,7 @@ private fun ResumeCard(container: AppContainer, workoutId: Long, onResume: () ->
         Box(Modifier.matchParentSize().drawBehind { drawRect(Brush.horizontalGradient(listOf(th.accent.copy(alpha = 0.55f), th.accent.copy(alpha = 0.1f)))) })
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(52.dp).clip(CircleShape).drawBehind { drawCircle(th.accentBright) }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.FitnessCenter, null, tint = th.onAccent)
+                Icon(Duo.FitnessCenter, null, tint = th.onAccent)
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -181,11 +181,11 @@ private fun TemplateCard(t: TemplateView, onStart: () -> Unit, onEdit: () -> Uni
                     Caption("${t.items.size} exercises · ${t.items.sumOf { it.first.targetSets }} sets")
                 }
                 Box {
-                    GlassIconButton(Icons.Rounded.MoreVert, { menu = true }, size = 40.dp)
+                    GlassIconButton(Duo.MoreVert, { menu = true }, size = 40.dp)
                     DropdownMenu(menu, { menu = false }) {
-                        DropdownMenuItem({ Text("Edit") }, { menu = false; onEdit() }, leadingIcon = { Icon(Icons.Rounded.Edit, null) })
-                        DropdownMenuItem({ Text("Duplicate") }, { menu = false; onDuplicate() }, leadingIcon = { Icon(Icons.Rounded.ContentCopy, null) })
-                        DropdownMenuItem({ Text("Archive") }, { menu = false; onArchive() }, leadingIcon = { Icon(Icons.Rounded.Inventory2, null) })
+                        DropdownMenuItem({ Text("Edit") }, { menu = false; onEdit() }, leadingIcon = { Icon(Duo.Edit, null) })
+                        DropdownMenuItem({ Text("Duplicate") }, { menu = false; onDuplicate() }, leadingIcon = { Icon(Duo.ContentCopy, null) })
+                        DropdownMenuItem({ Text("Archive") }, { menu = false; onArchive() }, leadingIcon = { Icon(Duo.Inventory2, null) })
                     }
                 }
             }
@@ -197,7 +197,7 @@ private fun TemplateCard(t: TemplateView, onStart: () -> Unit, onEdit: () -> Uni
                     }
                     if (t.items.size > 5) Caption("+${t.items.size - 5}", Modifier.offset(x = (5 * 34 + 6).dp).align(Alignment.CenterStart))
                 }
-                AccentButton("Start", onStart, icon = Icons.Rounded.PlayArrow, height = 46.dp)
+                AccentButton("Start", onStart, icon = Duo.PlayArrow, height = 46.dp)
             }
             Spacer(Modifier.height(8.dp))
             Caption(t.items.joinToString(" · ") { it.second.name }, )

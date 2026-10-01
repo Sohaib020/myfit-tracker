@@ -108,7 +108,7 @@ private fun BigStepper(label: String, value: String, unit: String?, onMinus: () 
         Text(label.uppercase(), style = FitType.overline, color = th.textDim, modifier = Modifier.padding(start = 6.dp, bottom = 6.dp))
         Glass(Modifier.fillMaxWidth().height(height), shape = RoundedCornerShape(28.dp)) {
             Row(Modifier.fillMaxSize().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                StepButton(Icons.Rounded.Remove) { tick(); onMinus() }
+                StepButton(Duo.Remove) { tick(); onMinus() }
                 Box(Modifier.weight(1f).fillMaxSize().clickableNoRipple(onTapValue), contentAlignment = Alignment.Center) {
                     Row(verticalAlignment = Alignment.Bottom) {
                         AnimatedContent(value, transitionSpec = {
@@ -122,7 +122,7 @@ private fun BigStepper(label: String, value: String, unit: String?, onMinus: () 
                         }
                     }
                 }
-                StepButton(Icons.Rounded.Add) { tick(); onPlus() }
+                StepButton(Duo.Add) { tick(); onPlus() }
             }
         }
     }
@@ -188,7 +188,7 @@ fun DurationField(sec: Long?, onChange: (Long?) -> Unit) {
     GlassChip(if (running) "Stop stopwatch" else "Start stopwatch", running, {
         if (running) { running = false; onChange((System.currentTimeMillis() - startedAt) / 1000) }
         else { startedAt = System.currentTimeMillis(); now = startedAt; running = true }
-    }, icon = if (running) Icons.Rounded.Stop else Icons.Rounded.PlayArrow)
+    }, icon = if (running) Duo.Stop else Duo.PlayArrow)
     if (typing) NumberPadDialog("Duration (seconds, or m:ss)", sec?.let { mmss(it) } ?: "", "", true, allowColon = true, onDismiss = { typing = false }) { s ->
         onChange(parseDuration(s)); typing = false
     }

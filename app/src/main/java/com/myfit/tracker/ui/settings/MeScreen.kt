@@ -131,8 +131,8 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
         item {
             val p = profile
             GlassCard(onClick = { open(Sheet.EditProfile) }) {
-                CardHeader(Icons.Rounded.Person, p?.name ?: "Profile", th.accentBright) {
-                    Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Icons.Rounded.Edit, null, tint = th.textDim) }
+                CardHeader(Duo.Person, p?.name ?: "Profile", th.accentBright) {
+                    Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.Edit, null, tint = th.textDim) }
                 }
                 if (p != null) {
                     val age = p.age + ChronoUnit.YEARS.between(LocalDate.parse(p.ageRecordedOn), Clock.today()).toInt()
@@ -152,8 +152,8 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
         // ---------- targets
         item {
             GlassCard(onClick = { open(Sheet.EditTargets) }) {
-                CardHeader(Icons.Rounded.TrackChanges, "Daily targets", th.success) {
-                    Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Icons.Rounded.Edit, null, tint = th.textDim) }
+                CardHeader(Duo.TrackChanges, "Daily targets", th.success) {
+                    Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.Edit, null, tint = th.textDim) }
                 }
                 Spacer(Modifier.height(12.dp))
                 val today = Clock.today()
@@ -173,7 +173,7 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
         // ---------- appearance
         item {
             GlassCard {
-                CardHeader(Icons.Rounded.Palette, "Theme", th.fat)
+                CardHeader(Duo.Palette, "Theme", th.fat)
                 Spacer(Modifier.height(14.dp))
                 Caption("${Themes.all.size} themes · most of them animate. Swipe to browse.")
                 Spacer(Modifier.height(10.dp))
@@ -212,13 +212,13 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
 
         item {
             GlassCard {
-                CardHeader(Icons.Rounded.Wallpaper, "Background", th.water)
+                CardHeader(Duo.Wallpaper, "Background", th.water)
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     GlassChip("Theme art", settings.customBackground == null, { container.write { container.settings.setCustomBackground(null) } })
                     GlassChip("My photo", settings.customBackground != null, {
                         picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    }, icon = Icons.Rounded.Image)
+                    }, icon = Duo.Image)
                 }
                 if (settings.customBackground != null) {
                     Spacer(Modifier.height(8.dp))
@@ -250,7 +250,7 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
         // ---------- gym mode
         item {
             GlassCard {
-                CardHeader(Icons.Rounded.FitnessCenter, "Gym Mode", th.accentBright)
+                CardHeader(Duo.FitnessCenter, "Gym Mode", th.accentBright)
                 Spacer(Modifier.height(10.dp))
                 ToggleRow("Auto-start rest timer", "Starts after every completed set.", settings.restAutoStart) { container.write { container.settings.setRestAuto(it) } }
                 Text("Default rest", style = FitType.body, color = th.text)
@@ -274,7 +274,7 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
         // ---------- units
         item {
             GlassCard {
-                CardHeader(Icons.Rounded.Straighten, "Units", th.warning)
+                CardHeader(Duo.Straighten, "Units", th.warning)
                 Spacer(Modifier.height(12.dp))
                 val u = settings.units
                 UnitRow("Weight") { GlassSegmented(WeightUnit.entries, u.weight, { it.label }, { container.write { container.settings.setUnits(u.copy(weight = it)) } }, Modifier.width(170.dp)) }
@@ -288,7 +288,7 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
         // ---------- dashboard & behaviour
         item {
             GlassCard {
-                CardHeader(Icons.Rounded.Tune, "Dashboard & behaviour", th.steps)
+                CardHeader(Duo.Tune, "Dashboard & behaviour", th.steps)
                 Spacer(Modifier.height(10.dp))
                 DashCard.entries.forEach { card ->
                     ToggleRow(card.label, null, card in settings.dashCards) { on ->
@@ -302,7 +302,7 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
 
         item {
             GlassCard {
-                CardHeader(Icons.Rounded.Lock, "Privacy", th.textDim)
+                CardHeader(Duo.Lock, "Privacy", th.textDim)
                 Spacer(Modifier.height(10.dp))
                 Caption("All data lives only on this phone. No account, no ads, no analytics. Backup & export arrive in a later build. Exercise photos & instructions: free-exercise-db (public domain).")
                 Spacer(Modifier.height(6.dp))
@@ -368,7 +368,7 @@ fun EditProfileForm(c: AppContainer, close: () -> Unit) {
     var wake by remember { mutableIntStateOf(p.wakeTimeMin) }
     var sleep by remember { mutableIntStateOf(p.sleepTimeMin) }
 
-    FormHeader("Edit profile", Icons.Rounded.Person, th.accentBright, false, null)
+    FormHeader("Edit profile", Duo.Person, th.accentBright, false, null)
     NotesField(name, { name = it.take(40) }, "Name")
     Spacer(Modifier.height(12.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -439,7 +439,7 @@ fun EditTargetsForm(c: AppContainer, close: () -> Unit) {
     var sleepH by remember { mutableStateOf(cur(TargetType.SLEEP_MIN)?.let { Fmt.trim(it / 60.0, 2) } ?: "") }
     var workouts by remember { mutableDoubleStateOf(cur(TargetType.WEEKLY_WORKOUTS) ?: 4.0) }
 
-    FormHeader("Daily targets", Icons.Rounded.TrackChanges, th.success, false, null)
+    FormHeader("Daily targets", Duo.TrackChanges, th.success, false, null)
     Caption("Saving creates a new target version starting today (${today}). Earlier days are still judged against the old targets.")
     Spacer(Modifier.height(14.dp))
     @Composable fun field(label: String, v: String, unit: String, dec: Boolean, set: (String) -> Unit) {
@@ -485,11 +485,12 @@ private fun PipSettingsCard(container: AppContainer) {
     var testing by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
     GlassCard {
-        CardHeader(Icons.Rounded.AutoAwesome, "Pip · AI buddy", th.accentBright)
+        CardHeader(Duo.AutoAwesome, "Pip · AI buddy", th.accentBright)
         Spacer(Modifier.height(10.dp))
         Caption("Questions about your logs are answered offline from your own data. General health & fitness questions use Google Gemini with only a short, question-specific summary — never your full history or notes. Online answers are tagged.")
         Spacer(Modifier.height(12.dp))
         Text("Gemini API key", style = FitType.label, color = th.textDim)
+        if (settings.geminiKey.isBlank() && com.myfit.tracker.BuildConfig.GEMINI_KEY.isNotBlank()) Caption("Built-in key active ✓ — you only need your own key if you want to use a different one.", color = th.success)
         Spacer(Modifier.height(6.dp))
         Glass(Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(20.dp)) {
             Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -563,7 +564,7 @@ private fun VoiceSettingsCard(container: AppContainer) {
     var key by remember(settings.elevenKey) { mutableStateOf(settings.elevenKey) }
     var status by remember { mutableStateOf<String?>(null) }
     GlassCard {
-        CardHeader(Icons.Rounded.AutoAwesome, "Pip's voice", th.water)
+        CardHeader(Duo.AutoAwesome, "Pip's voice", th.water)
         Spacer(Modifier.height(8.dp))
         Caption("Auto uses ElevenLabs when you add a key (most realistic, speaks Urdu), otherwise the on-device voice — instant and fully offline.")
         Spacer(Modifier.height(10.dp))
@@ -605,6 +606,7 @@ private fun VoiceSettingsCard(container: AppContainer) {
         }
         Spacer(Modifier.height(14.dp))
         Text("ElevenLabs key (optional)", style = FitType.section, color = th.text)
+        if (settings.elevenKey.isBlank() && com.myfit.tracker.BuildConfig.ELEVEN_KEY.isNotBlank()) Caption("Built-in key active ✓", color = th.success)
         Caption("Free plan ≈ 10,000 characters a month (roughly 100–150 replies). When it runs out Pip switches to the on-device voice by itself.")
         Spacer(Modifier.height(6.dp))
         Glass(Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(20.dp)) {

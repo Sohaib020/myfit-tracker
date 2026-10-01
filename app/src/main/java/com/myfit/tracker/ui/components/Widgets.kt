@@ -73,23 +73,33 @@ fun GlassCard(
     }
 }
 
+/** Duotone glass tile: a frosted rounded square washed with the colour, with a glowing duotone glyph. */
 @Composable
-fun IconBubble(icon: ImageVector, color: Color, size: Dp = 34.dp) {
+fun IconBubble(icon: ImageVector, color: Color, size: Dp = 36.dp) {
+    val th = com.myfit.tracker.ui.theme.LocalFitTheme.current
+    val corner = size * 0.32f
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(corner)
+    val glyph = if (th.isLight) Color(color.red * 0.8f, color.green * 0.8f, color.blue * 0.8f) else
+        Color(minOf(1f, color.red * 0.55f + 0.45f), minOf(1f, color.green * 0.55f + 0.45f), minOf(1f, color.blue * 0.55f + 0.45f))
     Box(
         Modifier
             .size(size)
-            .clip(CircleShape)
+            .clip(shape)
             .drawBehind {
-                // solid, glossy bubble so icons read clearly on any theme
-                drawCircle(Brush.verticalGradient(listOf(
-                    Color(minOf(1f, color.red * 1.12f + 0.06f), minOf(1f, color.green * 1.12f + 0.06f), minOf(1f, color.blue * 1.12f + 0.06f)),
-                    Color(color.red * 0.72f, color.green * 0.72f, color.blue * 0.72f),
-                )))
-                drawCircle(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.38f), Color.Transparent), 0f, this.size.height * 0.55f))
-                drawCircle(Color.White.copy(alpha = 0.35f), style = Stroke(1.dp.toPx()))
+                val r = androidx.compose.ui.geometry.CornerRadius(corner.toPx())
+                // colour wash, brighter at the top-left like light through tinted glass
+                drawRoundRect(Brush.linearGradient(listOf(color.copy(alpha = 0.55f), color.copy(alpha = 0.22f)), androidx.compose.ui.geometry.Offset.Zero,
+                    androidx.compose.ui.geometry.Offset(this.size.width, this.size.height)), cornerRadius = r)
+                drawRoundRect(Color.White.copy(alpha = if (th.isLight) 0.35f else 0.06f), cornerRadius = r)
+                drawRoundRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.30f), Color.Transparent), 0f, this.size.height * 0.5f), cornerRadius = r)
+                // soft glow behind the glyph
+                drawCircle(Brush.radialGradient(listOf(color.copy(alpha = 0.55f), Color.Transparent)), radius = this.size.minDimension * 0.42f)
+                drawRoundRect(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.08f)),
+                    androidx.compose.ui.geometry.Offset.Zero, androidx.compose.ui.geometry.Offset(this.size.width, this.size.height)),
+                    cornerRadius = r, style = Stroke(1.dp.toPx()))
             },
         contentAlignment = Alignment.Center,
-    ) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(size * 0.55f)) }
+    ) { Icon(icon, null, tint = glyph, modifier = Modifier.size(size * 0.6f)) }
 }
 
 @Composable
@@ -287,9 +297,9 @@ fun Stepper(value: Int, onChange: (Int) -> Unit, range: IntRange, modifier: Modi
     val th = LocalFitTheme.current
     val tick = rememberTick()
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        com.myfit.tracker.ui.theme.GlassIconButton(Icons.Rounded.Remove, { if (value > range.first) { tick(); onChange(value - 1) } }, size = 40.dp)
+        com.myfit.tracker.ui.theme.GlassIconButton(Duo.Remove, { if (value > range.first) { tick(); onChange(value - 1) } }, size = 40.dp)
         Text(label(value), style = FitType.title, color = th.text, textAlign = TextAlign.Center, modifier = Modifier.width(56.dp))
-        com.myfit.tracker.ui.theme.GlassIconButton(Icons.Rounded.Add, { if (value < range.last) { tick(); onChange(value + 1) } }, size = 40.dp)
+        com.myfit.tracker.ui.theme.GlassIconButton(Duo.Add, { if (value < range.last) { tick(); onChange(value + 1) } }, size = 40.dp)
     }
 }
 

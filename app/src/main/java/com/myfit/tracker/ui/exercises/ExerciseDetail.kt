@@ -136,9 +136,9 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
         Box {
             ExerciseImage(e, Modifier.fillMaxWidth().height(300.dp), animate = true)
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp)) {
-                GlassIconButton(Icons.AutoMirrored.Rounded.ArrowBack, { nav.pop() })
+                GlassIconButton(Duo.ArrowBack, { nav.pop() })
                 Spacer(Modifier.weight(1f))
-                GlassIconButton(Icons.Rounded.Edit, { nav.push(Overlay.ExerciseEditor(e.id)) })
+                GlassIconButton(Duo.Edit, { nav.push(Overlay.ExerciseEditor(e.id)) })
             }
         }
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -153,7 +153,7 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
 
             // ---- your history
             GlassCard {
-                CardHeader(Icons.Rounded.EmojiEvents, "Your record", th.warning) {
+                CardHeader(Duo.EmojiEvents, "Your record", th.warning) {
                     if (history.isNotEmpty()) DataBadge(DataKind.RECORDED)
                 }
                 Spacer(Modifier.height(12.dp))
@@ -223,8 +223,8 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
 
             if (e.archivedAt == null) GlassButton("Archive exercise", {
                 container.write { container.exerciseRepo.archive(e.id) }; toaster.show("Archived — history is kept"); nav.pop()
-            }, Modifier.fillMaxWidth(), icon = Icons.Rounded.Archive)
-            else GlassButton("Restore exercise", { container.write { container.exerciseRepo.unarchive(e.id) } }, Modifier.fillMaxWidth(), icon = Icons.Rounded.Unarchive)
+            }, Modifier.fillMaxWidth(), icon = Duo.Archive)
+            else GlassButton("Restore exercise", { container.write { container.exerciseRepo.unarchive(e.id) } }, Modifier.fillMaxWidth(), icon = Duo.Unarchive)
             Caption("Exercises are never deleted, so your history always stays intact. Archiving hides it from lists.")
             Spacer(Modifier.height(24.dp))
         }

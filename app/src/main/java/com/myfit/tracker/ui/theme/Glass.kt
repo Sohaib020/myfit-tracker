@@ -88,12 +88,12 @@ fun Glass(
     val scale by animateFloatAsState(if (pressed && onClick != null) pressScale else 1f, spring(0.45f, 700f), label = "glassPress")
     val glow by animateFloatAsState(if (pressed && onClick != null) 1f else 0f, label = "glassGlow")
     val tick = rememberTick()
-    val density = LocalDensity.current
-    // Cards sample the shared pre-blurred backdrop (one blur per frame for the whole app).
-    // Surfaces that show live content underneath (the dock) blur themselves with their own amount.
-    val ownBlurPx = with(density) { (blur * (if (seeContent) st.dockBlur else 0f)).toPx() }
+    // Everything samples a backdrop that was blurred ONCE per frame at low resolution:
+    // cards use the shared card blur, the dock (`seeContent`) uses its own dock-blur layer.
+    // The per-panel refraction shader only runs in "Smooth" motion — it costs one extra GPU pass per panel.
     val refr = st.refraction
-    val shader = remember { LiquidGlass.newShader() }
+    val lens = st.motion == 0 && LiquidGlass.supported && refr > 0.01f && !com.myfit.tracker.CrashGuard.safeMode
+    val shader = remember(lens) { if (lens) LiquidGlass.newShader() else null }
     val fill = tint ?: if (realBlurSupported) th.glassTint.copy(alpha = (th.glassTint.alpha * strength).coerceIn(0f, 1f)) else th.glassFallback
 
     Box(
@@ -110,7 +110,7 @@ fun Glass(
             Box(
                 Modifier
                     .matchParentSize()
-                    .graphicsLayer {
+                    .then(if (!lens) Modifier else Modifier.graphicsLayer {
                         val w = size.width; val h = size.height
                         val corner = when (val o = shape.createOutline(size, LayoutDirection.Ltr, this)) {
                             is Outline.Rounded -> o.roundRect.topLeftCornerRadius.x
@@ -119,24 +119,19 @@ fun Glass(
                         }
                         val bezel = (minOf(w, h) * 0.22f).coerceIn(10.dp.toPx(), 34.dp.toPx())
                         renderEffect = LiquidGlass.effect(
-                            shader, w, h, corner, ownBlurPx,
+                            shader, w, h, corner, 0f,
                             bezelPx = bezel, strengthPx = bezel * 0.55f * refr,
                             dispersion = (dispersion * refr).coerceIn(0f, 0.6f),
                             highlight = if (th.isLight) 0.10f else 0.16f,
                         )
                         clip = true
-                    }
+                    })
                     .drawBehind {
                         val p = pos.value
                         translate(-p.x, -p.y) {
-                            if (seeContent) {
-                                b.layer?.let { drawLayer(it) }
-                                b.contentLayer?.let { drawLayer(it) }
-                            } else {
-                                val l = b.blurLayer ?: b.layer
-                                if (l != null) drawLayer(l)
-                                else drawBackdrop(b.theme, b.image, 0f, b.rootSize.width, b.rootSize.height)
-                            }
+                            val l = (if (seeContent) b.dockLayer else null) ?: b.blurLayer ?: b.layer
+                            if (l != null) drawLayer(l)
+                            else drawBackdrop(b.theme, b.image, 0f, b.rootSize.width, b.rootSize.height)
                         }
                     }
             )

@@ -136,8 +136,9 @@ fun LiquidTabBar(
                         .graphicsLayer {
                             val w = size.width; val h = size.height
                             val bez = minOf(w, h) * 0.42f
-                            renderEffect = LiquidGlass.effect(
-                                lensShader, w, h, h / 2f, blurPx = 1.5f + 6f * (1f - p.coerceIn(0f, 1f)),
+                            // the lens shader only runs while the blob is popped out (finger down)
+                            renderEffect = if (p < 0.02f) null else LiquidGlass.effect(
+                                lensShader, w, h, h / 2f, blurPx = 1.5f,
                                 bezelPx = bez, strengthPx = bez * (0.35f + 0.5f * p.coerceIn(0f, 1f)),
                                 dispersion = 0.06f + 0.22f * p.coerceIn(0f, 1f), highlight = 0.22f,
                             )
@@ -150,10 +151,9 @@ fun LiquidTabBar(
                             val mag = 1.18f + 0.22f * p.coerceIn(0f, 1f)
                             scale(mag, pivot = Offset(size.width / 2, size.height / 2)) {
                                 translate(-lx, -ly) {
-                                    val bl = backdrop.layer
+                                    val bl = if (p < 0.02f) (backdrop.dockLayer ?: backdrop.layer) else backdrop.layer
                                     if (bl != null) drawLayer(bl)
                                     else drawBackdrop(backdrop.theme, backdrop.image, backdrop.time.floatValue, backdrop.rootSize.width, backdrop.rootSize.height)
-                                    backdrop.contentLayer?.let { drawLayer(it) }
                                 }
                             }
                         }

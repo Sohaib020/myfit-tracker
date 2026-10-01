@@ -74,8 +74,8 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
             run {
                 val urdu = ur != null
                 var done = false
-                if (s.voiceEngine == 0 && s.elevenKey.isNotBlank() && !elevenOff) {
-                    done = runCatching { viaEleven(s.elevenKey, if (urdu) clean(ur!!) else en, urdu) }.getOrElse { e ->
+                if (s.voiceEngine == 0 && s.elevenKeyEff.isNotBlank() && !elevenOff) {
+                    done = runCatching { viaEleven(s.elevenKeyEff, if (urdu) clean(ur!!) else en, urdu) }.getOrElse { e ->
                         if (e is ElevenLabs.Failure) {
                             lastError.value = if (e.quota) "ElevenLabs credits used up — using the on-device voice." else "ElevenLabs: ${e.message}"
                             if (e.permanent || e.quota) elevenOff = true

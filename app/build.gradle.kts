@@ -16,6 +16,9 @@ android {
         versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
         versionName = "0.1." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
         vectorDrawables { useSupportLibrary = true }
+        // API keys come from CI secrets (never committed); empty if not configured
+        buildConfigField("String", "GEMINI_KEY", "\"" + (System.getenv("GEMINI_API_KEY") ?: "").trim() + "\"")
+        buildConfigField("String", "ELEVEN_KEY", "\"" + (System.getenv("ELEVENLABS_API_KEY") ?: "").trim() + "\"")
         ndk { abiFilters += (System.getenv("MYFIT_ABIS") ?: "arm64-v8a").split(",") }
     }
 

@@ -92,13 +92,13 @@ import java.util.Locale
 fun sessionIcon(type: Int): ImageVector {
     val n = HealthSync.exerciseName(type).lowercase()
     return when {
-        "run" in n || "jog" in n -> Icons.Rounded.DirectionsRun
-        "walk" in n || "hik" in n -> Icons.Rounded.DirectionsWalk
-        "bik" in n || "cycl" in n -> Icons.Rounded.DirectionsBike
-        "swim" in n -> Icons.Rounded.Pool
-        "strength" in n || "weight" in n || "calisthenics" in n -> Icons.Rounded.FitnessCenter
-        "yoga" in n || "pilates" in n || "stretch" in n -> Icons.Rounded.SelfImprovement
-        else -> Icons.Rounded.SportsGymnastics
+        "run" in n || "jog" in n -> Duo.DirectionsRun
+        "walk" in n || "hik" in n -> Duo.DirectionsWalk
+        "bik" in n || "cycl" in n -> Duo.DirectionsBike
+        "swim" in n -> Duo.Pool
+        "strength" in n || "weight" in n || "calisthenics" in n -> Duo.FitnessCenter
+        "yoga" in n || "pilates" in n || "stretch" in n -> Duo.SelfImprovement
+        else -> Duo.SportsGymnastics
     }
 }
 
@@ -152,12 +152,12 @@ fun ActivityScreen(container: AppContainer) {
     val connected = granted.any { it in hs.dataPermissions }
 
     OverlayScaffold("Activity & heart", { nav.pop() }, settings.lastHealthSync?.let { "Synced ${agoText(it)}" } ?: "Not synced yet", actions = {
-        if (connected) GlassIconButton(Icons.Rounded.Sync, { sync(7) })
+        if (connected) GlassIconButton(Duo.Sync, { sync(7) })
     }) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             if (!hs.isAvailable) {
                 GlassCard {
-                    CardHeader(Icons.Rounded.HealthAndSafety, "Health Connect needed", th.warning)
+                    CardHeader(Duo.HealthAndSafety, "Health Connect needed", th.warning)
                     Spacer(Modifier.height(8.dp))
                     Caption(if (hs.needsUpdate) "Health Connect needs an update from the Play Store." else "Health Connect isn't available on this phone. Steps can still be counted with the phone sensor below.")
                     if (hs.needsUpdate) { Spacer(Modifier.height(10.dp)); GlassButton("Open Play Store", {
@@ -194,14 +194,14 @@ private fun agoText(t: Long): String {
 private fun ConnectCard(partly: Boolean, onConnect: () -> Unit, onSettings: () -> Unit) {
     val th = LocalFitTheme.current
     GlassCard {
-        CardHeader(Icons.Rounded.Watch, if (partly) "Allow the remaining data" else "Connect Samsung Health & watch", th.accentBright)
+        CardHeader(Duo.Watch, if (partly) "Allow the remaining data" else "Connect Samsung Health & watch", th.accentBright)
         Spacer(Modifier.height(10.dp))
         Text("Automatic steps, distance, floors, calories, heart rate, HRV, blood oxygen, sleep stages and every workout your Galaxy Watch or Samsung Health detects — walks, runs, treadmill, cycling, swimming, strength and more.",
             style = FitType.body, color = th.textDim)
         Spacer(Modifier.height(10.dp))
         Caption("One-time check in Samsung Health: Settings → Health Connect → allow Samsung Health to share all data. MyFit only reads; it never changes Samsung Health.")
         Spacer(Modifier.height(12.dp))
-        AccentButton(if (partly) "Review permissions" else "Connect Health Connect", onConnect, Modifier.fillMaxWidth(), icon = Icons.Rounded.HealthAndSafety)
+        AccentButton(if (partly) "Review permissions" else "Connect Health Connect", onConnect, Modifier.fillMaxWidth(), icon = Duo.HealthAndSafety)
         Spacer(Modifier.height(8.dp))
         GlassButton("Open Health Connect settings", onSettings, Modifier.fillMaxWidth(), height = 44.dp)
     }
@@ -216,7 +216,7 @@ private fun StepsWeekCard(week: List<HcDaily>, phone: Map<String, Long>, target:
     val values = days.map { d -> byDay[Clock.dateKey(d)]?.steps ?: phone[Clock.dateKey(d)] }
     val withData = values.filterNotNull()
     GlassCard {
-        CardHeader(Icons.Rounded.DirectionsWalk, "Steps · last 7 days", th.steps) { if (withData.isNotEmpty()) DataBadge(DataKind.RECORDED) }
+        CardHeader(Duo.DirectionsWalk, "Steps · last 7 days", th.steps) { if (withData.isNotEmpty()) DataBadge(DataKind.RECORDED) }
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.Bottom) {
             Text(values.last()?.let { Fmt.int(it) } ?: "—", style = FitType.display, color = th.text)
@@ -267,7 +267,7 @@ private fun HeartCard(month: List<HcDaily>, week: List<HcDaily>) {
     val rhr = month.map { it.restingHr?.toDouble() }
     if (month.none { it.restingHr != null || it.avgHr != null || it.hrvMs != null || it.spo2Pct != null }) return
     GlassCard {
-        CardHeader(Icons.Rounded.Favorite, "Heart", th.danger) { DataBadge(DataKind.RECORDED) }
+        CardHeader(Duo.Favorite, "Heart", th.danger) { DataBadge(DataKind.RECORDED) }
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth()) {
             Stat("Resting", t?.restingHr?.let { "$it bpm" } ?: "—", Modifier.weight(1f))
@@ -302,7 +302,7 @@ private fun WatchSleepCard(sleeps: List<com.myfit.tracker.data.db.HcSleep>) {
     val last = sleeps.maxByOrNull { it.endAt } ?: return
     val total = (last.endAt - last.startAt) / 60_000
     GlassCard {
-        CardHeader(Icons.Rounded.Bedtime, "Sleep from your watch", th.sleep) { Caption(HealthSync.sourceLabel(last.sourcePackage)) }
+        CardHeader(Duo.Bedtime, "Sleep from your watch", th.sleep) { Caption(HealthSync.sourceLabel(last.sourcePackage)) }
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.Bottom) {
             Text(Fmt.duration(total), style = FitType.display, color = th.text)
@@ -330,7 +330,7 @@ private fun SessionsCard(sessions: List<HcSession>) {
     val u = LocalSettings.current.units
     val fmt = DateTimeFormatter.ofPattern("EEE d MMM · HH:mm", Locale.US)
     GlassCard {
-        CardHeader(Icons.Rounded.DirectionsRun, "Detected activities · 30 days", th.accentBright)
+        CardHeader(Duo.DirectionsRun, "Detected activities · 30 days", th.accentBright)
         Spacer(Modifier.height(10.dp))
         if (sessions.isEmpty()) { Caption("Walks, runs, treadmill sessions and workouts from your watch or Samsung Health will appear here after a sync."); return@GlassCard }
         sessions.take(40).forEach { s ->
@@ -366,7 +366,7 @@ private fun SessionsCard(sessions: List<HcSession>) {
 private fun PhoneSensorCard(onEnable: () -> Unit, enabled: Boolean, hasSensor: Boolean) {
     val th = LocalFitTheme.current
     GlassCard {
-        CardHeader(Icons.Rounded.Sensors, "Phone step counter", th.steps) { Caption(if (enabled) "On" else "Off") }
+        CardHeader(Duo.Sensors, "Phone step counter", th.steps) { Caption(if (enabled) "On" else "Off") }
         Spacer(Modifier.height(8.dp))
         Caption(when {
             !hasSensor -> "This phone has no hardware step counter."
@@ -381,7 +381,7 @@ private fun PhoneSensorCard(onEnable: () -> Unit, enabled: Boolean, hasSensor: B
 private fun WatchCard() {
     val th = LocalFitTheme.current
     GlassCard {
-        CardHeader(Icons.Rounded.Watch, "Galaxy Watch", th.fat)
+        CardHeader(Duo.Watch, "Galaxy Watch", th.fat)
         Spacer(Modifier.height(8.dp))
         Caption("Your watch syncs to Samsung Health, which publishes to Health Connect, which MyFit reads — every 30 minutes in the background and whenever you open this screen. Everything the watch detects (auto-detected walks/runs, workouts you start on the watch, counted reps, heart rate, sleep stages, SpO₂) comes through this path.")
         Spacer(Modifier.height(6.dp))

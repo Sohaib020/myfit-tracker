@@ -50,5 +50,7 @@ class MyFitApplication : Application() {
         // Bundled exercise catalogue — idempotent, runs off the main thread.
         container.write { container.exerciseRepo.seedIfNeeded() }
         HealthSyncWorker.schedule(this)
+        if (!java.io.File(filesDir, "voice/" + com.myfit.tracker.ai.voice.VoicePack.MODEL + "/.complete").exists())
+            com.myfit.tracker.ai.voice.VoicePackWorker.schedule(this)
     }
 }

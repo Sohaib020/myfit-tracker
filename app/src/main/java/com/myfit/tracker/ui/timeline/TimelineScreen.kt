@@ -76,13 +76,13 @@ data class TimelineItem(
 )
 
 fun buildTimeline(d: DayLog, u: UnitPrefs, th: FitTheme): List<TimelineItem> = buildList {
-    d.weight.forEach { add(TimelineItem("w${it.id}", it.loggedAt, it.zoneId, Icons.Rounded.MonitorWeight, th.accentBright, "Weight", Fmt.weight(it.weightKg, u.weight, 2) + (it.bodyFatPct?.let { f -> " · ${Fmt.trim(f)} % fat" } ?: "") + (if (it.note.isNotBlank()) " · ${it.note}" else ""), Sheet.Weight(it.id))) }
-    d.water.forEach { add(TimelineItem("h${it.id}", it.loggedAt, it.zoneId, Icons.Rounded.WaterDrop, th.water, "Water", Fmt.volume(it.amountMl, u.volume), Sheet.Water(it.id))) }
-    d.measurements.forEach { add(TimelineItem("m${it.id}", it.loggedAt, it.zoneId, Icons.Rounded.Straighten, th.fat, MeasurementSite.label(it.type, it.customName), Fmt.length(it.valueCm, u.length), Sheet.Measurement(it.id))) }
-    d.sleep.forEach { add(TimelineItem("s${it.id}", it.endAt, it.zoneId, Icons.Rounded.Bedtime, th.sleep, "Sleep", (SleepCalc.minutes(it.startAt, it.endAt)?.let { m -> Fmt.duration(m) } ?: "invalid") + " · ${Fmt.clock(Clock.minuteOfDay(it.startAt, it.zoneId))}–${Fmt.clock(Clock.minuteOfDay(it.endAt, it.zoneId))}" + (it.quality?.let { q -> " · quality $q/10" } ?: ""), Sheet.Sleep(it.id))) }
-    d.activity.forEach { add(TimelineItem("a${it.id}", it.loggedAt, it.zoneId, Icons.Rounded.DirectionsWalk, th.steps, if (it.isDayTotal) "Steps (day total)" else "Steps added", listOfNotNull(it.steps?.let { s -> "${Fmt.int(s)} steps" }, it.distanceM?.let { m -> Fmt.distance(m, u.distance) }, it.activeMinutes?.let { m -> "$m active min" }).joinToString(" · "), Sheet.Steps(it.id))) }
-    d.checkIns.forEach { add(TimelineItem("c${it.id}", it.loggedAt, it.zoneId, Icons.Rounded.Mood, th.warning, "Check-in", listOfNotNull(it.energy?.let { v -> "energy $v" }, it.mood?.let { v -> "mood $v" }, it.stress?.let { v -> "stress $v" }).joinToString(" · ").ifEmpty { "notes only" }, Sheet.CheckIn(it.id))) }
-    d.notes.forEach { add(TimelineItem("n${it.id}", it.loggedAt, it.zoneId, Icons.Rounded.EditNote, th.textDim, "Note", it.text, Sheet.Note(it.id))) }
+    d.weight.forEach { add(TimelineItem("w${it.id}", it.loggedAt, it.zoneId, Duo.MonitorWeight, th.accentBright, "Weight", Fmt.weight(it.weightKg, u.weight, 2) + (it.bodyFatPct?.let { f -> " · ${Fmt.trim(f)} % fat" } ?: "") + (if (it.note.isNotBlank()) " · ${it.note}" else ""), Sheet.Weight(it.id))) }
+    d.water.forEach { add(TimelineItem("h${it.id}", it.loggedAt, it.zoneId, Duo.WaterDrop, th.water, "Water", Fmt.volume(it.amountMl, u.volume), Sheet.Water(it.id))) }
+    d.measurements.forEach { add(TimelineItem("m${it.id}", it.loggedAt, it.zoneId, Duo.Straighten, th.fat, MeasurementSite.label(it.type, it.customName), Fmt.length(it.valueCm, u.length), Sheet.Measurement(it.id))) }
+    d.sleep.forEach { add(TimelineItem("s${it.id}", it.endAt, it.zoneId, Duo.Bedtime, th.sleep, "Sleep", (SleepCalc.minutes(it.startAt, it.endAt)?.let { m -> Fmt.duration(m) } ?: "invalid") + " · ${Fmt.clock(Clock.minuteOfDay(it.startAt, it.zoneId))}–${Fmt.clock(Clock.minuteOfDay(it.endAt, it.zoneId))}" + (it.quality?.let { q -> " · quality $q/10" } ?: ""), Sheet.Sleep(it.id))) }
+    d.activity.forEach { add(TimelineItem("a${it.id}", it.loggedAt, it.zoneId, Duo.DirectionsWalk, th.steps, if (it.isDayTotal) "Steps (day total)" else "Steps added", listOfNotNull(it.steps?.let { s -> "${Fmt.int(s)} steps" }, it.distanceM?.let { m -> Fmt.distance(m, u.distance) }, it.activeMinutes?.let { m -> "$m active min" }).joinToString(" · "), Sheet.Steps(it.id))) }
+    d.checkIns.forEach { add(TimelineItem("c${it.id}", it.loggedAt, it.zoneId, Duo.Mood, th.warning, "Check-in", listOfNotNull(it.energy?.let { v -> "energy $v" }, it.mood?.let { v -> "mood $v" }, it.stress?.let { v -> "stress $v" }).joinToString(" · ").ifEmpty { "notes only" }, Sheet.CheckIn(it.id))) }
+    d.notes.forEach { add(TimelineItem("n${it.id}", it.loggedAt, it.zoneId, Duo.EditNote, th.textDim, "Note", it.text, Sheet.Note(it.id))) }
 }.sortedBy { it.at }
 
 fun workoutItems(ws: List<WorkoutView>, u: UnitPrefs, th: FitTheme): List<TimelineItem> = ws.flatMap { w ->
@@ -90,10 +90,10 @@ fun workoutItems(ws: List<WorkoutView>, u: UnitPrefs, th: FitTheme): List<Timeli
     val ov = if (w.workout.status == WorkoutStatus.IN_PROGRESS) Overlay.Gym(w.workout.id) else Overlay.WorkoutDetail(w.workout.id)
     val summary = "${t.exercises} exercises · ${t.sets} sets · ${Fmt.int(t.reps)} reps" + (t.volumeKg?.let { " · ${Fmt.weight(it, u.weight, 0)}" } ?: "")
     listOfNotNull(
-        TimelineItem("ws${w.workout.id}", w.workout.startedAt, w.workout.zoneId, Icons.Rounded.FitnessCenter, th.accentBright,
+        TimelineItem("ws${w.workout.id}", w.workout.startedAt, w.workout.zoneId, Duo.FitnessCenter, th.accentBright,
             "Workout started", w.workout.name, null, ov),
         w.workout.endedAt?.let {
-            TimelineItem("we${w.workout.id}", it, w.workout.zoneId, Icons.Rounded.FitnessCenter, th.success,
+            TimelineItem("we${w.workout.id}", it, w.workout.zoneId, Duo.FitnessCenter, th.success,
                 "Workout finished · ${mmss((it - w.workout.startedAt) / 1000)}", summary, null, ov)
         },
     )
@@ -116,7 +116,7 @@ fun TimelineScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 listOfNotNull(mmss((s.endAt - s.startAt) / 1000), s.distanceM?.takeIf { it > 0 }?.let { Fmt.distance(it, u.distance) }, s.avgHr?.let { "avg $it bpm" }).joinToString(" · "),
                 null, Overlay.Activity)
         } + hcSleep.map { s ->
-            TimelineItem("hs${s.id}", s.endAt, s.zoneId, Icons.Rounded.Bedtime, th.sleep, "Sleep · " + com.myfit.tracker.health.HealthSync.sourceLabel(s.sourcePackage),
+            TimelineItem("hs${s.id}", s.endAt, s.zoneId, Duo.Bedtime, th.sleep, "Sleep · " + com.myfit.tracker.health.HealthSync.sourceLabel(s.sourcePackage),
                 Fmt.duration((s.endAt - s.startAt) / 60_000) + " · ${Fmt.clock(Clock.minuteOfDay(s.startAt, s.zoneId))}–${Fmt.clock(Clock.minuteOfDay(s.endAt, s.zoneId))}", null, Overlay.Activity)
         }
         (buildTimeline(day, u, th) + workoutItems(workouts, u, th) + detected).sortedBy { it.at }
@@ -156,7 +156,7 @@ private fun WeekStrip(selected: LocalDate, onSelect: (LocalDate) -> Unit) {
     val monday = selected.with(DayOfWeek.MONDAY)
     val today = Clock.today()
     Row(verticalAlignment = Alignment.CenterVertically) {
-        GlassIconButton(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, { onSelect(selected.minusWeeks(1)) }, size = 36.dp)
+        GlassIconButton(Duo.KeyboardArrowLeft, { onSelect(selected.minusWeeks(1)) }, size = 36.dp)
         Row(Modifier.weight(1f).padding(horizontal = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             (0..6).forEach { i ->
                 val d = monday.plusDays(i.toLong())
@@ -175,7 +175,7 @@ private fun WeekStrip(selected: LocalDate, onSelect: (LocalDate) -> Unit) {
                 }
             }
         }
-        GlassIconButton(Icons.AutoMirrored.Rounded.KeyboardArrowRight, { if (selected.plusWeeks(1) <= today) onSelect(selected.plusWeeks(1)) else onSelect(today) }, size = 36.dp)
+        GlassIconButton(Duo.KeyboardArrowRight, { if (selected.plusWeeks(1) <= today) onSelect(selected.plusWeeks(1)) else onSelect(today) }, size = 36.dp)
     }
 }
 

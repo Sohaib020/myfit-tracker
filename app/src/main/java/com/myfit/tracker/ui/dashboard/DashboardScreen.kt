@@ -178,7 +178,7 @@ private fun PipCard(s: DashState) {
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Rounded.ChatBubble, null, tint = th.onAccent, modifier = Modifier.size(16.dp))
+                    Icon(Duo.ChatBubble, null, tint = th.onAccent, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("Chat with Pip", style = FitType.label, color = th.onAccent)
                 }
@@ -239,7 +239,7 @@ private fun BodyCard(s: DashState, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     val u = LocalSettings.current.units.weight
     GlassCard(onClick = onClick) {
-        CardHeader(Icons.Rounded.MonitorWeight, "Body weight", th.accentBright) {
+        CardHeader(Duo.MonitorWeight, "Body weight", th.accentBright) {
             if (s.latestWeight != null) DataBadge(DataKind.RECORDED)
         }
         Spacer(Modifier.height(14.dp))
@@ -266,7 +266,7 @@ private fun BodyCard(s: DashState, onClick: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             val ref = s.avg7.value ?: lw.weightKg
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Flag, null, tint = th.textDim, modifier = Modifier.size(16.dp))
+                Icon(Duo.Flag, null, tint = th.textDim, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
                 Caption("Target ${Fmt.weight(t, u)} · ${Fmt.signed(Units.kgTo(t - ref, u))} ${u.label} from your ${if (s.avg7.value != null) "7-day average" else "latest weigh-in"}")
             }
@@ -296,7 +296,7 @@ private fun HydrationCard(s: DashState, c: AppContainer, open: (Sheet) -> Unit) 
     val units = LocalSettings.current.units
     val toaster = LocalToaster.current
     GlassCard(onClick = { open(Sheet.Water()) }) {
-        CardHeader(Icons.Rounded.WaterDrop, "Hydration", th.water) {
+        CardHeader(Duo.WaterDrop, "Hydration", th.water) {
             Caption("${s.day.water.size} ${if (s.day.water.size == 1) "entry" else "entries"}")
         }
         Spacer(Modifier.height(12.dp))
@@ -318,7 +318,7 @@ private fun HydrationCard(s: DashState, c: AppContainer, open: (Sheet) -> Unit) 
                                 val id = c.logRepo.addWater(ml)
                                 toaster.show("Added ${Fmt.trim(ml, 0)} ml of water", "Undo") { c.write { c.logRepo.deleteWater(id) } }
                             }
-                        }, icon = Icons.Rounded.WaterDrop)
+                        }, icon = Duo.WaterDrop)
                     }
                 }
             }
@@ -352,7 +352,7 @@ private fun HydrationCard(s: DashState, c: AppContainer, open: (Sheet) -> Unit) 
                                     toaster.show("Removed ${Fmt.volume(e.amountMl, units.volume)}", "Undo") { c.write { c.logRepo.addWater(e.amountMl, e.loggedAt) } }
                                 },
                                 contentAlignment = Alignment.Center,
-                            ) { Icon(Icons.Rounded.Close, "Remove", tint = th.textDim, modifier = Modifier.size(15.dp)) }
+                            ) { Icon(Duo.Close, "Remove", tint = th.textDim, modifier = Modifier.size(15.dp)) }
                         }
                     }
                 }
@@ -367,9 +367,10 @@ private fun HydrationCard(s: DashState, c: AppContainer, open: (Sheet) -> Unit) 
 private fun WaterGlass(fraction: Float, color: Color, modifier: Modifier) {
     val th = LocalFitTheme.current
     val level by animateFloatAsState(fraction.coerceIn(0f, 1f), tween(1200), label = "water")
-    val inf = rememberInfiniteTransition(label = "wave")
-    val ph by inf.animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(2200, easing = LinearEasing)), label = "ph")
+    // the wave rides the shared backdrop clock (no extra frames; still in Battery saver)
+    val clock = com.myfit.tracker.ui.theme.LocalBackdrop.current.time
     Canvas(modifier) {
+        val ph = (clock.floatValue * 2.85f) % (2 * PI).toFloat()
         val w = size.width; val h = size.height
         val glass = Path().apply {
             moveTo(w * 0.08f, 0f); lineTo(w * 0.92f, 0f); lineTo(w * 0.8f, h); lineTo(w * 0.2f, h); close()
@@ -404,7 +405,7 @@ private fun WaterGlass(fraction: Float, color: Color, modifier: Modifier) {
 private fun RecoveryCard(s: DashState, open: (Sheet) -> Unit) {
     val th = LocalFitTheme.current
     GlassCard(onClick = { open(Sheet.Sleep()) }) {
-        CardHeader(Icons.Rounded.Bedtime, "Sleep & recovery", th.sleep)
+        CardHeader(Duo.Bedtime, "Sleep & recovery", th.sleep)
         Spacer(Modifier.height(12.dp))
         Row {
             Column(Modifier.weight(1f)) {
@@ -439,7 +440,7 @@ private fun StepsCard(s: DashState, onClick: () -> Unit) {
     val units = LocalSettings.current.units
     val d = s.health.daily
     GlassCard(onClick = onClick) {
-        CardHeader(Icons.Rounded.DirectionsWalk, "Activity & heart", th.steps) {
+        CardHeader(Duo.DirectionsWalk, "Activity & heart", th.steps) {
             s.stepsSource?.let { Caption(it) }
         }
         Spacer(Modifier.height(12.dp))
@@ -472,7 +473,7 @@ private fun CheckInCard(s: DashState, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     val ci = s.checkIn
     GlassCard(onClick = onClick) {
-        CardHeader(Icons.Rounded.Mood, "Daily check-in", th.warning)
+        CardHeader(Duo.Mood, "Daily check-in", th.warning)
         Spacer(Modifier.height(12.dp))
         if (ci == null) {
             Caption("Not done yet today. Takes 20 seconds — energy, mood, stress, soreness.")
@@ -498,14 +499,14 @@ private fun GoalsCard(s: DashState) {
     val th = LocalFitTheme.current
     val met = s.goals.count { it.met == true }
     GlassCard {
-        CardHeader(Icons.Rounded.CheckCircle, "Today's goals", th.success) {
+        CardHeader(Duo.CheckCircle, "Today's goals", th.success) {
             Text("$met/${s.goals.size}", style = FitType.section, color = th.text)
         }
         Spacer(Modifier.height(10.dp))
         s.goals.forEach { g ->
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    if (g.met == true) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked, null,
+                    if (g.met == true) Duo.CheckCircle else Duo.RadioButtonUnchecked, null,
                     tint = if (g.met == true) th.success else th.textFaint, modifier = Modifier.size(22.dp),
                 )
                 Spacer(Modifier.width(10.dp))

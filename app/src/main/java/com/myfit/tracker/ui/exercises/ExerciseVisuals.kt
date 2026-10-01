@@ -106,16 +106,16 @@ fun muscleColor(group: String): Color = when (group) {
 }
 
 fun equipmentIcon(ex: Exercise): ImageVector = when {
-    ex.measurementType == MeasurementType.DISTANCE_DURATION || ex.primaryMuscle == MuscleGroup.CARDIO -> Icons.Rounded.DirectionsRun
-    ex.category == "stretching" -> Icons.Rounded.SelfImprovement
+    ex.measurementType == MeasurementType.DISTANCE_DURATION || ex.primaryMuscle == MuscleGroup.CARDIO -> Duo.DirectionsRun
+    ex.category == "stretching" -> Duo.SelfImprovement
     else -> when (ex.equipment) {
-        "barbell", "e-z curl bar", "dumbbell", "kettlebells" -> Icons.Rounded.FitnessCenter
-        "cable" -> Icons.Rounded.Cable
-        "machine" -> Icons.Rounded.PrecisionManufacturing
-        "body only" -> Icons.Rounded.AccessibilityNew
-        "bands" -> Icons.Rounded.LinearScale
-        "medicine ball", "exercise ball" -> Icons.Rounded.SportsBaseball
-        else -> Icons.Rounded.SportsGymnastics
+        "barbell", "e-z curl bar", "dumbbell", "kettlebells" -> Duo.FitnessCenter
+        "cable" -> Duo.Cable
+        "machine" -> Duo.PrecisionManufacturing
+        "body only" -> Duo.AccessibilityNew
+        "bands" -> Duo.LinearScale
+        "medicine ball", "exercise ball" -> Duo.SportsBaseball
+        else -> Duo.SportsGymnastics
     }
 }
 

@@ -50,7 +50,15 @@ class VoicePack(private val context: Context) {
 
     fun install(scope: CoroutineScope) {
         if (job?.isActive == true || ready) return
-        job = scope.launch(Dispatchers.IO) {
+        job = scope.launch(Dispatchers.IO) { downloadNow() }
+    }
+
+    private val dlLock = Mutex()
+
+    /** Downloads + unpacks the pack (used by the button and the automatic Wi-Fi worker). Returns success. */
+    suspend fun downloadNow(): Boolean = dlLock.withLock {
+        if (ready) return true
+        withContext(Dispatchers.IO) {
             _state.value = State.Downloading(0f)
             runCatching {
                 dir.deleteRecursively(); dir.mkdirs()
@@ -73,7 +81,7 @@ class VoicePack(private val context: Context) {
                 }
                 TarArchiveInputStream(BZip2CompressorInputStream(BufferedInputStream(counting, 1 shl 16))).use { tar ->
                     while (true) {
-                        ensureActive()
+                        kotlin.coroutines.coroutineContext.ensureActive()
                         val e = tar.nextEntry ?: break
                         val name = e.name.substringAfter('/', "")
                         if (name.isEmpty() || e.isDirectory) continue
@@ -91,7 +99,7 @@ class VoicePack(private val context: Context) {
             }.onFailure { e ->
                 dir.deleteRecursively()
                 _state.value = State.Failed(e.message ?: "Download failed — check your connection and try again.")
-            }
+            }.isSuccess
         }
     }
 

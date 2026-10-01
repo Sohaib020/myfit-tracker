@@ -48,6 +48,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.ime
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
@@ -94,7 +97,7 @@ fun PipChatScreen(container: AppContainer) {
     var sharedFor by remember { mutableStateOf<String?>(null) }
     var showShared by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    val online = settings.geminiKey.isNotBlank() && settings.onlineAi
+    val online = settings.geminiKeyEff.isNotBlank() && settings.onlineAi
 
     val speaking by container.pipVoice.speaking.collectAsState()
     val voiceLevel by container.pipVoice.level.collectAsState()
@@ -124,10 +127,13 @@ fun PipChatScreen(container: AppContainer) {
         }
     }
 
+    val imeOpen = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+    LaunchedEffect(imeOpen) { if (imeOpen && messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex) }
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().imePadding()) {
         OverlayTopBar("Pip", { nav.pop() }, if (online) "Your data offline · general questions online" else "Answers from your data (offline)") {
             GlassIconButton(
-                if (settings.pipVoice) Icons.AutoMirrored.Rounded.VolumeUp else Icons.AutoMirrored.Rounded.VolumeOff,
+                if (settings.pipVoice) Duo.VolumeUp else Duo.VolumeOff,
                 {
                     val on = !settings.pipVoice
                     if (!on) container.pipVoice.stop()
@@ -135,11 +141,11 @@ fun PipChatScreen(container: AppContainer) {
                 },
                 tint = if (settings.pipVoice) th.accentBright else th.textDim,
             )
-            if (messages.isNotEmpty()) GlassIconButton(Icons.Rounded.DeleteSweep, { confirmClear = true })
+            if (messages.isNotEmpty()) GlassIconButton(Duo.DeleteSweep, { confirmClear = true })
         }
-        // ---- big, live Pip
-        Box(Modifier.fillMaxWidth().height(if (messages.isEmpty()) 250.dp else 170.dp).animateContentSize(), contentAlignment = Alignment.Center) {
-            Pip(mood, size = if (messages.isEmpty()) 230.dp else 160.dp, talking = speaking || typing, idleActions = !thinking, level = if (speaking) voiceLevel else -1f)
+        // ---- welcome: big Pip. Once chatting, Pip floats in the corner so the chat gets the whole screen.
+        if (messages.isEmpty()) Box(Modifier.fillMaxWidth().height(250.dp), contentAlignment = Alignment.Center) {
+            Pip(mood, size = 230.dp, talking = speaking || typing, idleActions = !thinking, level = if (speaking) voiceLevel else -1f)
         }
         if (messages.isEmpty()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -151,7 +157,7 @@ fun PipChatScreen(container: AppContainer) {
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = if (messages.isEmpty()) 8.dp else 96.dp, bottom = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(messages, key = { it.id }) { m ->
@@ -188,9 +194,22 @@ fun PipChatScreen(container: AppContainer) {
                     .clickableNoRipple { send(input) },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.AutoMirrored.Rounded.Send, "Send", tint = th.onAccent, modifier = Modifier.size(24.dp))
+                Icon(Duo.Send, "Send", tint = th.onAccent, modifier = Modifier.size(24.dp))
             }
         }
+    }
+    // floating Pip (bobs gently, shrinks while typing)
+    if (messages.isNotEmpty()) {
+        val bob = androidx.compose.animation.core.rememberInfiniteTransition(label = "float")
+        val fy by bob.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(2600), androidx.compose.animation.core.RepeatMode.Reverse), label = "fy")
+        val pipSize by androidx.compose.animation.core.animateDpAsState(if (imeOpen) 72.dp else 104.dp, label = "pipSize")
+        Box(
+            Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 58.dp, end = 6.dp)
+                .graphicsLayer { translationY = (fy - 0.5f) * 10.dp.toPx(); rotationZ = (fy - 0.5f) * 4f }
+        ) {
+            Pip(mood, size = pipSize, talking = speaking || typing, idleActions = !thinking, level = if (speaking) voiceLevel else -1f)
+        }
+    }
     }
 
     if (showShared) AlertDialog(
@@ -231,10 +250,10 @@ private fun Bubble(m: ChatMessage, animate: Boolean, onShowShared: (() -> Unit)?
                     Spacer(Modifier.height(6.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val (label, color, icon) = when (m.source) {
-                            "data" -> Triple("From your data", th.success, Icons.Rounded.Insights)
-                            "online" -> Triple("Online · Gemini", th.water, Icons.Rounded.Cloud)
-                            "error" -> Triple("Couldn't reach Gemini", th.warning, Icons.Rounded.Cloud)
-                            else -> Triple("Pip", th.textFaint, Icons.Rounded.Insights)
+                            "data" -> Triple("From your data", th.success, Duo.Insights)
+                            "online" -> Triple("Online · Gemini", th.water, Duo.Cloud)
+                            "error" -> Triple("Couldn't reach Gemini", th.warning, Duo.Cloud)
+                            else -> Triple("Pip", th.textFaint, Duo.Insights)
                         }
                         Icon(icon, null, tint = color, modifier = Modifier.size(12.dp))
                         Spacer(Modifier.size(4.dp))

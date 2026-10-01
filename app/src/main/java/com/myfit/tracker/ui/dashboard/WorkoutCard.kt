@@ -52,7 +52,7 @@ fun WorkoutCard(w: WorkoutToday, container: AppContainer) {
     val now by produceState(Clock.now()) { while (true) { value = Clock.now(); delay(1000) } }
 
     GlassCard(onClick = { w.active?.let { nav.push(Overlay.Gym(it.workout.id)) } }) {
-        CardHeader(Icons.Rounded.FitnessCenter, "Today's workout", th.accentBright) {
+        CardHeader(Duo.FitnessCenter, "Today's workout", th.accentBright) {
             w.weeklyTarget?.let { Caption("${w.weeklyDone}/${Fmt.int(it)} this week") }
         }
         Spacer(Modifier.height(12.dp))
@@ -64,13 +64,13 @@ fun WorkoutCard(w: WorkoutToday, container: AppContainer) {
                 Caption("${mmss((now - a.workout.startedAt) / 1000)} · ${a.exercises.size} exercises · ${a.totals.sets} sets" +
                     (a.totals.volumeKg?.let { " · ${Fmt.weight(it, u.weight, 0)}" } ?: ""))
                 Spacer(Modifier.height(12.dp))
-                AccentButton("Resume Gym Mode", { nav.push(Overlay.Gym(a.workout.id)) }, icon = Icons.Rounded.PlayArrow, height = 48.dp)
+                AccentButton("Resume Gym Mode", { nav.push(Overlay.Gym(a.workout.id)) }, icon = Duo.PlayArrow, height = 48.dp)
             }
             w.done.isNotEmpty() -> {
                 w.done.forEach { d ->
                     val t = d.totals
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-                        Icon(Icons.Rounded.CheckCircle, null, tint = th.success, modifier = Modifier.size(22.dp))
+                        Icon(Duo.CheckCircle, null, tint = th.success, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(8.dp))
                         Column(Modifier.weight(1f)) {
                             Text(d.workout.name, style = FitType.section, color = th.text)
@@ -96,7 +96,7 @@ fun WorkoutCard(w: WorkoutToday, container: AppContainer) {
                         val id = w.next?.let { container.workoutRepo.startFromTemplate(it.template.id) } ?: container.workoutRepo.startEmpty()
                         nav.push(Overlay.Gym(id))
                     }
-                }, icon = Icons.Rounded.PlayArrow, height = 48.dp)
+                }, icon = Duo.PlayArrow, height = 48.dp)
             }
         }
         w.weeklyTarget?.takeIf { it > 0 }?.let { t ->

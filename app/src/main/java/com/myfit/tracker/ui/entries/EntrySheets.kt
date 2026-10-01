@@ -118,7 +118,7 @@ fun FormHeader(title: String, icon: ImageVector, color: Color, editing: Boolean,
             Text(title, style = FitType.title, color = th.text)
             Caption(if (editing) "Editing a saved entry" else "New entry · time is stamped automatically")
         }
-        if (editing && onDelete != null) GlassIconButton(Icons.Rounded.DeleteOutline, { confirm = true }, tint = th.danger)
+        if (editing && onDelete != null) GlassIconButton(Duo.DeleteOutline, { confirm = true }, tint = th.danger)
     }
     Spacer(Modifier.height(12.dp))
     if (confirm) {
@@ -173,7 +173,7 @@ private fun QuickAddContent(container: AppContainer, open: (Sheet?) -> Unit) {
             val id = active?.id ?: container.workoutRepo.startEmpty()
             open(null); nav.push(com.myfit.tracker.ui.nav.Overlay.Gym(id))
         }
-    }, Modifier.fillMaxWidth(), icon = Icons.Rounded.FitnessCenter)
+    }, Modifier.fillMaxWidth(), icon = Duo.FitnessCenter)
     Gap()
     // one-tap water
     Text("Water — one tap", style = FitType.label, color = th.textDim)
@@ -186,18 +186,18 @@ private fun QuickAddContent(container: AppContainer, open: (Sheet?) -> Unit) {
                     toaster.show("Added ${Fmt.volume(ml, units.volume)} of water", "Undo") { container.write { container.logRepo.deleteWater(id) } }
                 }
                 open(null)
-            }, icon = Icons.Rounded.WaterDrop)
+            }, icon = Duo.WaterDrop)
         }
     }
     Gap(20)
     val items = listOf(
-        QuickItem("Weight", Icons.Rounded.MonitorWeight, th.accentBright, Sheet.Weight()),
-        QuickItem("Water", Icons.Rounded.WaterDrop, th.water, Sheet.Water()),
-        QuickItem("Sleep", Icons.Rounded.Bedtime, th.sleep, Sheet.Sleep()),
-        QuickItem("Steps", Icons.Rounded.DirectionsWalk, th.steps, Sheet.Steps()),
-        QuickItem("Measure", Icons.Rounded.Straighten, th.fat, Sheet.Measurement()),
-        QuickItem("Check-in", Icons.Rounded.Mood, th.warning, Sheet.CheckIn()),
-        QuickItem("Note", Icons.Rounded.EditNote, th.textDim, Sheet.Note()),
+        QuickItem("Weight", Duo.MonitorWeight, th.accentBright, Sheet.Weight()),
+        QuickItem("Water", Duo.WaterDrop, th.water, Sheet.Water()),
+        QuickItem("Sleep", Duo.Bedtime, th.sleep, Sheet.Sleep()),
+        QuickItem("Steps", Duo.DirectionsWalk, th.steps, Sheet.Steps()),
+        QuickItem("Measure", Duo.Straighten, th.fat, Sheet.Measurement()),
+        QuickItem("Check-in", Duo.Mood, th.warning, Sheet.CheckIn()),
+        QuickItem("Note", Duo.EditNote, th.textDim, Sheet.Note()),
     )
     FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp), maxItemsInEachRow = 4) {
         items.forEach { q ->
@@ -232,7 +232,7 @@ private fun WeightForm(id: Long?, c: AppContainer, close: () -> Unit) {
             note = e.note; at = e.loggedAt
         }
     }
-    FormHeader("Weight", Icons.Rounded.MonitorWeight, th.accentBright, id != null) {
+    FormHeader("Weight", Duo.MonitorWeight, th.accentBright, id != null) {
         c.write { c.logRepo.deleteWeight(id!!) }; toaster.show("Weight entry deleted"); close()
     }
     NumberInput(value, { value = it }, units.weight.label)
@@ -272,7 +272,7 @@ private fun WaterForm(id: Long?, c: AppContainer, close: () -> Unit) {
     LaunchedEffect(id) {
         if (id != null) c.logRepo.getWater(id)?.let { e -> value = Fmt.trim(Units.mlTo(e.amountMl, inputUnit), 1); at = e.loggedAt }
     }
-    FormHeader("Water", Icons.Rounded.WaterDrop, th.water, id != null) {
+    FormHeader("Water", Duo.WaterDrop, th.water, id != null) {
         c.write { c.logRepo.deleteWater(id!!) }; toaster.show("Water entry deleted"); close()
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -311,7 +311,7 @@ private fun MeasurementForm(id: Long?, c: AppContainer, close: () -> Unit) {
             type = e.type; custom = e.customName ?: ""; value = Fmt.trim(Units.cmTo(e.valueCm, units.length), 2); note = e.note; at = e.loggedAt
         }
     }
-    FormHeader("Body measurement", Icons.Rounded.Straighten, th.fat, id != null) {
+    FormHeader("Body measurement", Duo.Straighten, th.fat, id != null) {
         c.write { c.logRepo.deleteMeasurement(id!!) }; toaster.show("Measurement deleted"); close()
     }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -370,7 +370,7 @@ private fun SleepForm(id: Long?, c: AppContainer, close: () -> Unit) {
             if (profile != null) loaded = true
         }
     }
-    FormHeader("Sleep", Icons.Rounded.Bedtime, th.sleep, id != null) {
+    FormHeader("Sleep", Duo.Bedtime, th.sleep, id != null) {
         c.write { c.logRepo.deleteSleep(id!!) }; toaster.show("Sleep entry deleted"); close()
     }
     DateTimeRow("Fell asleep", start, { start = it })
@@ -416,7 +416,7 @@ private fun StepsForm(id: Long?, c: AppContainer, close: () -> Unit) {
             active = e.activeMinutes?.toString() ?: ""; at = e.loggedAt
         }
     }
-    FormHeader("Steps & activity", Icons.Rounded.DirectionsWalk, th.steps, id != null) {
+    FormHeader("Steps & activity", Duo.DirectionsWalk, th.steps, id != null) {
         c.write { c.logRepo.deleteActivity(id!!) }; toaster.show("Activity entry deleted"); close()
     }
     GlassSegmented(listOf(true, false), isTotal, { if (it) "Today's total" else "Add steps" }, { isTotal = it }, Modifier.fillMaxWidth())
@@ -499,7 +499,7 @@ private fun CheckInForm(id: Long?, c: AppContainer, close: () -> Unit) {
             base = e; energy = e.energy; mood = e.mood; stress = e.stress; sleepQ = e.sleepQuality; sore = e.soreness; motiv = e.motivation; notes = e.notes; at = e.loggedAt
         }
     }
-    FormHeader("Daily check-in", Icons.Rounded.Mood, th.warning, id != null) {
+    FormHeader("Daily check-in", Duo.Mood, th.warning, id != null) {
         c.write { c.logRepo.deleteCheckIn(id!!) }; toaster.show("Check-in deleted"); close()
     }
     Caption("Personal 1–10 ratings — how you feel, not a medical measure. Skip any you like.")
@@ -532,7 +532,7 @@ private fun NoteForm(id: Long?, c: AppContainer, close: () -> Unit) {
     var text by remember { mutableStateOf("") }
     var at by remember { mutableLongStateOf(Clock.now()) }
     LaunchedEffect(id) { if (id != null) c.logRepo.getNote(id)?.let { e -> text = e.text; at = e.loggedAt } }
-    FormHeader("Note", Icons.Rounded.EditNote, th.textDim, id != null) {
+    FormHeader("Note", Duo.EditNote, th.textDim, id != null) {
         c.write { c.logRepo.deleteNote(id!!) }; toaster.show("Note deleted"); close()
     }
     NotesField(text, { text = it }, "What's worth remembering today?")

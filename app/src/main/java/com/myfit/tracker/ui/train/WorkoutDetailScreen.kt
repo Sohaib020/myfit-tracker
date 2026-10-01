@@ -132,7 +132,7 @@ fun WorkoutDetailScreen(container: AppContainer, workoutId: Long) {
                         AccentButton("Save changes", {
                             container.write { container.workoutRepo.updateWorkoutMeta(workoutId, name.trim().ifEmpty { w.workout.name }, notes.trim(), start, end) }
                             toaster.show("Workout updated")
-                        }, Modifier.fillMaxWidth(), enabled = end > start, icon = Icons.Rounded.Save)
+                        }, Modifier.fillMaxWidth(), enabled = end > start, icon = Duo.Save)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -142,12 +142,12 @@ fun WorkoutDetailScreen(container: AppContainer, workoutId: Long) {
                             if (active != null) { toaster.show("Finish or discard your current workout first"); nav.replace(Overlay.Gym(active.id)) }
                             else nav.replace(Overlay.Gym(container.workoutRepo.repeatWorkout(workoutId)))
                         }
-                    }, Modifier.weight(1f), icon = Icons.Rounded.Replay)
+                    }, Modifier.weight(1f), icon = Duo.Replay)
                     GlassButton("Save as template", {
                         container.write { container.workoutRepo.templateFromWorkout(workoutId, w.workout.name) }; toaster.show("Template created")
                     }, Modifier.weight(1f))
                 }
-                GlassButton("Delete workout", { confirmDelete = true }, Modifier.fillMaxWidth(), icon = Icons.Rounded.DeleteOutline)
+                GlassButton("Delete workout", { confirmDelete = true }, Modifier.fillMaxWidth(), icon = Duo.DeleteOutline)
                 Spacer(Modifier.height(20.dp))
             }
         }
@@ -169,7 +169,7 @@ fun WorkoutDetailScreen(container: AppContainer, workoutId: Long) {
                     toaster.show("Set corrected — totals recalculated"); edit = null
                 }, Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp))
-                GlassButton("Delete set", { confirm = true }, Modifier.fillMaxWidth(), icon = Icons.Rounded.DeleteOutline)
+                GlassButton("Delete set", { confirm = true }, Modifier.fillMaxWidth(), icon = Duo.DeleteOutline)
                 if (confirm) AlertDialog(
                     onDismissRequest = { confirm = false },
                     title = { Text("Delete set ${row.setNumber}?") },

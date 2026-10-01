@@ -37,8 +37,8 @@ class Backdrop {
     var rootSize by mutableStateOf(Size.Zero)
     /** The backdrop recorded ONCE per frame; every glass surface replays this layer (cheap). */
     var layer: GraphicsLayer? = null
-    /** The current tab's content recorded per frame — lets the dock blur what scrolls beneath it. */
-    var contentLayer: GraphicsLayer? = null
+    /** The backdrop blurred with the dock's own (stronger) blur amount. */
+    var dockLayer: GraphicsLayer? = null
     /** The backdrop pre-blurred once per frame (shared by every card, instead of one blur per card). */
     var blurLayer: GraphicsLayer? = null
 }

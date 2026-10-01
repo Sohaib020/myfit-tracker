@@ -46,9 +46,9 @@ class PipBrain(private val c: AppContainer) {
     private suspend fun answer(q: String): Reply {
         data.answer(q)?.let { return Reply(it.text, "data", it.mood) }
         val s = c.settings.settings.first()
-        if (s.geminiKey.isBlank() || !s.onlineAi) {
+        if (s.geminiKeyEff.isBlank() || !s.onlineAi) {
             return Reply(
-                if (s.geminiKey.isBlank()) "That one needs my online brain, which isn't set up yet 🌱 Add your Gemini key in Me → Pip. Offline I can answer things like \"How many times did I train legs this month?\", \"Average sleep last week\" or \"How much did my bench improve?\""
+                if (s.geminiKeyEff.isBlank()) "That one needs my online brain, which isn't set up yet 🌱 Add your Gemini key in Me → Pip. Offline I can answer things like \"How many times did I train legs this month?\", \"Average sleep last week\" or \"How much did my bench improve?\""
                 else "Online answers are switched off, and that's not something I can work out from your logs alone. You can turn online answers on in Me → Pip.",
                 "local", PipMood.CURIOUS,
             )
@@ -60,7 +60,7 @@ class PipBrain(private val c: AppContainer) {
             .takeLast(8).map { (if (it.role == "user") "user" else "model") to it.text }
         val turn = history + ("user" to "User data (only what's relevant; may be incomplete):\n$summary\n\nQuestion: $q")
         val system = Gemini.systemPrompt("Use the user's units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}.")
-        val text = generateWithFallback(s.geminiKey, s.geminiModel, system, turn)
+        val text = generateWithFallback(s.geminiKeyEff, s.geminiModel, system, turn)
         val (display, ur, hi) = splitSpeech(text)
         return Reply(display, "online", com.myfit.tracker.ui.pip.moodForReply(display, q), summary, ur, hi)
     }

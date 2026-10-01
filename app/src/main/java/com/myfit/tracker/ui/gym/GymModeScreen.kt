@@ -167,14 +167,14 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
         Column(Modifier.fillMaxSize()) {
             // ---------------- header
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                GlassIconButton(Icons.Rounded.KeyboardArrowDown, { nav.pop() })
+                GlassIconButton(Duo.KeyboardArrowDown, { nav.pop() })
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(v.workout.name, style = FitType.title, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val t = v.totals
                     Caption("${mmss((now - v.workout.startedAt) / 1000)} · ${t.sets} sets" + (t.volumeKg?.let { " · ${Fmt.weight(it, u.weight, 0)}" } ?: ""))
                 }
-                AccentButton("Finish", { nav.replace(Overlay.FinishWorkout(workoutId)) }, height = 44.dp, icon = Icons.Rounded.Check)
+                AccentButton("Finish", { nav.replace(Overlay.FinishWorkout(workoutId)) }, height = 44.dp, icon = Duo.Check)
             }
             // ---------------- exercise strip
             ExerciseStrip(list, cur?.we?.id, vm, { showPicker = true })
@@ -216,7 +216,7 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
             Glass(Modifier.padding(32.dp), shape = RoundedCornerShape(32.dp), onClick = { celebrate = null }) {
                 Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Pip(PipMood.PROUD, size = 120.dp)
-                    Icon(Icons.Rounded.EmojiEvents, null, tint = th.warning, modifier = Modifier.size(28.dp))
+                    Icon(Duo.EmojiEvents, null, tint = th.warning, modifier = Modifier.size(28.dp))
                     Text("New best!", style = FitType.title, color = th.text)
                     Caption(celebrate ?: "")
                 }
@@ -240,7 +240,7 @@ private fun EmptyWorkout(onAdd: () -> Unit) {
         Text("Empty workout", style = FitType.title, color = th.text)
         Caption("Add the first exercise to start logging sets.")
         Spacer(Modifier.height(20.dp))
-        AccentButton("Add exercises", onAdd, icon = Icons.Rounded.Add)
+        AccentButton("Add exercises", onAdd, icon = Duo.Add)
     }
 }
 
@@ -269,7 +269,7 @@ private fun ExerciseStrip(list: List<WorkoutExerciseView>, current: Long?, vm: G
         }
         item {
             Glass(Modifier.size(64.dp), shape = RoundedCornerShape(22.dp), onClick = onAdd, pressScale = 0.9f) {
-                Icon(Icons.Rounded.Add, "Add exercise", tint = th.text, modifier = Modifier.align(Alignment.Center).size(28.dp))
+                Icon(Duo.Add, "Add exercise", tint = th.text, modifier = Modifier.align(Alignment.Center).size(28.dp))
             }
         }
     }
@@ -300,18 +300,18 @@ private fun ExerciseHeaderCard(cur: WorkoutExerciseView, list: List<WorkoutExerc
                 }
             }
             Box {
-                GlassIconButton(Icons.Rounded.MoreVert, { menu = true }, size = 40.dp)
+                GlassIconButton(Duo.MoreVert, { menu = true }, size = 40.dp)
                 DropdownMenu(menu, { menu = false }) {
-                    DropdownMenuItem({ Text("Exercise details") }, { menu = false; nav.push(Overlay.ExerciseDetail(cur.exercise.id)) }, leadingIcon = { Icon(Icons.Rounded.Info, null) })
-                    DropdownMenuItem({ Text("Move up") }, { menu = false; vm.move(cur.we.id, -1) }, leadingIcon = { Icon(Icons.Rounded.ArrowUpward, null) })
-                    DropdownMenuItem({ Text("Move down") }, { menu = false; vm.move(cur.we.id, 1) }, leadingIcon = { Icon(Icons.Rounded.ArrowDownward, null) })
+                    DropdownMenuItem({ Text("Exercise details") }, { menu = false; nav.push(Overlay.ExerciseDetail(cur.exercise.id)) }, leadingIcon = { Icon(Duo.Info, null) })
+                    DropdownMenuItem({ Text("Move up") }, { menu = false; vm.move(cur.we.id, -1) }, leadingIcon = { Icon(Duo.ArrowUpward, null) })
+                    DropdownMenuItem({ Text("Move down") }, { menu = false; vm.move(cur.we.id, 1) }, leadingIcon = { Icon(Duo.ArrowDownward, null) })
                     DropdownMenuItem(
                         { Text(if (cur.we.supersetGroup != null) "Remove from superset" else "Superset with next") },
                         { menu = false; vm.toggleSuperset(cur, list) },
-                        leadingIcon = { Icon(if (cur.we.supersetGroup != null) Icons.Rounded.LinkOff else Icons.Rounded.Link, null) },
+                        leadingIcon = { Icon(if (cur.we.supersetGroup != null) Duo.LinkOff else Duo.Link, null) },
                     )
-                    DropdownMenuItem({ Text("Start rest timer") }, { menu = false; vm.startRest(cur, settings) }, leadingIcon = { Icon(Icons.Rounded.Timer, null) })
-                    DropdownMenuItem({ Text("Remove exercise") }, { menu = false; vm.remove(cur.we.id, onRemoved) }, leadingIcon = { Icon(Icons.Rounded.DeleteOutline, null) })
+                    DropdownMenuItem({ Text("Start rest timer") }, { menu = false; vm.startRest(cur, settings) }, leadingIcon = { Icon(Duo.Timer, null) })
+                    DropdownMenuItem({ Text("Remove exercise") }, { menu = false; vm.remove(cur.we.id, onRemoved) }, leadingIcon = { Icon(Duo.DeleteOutline, null) })
                 }
             }
         }
@@ -326,7 +326,7 @@ private fun PreviousCard(cur: WorkoutExerciseView, vm: GymViewModel, u: com.myfi
     Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.History, null, tint = th.textDim, modifier = Modifier.size(16.dp))
+                Icon(Duo.History, null, tint = th.textDim, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("PREVIOUS WORKOUT" + (h?.lastDate?.let { " · $it" } ?: ""), style = FitType.overline, color = th.textDim)
             }
@@ -346,7 +346,7 @@ private fun PreviousCard(cur: WorkoutExerciseView, vm: GymViewModel, u: com.myfi
             h?.best?.let { b ->
                 Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.EmojiEvents, null, tint = th.warning, modifier = Modifier.size(16.dp))
+                    Icon(Duo.EmojiEvents, null, tint = th.warning, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Caption("Best recorded: ${formatSet(m, b, u)} · ${b.workoutLocalDate} · ${h.sessions} session${if (h.sessions == 1) "" else "s"}")
                 }
@@ -397,7 +397,7 @@ private fun CurrentSetCard(cur: WorkoutExerciseView, list: List<WorkoutExerciseV
             AccentButton(
                 if (vm.busy) "Saving…" else "COMPLETE SET",
                 { vm.complete(cur, list, s, onResult) },
-                Modifier.fillMaxWidth(), icon = Icons.Rounded.Check, height = 72.dp, enabled = !vm.busy,
+                Modifier.fillMaxWidth(), icon = Duo.Check, height = 72.dp, enabled = !vm.busy,
             )
             if (cur.exercise.measurementType == MeasurementType.WEIGHT_REPS) Caption("Volume counts weight × reps of non-warm-up sets.")
         }
@@ -446,7 +446,7 @@ private fun EditSetContent(row: SetRow, ev: WorkoutExerciseView, vm: GymViewMode
     val err = vm.validate(ev.exercise.measurementType, d)
     AccentButton("Save correction", { vm.editSet(row.setId, d); close() }, Modifier.fillMaxWidth(), enabled = err == null)
     Spacer(Modifier.height(10.dp))
-    GlassButton("Delete set", { confirm = true }, Modifier.fillMaxWidth(), icon = Icons.Rounded.DeleteOutline)
+    GlassButton("Delete set", { confirm = true }, Modifier.fillMaxWidth(), icon = Duo.DeleteOutline)
     if (confirm) androidx.compose.material3.AlertDialog(
         onDismissRequest = { confirm = false },
         title = { Text("Delete set ${row.setNumber}?") },

@@ -56,9 +56,9 @@ fun DateTimeRow(label: String, epochMs: Long, onChange: (Long) -> Unit, modifier
 
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = FitType.label, color = th.textDim, modifier = Modifier.weight(1f))
-        Chip(Icons.Rounded.CalendarMonth, zdt.toLocalDate().format(dayFmt)) { showDate = true }
+        Chip(Duo.CalendarMonth, zdt.toLocalDate().format(dayFmt)) { showDate = true }
         Spacer(Modifier.width(8.dp))
-        Chip(Icons.Rounded.Schedule, zdt.toLocalTime().format(timeFmt)) { showTime = true }
+        Chip(Duo.Schedule, zdt.toLocalTime().format(timeFmt)) { showTime = true }
     }
 
     if (showDate) {
@@ -100,7 +100,7 @@ fun DateTimeRow(label: String, epochMs: Long, onChange: (Long) -> Unit, modifier
 @Composable
 fun MinuteOfDayChip(minOfDay: Int, onChange: (Int) -> Unit) {
     var show by remember { mutableStateOf(false) }
-    Chip(Icons.Rounded.Schedule, "%02d:%02d".format(Locale.US, minOfDay / 60, minOfDay % 60)) { show = true }
+    Chip(Duo.Schedule, "%02d:%02d".format(Locale.US, minOfDay / 60, minOfDay % 60)) { show = true }
     if (show) {
         val state = rememberTimePickerState(minOfDay / 60, minOfDay % 60, is24Hour = true)
         AlertDialog(

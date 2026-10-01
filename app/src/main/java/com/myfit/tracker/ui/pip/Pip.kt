@@ -76,7 +76,7 @@ enum class PipMood {
 }
 
 /** Rendered animations in assets/pip/<name>.webp. Loops repeat; the rest play once then return to idle. */
-private val LOOPS = setOf("idle", "thinking", "love", "sleepy", "concerned", "dance", "train")
+private val LOOPS = setOf("thinking", "love", "sleepy", "concerned", "dance", "train", "sad")
 
 private fun animFor(m: PipMood) = when (m) {
     PipMood.HAPPY, PipMood.NEUTRAL, PipMood.TALKING -> "idle"
@@ -99,8 +99,11 @@ private fun animFor(m: PipMood) = when (m) {
     PipMood.LAUGH -> "laugh"
 }
 
-private val TAP_REACTIONS = listOf("wave", "laugh", "wink", "surprised", "dance", "spin", "flex", "letsgo", "love", "celebrate", "hydrate", "train", "fuel", "curious")
-private val IDLE_ACTS = listOf("wave", "wink", "hydrate", "curious", "flex")
+private val TAP_REACTIONS = listOf(
+    "wave", "laugh", "wink", "surprised", "dance", "spin", "flex", "letsgo", "love", "celebrate", "hydrate", "train", "fuel", "curious",
+    "jumpingjacks", "jog", "squat", "stretch", "clap", "shrug", "yes", "no", "shy", "pout", "yawn", "blowkiss", "point",
+)
+private val IDLE_ACTS = listOf("wave", "wink", "hydrate", "curious", "flex", "stretch", "clap", "yawn", "point", "shrug", "blowkiss")
 private val CALM = setOf(PipMood.HAPPY, PipMood.NEUTRAL, PipMood.TALKING, PipMood.PROUD, PipMood.WAVE)
 private val BUSY = setOf(PipMood.CELEBRATE, PipMood.EXCITED, PipMood.LOVE, PipMood.DANCE, PipMood.SLEEPY, PipMood.THINKING)
 
@@ -108,6 +111,16 @@ private data class Fx(val born: Float, val x: Float, val y: Float, val vx: Float
 
 private val CHEEK = Color(0xFFFF8FAB)
 private val confettiColors = listOf(Color(0xFFFF5C8A), Color(0xFFFFD34D), Color(0xFF4FC3FF), Color(0xFF7CFFB2), Color(0xFFB57CFF))
+
+/** Look-at stills: row 0 = finger above Pip, col 0 = finger to his left (screen left). */
+private object LookFrames {
+    @Volatile var frames: Map<String, ImageBitmap>? = null
+    suspend fun load(ctx: android.content.Context): Map<String, ImageBitmap> = frames ?: withContext(Dispatchers.IO) {
+        (0..2).flatMap { r -> (0..2).map { c -> "$r$c" } }.mapNotNull { k ->
+            runCatching { k to ctx.assets.open("pip/look/look_$k.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
+        }.toMap()
+    }.also { if (it.isNotEmpty()) frames = it }
+}
 
 /** Talking mouth frames (idle pose, mouth closed → wide open), decoded once and shared. */
 private object TalkFrames {
@@ -151,6 +164,10 @@ fun Pip(
     val tiltY = remember { Animatable(0f) }
     var talkFrames by remember { mutableStateOf(TalkFrames.frames) }
     var redraw by remember { mutableIntStateOf(0) }
+    var replay by remember { mutableIntStateOf(0) }
+    var resting by remember { mutableStateOf(false) }
+    var lookFrames by remember { mutableStateOf(LookFrames.frames) }
+    val motion = com.myfit.tracker.ui.theme.LocalSettings.current.motion
 
     fun burst(kind: Int, n: Int, cx: Float, cy: Float, spread: Float = 1f) {
         repeat(n) {
@@ -173,16 +190,17 @@ fun Pip(
         }
     }
 
-    val effMood = if (hugging || petting) PipMood.LOVE else mood
+    val effMood = if (hugging) PipMood.LOVE else mood
     val baseAnim = animFor(effMood).let { if (it !in LOOPS && baseDone) "idle" else it }
     val anim = reaction ?: baseAnim
     val showTalk = talking && reaction == null && anim == "idle" && talkFrames != null
+    val looking = pointer != null && reaction == null && !hugging && !showTalk && lookFrames != null
 
     // ---- the animated clip currently playing
     var drawable by remember { mutableStateOf<Drawable?>(null) }
     var still by remember { mutableStateOf<ImageBitmap?>(null) }
     val loopNow = reaction == null && anim in LOOPS
-    DisposableEffect(anim, loopNow) {
+    DisposableEffect(anim, loopNow, replay) {
         var alive = true
         val clip = anim
         val job = scope.launch {
@@ -191,6 +209,7 @@ fun Pip(
             if (d != null && Build.VERSION.SDK_INT >= 28 && runCatching {
                 start(d, loop = loopNow, onEnd = {
                     if (reaction == clip) reaction = null
+                    else if (clip == "idle") resting = true            // hold still a moment, then breathe again
                     else if (clip == baseAnim) baseDone = true
                 }, invalidate = { redraw++ })
             }.isSuccess) {
@@ -207,35 +226,44 @@ fun Pip(
     }
     DisposableEffect(Unit) { onDispose { stopClip(drawable) } }
     LaunchedEffect(talking) { if (talking && talkFrames == null) talkFrames = TalkFrames.load(ctx) }
+    LaunchedEffect(pointer != null) { if (pointer != null && lookFrames == null) lookFrames = LookFrames.load(ctx) }
+    // idle breathing plays, rests 3–6 s on its last frame, then plays again (never in Battery saver)
+    LaunchedEffect(resting, motion) {
+        if (resting && motion != 2) { delay(3000L + Random.nextLong(3000L)); resting = false; replay++ }
+    }
 
     // ---- light frame loop: particles, idle acts. Slows to a trickle when nothing needs frames.
     val idleOn by rememberUpdatedState(idleActions)
     val moodNow by rememberUpdatedState(effMood)
+    val motionNow by rememberUpdatedState(motion)
     LaunchedEffect(Unit) {
         var nextIdle = 6f + Random.nextFloat() * 4f
-        var start = -1L
-        while (true) {
-            withFrameMillis { ms ->
-                if (start < 0) start = ms
-                t = (ms - start) / 1000f
-                if (fx.isNotEmpty()) fx.removeAll { t - it.born > 1.7f }
-                when (moodNow) {
-                    PipMood.CELEBRATE, PipMood.EXCITED -> if (Random.nextFloat() < 0.12f && fx.size < 50) burst(2, 1, 0.5f, 0.08f)
-                    PipMood.LOVE -> if (Random.nextFloat() < 0.04f) burst(0, 1, 0.5f, 0.35f, 0.6f)
-                    PipMood.DANCE -> if (Random.nextFloat() < 0.05f) burst(4, 1, if (Random.nextBoolean()) 0.18f else 0.82f, 0.3f, 0.3f)
-                    else -> Unit
-                }
-                if (idleOn && reaction == null && moodNow in CALM && pointer == null && t > nextIdle) {
-                    react(IDLE_ACTS.random()); nextIdle = t + 8f + Random.nextFloat() * 6f
-                }
+        val start = android.os.SystemClock.uptimeMillis()
+        fun step() {
+            t = (android.os.SystemClock.uptimeMillis() - start) / 1000f
+            if (fx.isNotEmpty()) fx.removeAll { t - it.born > 1.7f }
+            when (moodNow) {
+                PipMood.CELEBRATE, PipMood.EXCITED -> if (Random.nextFloat() < 0.3f && fx.size < 40) burst(2, 1, 0.5f, 0.08f)
+                PipMood.LOVE -> if (Random.nextFloat() < 0.12f) burst(0, 1, 0.5f, 0.35f, 0.6f)
+                PipMood.DANCE -> if (Random.nextFloat() < 0.12f) burst(4, 1, if (Random.nextBoolean()) 0.18f else 0.82f, 0.3f, 0.3f)
+                else -> Unit
             }
-            if (fx.isEmpty() && pointer == null && !talking && moodNow !in BUSY) delay(160)
+            if (idleOn && motionNow != 2 && reaction == null && moodNow in CALM && pointer == null && t > nextIdle) {
+                react(IDLE_ACTS.random()); nextIdle = t + 9f + Random.nextFloat() * 7f
+            }
+        }
+        while (true) {
+            when {
+                fx.isNotEmpty() -> withFrameMillis { step() }                 // particles: smooth
+                talking || moodNow in BUSY -> { step(); delay(50) }           // symbols / lip-sync: ~20 fps
+                else -> { step(); delay(400) }                               // nothing moving: almost free
+            }
         }
     }
     LaunchedEffect(pointer) {
         val p = pointer
-        val tx = if (p == null) 0f else ((p.y / boxPx.height - 0.45f) * -14f).coerceIn(-10f, 10f)
-        val ty = if (p == null) 0f else ((p.x / boxPx.width - 0.5f) * 22f).coerceIn(-14f, 14f)
+        val tx = if (p == null) 0f else ((p.y / boxPx.height - 0.45f) * -6f).coerceIn(-5f, 5f)
+        val ty = if (p == null) 0f else ((p.x / boxPx.width - 0.5f) * 10f).coerceIn(-6f, 6f)
         launch { tiltX.animateTo(tx, spring(0.6f, 300f)) }
         tiltY.animateTo(ty, spring(0.6f, 300f))
     }
@@ -263,9 +291,9 @@ fun Pip(
                 }
                 .pointerInput(Unit) {
                     detectDragGestures(
-                        onDragStart = { o -> pointer = o; petting = true },
-                        onDragEnd = { petting = false; pointer = null },
-                        onDragCancel = { petting = false; pointer = null },
+                        onDragStart = { o -> pointer = o },
+                        onDragEnd = { pointer = null },
+                        onDragCancel = { pointer = null },
                     ) { ch, _ ->
                         pointer = ch.position
                         if (t - lastHeart > 0.35f) { lastHeart = t; burst(0, 1, ch.position.x / this.size.width, ch.position.y / this.size.height) }
@@ -295,7 +323,13 @@ fun Pip(
             redraw // re-draw whenever the clip advances a frame
             val w = this.size.width.toInt(); val h = this.size.height.toInt()
             val talkF = talkFrames
-            if (showTalk && talkF != null) {
+            val lookF = lookFrames
+            val p = pointer
+            if (looking && lookF != null && p != null) {
+                val col = (p.x / this.size.width * 3f).toInt().coerceIn(0, 2)
+                val row = ((p.y / this.size.height - 0.12f) / 0.82f * 3f).toInt().coerceIn(0, 2)
+                lookF["$row$col"]?.let { drawImage(it, dstOffset = IntOffset.Zero, dstSize = IntSize(w, h)) }
+            } else if (showTalk && talkF != null) {
                 val lv = if (level < 0f) 0.25f + 0.6f * abs(sin(t * 11f) * sin(t * 4.3f + 1f)) else level
                 val idx = (lv.coerceIn(0f, 1f) * (talkF.size - 1) + 0.4f).toInt().coerceIn(0, talkF.size - 1)
                 drawImage(talkF[idx], dstOffset = IntOffset.Zero, dstSize = IntSize(w, h))

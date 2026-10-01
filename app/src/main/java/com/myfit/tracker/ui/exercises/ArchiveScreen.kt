@@ -58,7 +58,7 @@ fun ArchiveScreen(container: AppContainer) {
             if (exercises.isEmpty() && templates.isEmpty()) item {
                 Glass(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        IconBubble(Icons.Rounded.Inventory2, th.accent, size = 52.dp)
+                        IconBubble(Duo.Inventory2, th.accent, size = 52.dp)
                         Spacer(Modifier.height(10.dp))
                         Text("Nothing archived", style = FitType.section, color = th.text)
                         Caption("Archive an exercise from its detail page, or a template from its menu in Train.")
@@ -70,12 +70,12 @@ fun ArchiveScreen(container: AppContainer) {
                 items(templates, key = { "t" + it.id }) { tp ->
                     Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            IconBubble(Icons.Rounded.Inventory2, th.accent)
+                            IconBubble(Duo.Inventory2, th.accent)
                             Spacer(Modifier.width(10.dp))
                             Text(tp.name, style = FitType.section, color = th.text, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             GlassButton("Restore", {
                                 container.write { container.workoutRepo.unarchiveTemplate(tp.id) }; toaster.show("Template restored")
-                            }, icon = Icons.Rounded.Unarchive, height = 40.dp)
+                            }, icon = Duo.Unarchive, height = 40.dp)
                         }
                     }
                 }
@@ -93,7 +93,7 @@ fun ArchiveScreen(container: AppContainer) {
                             }
                             GlassButton("Restore", {
                                 container.write { container.exerciseRepo.unarchive(ex.id) }; toaster.show("${ex.name} restored")
-                            }, icon = Icons.Rounded.Unarchive, height = 40.dp)
+                            }, icon = Duo.Unarchive, height = 40.dp)
                         }
                     }
                 }
