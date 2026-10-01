@@ -41,6 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -101,6 +102,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
         if (settings.pipEnabled) item { PipCard(state) }
         if (DashCard.WORKOUT in cards) item { WorkoutCard(state.workout, container) }
         item { RingsCard(state, open) }
+        if (DashCard.NUTRITION in cards) item { NutritionCard(container) }
         if (DashCard.BODY in cards) item { BodyCard(state) { open(Sheet.Weight()) } }
         if (DashCard.HYDRATION in cards) item { HydrationCard(state, container, open) }
         if (DashCard.RECOVERY in cards) item { RecoveryCard(state, open) }
@@ -521,3 +523,34 @@ private fun GoalsCard(s: DashState) {
 
 @Composable
 fun DashSection(text: String) = SectionTitle(text)
+
+@Composable
+private fun NutritionCard(c: AppContainer) {
+    val th = LocalFitTheme.current
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
+    val today = Clock.today()
+    val items by androidx.compose.runtime.remember(today) { c.nutritionRepo.itemsOn(today) }.collectAsState(initial = emptyList())
+    val targets by c.profileRepo.targets.collectAsState(initial = emptyList())
+    val t = com.myfit.tracker.ui.food.totalsOf(items)
+    val key = Clock.dateKey(today)
+    GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Food(key)) }) {
+        CardHeader(Duo.ForkKnife, "Food", th.protein) {
+            Caption(if (items.isEmpty()) "Nothing logged yet" else "${items.size} ${if (items.size == 1) "item" else "items"}")
+        }
+        Spacer(Modifier.height(12.dp))
+        com.myfit.tracker.ui.food.MacroSummary(
+            t,
+            com.myfit.tracker.domain.Targets.on(targets, com.myfit.tracker.data.db.TargetType.CALORIES, today),
+            com.myfit.tracker.domain.Targets.on(targets, com.myfit.tracker.data.db.TargetType.PROTEIN_G, today),
+            com.myfit.tracker.domain.Targets.on(targets, com.myfit.tracker.data.db.TargetType.CARBS_G, today),
+            com.myfit.tracker.domain.Targets.on(targets, com.myfit.tracker.data.db.TargetType.FAT_G, today),
+            ringSize = 96,
+        )
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val meal = com.myfit.tracker.ui.food.mealForNow()
+            com.myfit.tracker.ui.theme.GlassButton("Snap meal", { nav.push(com.myfit.tracker.ui.nav.Overlay.FoodPhoto(meal, key)) }, Modifier.weight(1f), icon = Duo.Camera, height = 44.dp)
+            com.myfit.tracker.ui.theme.GlassButton("Log food", { nav.push(com.myfit.tracker.ui.nav.Overlay.FoodAdd(meal, key, 0)) }, Modifier.weight(1f), icon = Duo.ForkKnife, height = 44.dp)
+        }
+    }
+}

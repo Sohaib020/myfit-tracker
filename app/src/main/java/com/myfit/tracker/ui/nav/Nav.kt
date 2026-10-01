@@ -15,6 +15,9 @@ sealed interface Overlay {
     data object Activity : Overlay
     data object PipChat : Overlay
     data object Archive : Overlay
+    data class Food(val date: String? = null) : Overlay
+    data class FoodAdd(val mealType: String, val date: String, val tab: Int) : Overlay
+    data class FoodPhoto(val mealType: String, val date: String) : Overlay
 }
 
 @Stable

@@ -104,6 +104,8 @@ dependencies {
     // On-device neural voice (Supertonic via sherpa-onnx; AAR fetched by CI) + .tar.bz2 extraction
     implementation(files("libs/sherpa-onnx.aar"))
     implementation("org.apache.commons:commons-compress:1.27.1")
+    // Google code scanner: barcode scanning UI without a camera permission
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 
     testImplementation("junit:junit:4.13.2")
 }

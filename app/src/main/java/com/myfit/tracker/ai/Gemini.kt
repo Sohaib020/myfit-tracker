@@ -118,6 +118,37 @@ class Gemini(private val context: Context) {
                 .ifEmpty { throw ApiError(code, "Empty reply (${cand.optString("finishReason")})") }
         }
 
+    /** One image + instruction → JSON text (used for food photos). */
+    suspend fun generateVision(key: String, model: String, prompt: String, jpeg: ByteArray): String = withContext(Dispatchers.IO) {
+        val parts = JSONArray()
+            .put(JSONObject().put("inline_data", JSONObject().put("mime_type", "image/jpeg").put("data", android.util.Base64.encodeToString(jpeg, android.util.Base64.NO_WRAP))))
+            .put(JSONObject().put("text", prompt))
+        val gen = JSONObject().put("temperature", 0.2).put("maxOutputTokens", 2000).put("responseMimeType", "application/json")
+        if ("flash" in model) gen.put("thinkingConfig", JSONObject().put("thinkingBudget", 0))
+        val req = JSONObject().put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", parts))).put("generationConfig", gen)
+        val c = open("$base/models/$model:generateContent", key, "POST")
+        c.readTimeout = 60_000
+        c.doOutput = true
+        c.outputStream.use { it.write(req.toString().toByteArray()) }
+        val (code, body) = readBody(c)
+        if (code == 400 && body.contains("thinking", ignoreCase = true)) {
+            gen.remove("thinkingConfig")
+            val c2 = open("$base/models/$model:generateContent", key, "POST"); c2.readTimeout = 60_000; c2.doOutput = true
+            c2.outputStream.use { it.write(req.toString().toByteArray()) }
+            val (code2, body2) = readBody(c2)
+            if (code2 !in 200..299) throw ApiError(code2, errorMessage(body2))
+            return@withContext textOf(code2, body2)
+        }
+        if (code !in 200..299) throw ApiError(code, errorMessage(body))
+        textOf(code, body)
+    }
+
+    private fun textOf(code: Int, body: String): String {
+        val cand = JSONObject(body).optJSONArray("candidates")?.optJSONObject(0) ?: throw ApiError(code, "Empty reply")
+        val parts = cand.optJSONObject("content")?.optJSONArray("parts") ?: JSONArray()
+        return (0 until parts.length()).joinToString("") { parts.getJSONObject(it).optString("text") }.trim()
+    }
+
     companion object {
         fun systemPrompt(unitsLine: String) = """
 You are Pip, the cheerful little buddy inside "MyFit Tracker", a private fitness logbook app. You look like a soft mint plush with a navy striped sweatband, a curly antenna and little sneakers.

@@ -35,6 +35,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
     abstract fun templateDao(): TemplateDao
     abstract fun healthDao(): HealthDao
+    abstract fun nutritionDao(): NutritionDao
 
     companion object {
         const val NAME = "myfit.db"

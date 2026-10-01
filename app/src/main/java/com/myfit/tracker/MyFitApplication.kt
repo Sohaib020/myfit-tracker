@@ -27,6 +27,7 @@ class AppContainer(app: Application) {
     val restTimer = RestTimer(app)
     val healthSync = HealthSync(app, db)
     val healthRepo = HealthRepository(db)
+    val nutritionRepo = com.myfit.tracker.data.repo.NutritionRepository(db, app)
     val pipBrain by lazy { com.myfit.tracker.ai.PipBrain(this) }
     val pipVoice by lazy { com.myfit.tracker.ai.PipVoice(app, settings) }
     val app: Application = app
@@ -49,6 +50,7 @@ class MyFitApplication : Application() {
         com.myfit.tracker.ui.theme.ThemeShaders.init(this)
         // Bundled exercise catalogue — idempotent, runs off the main thread.
         container.write { container.exerciseRepo.seedIfNeeded() }
+        container.write { container.nutritionRepo.seedIfNeeded() }
         HealthSyncWorker.schedule(this)
         if (!java.io.File(filesDir, "voice/" + com.myfit.tracker.ai.voice.VoicePack.MODEL + "/.complete").exists())
             com.myfit.tracker.ai.voice.VoicePackWorker.schedule(this)

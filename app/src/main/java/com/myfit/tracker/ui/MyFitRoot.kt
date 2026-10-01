@@ -307,6 +307,9 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.Activity -> com.myfit.tracker.ui.activity.ActivityScreen(container)
                         Overlay.PipChat -> com.myfit.tracker.ui.pip.PipChatScreen(container)
                         Overlay.Archive -> com.myfit.tracker.ui.exercises.ArchiveScreen(container)
+                        is Overlay.Food -> com.myfit.tracker.ui.food.FoodDiaryScreen(container, o.date)
+                        is Overlay.FoodAdd -> com.myfit.tracker.ui.food.FoodAddScreen(container, o.mealType, o.date, o.tab)
+                        is Overlay.FoodPhoto -> com.myfit.tracker.ui.food.FoodPhotoScreen(container, o.mealType, o.date)
                     }
                 }
             }

@@ -69,6 +69,7 @@ import com.myfit.tracker.ui.components.NumberInput
 import com.myfit.tracker.ui.theme.AccentButton
 import com.myfit.tracker.ui.theme.FitType
 import com.myfit.tracker.ui.theme.Glass
+import com.myfit.tracker.ui.theme.GlassButton
 import com.myfit.tracker.ui.theme.GlassChip
 import com.myfit.tracker.ui.theme.GlassIconButton
 import com.myfit.tracker.ui.theme.LocalFitTheme
@@ -176,6 +177,12 @@ private fun QuickAddContent(container: AppContainer, open: (Sheet?) -> Unit) {
             open(null); nav.push(com.myfit.tracker.ui.nav.Overlay.Gym(id))
         }
     }, Modifier.fillMaxWidth(), icon = Duo.FitnessCenter)
+    Gap(10)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        val today = com.myfit.tracker.domain.Clock.today().toString()
+        GlassButton("Snap meal", { open(null); nav.push(com.myfit.tracker.ui.nav.Overlay.FoodPhoto(com.myfit.tracker.ui.food.mealForNow(), today)) }, Modifier.weight(1f), icon = Duo.Camera, height = 48.dp)
+        GlassButton("Log food", { open(null); nav.push(com.myfit.tracker.ui.nav.Overlay.FoodAdd(com.myfit.tracker.ui.food.mealForNow(), today, 0)) }, Modifier.weight(1f), icon = Duo.ForkKnife, height = 48.dp)
+    }
     Gap()
     // one-tap water
     Text("Water — one tap", style = FitType.label, color = th.textDim)
@@ -213,7 +220,7 @@ private fun QuickAddContent(container: AppContainer, open: (Sheet?) -> Unit) {
         }
     }
     Gap()
-    Caption("Food, supplements and progress photos arrive in the next builds.")
+    Caption("Supplements and progress photos arrive in the next builds.")
 }
 
 // ------------------------------------------------------------------ Weight
