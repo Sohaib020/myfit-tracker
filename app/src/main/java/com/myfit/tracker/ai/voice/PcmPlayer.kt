@@ -82,7 +82,13 @@ class PcmPlayer(private val rate: Int, private val level: MutableStateFlow<Float
         runCatching { track.stop() }                  // MODE_STREAM: plays what's buffered, then stops
         val total = written
         var waited = 0
-        while (!aborted && waited < 3000 && runCatching { track.playbackHeadPosition.toLong() }.getOrDefault(total) < total) {
+        var last = -1L
+        var still = 0
+        while (!aborted && waited < 4000) {
+            val head = runCatching { track.playbackHeadPosition.toLong() }.getOrDefault(total)
+            if (head >= total) break
+            if (head == last) { still += 30; if (still >= 240) break } else still = 0   // drained (or head reset)
+            last = head
             delay(30); waited += 30
         }
         runCatching { track.release() }

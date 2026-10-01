@@ -101,7 +101,7 @@ class RestAlertWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(
         )
         val label = inputData.getString("label") ?: "next set"
         val n = NotificationCompat.Builder(applicationContext, CHANNEL)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Rest over")
             .setContentText("Time for $label")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
