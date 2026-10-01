@@ -151,6 +151,10 @@ interface WorkoutDao {
     @Query("$SET_ROW_SELECT WHERE we.exerciseId = :exerciseId AND w.deletedAt IS NULL AND w.status = 'COMPLETED' ORDER BY w.startedAt, we.position, ws.setNumber")
     fun observeExerciseHistory(exerciseId: Long): Flow<List<SetRow>>
 
+    /** Every completed set of every exercise, oldest first — PR history across the whole log. */
+    @Query("$SET_ROW_SELECT WHERE w.deletedAt IS NULL AND w.status = 'COMPLETED' ORDER BY w.startedAt, we.position, ws.setNumber")
+    fun observeAllHistory(): Flow<List<SetRow>>
+
     @Query("$SET_ROW_SELECT WHERE we.exerciseId = :exerciseId AND w.deletedAt IS NULL AND w.status = 'COMPLETED' AND w.id != :excludeWorkoutId ORDER BY w.startedAt, we.position, ws.setNumber")
     suspend fun exerciseHistoryExcluding(exerciseId: Long, excludeWorkoutId: Long): List<SetRow>
 

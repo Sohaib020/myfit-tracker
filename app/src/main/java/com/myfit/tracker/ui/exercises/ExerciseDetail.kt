@@ -176,13 +176,6 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
                             Caption("Best estimated 1RM ${Fmt.weight(est, u.weight)} (Epley, sets of 1–12 reps). Not a lifted weight.")
                         }
                     }
-                    val metrics = sessions.takeLast(12).map { sessionMetric(e.measurementType, it) }
-                    if (metrics.count { it != null } >= 2) {
-                        Spacer(Modifier.height(14.dp))
-                        Caption(metricLabel(e.measurementType) + " · last ${metrics.size} sessions")
-                        Spacer(Modifier.height(6.dp))
-                        Sparkline(metrics, th.accentBright, Modifier.fillMaxWidth().height(80.dp))
-                    }
                     Spacer(Modifier.height(14.dp))
                     sessions.takeLast(5).reversed().forEach { s ->
                         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -193,6 +186,9 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
                     }
                 }
             }
+
+            if (sessions.size >= 2) ProgressCard(e.measurementType, sessions, history)
+            if (history.isNotEmpty()) RecordsCard(e.id, e.measurementType, history)
 
             // ---- how to
             if (e.instructions.isNotBlank()) {
@@ -314,3 +310,123 @@ fun ExerciseEditorScreen(container: AppContainer, exerciseId: Long?) {
 @Composable
 private fun Label(t: String) = Text(t, style = FitType.label, color = LocalFitTheme.current.textDim)
 
+// ------------------------------------------------------------------ progress & records
+
+private data class Metric(val id: String, val label: String, val estimate: Boolean = false)
+
+private fun metricsFor(m: String): List<Metric> = when (m) {
+    MeasurementType.WEIGHT_REPS -> listOf(Metric("top", "Top weight"), Metric("e1rm", "Est. 1RM", true), Metric("vol", "Volume"), Metric("reps", "Total reps"))
+    MeasurementType.WEIGHT_DURATION -> listOf(Metric("top", "Top weight"), Metric("dur", "Longest"))
+    MeasurementType.BODYWEIGHT_REPS, MeasurementType.REPS_ONLY, MeasurementType.ASSISTED_REPS -> listOf(Metric("maxreps", "Most reps"), Metric("reps", "Total reps"))
+    MeasurementType.DURATION -> listOf(Metric("dur", "Longest"), Metric("totdur", "Total time"))
+    MeasurementType.DISTANCE_DURATION -> listOf(Metric("dist", "Distance"), Metric("totdur", "Total time"))
+    else -> emptyList()
+}
+
+private fun metricValue(id: String, s: Session): Double? {
+    val w = s.sets.filter { it.setType != SetType.WARMUP }
+    return when (id) {
+        "top" -> w.mapNotNull { it.weightKg }.filter { it > 0 }.maxOrNull()
+        "e1rm" -> w.mapNotNull { WorkoutCalc.estimated1Rm(it.weightKg, it.reps) }.maxOrNull()
+        "vol" -> w.filter { (it.weightKg ?: 0.0) > 0 && (it.reps ?: 0) > 0 }.sumOf { it.weightKg!! * it.reps!! }.takeIf { it > 0 }
+        "reps" -> w.sumOf { it.reps ?: 0 }.toDouble().takeIf { it > 0 }
+        "maxreps" -> w.mapNotNull { it.reps }.maxOrNull()?.toDouble()
+        "dur" -> w.mapNotNull { it.durationSec }.maxOrNull()?.toDouble()
+        "totdur" -> w.sumOf { it.durationSec ?: 0L }.toDouble().takeIf { it > 0 }
+        "dist" -> w.mapNotNull { it.distanceM }.maxOrNull()
+        else -> null
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ProgressCard(m: String, sessions: List<Session>, history: List<SetRow>) {
+    val th = LocalFitTheme.current
+    val u = LocalSettings.current.units
+    val metrics = metricsFor(m)
+    if (metrics.isEmpty()) return
+    var metric by remember(m) { mutableStateOf(metrics.first()) }
+    var range by remember { mutableStateOf(2) }   // 0 = 1M, 1 = 3M, 2 = 1Y, 3 = all
+    val today = Clock.today()
+    val from = when (range) { 0 -> today.minusMonths(1); 1 -> today.minusMonths(3); 2 -> today.minusYears(1); else -> null }
+    val prSessions = remember(history) {
+        com.myfit.tracker.domain.Records.events(history.firstOrNull()?.exerciseId ?: 0, m, history).map { it.workoutId }.toSet()
+    }
+    val fmtD = java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.US)
+    val pts = sessions.filter { from == null || !java.time.LocalDate.parse(it.date).isBefore(from) }.mapNotNull { s ->
+        metricValue(metric.id, s)?.let { v ->
+            val d = java.time.LocalDate.parse(s.date)
+            com.myfit.tracker.ui.components.ChartPoint(d.toEpochDay(), v, d.format(fmtD), s.workoutId in prSessions)
+        }
+    }
+    val fmt: (Double) -> String = when (metric.id) {
+        "top", "e1rm" -> { v -> Fmt.weight(v, u.weight, 1) }
+        "vol" -> { v -> Fmt.weight(v, u.weight, 0) }
+        "reps", "maxreps" -> { v -> Fmt.int(v) }
+        "dur", "totdur" -> { v -> mmss(v.toLong()) }
+        "dist" -> { v -> Fmt.distance(v, u.distance) }
+        else -> { v -> Fmt.trim(v, 1) }
+    }
+    GlassCard {
+        CardHeader(Duo.Insights, "Progress", th.accentBright) { if (metric.estimate) DataBadge(DataKind.ESTIMATED) else DataBadge(DataKind.RECORDED) }
+        Spacer(Modifier.height(10.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            metrics.forEach { mm -> GlassChip(mm.label, mm == metric, { metric = mm }) }
+        }
+        Spacer(Modifier.height(12.dp))
+        if (pts.size >= 2) {
+            com.myfit.tracker.ui.components.ProgressChart(pts, th.accent, fmt, Modifier.fillMaxWidth())
+            val first = pts.first().y; val last = pts.last().y
+            val change = last - first
+            Spacer(Modifier.height(8.dp))
+            Caption(
+                (if (change > 0) "Up " else if (change < 0) "Down " else "No change ") +
+                    (if (change != 0.0) fmt(kotlin.math.abs(change)) + " " else "") + "over ${pts.size} sessions shown." +
+                    (if (metric.estimate) " Estimated 1RM uses the Epley formula on sets of 1–12 reps — not a lifted weight." else "") +
+                    " Orange dots are sessions with a PR.",
+            )
+        } else Caption("Not enough sessions in this range yet — try a longer range.")
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("1M", "3M", "1Y", "All").forEachIndexed { i, l -> GlassChip(l, range == i, { range = i }) }
+        }
+    }
+}
+
+@Composable
+private fun RecordsCard(exerciseId: Long, m: String, history: List<SetRow>) {
+    val th = LocalFitTheme.current
+    val u = LocalSettings.current.units
+    val current = remember(history) { com.myfit.tracker.domain.Records.current(exerciseId, m, history) }
+    val events = remember(history) { com.myfit.tracker.domain.Records.events(exerciseId, m, history).reversed() }
+    if (current.isEmpty()) return
+    GlassCard {
+        CardHeader(Duo.EmojiEvents, "Personal records", th.warning) { Caption("${events.size} PR${if (events.size == 1) "" else "s"}") }
+        Spacer(Modifier.height(10.dp))
+        current.forEach { p ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(com.myfit.tracker.domain.Records.label(p.type), style = FitType.body, color = th.text)
+                    Caption(p.date + if (p.isEstimate) " · estimate" else "")
+                }
+                Text(com.myfit.tracker.domain.Records.format(p, u), style = FitType.section, color = th.text)
+            }
+        }
+        if (events.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Text("PR HISTORY", style = FitType.overline, color = th.textDim)
+            Spacer(Modifier.height(6.dp))
+            events.take(8).forEach { p ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(p.date, style = FitType.caption, color = th.textDim, modifier = Modifier.width(92.dp))
+                    Text(com.myfit.tracker.domain.Records.label(p.type), style = FitType.caption, color = th.text, modifier = Modifier.weight(1f))
+                    Text(com.myfit.tracker.domain.Records.format(p, u), style = FitType.caption, color = th.text)
+                    com.myfit.tracker.domain.Records.delta(p, u)?.let { Text("  $it", style = FitType.caption, color = th.success) }
+                }
+            }
+        } else {
+            Spacer(Modifier.height(6.dp))
+            Caption("Your first session is the baseline — beat it next time for your first PR.")
+        }
+    }
+}

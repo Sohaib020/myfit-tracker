@@ -114,6 +114,19 @@ fun TrainScreen(container: AppContainer, bottomPad: Int) {
         }
 
         item {
+            Glass(Modifier.fillMaxWidth(), onClick = { nav.push(Overlay.Records) }) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    com.myfit.tracker.ui.components.IconBubble(Duo.EmojiEvents, th.warning, 44.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Progress & PRs", style = FitType.section, color = th.text)
+                        Caption("Every personal record, detected from your sets. Open an exercise for its graph.")
+                    }
+                    androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim)
+                }
+            }
+        }
+        item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SectionTitle("Templates", Modifier.weight(1f))
                 GlassButton("New", { nav.push(Overlay.TemplateEditor(null)) }, icon = Duo.Add, height = 40.dp)

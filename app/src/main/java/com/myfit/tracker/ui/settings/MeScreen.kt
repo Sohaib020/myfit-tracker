@@ -335,6 +335,13 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit) {
 
             item { HealthStatusCard(container) }
             item {
+                GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Records) }) {
+                    CardHeader(Duo.EmojiEvents, "Personal records", th.warning) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
+                    Spacer(Modifier.height(6.dp))
+                    Caption("Every PR you've set, detected from your logged sets.")
+                }
+            }
+            item {
                 GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Food(null)) }) {
                     CardHeader(Duo.ForkKnife, "Food diary", th.protein) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
                     Spacer(Modifier.height(6.dp))

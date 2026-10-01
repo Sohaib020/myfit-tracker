@@ -26,6 +26,7 @@ class ExerciseRepository(private val db: AppDatabase, private val context: Conte
     private val dao = db.exerciseDao()
 
     val active: Flow<List<Exercise>> = dao.observeActive()
+    val everything: Flow<List<Exercise>> = dao.observeAll()
     val all: Flow<List<Exercise>> = dao.observeAll()
     val archived: Flow<List<Exercise>> = dao.observeArchived()
     fun observe(id: Long) = dao.observe(id)
@@ -149,6 +150,7 @@ class WorkoutRepository(private val db: AppDatabase) {
     }
 
     fun exerciseHistory(exerciseId: Long): Flow<List<SetRow>> = dao.observeExerciseHistory(exerciseId)
+    fun allHistory(): Flow<List<SetRow>> = dao.observeAllHistory()
     suspend fun exerciseHistoryExcluding(exerciseId: Long, workoutId: Long) = dao.exerciseHistoryExcluding(exerciseId, workoutId)
     val usedExerciseIds: Flow<Set<Long>> = dao.observeUsedExerciseIds().map { it.toSet() }
 

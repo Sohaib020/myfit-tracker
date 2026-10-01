@@ -84,6 +84,15 @@ fun FinishWorkoutScreen(container: AppContainer, workoutId: Long) {
                 }
             }
             SummaryGrid(t, durSec, u)
+            val setKey = w.exercises.sumOf { it.sets.size }
+            val prs by androidx.compose.runtime.produceState(emptyList<Pair<String, com.myfit.tracker.domain.Records.Pr>>(), setKey) {
+                value = w.exercises.filter { it.sets.isNotEmpty() }.flatMap { e ->
+                    val past = container.workoutRepo.exerciseHistoryExcluding(e.exercise.id, workoutId)
+                    com.myfit.tracker.domain.Records.events(e.exercise.id, e.exercise.measurementType, past + e.sets)
+                        .filter { it.workoutId == workoutId }.map { e.exercise.name to it }
+                }
+            }
+            com.myfit.tracker.ui.exercises.NewRecordsCard(prs)
             GlassCard {
                 Text("What you did", style = FitType.section, color = th.text)
                 Spacer(Modifier.height(8.dp))
