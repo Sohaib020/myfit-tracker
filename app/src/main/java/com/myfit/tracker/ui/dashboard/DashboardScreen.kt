@@ -376,6 +376,7 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
         DashCard.MIND -> com.myfit.tracker.ui.mind.MindTile(container) { nav.push(Overlay.Mind) }
         DashCard.CYCLE -> com.myfit.tracker.ui.cycle.CycleTile(container) { nav.push(Overlay.Cycle) }
         DashCard.GLUCOSE -> com.myfit.tracker.ui.glucose.GlucoseTile(container) { nav.push(Overlay.Glucose) }
+        DashCard.STREAKS -> com.myfit.tracker.ui.badges.StreaksTile(container) { nav.push(Overlay.Badges) }
     }
 }
 

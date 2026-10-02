@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -59,7 +60,7 @@ import java.util.Locale
 
 /** Food diary for one day: totals vs targets, meals with their items, quick ways to add food. */
 @Composable
-fun FoodDiaryScreen(container: AppContainer, startDate: String?) {
+fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean = false, bottomPad: Int = 40) {
     val th = LocalFitTheme.current
     val nav = LocalNav.current
     val toaster = LocalToaster.current
@@ -75,13 +76,25 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?) {
     val dateKey = Clock.dateKey(date)
 
     Column(Modifier.fillMaxSize()) {
-        OverlayTopBar("Food", { nav.pop() }, if (date == Clock.today()) "Today" else date.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.US))) {
+        val dayLabel = if (date == Clock.today()) "Today" else date.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.US))
+        if (asTab) Row(
+            Modifier.fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = com.myfit.tracker.ui.components.TopBarSpace, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Food", style = FitType.display, color = th.text)
+                Caption("$dayLabel · diary, snaps, fasting & supplements")
+            }
+            GlassIconButton(Duo.KeyboardArrowLeft, { date = date.minusDays(1) })
+            Spacer(Modifier.width(8.dp))
+            GlassIconButton(Duo.KeyboardArrowRight, { if (date < Clock.today()) date = date.plusDays(1) })
+        } else OverlayTopBar("Food", { nav.pop() }, dayLabel) {
             GlassIconButton(Duo.KeyboardArrowLeft, { date = date.minusDays(1) })
             GlassIconButton(Duo.KeyboardArrowRight, { if (date < Clock.today()) date = date.plusDays(1) })
         }
         LazyColumn(
             Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 40.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = bottomPad.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
@@ -102,6 +115,12 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?) {
                     QuickTile("Search", Duo.Search, th.water, Modifier.weight(1f)) { nav.push(Overlay.FoodAdd(mealForNow(), dateKey, 0)) }
                     QuickTile("Barcode", Duo.Barcode, th.carbs, Modifier.weight(1f)) { nav.push(Overlay.FoodAdd(mealForNow(), dateKey, 1)) }
                     QuickTile("Saved", Duo.Bookmark, th.fat, Modifier.weight(1f)) { nav.push(Overlay.FoodAdd(mealForNow(), dateKey, 2)) }
+                }
+            }
+            if (asTab) item {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HubChip("Fasting", Duo.Timer, th.sleep, Modifier.weight(1f)) { nav.push(Overlay.Fasting) }
+                    HubChip("Supplements", Duo.Inventory2, th.success, Modifier.weight(1f)) { nav.push(Overlay.Supplements) }
                 }
             }
             MEAL_ORDER.filter { it in grouped.keys || it in listOf("BREAKFAST", "LUNCH", "SNACK", "DINNER") }.forEach { type ->
@@ -172,6 +191,18 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?) {
                 container.write { container.nutritionRepo.saveAsMeal(name.ifBlank { mealLabel(sf) }, sf, list) }
                 toaster.show("Saved \"$name\""); saveFor = null
             }, Modifier.fillMaxWidth())
+        }
+    }
+}
+
+@Composable
+private fun HubChip(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: androidx.compose.ui.graphics.Color, modifier: Modifier, onClick: () -> Unit) {
+    val th = LocalFitTheme.current
+    Glass(modifier.height(52.dp), shape = RoundedCornerShape(26.dp), onClick = onClick, pressScale = 0.94f) {
+        Row(Modifier.align(Alignment.Center).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(label, style = FitType.label, color = th.text, maxLines = 1)
         }
     }
 }

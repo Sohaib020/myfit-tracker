@@ -154,7 +154,7 @@ fun StreaksTile(container: AppContainer, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     val state by BadgeEngine.state.collectAsState()
     LaunchedEffect(Unit) { BadgeEngine.refresh(container) }
-    Glass(Modifier.fillMaxWidth().height(150.dp), onClick = onClick) {
+    Glass(Modifier.fillMaxWidth().height(com.myfit.tracker.ui.dashboard.TileHeight), onClick = onClick) {
         Column(Modifier.fillMaxSize().padding(14.dp)) {
             Text("STREAKS", style = FitType.overline, color = th.textDim)
             Spacer(Modifier.height(6.dp))

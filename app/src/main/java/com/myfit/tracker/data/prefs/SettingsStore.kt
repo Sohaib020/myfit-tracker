@@ -24,13 +24,13 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 enum class DashCard(val label: String) {
     PIP("Pip"), SNAP("Snap a meal"), VITALS("Vitals"), MIND("Mindfulness"), CYCLE("Cycle"), GLUCOSE("Blood sugar"), WORKOUT("Today's workout"), RINGS("Today's rings"), SOCIAL("Compete with friends"), NUTRITION("Food & calories"), BODY("Body weight"), HYDRATION("Hydration"), RECOVERY("Sleep & recovery"),
-    STEPS("Steps & activity"), CHECKIN("Daily check-in"), GOALS("Today's goals")
+    STEPS("Steps & activity"), CHECKIN("Daily check-in"), GOALS("Today's goals"), STREAKS("Streaks & badges")
 }
 
 /** Cards that start out half width (two per row). Users can resize any card by long-pressing it. */
 val DefaultSmallCards: Set<DashCard> = setOf(
     DashCard.HYDRATION, DashCard.STEPS, DashCard.RECOVERY, DashCard.CHECKIN, DashCard.BODY,
-    DashCard.GOALS, DashCard.VITALS, DashCard.MIND, DashCard.CYCLE, DashCard.GLUCOSE,
+    DashCard.GOALS, DashCard.VITALS, DashCard.MIND, DashCard.CYCLE, DashCard.GLUCOSE, DashCard.STREAKS,
 )
 
 /** Values for [AppSettings.diabetesType]. */
