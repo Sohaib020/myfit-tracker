@@ -54,4 +54,5 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 - ✅ pip merged (7×7 look grid, smooth follow) — CI green run 53
 - ✅ health merged + finished: glucose HbA1c log, check reminders, Ramadan mode; cycle TTC/pregnancy/perimenopause modes + PIN lock — CI green run 56
 - ✅ habits merged + badges screen, streaks tile, celebration, hub entries — CI green run 58
-- ⏭ next: nav → ai → foodicons
+- ✅ nav merged + finished: dock Home·Train(Workouts|Exercises)·Food(diary + fasting/supplements)·Arena(SocialScreen)·Settings; calendar history icon top-right on every tab (Overlay.History); bottom gradient scrim; Streaks & badges dashboard tile; ring blob/legend fix + compact camera pill + resize toolbar + eligibility gating verified; AI keys only in Developer options — CI green run 61
+- ⏭ next: ai → foodicons
