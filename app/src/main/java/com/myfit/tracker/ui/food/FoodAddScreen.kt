@@ -183,9 +183,6 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
             val meta = container.nutritionRepo.meta(f)
             if (meta?.photo != null) {
                 FoodThumb(meta.photo, 140.dp, 24.dp, Modifier.fillMaxWidth().height(140.dp))
-                container.nutritionRepo.credit(meta.photo)?.let { cr ->
-                    Caption("Photo: ${cr.artist.ifBlank { "Wikimedia Commons" }} · ${cr.license} · Wikimedia Commons", color = th.textFaint)
-                }
                 Spacer(Modifier.height(8.dp))
             }
             Text(f.name, style = FitType.title, color = th.text)

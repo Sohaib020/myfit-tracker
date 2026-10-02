@@ -28,25 +28,29 @@ data class LogLine(
 class NutritionRepository(private val db: AppDatabase, private val context: Context) {
     private val dao = db.nutritionDao()
 
-    /** Extra info for built-in foods: category, search aliases, photo and how solid the numbers are. */
+    /** Extra info for built-in foods: category, search aliases, 3D icon (asset id) and how solid the numbers are. */
     data class FoodMeta(val category: String, val aliases: List<String>, val photo: String?, val reference: Boolean)
-    data class Credit(val artist: String, val license: String, val url: String)
+
+    /** Ids that have a generated 3D icon in assets/foodicon. */
+    private val icons: Set<String> by lazy { runCatching { context.assets.list("foodicon")?.filter { it.endsWith(".webp") }?.map { it.removeSuffix(".webp") }?.toSet() }.getOrNull() ?: emptySet() }
+    private val iconByName = HashMap<String, String>()
 
     private val metaMap: Map<String, FoodMeta> by lazy {
-        val credits = runCatching { org.json.JSONObject(context.assets.open("foodimg/credits.json").bufferedReader().use { it.readText() }) }.getOrNull()
         val arr = JSONArray(context.assets.open("foods_pk.json").bufferedReader().use { it.readText() })
         (0 until arr.length()).associate { i ->
             val o = arr.getJSONObject(i)
-            val wiki = o.optString("wiki").takeIf { it.isNotBlank() && it != "null" }
-            val slug = wiki?.lowercase()?.replace(Regex("[^a-z0-9]+"), "_")?.trim('_')
+            val id = o.getString("id")
             val al = o.optJSONArray("aliases")?.let { a -> (0 until a.length()).map { a.getString(it).lowercase() } } ?: emptyList()
-            ("pkfood:" + o.getString("id")) to FoodMeta(o.optString("category", "Basics"), al, slug?.takeIf { credits?.has(it) == true }, o.optString("basis") == "reference")
+            val icon = id.takeIf { it in icons }
+            if (icon != null) iconByName[o.optString("name").lowercase()] = icon
+            ("pkfood:$id") to FoodMeta(o.optString("category", "Basics"), al, icon, o.optString("basis") == "reference")
         }
     }
-    private val creditMap: org.json.JSONObject? by lazy { runCatching { org.json.JSONObject(context.assets.open("foodimg/credits.json").bufferedReader().use { it.readText() }) }.getOrNull() }
+
+    /** 3D icon for a logged item, matched by its built-in food name (diary rows). */
+    fun iconForName(name: String): String? { metaMap.size; return iconByName[name.lowercase()] }
 
     fun meta(f: Food): FoodMeta? = metaMap[f.uuid]
-    fun credit(slug: String): Credit? = creditMap?.optJSONObject(slug)?.let { Credit(it.optString("artist"), it.optString("license"), it.optString("url")) }
     val categories: List<String> get() = listOf("Breakfast", "Breads", "Rice", "Curries", "Daal & Beans", "BBQ & Kebabs", "Vegetables", "Street food", "Fast food", "Restaurant", "Indian", "Sweets", "Drinks", "Fruit", "Dairy & Eggs", "Meat & Fish", "Snacks & Nuts", "Basics")
 
     /** Name/brand search plus Roman-Urdu aliases ("kardi", "nehari", "anda"). */
