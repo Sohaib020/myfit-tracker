@@ -1,0 +1,10 @@
+import sys; sys.path.insert(0, '.')
+import pipgen as P, time
+P.build()
+t = time.time()
+P.pose({'arm': 0})
+P.render('/tmp/claude-0/-home-claude-myfit-tracker/a3bd9ddc-9b2d-5774-bc12-e1c6a3a44cb1/scratchpad/pip3d/t_idle.png')
+print('t', time.time() - t)
+P.pose({'armR': 150, 'fwdR': 10, 'mouth': 'open', 'brows': 'normal', 'tilt': -6, 'yaw': 12})
+P.render('/tmp/claude-0/-home-claude-myfit-tracker/a3bd9ddc-9b2d-5774-bc12-e1c6a3a44cb1/scratchpad/pip3d/t_wave.png')
+print('t', time.time() - t)
