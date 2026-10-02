@@ -26,7 +26,7 @@ for n, i in enumerate(ids):
     cmd = [sd, "--diffusion-model", f"{models}/flux.gguf", "--vae", f"{models}/ae.safetensors",
            "--clip_l", f"{models}/clip_l.safetensors", "--t5xxl", f"{models}/t5xxl.gguf",
            "-p", prompt, "--cfg-scale", "1.0", "--sampling-method", "euler", "--steps", str(STYLE.get("steps", 4)),
-           "-W", size, "-H", size, "--seed", str(seed), "-t", str(os.cpu_count()), "-o", f"raw/{i}.png"]
+           "-W", size, "-H", size, "--vae-tiling", "--seed", str(seed), "-t", str(os.cpu_count()), "-o", f"raw/{i}.png"]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0 or not os.path.exists(f"raw/{i}.png"):
         print("FAIL", i, r.stdout[-2000:], r.stderr[-2000:], flush=True)

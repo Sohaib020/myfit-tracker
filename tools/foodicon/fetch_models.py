@@ -29,5 +29,5 @@ pick([("leejet/FLUX.1-schnell-gguf", r"q4_0\.gguf$"), ("city96/FLUX.1-schnell-gg
       ("second-state/FLUX.1-schnell-GGUF", r"schnell.*Q4_0\.gguf$")], "flux.gguf")
 pick([("second-state/FLUX.1-schnell-GGUF", r"^ae\.safetensors$"), ("black-forest-labs/FLUX.1-schnell", r"^ae\.safetensors$")], "ae.safetensors")
 pick([("comfyanonymous/flux_text_encoders", r"^clip_l\.safetensors$"), ("second-state/FLUX.1-schnell-GGUF", r"^clip_l\.safetensors$")], "clip_l.safetensors")
-pick([("second-state/FLUX.1-schnell-GGUF", r"t5xxl.*Q5_0\.gguf$"), ("second-state/FLUX.1-schnell-GGUF", r"t5xxl.*Q8_0\.gguf$"),
-      ("city96/t5-v1_1-xxl-encoder-gguf", r"Q5_K_M\.gguf$")], "t5xxl.gguf")
+pick([("city96/t5-v1_1-xxl-encoder-gguf", r"Q4_K_M\.gguf$"), ("second-state/FLUX.1-schnell-GGUF", r"t5xxl.*Q4_0\.gguf$"),
+      ("second-state/FLUX.1-schnell-GGUF", r"t5xxl.*Q5_0\.gguf$")], "t5xxl.gguf")
