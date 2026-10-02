@@ -10,9 +10,21 @@ permissions:
   contents: write
 
 env:
-  NSH: 18
+  NSH: 19
 
 jobs:
+  describe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Describe every food
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python3 tools/foodicon/describe.py
+      - uses: actions/upload-artifact@v4
+        with: { name: desc, path: tools/foodicon/desc.json }
+
   setup:
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -31,15 +43,17 @@ jobs:
         with: { name: sdbin, path: sdbin/sd }
 
   gen:
-    needs: setup
+    needs: [setup, describe]
     runs-on: ubuntu-latest
     timeout-minutes: 340
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: desc, path: tools/foodicon }
       - name: Count items
         id: c
         run: |
@@ -76,11 +90,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
+        with: { name: desc, path: tools/foodicon }
+      - uses: actions/download-artifact@v4
         with: { pattern: 'raw-*', path: raw, merge-multiple: true }
       - run: pip install "rembg[cpu]" pillow || pip install rembg onnxruntime pillow
       - run: ls raw | wc -l; python3 tools/foodicon/post.py
       - name: Pack
         run: |
+          cp tools/foodicon/desc.json out/desc.json
+          python3 -c "import json,os;ids=[f['id'] for f in json.load(open('app/src/main/assets/foods_pk.json'))];m=[i for i in ids if not os.path.exists('out/foodicon/'+i+'.webp')];print('MISSING',len(m),m);open('out/missing.txt','w').write(chr(10).join(m))"
           cd out && zip -qr foodicon.zip foodicon && zip -qr rawjpg.zip rawjpg && du -sh foodicon && ls -la
       - uses: softprops/action-gh-release@v2
         with:
@@ -92,4 +110,6 @@ jobs:
           files: |
             out/foodicon.zip
             out/rawjpg.zip
+            out/desc.json
+            out/missing.txt
             out/sheet_*.jpg

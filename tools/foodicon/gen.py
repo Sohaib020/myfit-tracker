@@ -16,7 +16,8 @@ ids = only or sorted(desc)
 ids = [i for k, i in enumerate(ids) if k % nshards == shard]
 os.makedirs("raw", exist_ok=True)
 print("shard", shard, "items", len(ids), flush=True)
-for i in ids:
+fails = 0
+for n, i in enumerate(ids):
     d = desc[i]
     prompt = STYLE["prefix"] + d + STYLE["suffix"]
     seed = seeds.get(i, zlib.crc32(i.encode()) % 100000)
@@ -29,5 +30,13 @@ for i in ids:
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0 or not os.path.exists(f"raw/{i}.png"):
         print("FAIL", i, r.stdout[-2000:], r.stderr[-2000:], flush=True)
+        fails += 1
+        if fails <= 2:  # annotations are readable without log access
+            msg = (r.stderr[-700:] or r.stdout[-700:]).replace("\n", " | ")
+            print(f"::error::shard {shard} {i}: {msg}", flush=True)
+        if fails >= 3 and n == fails - 1:
+            sys.exit("first three items failed — stopping this shard")
     else:
-        print(f"ok {i} seed={seed} {time.time()-t:.0f}s", flush=True)
+        dt = time.time() - t
+        if n == 0: print(f"::notice::shard {shard} first icon {i} took {dt:.0f}s", flush=True)
+        print(f"ok {i} seed={seed} {dt:.0f}s", flush=True)
