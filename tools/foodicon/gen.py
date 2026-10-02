@@ -17,7 +17,12 @@ ids = [i for k, i in enumerate(ids) if k % nshards == shard]
 os.makedirs("raw", exist_ok=True)
 print("shard", shard, "items", len(ids), flush=True)
 fails = 0
+BUDGET = float(os.environ.get("BUDGET_MIN", "300")) * 60
+start = time.time()
 for n, i in enumerate(ids):
+    if os.path.exists(f"raw/{i}.png"): continue
+    if time.time() - start > BUDGET:
+        print(f"::warning::shard {shard} stopped at the time budget after {n} items", flush=True); break
     d = desc[i]
     prompt = STYLE["prefix"] + d + STYLE["suffix"]
     seed = seeds.get(i, zlib.crc32(i.encode()) % 100000)

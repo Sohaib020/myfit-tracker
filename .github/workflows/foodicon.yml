@@ -91,7 +91,7 @@ jobs:
           python3 tools/foodicon/gen.py ${{ matrix.shard }} $NSH $PWD/sdbin/sd $PWD/models
           ls raw | wc -l
       - uses: actions/upload-artifact@v4
-        if: steps.c.outputs.n != '0'
+        if: always() && steps.c.outputs.n != '0'
         with: { name: 'raw-${{ matrix.shard }}', path: raw/, if-no-files-found: ignore }
 
   pack:
