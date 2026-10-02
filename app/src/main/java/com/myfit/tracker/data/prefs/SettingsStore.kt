@@ -27,6 +27,15 @@ enum class DashCard(val label: String) {
     STEPS("Steps & activity"), CHECKIN("Daily check-in"), GOALS("Today's goals")
 }
 
+/** Cards that start out half width (two per row). Users can resize any card by long-pressing it. */
+val DefaultSmallCards: Set<DashCard> = setOf(
+    DashCard.HYDRATION, DashCard.STEPS, DashCard.RECOVERY, DashCard.CHECKIN, DashCard.BODY,
+    DashCard.GOALS, DashCard.VITALS, DashCard.MIND, DashCard.CYCLE, DashCard.GLUCOSE,
+)
+
+/** Values for [AppSettings.diabetesType]. */
+val DiabetesTypes = listOf("unset", "none", "type1", "type2", "gestational", "prediabetes", "other")
+
 data class AppSettings(
     val themeId: String = "kinetic",
     val gentleThemes: Boolean = true,
@@ -69,6 +78,9 @@ data class AppSettings(
     val cycleEnabled: Boolean = false,
     val cycleAsked: Boolean = false,
     val glucoseEnabled: Boolean = false,
+    val dashSmall: Set<DashCard> = DefaultSmallCards,   // half-width dashboard cards (defaults ± user overrides)
+    val diabetesType: String = "unset",  // unset | none | type1 | type2 | gestational | prediabetes | other
+    val diabetesAsked: Boolean = false,  // the Home "do you manage diabetes?" card was answered or dismissed
 ) {
     /** The user's own key if they added one, otherwise the key built into this build (from CI secrets). */
     val geminiKeyEff: String get() = geminiKey.ifBlank { com.myfit.tracker.BuildConfig.GEMINI_KEY }
@@ -127,6 +139,9 @@ class SettingsStore(private val context: Context) {
         val cycle = booleanPreferencesKey("cycle_on")
         val cycleAsked = booleanPreferencesKey("cycle_asked")
         val glucose = booleanPreferencesKey("glucose_on")
+        val dashSize = stringSetPreferencesKey("dash_size")   // "CARD:S" / "CARD:L" overrides of DefaultSmallCards
+        val diabetes = stringPreferencesKey("diabetes_type")
+        val diabetesAsked = booleanPreferencesKey("diabetes_asked")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -180,6 +195,15 @@ class SettingsStore(private val context: Context) {
             cycleEnabled = p[K.cycle] ?: false,
             cycleAsked = p[K.cycleAsked] ?: false,
             glucoseEnabled = p[K.glucose] ?: false,
+            dashSmall = run {
+                val o = p[K.dashSize].orEmpty().mapNotNull { e ->
+                    val c = runCatching { DashCard.valueOf(e.substringBefore(':')) }.getOrNull() ?: return@mapNotNull null
+                    c to (e.substringAfter(':') == "S")
+                }.toMap()
+                DashCard.entries.filter { o[it] ?: (it in DefaultSmallCards) }.toSet()
+            },
+            diabetesType = p[K.diabetes]?.takeIf { it in DiabetesTypes } ?: "unset",
+            diabetesAsked = p[K.diabetesAsked] ?: false,
         )
     }
 
@@ -225,4 +249,13 @@ class SettingsStore(private val context: Context) {
     suspend fun setDevMode(v: Boolean) = context.dataStore.edit { it[K.dev] = v }
     suspend fun setCycle(enabled: Boolean) = context.dataStore.edit { it[K.cycle] = enabled; it[K.cycleAsked] = true }
     suspend fun setGlucose(enabled: Boolean) = context.dataStore.edit { it[K.glucose] = enabled }
+    /** Half width (small = true) or full width for one dashboard card. */
+    suspend fun setDashSize(card: DashCard, small: Boolean) = context.dataStore.edit {
+        val cur = it[K.dashSize].orEmpty().filterNot { e -> e.substringBefore(':') == card.name }
+        it[K.dashSize] = (cur + "${card.name}:${if (small) "S" else "L"}").toSet()
+    }
+    suspend fun setDiabetesType(v: String) = context.dataStore.edit {
+        it[K.diabetes] = if (v in DiabetesTypes) v else "unset"; it[K.diabetesAsked] = true
+    }
+    suspend fun setDiabetesAsked(v: Boolean) = context.dataStore.edit { it[K.diabetesAsked] = v }
 }
