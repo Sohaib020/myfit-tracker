@@ -1,0 +1,27 @@
+// Chalk Dust (light): warm stone-grey, soft billows of lifted chalk, a faint diamond knurl band
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(0.925, 0.920, 0.910), float3(0.845, 0.850, 0.860), uv.y);
+    // soft chalk billows: bright where powder hangs, slightly deeper grey in the gaps
+    float cl = fbm(p * 2.0 + float2(2.0, 5.0));
+    float cl2 = fbm(p * 5.0 + float2(cl * 2.0, 1.0));
+    float powder = smoothstep(0.40, 0.75, cl * 0.75 + cl2 * 0.25);
+    c = mix(c, float3(0.995, 0.993, 0.988), powder * 0.75);
+    // a rose and a cool glow to keep it from feeling flat
+    float2 s = p - float2(ar * 0.05, 0.08);
+    c = mix(c, float3(0.99, 0.88, 0.88), exp(-dot(s, s) * 5.0) * 0.40);
+    float2 s2 = p - float2(ar * 0.95, 0.62);
+    c = mix(c, float3(0.86, 0.90, 0.98), exp(-dot(s2, s2) * 5.0) * 0.40);
+    // knurl: tiny diamond grid in a band at the bottom
+    float2 k = float2(p.x + p.y, p.x - p.y) * 70.0;
+    float2 kg = abs(fract(k) - 0.5);
+    float kn = smoothstep(0.10, 0.0, min(kg.x, kg.y));
+    float band = smoothstep(0.82, 0.90, uv.y);
+    c -= float3(0.05) * kn * band * (1.0 - powder * 0.6);
+    c += float3(1.0) * stars(p * 90.0, 0.18, 0.0) * 0.25;
+    c -= float3(0.10) * stars(p * 140.0 + 3.0, 0.05, 0.0) * 0.3;
+    c += (hash(fc + 9.1) - 0.5) * 0.008;
+    return outc(c);
+}

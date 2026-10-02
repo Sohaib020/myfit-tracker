@@ -1,0 +1,49 @@
+// Court Lines: lacquered hardwood under arena lights, painted key and three-point arc in soft cream
+float lineAA(float d, float w, float px) { return smoothstep(w + px, w - px, abs(d)); }
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float px = 1.5 / res.y;
+    // maple boards running vertically, staggered joints
+    float bw = 0.055;
+    float bi = floor(p.x / bw);
+    float bl = 0.55 + 0.4 * hash(float2(bi, 2.0));
+    float bj = floor((p.y + hash(float2(bi, 7.0)) * 3.0) / bl);
+    float tone = hash(float2(bi, bj));
+    float grain = noise(float2(p.x * 260.0, p.y * 9.0 + bi * 3.0));
+    float3 wood = mix(float3(0.30, 0.17, 0.085), float3(0.40, 0.235, 0.12), tone * 0.6 + grain * 0.4);
+    float seam = lineAA(fract(p.x / bw + 0.5) - 0.5, 0.012, px / bw);
+    wood *= 1.0 - seam * 0.25;
+    // overall dark arena grade: deep at the top, warm pool of light lower down
+    float2 l = p - float2(ar * 0.5, 0.82);
+    float pool = exp(-dot(l, l) * 2.6);
+    float3 c = wood * (0.22 + 0.55 * pool);
+    c = mix(c, float3(0.03, 0.035, 0.05), smoothstep(0.55, 0.0, uv.y) * 0.65);
+    // painted key (darker stain) and lines
+    float2 h = float2(ar * 0.5, 1.04);
+    float keyW = 0.20;
+    float inKey = step(abs(p.x - h.x), keyW) * step(0.64, p.y);
+    c = mix(c, c * float3(0.62, 0.42, 0.40), inKey * 0.85);
+    float ln = 0.0;
+    float lw = 0.0022;
+    ln = max(ln, lineAA(abs(p.x - h.x) - keyW, lw, px) * step(0.64, p.y));
+    ln = max(ln, lineAA(p.y - 0.64, lw, px) * step(abs(p.x - h.x), keyW));
+    float ft = length(p - float2(h.x, 0.64));
+    ln = max(ln, lineAA(ft - 0.15, lw, px) * step(p.y, 0.64));
+    float arc = length(p - h);
+    ln = max(ln, lineAA(arc - 0.62, lw, px));
+    // centre circle peeking at the top
+    float cc = length(p - float2(h.x, -0.08));
+    ln = max(ln, lineAA(cc - 0.22, lw, px));
+    ln = max(ln, lineAA(cc - 0.07, lw, px));
+    float lit = 0.35 + 0.65 * smoothstep(0.1, 0.9, uv.y);
+    c = mix(c, float3(0.95, 0.88, 0.76), ln * 0.55 * lit);
+    // lacquer sheen
+    float2 s = (p - float2(ar * 0.30, 0.70)) * float2(3.0, 1.0);
+    c += float3(1.0, 0.85, 0.65) * exp(-dot(s, s) * 6.0) * 0.06;
+    float2 vv = uv - float2(0.5, 0.6);
+    c *= 1.0 - 0.6 * dot(vv, vv);
+    c += (hash(fc + 5.1) - 0.5) * 0.012;
+    return outc(c);
+}

@@ -1,0 +1,61 @@
+// Ajrak: Sindhi block-print — madder crimson ground, indigo rosettes in a diamond lattice, white dot outlines, striped borders
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float px = 1.5 / res.y;
+    float3 red = float3(0.43, 0.06, 0.08);
+    float3 ind = float3(0.07, 0.06, 0.15);
+    float3 wht = float3(0.93, 0.89, 0.84);
+    float3 c = red;
+    // diamond lattice: rotate 45 degrees into cells
+    float s = 0.13;
+    float2 r = float2(p.x + p.y, p.y - p.x) * 0.70710678 / s;
+    float2 cell = floor(r);
+    float2 f = fract(r) - 0.5;
+    float2 q = f * s;                     // local, in p-units (rotated)
+    float d = length(q);
+    float ang = atan(q.y, q.x);
+    // indigo eight-petal rosette
+    float pet = s * 0.30 * (0.62 + 0.38 * abs(cos(ang * 4.0)));
+    float ros = smoothstep(pet + px, pet - px, d);
+    float core = smoothstep(s * 0.07 + px, s * 0.07 - px, d);
+    // ring of white dots around the rosette
+    float ringR = s * 0.37;
+    float da = 6.2831853 / 16.0;
+    float an = (floor(ang / da) + 0.5) * da;
+    float2 dp = float2(cos(an), sin(an)) * ringR;
+    float dots = smoothstep(0.0055 + px, 0.0055 - px, length(q - dp));
+    // lattice lines (indigo) with white edge
+    float edge = (0.5 - max(abs(f.x), abs(f.y))) * s;
+    float lat = smoothstep(0.0045 + px, 0.0045 - px, edge);
+    float latW = smoothstep(px * 1.5, 0.0, abs(edge - 0.0065) - 0.0010);
+    c = mix(c, ind, ros);
+    c = mix(c, red * 1.15, core);
+    c = mix(c, wht, dots * 0.9);
+    c = mix(c, ind, lat);
+    c = mix(c, wht, latW * 0.7);
+    // borders: indigo stripes with a dotted white line
+    float bt = step(p.y, 0.055);
+    float bb = step(0.93, p.y);
+    float3 bcol = ind;
+    float sy = min(abs(p.y - 0.028), abs(p.y - 0.958));
+    float bdots = smoothstep(0.0045 + px, 0.0045 - px, length(float2((fract(p.x / 0.022) - 0.5) * 0.022, sy)));
+    bcol = mix(bcol, wht, bdots);
+    float bline = smoothstep(px * 1.5, 0.0, min(abs(p.y - 0.060), abs(p.y - 0.925)) - 0.0014);
+    c = mix(c, bcol, max(bt, bb));
+    c = mix(c, wht, bline * 0.8);
+    // block-print imperfection: ink density and cloth weave
+    float ink = 0.86 + 0.14 * fbm3(p * 9.0);
+    float weave = 0.96 + 0.04 * noise(float2(fc.x * 0.9, fc.y * 0.15)) * noise(float2(fc.x * 0.15, fc.y * 0.9));
+    c *= ink * weave;
+    // quiet the middle so cards read cleanly
+    float calm = smoothstep(0.09, 0.22, uv.y) * smoothstep(0.90, 0.72, uv.y);
+    float lum = dot(c, float3(0.3, 0.5, 0.2));
+    c = mix(c, mix(float3(lum), c, 0.6) * 0.22 + red * 0.12, calm);
+    c *= 0.82;
+    float2 vv = uv - float2(0.5, 0.5);
+    c *= 1.0 - 0.40 * dot(vv, vv);
+    c += (hash(fc + 3.7) - 0.5) * 0.012;
+    return outc(c);
+}

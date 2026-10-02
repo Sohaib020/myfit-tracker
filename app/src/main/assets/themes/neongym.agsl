@@ -1,0 +1,44 @@
+// Neon Gym: dark concrete wall, one neon stroke (abstract barbell + arc) in hot coral, glossy floor reflection
+float seg(float2 p, float2 a, float2 b) {
+    float2 pa = p - a;
+    float2 ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h);
+}
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float conc = fbm(p * 7.0) * 0.6 + noise(fc * 0.5) * 0.4;
+    float3 c = mix(float3(0.050, 0.046, 0.058), float3(0.075, 0.068, 0.085), conc);
+    float floorY = 0.80;
+    float2 q = p;
+    if (uv.y > floorY) { q.y = 2.0 * floorY - p.y; }
+    float y0 = 0.70;
+    float d = seg(q, float2(ar * 0.12, y0), float2(ar * 0.88, y0));
+    d = min(d, seg(q, float2(ar * 0.22, y0 - 0.05), float2(ar * 0.22, y0 + 0.05)));
+    d = min(d, seg(q, float2(ar * 0.78, y0 - 0.05), float2(ar * 0.78, y0 + 0.05)));
+    d = min(d, seg(q, float2(ar * 0.17, y0 - 0.035), float2(ar * 0.17, y0 + 0.035)));
+    d = min(d, seg(q, float2(ar * 0.83, y0 - 0.035), float2(ar * 0.83, y0 + 0.035)));
+    float2 ac = q - float2(ar * 0.5, y0 + 0.02);
+    float arcD = abs(length(ac) - ar * 0.36);
+    arcD = max(arcD, ac.y + 0.08);
+    float3 neonA = float3(1.0, 0.33, 0.45);
+    float3 neonB = float3(0.55, 0.40, 1.0);
+    float coreA = smoothstep(0.004, 0.0015, d);
+    float coreB = smoothstep(0.003, 0.001, arcD);
+    float3 glow = neonA * (coreA * 0.9 + exp(-d * 38.0) * 0.45 + exp(-d * 8.0) * 0.12)
+                + neonB * (coreB * 0.6 + exp(-arcD * 45.0) * 0.30 + exp(-arcD * 9.0) * 0.08);
+    float refl = 1.0;
+    if (uv.y > floorY) { refl = 0.35 * (1.0 - smoothstep(floorY, 1.0, uv.y) * 0.7); }
+    c += glow * refl;
+    if (uv.y > floorY) {
+        c = mix(c, c * 0.65 + float3(0.012), 0.6);
+        c *= 0.9 + 0.1 * noise(float2(p.x * 4.0, p.y * 60.0));
+    }
+    c += neonA * smoothstep(0.004, 0.0, abs(uv.y - floorY)) * 0.10;
+    float2 vv = uv - float2(0.5, 0.55);
+    c *= 1.0 - 0.6 * dot(vv, vv);
+    c += (hash(fc + 7.7) - 0.5) * 0.014;
+    return outc(c);
+}
