@@ -48,3 +48,9 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 2. Merge into main in order: themes → pip → health → habits → nav → ai → foodicons; resolve shared-file conflicts (MyFitRoot.kt, Nav.kt, SettingsStore.kt, MeScreen.kt, build.gradle.kts, AndroidManifest.xml).
 3. Independent crash/security review, fix, build on main, verify signing cert (SHA-256 prefix 93a908b11ff96f312fb65cbf), deliver APK link.
 4. Give the user the AI cost/strategy write-up (on-device Gemma + capped cloud via a Cloudflare Worker proxy later).
+
+## Progress log (resumed 2 Oct, 21:16 PKT — sequential, one branch at a time)
+- ✅ themes merged (40 themes) — CI green run 52
+- ✅ pip merged (7×7 look grid, smooth follow) — CI green run 53
+- ✅ health merged + finished: glucose HbA1c log, check reminders, Ramadan mode; cycle TTC/pregnancy/perimenopause modes + PIN lock — CI green run 56
+- ⏭ next: habits → nav → ai → foodicons
