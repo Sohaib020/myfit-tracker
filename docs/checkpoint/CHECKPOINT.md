@@ -55,4 +55,5 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 - ✅ health merged + finished: glucose HbA1c log, check reminders, Ramadan mode; cycle TTC/pregnancy/perimenopause modes + PIN lock — CI green run 56
 - ✅ habits merged + badges screen, streaks tile, celebration, hub entries — CI green run 58
 - ✅ nav merged + finished: dock Home·Train(Workouts|Exercises)·Food(diary + fasting/supplements)·Arena(SocialScreen)·Settings; calendar history icon top-right on every tab (Overlay.History); bottom gradient scrim; Streaks & badges dashboard tile; ring blob/legend fix + compact camera pill + resize toolbar + eligibility gating verified; AI keys only in Developer options — CI green run 61
-- ⏭ next: ai → foodicons
+- ✅ ai merged + finished: OnDeviceLlm (LiteRT-LM `latest.release`, GPU→CPU fallback, idle release after 2 min), Settings "Offline brain" card (download/pause/resume/delete, Wi-Fi only, device check), FoodVision + PipBrain route on-device → capped cloud (15 photos / 40 answers per day, live names ≤60), AiCapSheetHost with rewarded ads (+5/+10, max 6/day; Google test ids unless ADMOB_APP_ID / ADMOB_REWARDED_ID secrets), Developer options AI card — CI green run 62 (APK 96→121 MB)
+- ⏭ next: foodicons
