@@ -41,7 +41,7 @@ fun HealthHubScreen(container: AppContainer) {
     val th = LocalFitTheme.current
     val nav = LocalNav.current
     val s = LocalSettings.current
-    val profile = androidx.compose.runtime.collectAsState(container.profileRepo.profile, null).value
+    val profile = androidx.compose.runtime.produceState<com.myfit.tracker.data.db.UserProfile?>(null) { container.profileRepo.profile.collect { value = it } }.value
     val female = profile?.sex == Sex.FEMALE
     val tiles = buildList {
         add(HubTile("Vitals", "Heart, oxygen, BP, breathing", Duo.Pulse, th.danger, Overlay.Vitals))
