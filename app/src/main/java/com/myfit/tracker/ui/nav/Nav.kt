@@ -20,6 +20,7 @@ sealed interface Overlay {
     data object Records : Overlay
     data object Social : Overlay
     data object Body : Overlay
+    data object Badges : Overlay
     data object Cycle : Overlay
     data object Glucose : Overlay
     data object Meds : Overlay

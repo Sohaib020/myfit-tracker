@@ -62,7 +62,7 @@ object HealthReminders {
 
         // ---- blood sugar
         val g = runCatching { GlucoseConfigStore.get(app) }.getOrNull()
-        val diabetes = runCatching { container.settings.settings.first().diabetesType }.getOrDefault("none") != "none"
+        val diabetes = runCatching { container.settings.settings.first().let { it.glucoseEnabled || it.diabetesType !in setOf("none", "unset") } }.getOrDefault(false)
         if (g != null && diabetes) {
             if (g.testRemind) g.testTimes.forEach { m ->
                 out += Alarm(dailyNext(m, after, zone), "Blood sugar check", "Time to check your blood sugar.")

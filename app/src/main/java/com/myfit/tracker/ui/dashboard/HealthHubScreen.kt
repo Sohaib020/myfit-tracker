@@ -49,10 +49,11 @@ fun HealthHubScreen(container: AppContainer) {
         add(HubTile("Activity & heart", "Steps, workouts, sleep", Duo.DirectionsRun, th.steps, Overlay.Activity))
         add(HubTile("Mindfulness", "Breathing, meditation, mood", Duo.SelfImprovement, th.sleep, Overlay.Mind))
         if (s.cycleEnabled || female) add(HubTile("Cycle", if (s.cycleEnabled) "Periods & predictions" else "Tap to turn on", Duo.CalendarMonth, th.protein, Overlay.Cycle))
-        add(HubTile("Blood sugar", if (s.glucoseEnabled) "Glucose, meds, A1c" else "Tap to turn on", Duo.Drop, th.water, Overlay.Glucose))
+        if (s.glucoseEnabled || s.diabetesType !in setOf("none", "unset")) add(HubTile("Blood sugar", if (s.glucoseEnabled) "Glucose, meds, A1c" else "Tap to turn on", Duo.Drop, th.water, Overlay.Glucose))
         add(HubTile("Reminders", "Water, meds, workouts…", Duo.Bell, th.warning, Overlay.Reminders))
         add(HubTile("Supplements", "Creatine, vitamins…", Duo.Egg, th.carbs, Overlay.Supplements))
         add(HubTile("Fasting", "Intermittent fasting timer", Duo.Timer, th.accent, Overlay.Fasting))
+        add(HubTile("Badges", "Streaks & achievements", Duo.EmojiEvents, th.warning, Overlay.Badges))
         add(HubTile("Devices", "Watches & apps connected", Duo.Watch, th.textDim, Overlay.Devices))
     }
     Column(Modifier.fillMaxSize()) {

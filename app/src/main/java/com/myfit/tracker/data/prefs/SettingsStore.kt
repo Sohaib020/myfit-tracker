@@ -70,7 +70,7 @@ data class AppSettings(
     val cycleAsked: Boolean = false,
     val glucoseEnabled: Boolean = false,
     /** "none", "type1", "type2", "gestational", "prediabetes", "other" — gates the diabetes toolkit. */
-    val diabetesType: String = "none",
+    val diabetesType: String = "unset",       // unset (not asked) · none · type1 · type2 · gestational · prediabetes · other
 ) {
     /** The user's own key if they added one, otherwise the key built into this build (from CI secrets). */
     val geminiKeyEff: String get() = geminiKey.ifBlank { com.myfit.tracker.BuildConfig.GEMINI_KEY }
@@ -183,7 +183,7 @@ class SettingsStore(private val context: Context) {
             cycleEnabled = p[K.cycle] ?: false,
             cycleAsked = p[K.cycleAsked] ?: false,
             glucoseEnabled = p[K.glucose] ?: false,
-            diabetesType = p[K.diabetesType] ?: "none",
+            diabetesType = p[K.diabetesType] ?: "unset",
         )
     }
 

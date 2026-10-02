@@ -318,6 +318,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.Records -> com.myfit.tracker.ui.exercises.RecordsScreen(container)
                         Overlay.Social -> com.myfit.tracker.ui.social.SocialScreen(container)
                         Overlay.Body -> com.myfit.tracker.ui.body.BodyScreen(container) { sheet = it }
+                        Overlay.Badges -> com.myfit.tracker.ui.badges.BadgesScreen(container)
                         Overlay.Cycle -> com.myfit.tracker.ui.cycle.CycleScreen(container)
                         Overlay.Glucose -> com.myfit.tracker.ui.glucose.GlucoseScreen(container)
                         Overlay.Meds -> com.myfit.tracker.ui.glucose.MedsScreen(container)
@@ -338,6 +339,8 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 }
             }
 
+            LaunchedEffect(Unit) { com.myfit.tracker.domain.BadgeEngine.refresh(container, force = true) }
+            com.myfit.tracker.ui.badges.BadgeCelebration(container)
             GlassSheet(visible = sheet != null, onDismiss = { sheet = null }) {
                 // keep showing the last content while the exit animation runs
                 val shown = sheet ?: lastSheet
