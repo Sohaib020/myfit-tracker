@@ -1,5 +1,30 @@
 package com.myfit.tracker.data.db
 
 /** Exact CREATE statements for schema v4 (copied from Room's generated schema). */
-val MIGRATION_3_4_SQL = listOf<String>(
+val MIGRATION_3_4_SQL = listOf(
+    "CREATE TABLE IF NOT EXISTS `glucose_reading` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `mgdl` REAL NOT NULL, `tag` TEXT NOT NULL, `source` TEXT NOT NULL, `sourcePackage` TEXT, `takenAt` INTEGER NOT NULL, `zoneId` TEXT NOT NULL, `localDate` TEXT NOT NULL, `notes` TEXT NOT NULL, `deletedAt` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+    "CREATE INDEX IF NOT EXISTS `index_glucose_reading_localDate` ON `glucose_reading` (`localDate`)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS `index_glucose_reading_uuid` ON `glucose_reading` (`uuid`)",
+    "CREATE TABLE IF NOT EXISTS `medication` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `name` TEXT NOT NULL, `kind` TEXT NOT NULL, `dose` REAL, `unit` TEXT NOT NULL, `times` TEXT NOT NULL, `remind` INTEGER NOT NULL, `notes` TEXT NOT NULL, `archivedAt` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS `index_medication_uuid` ON `medication` (`uuid`)",
+    "CREATE TABLE IF NOT EXISTS `medication_log` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `medicationId` INTEGER, `name` TEXT NOT NULL, `kind` TEXT NOT NULL, `dose` REAL, `unit` TEXT NOT NULL, `takenAt` INTEGER NOT NULL, `zoneId` TEXT NOT NULL, `localDate` TEXT NOT NULL, `notes` TEXT NOT NULL, `deletedAt` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+    "CREATE INDEX IF NOT EXISTS `index_medication_log_localDate` ON `medication_log` (`localDate`)",
+    "CREATE INDEX IF NOT EXISTS `index_medication_log_medicationId` ON `medication_log` (`medicationId`)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS `index_medication_log_uuid` ON `medication_log` (`uuid`)",
+    "CREATE TABLE IF NOT EXISTS `blood_pressure` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `systolic` INTEGER NOT NULL, `diastolic` INTEGER NOT NULL, `pulse` INTEGER, `source` TEXT NOT NULL, `sourcePackage` TEXT, `takenAt` INTEGER NOT NULL, `zoneId` TEXT NOT NULL, `localDate` TEXT NOT NULL, `notes` TEXT NOT NULL, `deletedAt` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+    "CREATE INDEX IF NOT EXISTS `index_blood_pressure_localDate` ON `blood_pressure` (`localDate`)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS `index_blood_pressure_uuid` ON `blood_pressure` (`uuid`)",
+    "CREATE TABLE IF NOT EXISTS `vital_reading` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `type` TEXT NOT NULL, `value` REAL NOT NULL, `source` TEXT NOT NULL, `takenAt` INTEGER NOT NULL, `zoneId` TEXT NOT NULL, `localDate` TEXT NOT NULL, `deletedAt` INTEGER, `createdAt` INTEGER NOT NULL)",
+    "CREATE INDEX IF NOT EXISTS `index_vital_reading_localDate` ON `vital_reading` (`localDate`)",
+    "CREATE INDEX IF NOT EXISTS `index_vital_reading_type` ON `vital_reading` (`type`)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS `index_vital_reading_uuid` ON `vital_reading` (`uuid`)",
+    "CREATE TABLE IF NOT EXISTS `cycle_day` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `localDate` TEXT NOT NULL, `flow` INTEGER, `symptoms` TEXT NOT NULL, `mood` TEXT, `ovulationTest` INTEGER, `mucus` INTEGER, `bbtC` REAL, `pillTaken` INTEGER, `notes` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS `index_cycle_day_localDate` ON `cycle_day` (`localDate`)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS `index_cycle_day_uuid` ON `cycle_day` (`uuid`)",
+    "CREATE TABLE IF NOT EXISTS `mind_session` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `type` TEXT NOT NULL, `title` TEXT NOT NULL, `durationSec` INTEGER NOT NULL, `startedAt` INTEGER NOT NULL, `zoneId` TEXT NOT NULL, `localDate` TEXT NOT NULL, `createdAt` INTEGER NOT NULL)",
+    "CREATE INDEX IF NOT EXISTS `index_mind_session_localDate` ON `mind_session` (`localDate`)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS `index_mind_session_uuid` ON `mind_session` (`uuid`)",
+    "CREATE TABLE IF NOT EXISTS `mood_entry` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `mood` INTEGER NOT NULL, `tags` TEXT NOT NULL, `note` TEXT NOT NULL, `loggedAt` INTEGER NOT NULL, `zoneId` TEXT NOT NULL, `localDate` TEXT NOT NULL, `deletedAt` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+    "CREATE INDEX IF NOT EXISTS `index_mood_entry_localDate` ON `mood_entry` (`localDate`)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS `index_mood_entry_uuid` ON `mood_entry` (`uuid`)",
 )
