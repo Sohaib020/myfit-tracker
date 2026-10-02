@@ -117,7 +117,16 @@ fun CycleScreen(container: AppContainer) {
                     },
                 )
             } else {
-                CycleContent(container, requestHc)
+                val ctx = LocalContext.current
+                var unlocked by remember { mutableStateOf(!CyclePrefs.lockOn(ctx) || CycleLockSession.isUnlocked()) }
+                if (!unlocked) CyclePinGate(
+                    onUnlocked = { unlocked = true },
+                    onForgot = {
+                        container.write { runCatching { CycleStore.deleteAll(container) } }
+                        CyclePrefs.clearAll(ctx); CycleLockSession.lock(); unlocked = true
+                        toaster.show("Cycle data deleted and PIN reset")
+                    },
+                ) else CycleContent(container, requestHc)
             }
         }
     }
@@ -194,6 +203,10 @@ private fun CycleContent(container: AppContainer, requestHc: () -> Unit) {
     var sheetDate by remember { mutableStateOf<LocalDate?>(null) }
     var hcGranted by remember { mutableStateOf<Set<String>?>(null) }
     val hcAvailable = remember { container.healthSync.isAvailable }
+    var mode by remember { mutableStateOf(CyclePrefs.mode(ctx)) }
+    val skinNights by androidx.compose.runtime.produceState(0, mode) {
+        value = if (mode == CycleMode.TTC) withContext(Dispatchers.IO) { runCatching { CycleHealth.skinTempNights(container).size }.getOrDefault(0) } else 0
+    }
 
     // Keep the predicted start where the reminder system can read it.
     val loaded = rows != null
@@ -217,7 +230,14 @@ private fun CycleContent(container: AppContainer, requestHc: () -> Unit) {
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { TodayCard(state) }
+            item { ModePickerCard(mode) { m -> CyclePrefs.setMode(ctx, m); mode = m; com.myfit.tracker.reminders.ReminderScheduler.reschedule(ctx) } }
+            when (mode) {
+                CycleMode.PREGNANCY -> item { PregnancyCard() }
+                CycleMode.TTC -> item { TtcCard(state.pred, state.byDate, state.shifts, skinNights) }
+                CycleMode.PERI -> item { PeriCard(state.byDate, state.pred) }
+                else -> {}
+            }
+            if (mode != CycleMode.PREGNANCY) item { TodayCard(state) }
             item {
                 val todayFlow = state.flows[today] ?: 0
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -248,8 +268,8 @@ private fun CycleContent(container: AppContainer, requestHc: () -> Unit) {
                     }
                 }
             }
-            item { PredictionCard(state) }
-            item { InsightsCard(state) }
+            if (mode != CycleMode.PREGNANCY) item { PredictionCard(state) }
+            if (mode != CycleMode.PREGNANCY) item { InsightsCard(state) }
             item { RemindersCard() }
             if (hcAvailable) item {
                 val g = hcGranted
@@ -267,6 +287,7 @@ private fun CycleContent(container: AppContainer, requestHc: () -> Unit) {
                     }
                 }
             }
+            item { CycleLockCard() }
             item {
                 GlassCard {
                     CardHeader(Duo.Lock, "Privacy", th.success)
