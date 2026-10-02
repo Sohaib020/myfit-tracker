@@ -69,6 +69,8 @@ data class AppSettings(
     val cycleEnabled: Boolean = false,
     val cycleAsked: Boolean = false,
     val glucoseEnabled: Boolean = false,
+    /** "none", "type1", "type2", "gestational", "prediabetes", "other" — gates the diabetes toolkit. */
+    val diabetesType: String = "none",
 ) {
     /** The user's own key if they added one, otherwise the key built into this build (from CI secrets). */
     val geminiKeyEff: String get() = geminiKey.ifBlank { com.myfit.tracker.BuildConfig.GEMINI_KEY }
@@ -127,6 +129,7 @@ class SettingsStore(private val context: Context) {
         val cycle = booleanPreferencesKey("cycle_on")
         val cycleAsked = booleanPreferencesKey("cycle_asked")
         val glucose = booleanPreferencesKey("glucose_on")
+        val diabetesType = stringPreferencesKey("diabetes_type")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -180,6 +183,7 @@ class SettingsStore(private val context: Context) {
             cycleEnabled = p[K.cycle] ?: false,
             cycleAsked = p[K.cycleAsked] ?: false,
             glucoseEnabled = p[K.glucose] ?: false,
+            diabetesType = p[K.diabetesType] ?: "none",
         )
     }
 
@@ -225,4 +229,5 @@ class SettingsStore(private val context: Context) {
     suspend fun setDevMode(v: Boolean) = context.dataStore.edit { it[K.dev] = v }
     suspend fun setCycle(enabled: Boolean) = context.dataStore.edit { it[K.cycle] = enabled; it[K.cycleAsked] = true }
     suspend fun setGlucose(enabled: Boolean) = context.dataStore.edit { it[K.glucose] = enabled }
+    suspend fun setDiabetesType(type: String) = context.dataStore.edit { it[K.diabetesType] = type }
 }
