@@ -357,6 +357,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
 
             LaunchedEffect(Unit) { com.myfit.tracker.domain.BadgeEngine.refresh(container, force = true) }
             com.myfit.tracker.ui.badges.BadgeCelebration(container)
+            com.myfit.tracker.ui.settings.AiCapSheetHost()
             GlassSheet(visible = sheet != null, onDismiss = { sheet = null }) {
                 // keep showing the last content while the exit animation runs
                 val shown = sheet ?: lastSheet
