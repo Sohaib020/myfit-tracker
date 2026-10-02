@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
     <!-- phone's own step counter (fallback when Health Connect has no steps) -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
@@ -25,6 +26,26 @@
     <uses-permission android:name="android.permission.health.READ_WEIGHT" />
     <uses-permission android:name="android.permission.health.READ_BODY_FAT" />
     <uses-permission android:name="android.permission.health.READ_HYDRATION" />
+    <uses-permission android:name="android.permission.health.READ_RESPIRATORY_RATE" />
+    <uses-permission android:name="android.permission.health.READ_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.READ_SKIN_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.READ_VO2_MAX" />
+    <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE" />
+    <uses-permission android:name="android.permission.health.WRITE_BLOOD_PRESSURE" />
+    <uses-permission android:name="android.permission.health.READ_BLOOD_GLUCOSE" />
+    <uses-permission android:name="android.permission.health.WRITE_BLOOD_GLUCOSE" />
+    <uses-permission android:name="android.permission.health.READ_MENSTRUATION" />
+    <uses-permission android:name="android.permission.health.WRITE_MENSTRUATION" />
+    <uses-permission android:name="android.permission.health.READ_OVULATION_TEST" />
+    <uses-permission android:name="android.permission.health.WRITE_OVULATION_TEST" />
+    <uses-permission android:name="android.permission.health.READ_CERVICAL_MUCUS" />
+    <uses-permission android:name="android.permission.health.WRITE_CERVICAL_MUCUS" />
+    <uses-permission android:name="android.permission.health.READ_INTERMENSTRUAL_BLEEDING" />
+    <uses-permission android:name="android.permission.health.WRITE_INTERMENSTRUAL_BLEEDING" />
+    <uses-permission android:name="android.permission.health.READ_BASAL_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.WRITE_BASAL_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.READ_MINDFULNESS" />
+    <uses-permission android:name="android.permission.health.WRITE_MINDFULNESS" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
 

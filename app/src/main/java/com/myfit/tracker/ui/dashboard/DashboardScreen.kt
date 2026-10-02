@@ -195,6 +195,10 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
                         DashCard.CHECKIN -> CheckInCard(state) { open(Sheet.CheckIn()) }
                         DashCard.GOALS -> GoalsCard(state)
                         DashCard.SOCIAL -> CompeteCard(container)
+                        DashCard.VITALS -> { val nav = com.myfit.tracker.ui.nav.LocalNav.current; com.myfit.tracker.ui.vitals.VitalsTile(container) { nav.push(com.myfit.tracker.ui.nav.Overlay.Vitals) } }
+                        DashCard.MIND -> { val nav = com.myfit.tracker.ui.nav.LocalNav.current; com.myfit.tracker.ui.mind.MindTile(container) { nav.push(com.myfit.tracker.ui.nav.Overlay.Mind) } }
+                        DashCard.CYCLE -> { val nav = com.myfit.tracker.ui.nav.LocalNav.current; com.myfit.tracker.ui.cycle.CycleTile(container) { nav.push(com.myfit.tracker.ui.nav.Overlay.Cycle) } }
+                        DashCard.GLUCOSE -> { val nav = com.myfit.tracker.ui.nav.LocalNav.current; com.myfit.tracker.ui.glucose.GlucoseTile(container) { nav.push(com.myfit.tracker.ui.nav.Overlay.Glucose) } }
                     }
                 }
             }

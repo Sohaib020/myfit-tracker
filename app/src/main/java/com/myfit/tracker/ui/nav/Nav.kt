@@ -20,6 +20,19 @@ sealed interface Overlay {
     data object Records : Overlay
     data object Social : Overlay
     data object Body : Overlay
+    data object Cycle : Overlay
+    data object Glucose : Overlay
+    data object Meds : Overlay
+    data object Vitals : Overlay
+    data object CameraHr : Overlay
+    data object Devices : Overlay
+    data object Mind : Overlay
+    data object Reminders : Overlay
+    data object Supplements : Overlay
+    data object Fasting : Overlay
+    data object DevSettings : Overlay
+    data object HealthHub : Overlay
+    data class DayLog(val date: String? = null) : Overlay
     data class Food(val date: String? = null) : Overlay
     data class FoodAdd(val mealType: String, val date: String, val tab: Int) : Overlay
     data class FoodPhoto(val mealType: String, val date: String) : Overlay

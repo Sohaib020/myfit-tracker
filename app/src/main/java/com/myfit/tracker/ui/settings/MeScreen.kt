@@ -198,16 +198,13 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 GlassSlider("Glass tint", "How milky the cards are", settings.glassStrength, 0.4f..1.6f) { v -> container.write { container.settings.setGlassStrength(v) } }
                 GlassSlider("Blur amount", "0 = crystal clear, right = heavy frost", settings.blurAmount, 0f..2f) { v -> container.write { container.settings.setBlurAmount(v) } }
                 GlassSlider("Dock blur", "How frosted the bottom bar is", settings.dockBlur, 0f..2.5f) { v -> container.write { container.settings.setDockBlur(v) } }
-                if (com.myfit.tracker.ui.theme.LiquidGlass.supported)
-                    GlassSlider("Refraction", "How strongly the glass edges bend what's behind", settings.refraction, 0f..2f) { v -> container.write { container.settings.setRefraction(v) } }
                 if (!realBlurSupported) Caption("This phone runs Android 11 or older, so glass uses a frosted fallback instead of live blur.")
             }
         }
 
         // ---------- pip / AI
-        item { PipSettingsCard(container) }
-        item { AiProvidersCard(container) }
-        item { VoiceSettingsCard(container) }
+        item { PipSettingsCard(container, dev = false) }
+        item { VoiceSettingsCard(container, dev = false) }
 
         // ---------- gym mode
         item {
@@ -267,7 +264,49 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 Spacer(Modifier.height(10.dp))
                 Caption("All data lives only on this phone. No account, no ads, no analytics. Backup & export arrive in a later build. Exercise photos & instructions: free-exercise-db (public domain).")
                 Spacer(Modifier.height(6.dp))
-                Caption("Version ${BuildConfig.VERSION_NAME}")
+                var taps by remember { mutableIntStateOf(0) }
+                val toasterV = LocalToaster.current
+                Caption("Version ${BuildConfig.VERSION_NAME}", Modifier.clickableNoRipple {
+                    if (settings.devMode) { toasterV.show("Developer options are already on"); return@clickableNoRipple }
+                    taps++
+                    if (taps >= 7) { container.write { container.settings.setDevMode(true) }; toasterV.show("Developer options unlocked") }
+                    else if (taps >= 4) toasterV.show("${7 - taps} more taps to unlock developer options")
+                }.padding(vertical = 4.dp))
+            }
+        }
+        if (settings.devMode) item {
+            val navD = com.myfit.tracker.ui.nav.LocalNav.current
+            GlassCard(onClick = { navD.push(com.myfit.tracker.ui.nav.Overlay.DevSettings) }) {
+                CardHeader(Duo.Tune, "Developer options", th.textDim) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
+                Spacer(Modifier.height(6.dp))
+                Caption("AI services & keys, voice keys, glass refraction.")
+            }
+        }
+    }
+}
+
+/** Hidden developer settings: AI providers & keys, voice service keys, advanced glass. */
+@Composable
+fun DevSettingsScreen(container: AppContainer) {
+    val th = LocalFitTheme.current
+    val settings = LocalSettings.current
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
+    Column(Modifier.fillMaxSize()) {
+        com.myfit.tracker.ui.components.OverlayTopBar("Developer options", { nav.pop() }, "For advanced users")
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 40.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            item { PipSettingsCard(container, dev = true) }
+            item { AiProvidersCard(container) }
+            item { VoiceSettingsCard(container, dev = true) }
+            item {
+                GlassCard {
+                    CardHeader(Duo.Palette, "Advanced glass", th.fat)
+                    Spacer(Modifier.height(8.dp))
+                    if (com.myfit.tracker.ui.theme.LiquidGlass.supported)
+                        GlassSlider("Refraction", "How strongly the glass edges bend what's behind", settings.refraction, 0f..2f) { v -> container.write { container.settings.setRefraction(v) } }
+                }
+            }
+            item {
+                GlassButton("Turn off developer options", { container.write { container.settings.setDevMode(false) }; nav.pop() }, Modifier.fillMaxWidth(), height = 46.dp)
             }
         }
     }
@@ -538,7 +577,7 @@ fun EditTargetsForm(c: AppContainer, close: () -> Unit) {
 
 
 @Composable
-private fun PipSettingsCard(container: AppContainer) {
+private fun PipSettingsCard(container: AppContainer, dev: Boolean) {
     val th = LocalFitTheme.current
     val settings = LocalSettings.current
     val toaster = LocalToaster.current
@@ -550,8 +589,9 @@ private fun PipSettingsCard(container: AppContainer) {
     GlassCard {
         CardHeader(Duo.AutoAwesome, "Pip · AI buddy", th.accentBright)
         Spacer(Modifier.height(10.dp))
-        Caption("Questions about your logs are answered offline from your own data. General health & fitness questions use Google Gemini with only a short, question-specific summary — never your full history or notes. Online answers are tagged.")
+        Caption("Questions about your logs are answered offline from your own data. General health & fitness questions go to an online AI with only a short, question-specific summary — never your full history or notes. Online answers are tagged.")
         Spacer(Modifier.height(12.dp))
+        if (dev) {
         Text("Gemini API key", style = FitType.label, color = th.textDim)
         if (settings.geminiKey.isBlank() && com.myfit.tracker.BuildConfig.GEMINI_KEY.isNotBlank()) Caption("Built-in key active ✓ — you only need your own key if you want to use a different one.", color = th.success)
         Spacer(Modifier.height(6.dp))
@@ -586,12 +626,13 @@ private fun PipSettingsCard(container: AppContainer) {
             }, height = 44.dp)
         }
         status?.let { Spacer(Modifier.height(6.dp)); Caption(it, color = if (it.startsWith("Working")) th.success else th.danger) }
+        }
         Spacer(Modifier.height(6.dp))
         ToggleRow("Online answers", "Off = Pip only answers from your data, fully offline.", settings.onlineAi) { container.write { container.settings.setOnlineAi(it) } }
         Spacer(Modifier.height(6.dp))
         ToggleRow("Pip speaks", "Pip reads its chat replies aloud. Also a mute button in the chat.", settings.pipVoice) { container.write { container.settings.setPipVoice(it) } }
         Spacer(Modifier.height(6.dp))
-        Caption("Recommended: in Google Cloud Console restrict this key to Android app com.myfit.tracker with SHA-1 ${container.pipBrain.certSha1.chunked(2).joinToString(":")}", color = th.textFaint)
+        if (dev) Caption("Recommended: in Google Cloud Console restrict this key to Android app com.myfit.tracker with SHA-1 ${container.pipBrain.certSha1.chunked(2).joinToString(":")}", color = th.textFaint)
     }
 }
 
@@ -615,7 +656,7 @@ private fun GlassSlider(title: String, hint: String, value: Float, range: Closed
 }
 
 @Composable
-private fun VoiceSettingsCard(container: AppContainer) {
+private fun VoiceSettingsCard(container: AppContainer, dev: Boolean) {
     val th = LocalFitTheme.current
     val settings = LocalSettings.current
     val toaster = LocalToaster.current
@@ -668,6 +709,7 @@ private fun VoiceSettingsCard(container: AppContainer) {
             }
         }
         Spacer(Modifier.height(14.dp))
+        if (dev) {
         Text("ElevenLabs key (optional)", style = FitType.section, color = th.text)
         if (settings.elevenKey.isBlank() && com.myfit.tracker.BuildConfig.ELEVEN_KEY.isNotBlank()) Caption("Built-in key active ✓", color = th.success)
         Caption("Free plan ≈ 10,000 characters a month (roughly 100–150 replies). When it runs out Pip switches to the on-device voice by itself.")
@@ -702,6 +744,7 @@ private fun VoiceSettingsCard(container: AppContainer) {
             }, height = 44.dp)
         }
         status?.let { Spacer(Modifier.height(6.dp)); Caption(it, color = if (it.startsWith("Key works")) th.success else th.textDim) }
+        }
         lastError?.let { Spacer(Modifier.height(6.dp)); Caption(it, color = th.warning) }
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {

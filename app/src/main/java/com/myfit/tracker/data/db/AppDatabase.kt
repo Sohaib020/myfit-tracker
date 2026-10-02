@@ -8,7 +8,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    version = 3,
+    version = 4,
     exportSchema = true,
     entities = [
         UserProfile::class, TargetHistory::class,
@@ -19,6 +19,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ActivityEntry::class, Supplement::class, SupplementLog::class, DailyCheckIn::class,
         DailyNote::class, ProgressPhoto::class, FastingSession::class, Goal::class, Reminder::class,
         HcDaily::class, HcSession::class, HcSleep::class, PhoneStepSnapshot::class, ChatMessage::class,
+        GlucoseReading::class, Medication::class, MedicationLog::class, BloodPressure::class, VitalReading::class,
+        CycleDay::class, MindSession::class, MoodEntry::class,
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,6 +40,18 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun nutritionDao(): NutritionDao
     abstract fun healthImportDao(): HealthImportDao
     abstract fun progressPhotoDao(): ProgressPhotoDao
+    abstract fun glucoseDao(): GlucoseDao
+    abstract fun medicationDao(): MedicationDao
+    abstract fun medicationLogDao(): MedicationLogDao
+    abstract fun bloodPressureDao(): BloodPressureDao
+    abstract fun vitalDao(): VitalDao
+    abstract fun cycleDao(): CycleDao
+    abstract fun mindDao(): MindDao
+    abstract fun moodDao(): MoodDao
+    abstract fun supplementDao(): SupplementDao
+    abstract fun supplementLogDao(): SupplementLogDao
+    abstract fun fastingDao(): FastingDao
+    abstract fun reminderDao(): ReminderDao
 
     companion object {
         const val NAME = "myfit.db"
@@ -69,9 +83,16 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v3 → v4: diabetes, vitals, cycle tracking and mindfulness. New tables only. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                MIGRATION_3_4_SQL.forEach { db.execSQL(it) }
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, NAME)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 // No destructive migration fallback: losing personal history is never acceptable.
                 .build()
     }

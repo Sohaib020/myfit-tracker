@@ -59,6 +59,35 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
     val needsUpdate: Boolean get() = sdkStatus == HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED
 
     private val client: HealthConnectClient by lazy { HealthConnectClient.getOrCreate(context) }
+    /** Shared Health Connect client for feature screens (vitals, glucose, cycle, mindfulness). Check [isAvailable] first. */
+    val hc: HealthConnectClient get() = client
+
+    /** Read/write permission strings for any record type. */
+    fun readPerm(k: KClass<out Record>): String = HealthPermission.getReadPermission(k)
+    fun writePerm(k: KClass<out Record>): String = HealthPermission.getWritePermission(k)
+
+    /** Vitals read with the main "Allow everything" request. */
+    val vitalsPermissions: Set<String> get() = setOf(
+        readPerm(androidx.health.connect.client.records.RespiratoryRateRecord::class),
+        readPerm(androidx.health.connect.client.records.BodyTemperatureRecord::class),
+        readPerm(androidx.health.connect.client.records.Vo2MaxRecord::class),
+        readPerm(androidx.health.connect.client.records.BloodPressureRecord::class),
+        writePerm(androidx.health.connect.client.records.BloodPressureRecord::class),
+    )
+    /** Only requested when the user turns on blood-sugar tracking. */
+    val glucosePermissions: Set<String> get() = setOf(
+        readPerm(androidx.health.connect.client.records.BloodGlucoseRecord::class),
+        writePerm(androidx.health.connect.client.records.BloodGlucoseRecord::class),
+    )
+    /** Only requested when the user turns on cycle tracking. */
+    val cyclePermissions: Set<String> get() = setOf(
+        readPerm(androidx.health.connect.client.records.MenstruationFlowRecord::class), writePerm(androidx.health.connect.client.records.MenstruationFlowRecord::class),
+        readPerm(androidx.health.connect.client.records.MenstruationPeriodRecord::class), writePerm(androidx.health.connect.client.records.MenstruationPeriodRecord::class),
+        readPerm(androidx.health.connect.client.records.OvulationTestRecord::class), writePerm(androidx.health.connect.client.records.OvulationTestRecord::class),
+        readPerm(androidx.health.connect.client.records.CervicalMucusRecord::class), writePerm(androidx.health.connect.client.records.CervicalMucusRecord::class),
+        readPerm(androidx.health.connect.client.records.BasalBodyTemperatureRecord::class), writePerm(androidx.health.connect.client.records.BasalBodyTemperatureRecord::class),
+        readPerm(androidx.health.connect.client.records.IntermenstrualBleedingRecord::class), writePerm(androidx.health.connect.client.records.IntermenstrualBleedingRecord::class),
+    )
 
     private fun p(k: KClass<out Record>) = HealthPermission.getReadPermission(k)
 
@@ -71,7 +100,7 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
     )
     val backgroundPermission = "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"
     val historyPermission = "android.permission.health.READ_HEALTH_DATA_HISTORY"
-    val allPermissions: Set<String> get() = dataPermissions + backgroundPermission + historyPermission
+    val allPermissions: Set<String> get() = dataPermissions + vitalsPermissions + backgroundPermission + historyPermission
 
     suspend fun granted(): Set<String> = if (!isAvailable) emptySet() else runCatching { client.permissionController.getGrantedPermissions() }.getOrDefault(emptySet())
 

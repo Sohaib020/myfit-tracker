@@ -102,10 +102,10 @@ fun workoutItems(ws: List<WorkoutView>, u: UnitPrefs, th: FitTheme): List<Timeli
 }
 
 @Composable
-fun TimelineScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int) {
+fun TimelineScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: Int, startDate: java.time.LocalDate? = null, onBack: (() -> Unit)? = null) {
     val th = LocalFitTheme.current
     val u = LocalSettings.current.units
-    var date by remember { mutableStateOf(Clock.today()) }
+    var date by remember { mutableStateOf(startDate ?: Clock.today()) }
     val nav = LocalNav.current
     val day by remember(date) { container.logRepo.day(date) }.collectAsState(initial = DayLog(date))
     val workouts by remember(date) { container.workoutRepo.dayViews(Clock.dateKey(date)) }.collectAsState(initial = emptyList())
@@ -130,7 +130,11 @@ fun TimelineScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            Column(Modifier.statusBarsPadding().padding(top = com.myfit.tracker.ui.components.TopBarSpace)) {
+            Column(Modifier.statusBarsPadding().padding(top = if (onBack != null) 8.dp else com.myfit.tracker.ui.components.TopBarSpace)) {
+                if (onBack != null) {
+                    com.myfit.tracker.ui.theme.GlassIconButton(com.myfit.tracker.ui.theme.Duo.ArrowBack, onBack)
+                    Spacer(Modifier.height(10.dp))
+                }
                 Text("Daily log", modifier = Modifier.padding(end = 62.dp), style = FitType.display, color = th.text)
                 Caption("Every entry, in the order it happened. Tap one to edit or delete.")
                 Spacer(Modifier.height(14.dp))
@@ -222,4 +226,11 @@ private fun TimelineRow(item: TimelineItem, onClick: () -> Unit) {
             }
         }
     }
+}
+
+/** The daily log as a full-screen page (opened from the calendar button on Home). */
+@Composable
+fun DayLogScreen(container: AppContainer, date: String?, open: (Sheet) -> Unit) {
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
+    TimelineScreen(container, open, 40, date?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }, onBack = { nav.pop() })
 }

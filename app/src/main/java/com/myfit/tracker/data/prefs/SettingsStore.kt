@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 enum class DashCard(val label: String) {
-    PIP("Pip"), SNAP("Snap a meal"), WORKOUT("Today's workout"), RINGS("Today's rings"), SOCIAL("Compete with friends"), NUTRITION("Food & calories"), BODY("Body weight"), HYDRATION("Hydration"), RECOVERY("Sleep & recovery"),
+    PIP("Pip"), SNAP("Snap a meal"), VITALS("Vitals"), MIND("Mindfulness"), CYCLE("Cycle"), GLUCOSE("Blood sugar"), WORKOUT("Today's workout"), RINGS("Today's rings"), SOCIAL("Compete with friends"), NUTRITION("Food & calories"), BODY("Body weight"), HYDRATION("Hydration"), RECOVERY("Sleep & recovery"),
     STEPS("Steps & activity"), CHECKIN("Daily check-in"), GOALS("Today's goals")
 }
 
@@ -65,6 +65,10 @@ data class AppSettings(
     val aiPrimary: String = "auto",      // auto | gemini | groq | openrouter | mistral
     val liveAi: Boolean = false,         // camera: name foods live while aiming (uses AI quota)
     val permsAsked: Boolean = false,     // first-launch permission walk-through done
+    val devMode: Boolean = false,        // developer options unlocked (tap version 7×)
+    val cycleEnabled: Boolean = false,
+    val cycleAsked: Boolean = false,
+    val glucoseEnabled: Boolean = false,
 ) {
     /** The user's own key if they added one, otherwise the key built into this build (from CI secrets). */
     val geminiKeyEff: String get() = geminiKey.ifBlank { com.myfit.tracker.BuildConfig.GEMINI_KEY }
@@ -119,6 +123,10 @@ class SettingsStore(private val context: Context) {
         val aiPrimary = stringPreferencesKey("ai_primary")
         val liveAi = booleanPreferencesKey("live_ai")
         val perms = booleanPreferencesKey("perms_asked")
+        val dev = booleanPreferencesKey("dev_mode")
+        val cycle = booleanPreferencesKey("cycle_on")
+        val cycleAsked = booleanPreferencesKey("cycle_asked")
+        val glucose = booleanPreferencesKey("glucose_on")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -168,6 +176,10 @@ class SettingsStore(private val context: Context) {
             aiPrimary = p[K.aiPrimary] ?: "auto",
             liveAi = p[K.liveAi] ?: false,
             permsAsked = p[K.perms] ?: false,
+            devMode = p[K.dev] ?: false,
+            cycleEnabled = p[K.cycle] ?: false,
+            cycleAsked = p[K.cycleAsked] ?: false,
+            glucoseEnabled = p[K.glucose] ?: false,
         )
     }
 
@@ -210,4 +222,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setAiPrimary(v: String) = context.dataStore.edit { it[K.aiPrimary] = v }
     suspend fun setLiveAi(v: Boolean) = context.dataStore.edit { it[K.liveAi] = v }
     suspend fun setPermsAsked(v: Boolean) = context.dataStore.edit { it[K.perms] = v }
+    suspend fun setDevMode(v: Boolean) = context.dataStore.edit { it[K.dev] = v }
+    suspend fun setCycle(enabled: Boolean) = context.dataStore.edit { it[K.cycle] = enabled; it[K.cycleAsked] = true }
+    suspend fun setGlucose(enabled: Boolean) = context.dataStore.edit { it[K.glucose] = enabled }
 }
