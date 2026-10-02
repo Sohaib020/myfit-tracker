@@ -1,0 +1,20 @@
+// Mint Fresh (light): cool white with mint and aqua washes, fine flowing contour lines
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(0.965, 0.988, 0.980), float3(0.925, 0.970, 0.962), uv.y);
+    float r1 = length(p - float2(ar * 0.95, 0.04));
+    c = mix(c, float3(0.72, 0.93, 0.86), exp(-r1 * r1 * 6.0) * 0.65);
+    float r2 = length(p - float2(ar * 0.0, 0.55));
+    c = mix(c, float3(0.76, 0.89, 0.96), exp(-r2 * r2 * 7.0) * 0.55);
+    float r3 = length(p - float2(ar * 0.75, 1.02));
+    c = mix(c, float3(0.70, 0.90, 0.88), exp(-r3 * r3 * 6.0) * 0.50);
+    // flowing contour lines in the lower half
+    float f = uv.y * 26.0 + 1.6 * sin(p.x * 4.0 + uv.y * 3.0) + 2.0 * fbm3(p * 1.5);
+    float ln = smoothstep(0.06, 0.0, abs(fract(f) - 0.5) - 0.44);
+    c = mix(c, float3(0.55, 0.80, 0.82), ln * 0.12 * smoothstep(0.45, 0.95, uv.y));
+    c += (fbm3(p * 2.0 + 3.0) - 0.5) * 0.015;
+    c += (hash(fc + 3.9) - 0.5) * 0.008;
+    return outc(c);
+}

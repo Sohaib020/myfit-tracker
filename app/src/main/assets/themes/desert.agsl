@@ -1,0 +1,26 @@
+// Desert Dawn (light): lilac-to-peach dawn sky, low sun glow, layered sand and terracotta dunes
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(0.93, 0.91, 0.97), float3(1.0, 0.90, 0.80), smoothstep(0.0, 0.62, uv.y));
+    float2 sc = float2(ar * 0.30, 0.62);
+    float sr = length(p - sc);
+    c = mix(c, float3(1.0, 0.95, 0.82), exp(-sr * sr * 14.0) * 0.8);
+    c = mix(c, float3(1.0, 0.82, 0.66), exp(-sr * sr * 3.0) * 0.30);
+    // dunes, far to near
+    float h1 = 0.66 + 0.03 * sin(p.x * 5.0 + 1.0) + 0.02 * sin(p.x * 11.0);
+    c = mix(c, float3(0.96, 0.82, 0.68), smoothstep(h1, h1 + 0.004, uv.y));
+    float h2 = 0.74 + 0.05 * sin(p.x * 3.5 + 3.0) + 0.015 * sin(p.x * 13.0 + 2.0);
+    float s2 = smoothstep(h2, h2 + 0.004, uv.y);
+    c = mix(c, mix(float3(0.93, 0.72, 0.56), float3(0.88, 0.64, 0.50), smoothstep(h2, h2 + 0.2, uv.y)), s2);
+    float h3 = 0.86 + 0.04 * sin(p.x * 2.5 + 0.5) + 0.02 * sin(p.x * 9.0 + 4.0);
+    float s3 = smoothstep(h3, h3 + 0.004, uv.y);
+    c = mix(c, mix(float3(0.84, 0.55, 0.42), float3(0.76, 0.46, 0.36), smoothstep(h3, 1.0, uv.y)), s3);
+    // ripple lines on the nearest dunes
+    float rip = smoothstep(0.85, 1.0, sin((uv.y - 0.03 * sin(p.x * 6.0)) * 260.0));
+    c -= float3(0.03, 0.03, 0.02) * rip * (s2 * 0.5 + s3 * 0.5);
+    c += (noise(fc * 0.35) - 0.5) * 0.015;
+    c += (hash(fc + 2.9) - 0.5) * 0.008;
+    return outc(c);
+}

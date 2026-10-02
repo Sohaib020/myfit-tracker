@@ -1,0 +1,22 @@
+// Cloud (light): clear sky blue fading to white, soft layered cumulus, gentle sun haze
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(0.66, 0.80, 0.97), float3(0.955, 0.970, 0.995), smoothstep(0.0, 0.9, uv.y));
+    float r1 = length(p - float2(ar * 0.85, 0.03));
+    c = mix(c, float3(1.0, 0.99, 0.95), exp(-r1 * r1 * 9.0) * 0.85);
+    // upper puffs
+    float n1 = fbm(float2(p.x * 3.0, p.y * 5.0) + 3.0);
+    float band1 = exp(-(uv.y - 0.30) * (uv.y - 0.30) * 30.0);
+    float m1 = smoothstep(0.42, 0.62, n1 * 0.7 + band1 * 0.45);
+    float shade1 = smoothstep(0.5, 0.75, fbm3(float2(p.x * 3.0, p.y * 5.0) + 3.4));
+    c = mix(c, mix(float3(1.0, 1.0, 1.0), float3(0.86, 0.90, 0.97), shade1 * 0.6), m1 * 0.92);
+    // lower soft bank
+    float n2 = fbm(float2(p.x * 2.0, p.y * 3.5) + 11.0);
+    float band2 = smoothstep(0.55, 0.95, uv.y);
+    float m2 = smoothstep(0.45, 0.65, n2 * 0.7 + band2 * 0.4);
+    c = mix(c, float3(1.0, 1.0, 1.0), m2 * 0.8);
+    c += (hash(fc + 5.3) - 0.5) * 0.008;
+    return outc(c);
+}

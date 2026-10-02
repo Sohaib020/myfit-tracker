@@ -1,0 +1,39 @@
+// Neon Pulse: violet dusk sky, soft sunset disc, magenta perspective grid, cyan horizon line
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float h = 0.66;
+    float3 c = mix(float3(0.030, 0.015, 0.075), float3(0.20, 0.035, 0.22), smoothstep(0.1, h, uv.y));
+    c += float3(0.9, 0.9, 1.0) * stars(p * 60.0, 0.15, 0.0) * 0.4 * smoothstep(h, 0.0, uv.y);
+    // sunset disc with horizontal cuts, sitting on the horizon
+    float2 sc = float2(ar * 0.5, h - 0.02);
+    float sr = length(p - sc);
+    float disc = smoothstep(0.155, 0.150, sr) * step(uv.y, h);
+    float cut = step(0.0, uv.y - (sc.y - 0.06)) * step(0.62, fract(uv.y * 55.0));
+    float3 sunc = mix(float3(1.0, 0.75, 0.35), float3(1.0, 0.25, 0.65), smoothstep(sc.y - 0.15, sc.y, uv.y));
+    c = mix(c, sunc * 0.62, disc * (1.0 - cut));
+    c += float3(1.0, 0.3, 0.7) * exp(-sr * sr * 14.0) * 0.18 * step(uv.y, h);
+    // ground grid
+    if (uv.y > h) {
+        float dy = uv.y - h;
+        float z = 0.12 / dy;
+        float gx = (p.x - ar * 0.5) * z * 9.0;
+        float gz = z * 3.0;
+        float wx = z * 9.0 / res.y * 1.4;
+        float wz = 3.0 * 0.12 / (dy * dy) / res.y * 1.4;
+        float lx = smoothstep(wx, 0.0, 0.5 - abs(fract(gx) - 0.5));
+        float lz = smoothstep(wz, 0.0, 0.5 - abs(fract(gz) - 0.5));
+        float fade = smoothstep(0.0, 0.12, dy);
+        c = mix(float3(0.035, 0.012, 0.060), float3(0.020, 0.008, 0.035), dy * 2.5);
+        c += float3(1.0, 0.25, 0.80) * max(lx, lz) * fade * 0.55;
+    }
+    float hd = (uv.y - h) / 0.004;
+    c += float3(0.30, 0.95, 1.0) * exp(-hd * hd) * 0.8;
+    float hg = (uv.y - h) / 0.05;
+    c += float3(0.30, 0.60, 1.0) * exp(-hg * hg) * 0.18;
+    float2 vv = uv - float2(0.5, 0.45);
+    c *= 1.0 - 0.5 * dot(vv, vv);
+    c += (hash(fc + 3.3) - 0.5) * 0.012;
+    return outc(c);
+}

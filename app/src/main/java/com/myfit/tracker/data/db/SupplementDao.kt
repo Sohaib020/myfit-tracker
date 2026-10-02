@@ -13,4 +13,7 @@ interface SupplementDao {
     @Update suspend fun update(e: Supplement)
     @Query("SELECT * FROM supplement WHERE id = :id") suspend fun get(id: Long): Supplement?
     @Query("SELECT * FROM supplement ORDER BY id DESC") fun observeAllRaw(): Flow<List<Supplement>>
+
+    @Query("SELECT * FROM supplement WHERE archivedAt IS NULL ORDER BY name COLLATE NOCASE") fun observeActive(): Flow<List<Supplement>>
+    @Query("SELECT * FROM supplement WHERE archivedAt IS NOT NULL ORDER BY name COLLATE NOCASE") fun observeArchived(): Flow<List<Supplement>>
 }

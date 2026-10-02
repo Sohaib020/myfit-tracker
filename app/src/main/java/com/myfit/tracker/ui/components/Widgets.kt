@@ -162,9 +162,15 @@ fun ProgressRing(
             } else {
                 drawArc(track, 0f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(sw))
                 val sweep = 360f * anim.value.coerceAtMost(1f)
-                if (sweep > 0f) {
+                if (sweep > 0f && sweep < 12f) {
+                    // tiny progress: a neat dot at 12 o'clock (no glow, no stretched round-cap blob)
+                    val r = arcSize.width / 2f
+                    val c = Offset(this.size.width / 2f, this.size.height / 2f)
+                    val a = Math.toRadians(-90.0)
+                    drawCircle(color, sw / 2f, Offset(c.x + r * kotlin.math.cos(a).toFloat(), c.y + r * kotlin.math.sin(a).toFloat()))
+                } else if (sweep >= 12f) {
                     // glow
-                    drawArc(color.copy(alpha = 0.25f), -90f, sweep, false, Offset(inset, inset), arcSize, style = Stroke(sw * 2.1f, cap = StrokeCap.Round))
+                    if (sweep >= 20f) drawArc(color.copy(alpha = 0.25f), -90f, sweep, false, Offset(inset, inset), arcSize, style = Stroke(sw * 2.1f, cap = StrokeCap.Round))
                     drawArc(
                         Brush.sweepGradient(listOf(color.copy(alpha = 0.65f), color, color)),
                         -90f, sweep, false, Offset(inset, inset), arcSize, style = Stroke(sw, cap = StrokeCap.Round),

@@ -1,0 +1,29 @@
+// Carbon Fibre: classic woven carbon tiles with a soft studio sheen and a faint lime edge light
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float2 q = float2(p.x + p.y, p.y - p.x) * 0.7071 * 46.0;
+    float2 i = floor(q);
+    float2 f = fract(q);
+    float o = mod(i.x + i.y, 2.0);
+    float across = mix(f.y, f.x, o);
+    float along = mix(f.x, f.y, o);
+    float cyl = 1.0 - abs(across - 0.5) * 2.0;
+    cyl = sqrt(max(cyl, 0.0));
+    float grad = mix(0.55, 1.0, along);
+    float w = cyl * grad;
+    float3 c = float3(0.028, 0.030, 0.034) + float3(0.060, 0.064, 0.072) * w * (0.75 + 0.25 * o);
+    // broad studio sheen across the weave
+    float d = p.x * 0.8 - p.y * 0.6;
+    float sb = (d + 0.12) / 0.24;
+    c += float3(0.09, 0.10, 0.11) * exp(-sb * sb) * w;
+    float r1 = length(p - float2(ar * 0.2, -0.05));
+    c += float3(0.35, 0.40, 0.45) * exp(-r1 * r1 * 5.0) * 0.10;
+    float r2 = length(p - float2(ar * 1.05, 1.02));
+    c += float3(0.55, 0.85, 0.10) * exp(-r2 * r2 * 9.0) * 0.20;
+    float2 vv = uv - float2(0.5, 0.4);
+    c *= 1.0 - 0.6 * dot(vv, vv);
+    c += (hash(fc + 1.9) - 0.5) * 0.010;
+    return outc(c);
+}

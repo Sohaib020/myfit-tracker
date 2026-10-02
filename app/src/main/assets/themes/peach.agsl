@@ -1,0 +1,19 @@
+// Peach Sorbet (light): creamy base with melting peach, coral and apricot scoops of colour
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(1.0, 0.975, 0.955), float3(0.995, 0.950, 0.920), uv.y);
+    float2 wp = p + (float2(fbm3(p * 1.8 + 1.0), fbm3(p * 1.8 + 7.0)) - 0.5) * 0.22;
+    float r1 = length(wp - float2(ar * 0.05, 0.05));
+    c = mix(c, float3(1.0, 0.76, 0.60), exp(-r1 * r1 * 9.0) * 0.60);
+    float r2 = length(wp - float2(ar * 1.0, 0.38));
+    c = mix(c, float3(1.0, 0.70, 0.68), exp(-r2 * r2 * 10.0) * 0.45);
+    float r3 = length(wp - float2(ar * 0.15, 0.80));
+    c = mix(c, float3(1.0, 0.86, 0.66), exp(-r3 * r3 * 9.0) * 0.45);
+    float r4 = length(wp - float2(ar * 0.95, 1.0));
+    c = mix(c, float3(0.98, 0.68, 0.58), exp(-r4 * r4 * 10.0) * 0.45);
+    c += (noise(fc * 0.3) - 0.5) * 0.010;
+    c += (hash(fc + 6.6) - 0.5) * 0.008;
+    return outc(c);
+}

@@ -1,0 +1,26 @@
+// Volcanic: cooled black basalt split by a network of glowing magma cracks, ash haze above
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(0.058, 0.055, 0.058), float3(0.034, 0.030, 0.030), uv.y);
+    c += (fbm(p * 9.0) - 0.5) * 0.04;
+    float2 w = p * 6.0 + float2(fbm3(p * 2.5 + 2.0), fbm3(p * 2.5 + 8.0)) * 1.4;
+    float r = abs(noise(w) - 0.5);
+    float r2 = abs(noise(w * 1.9 + 5.0) - 0.5);
+    float heat = smoothstep(0.2, 1.0, uv.y);
+    heat = heat * heat * 0.9 + 0.1;
+    float var = smoothstep(0.25, 0.75, noise(p * 3.0 + 1.0));
+    float vein = smoothstep(0.022, 0.0, r) + smoothstep(0.016, 0.0, r2) * 0.6;
+    float glow = exp(-r * r * 300.0) + exp(-r2 * r2 * 500.0) * 0.5;
+    c += float3(0.80, 0.18, 0.04) * glow * heat * var * 0.45;
+    c += float3(1.0, 0.55, 0.16) * vein * heat * var * 0.65;
+    float r1 = length(p - float2(ar * 0.25, 1.05));
+    c += float3(0.95, 0.30, 0.06) * exp(-r1 * r1 * 6.0) * 0.22;
+    float ash = fbm3(float2(p.x * 2.0, p.y * 3.0) + 6.0);
+    c += float3(0.30, 0.27, 0.27) * smoothstep(0.4, 0.8, ash) * (1.0 - uv.y) * (1.0 - uv.y) * 0.12;
+    float2 vv = uv - float2(0.5, 0.4);
+    c *= 1.0 - 0.55 * dot(vv, vv);
+    c += (hash(fc + 5.5) - 0.5) * 0.012;
+    return outc(c);
+}

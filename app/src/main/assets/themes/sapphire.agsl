@@ -1,0 +1,23 @@
+// Royal Sapphire: deep navy, sapphire light pool, a diagonal drift of fine gold dust
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(0.025, 0.040, 0.110), float3(0.008, 0.012, 0.040), smoothstep(0.0, 1.0, uv.y));
+    float r1 = length(p - float2(ar * 0.85, 0.12));
+    c += float3(0.12, 0.25, 0.85) * exp(-r1 * r1 * 3.5) * 0.35;
+    float r2 = length(p - float2(ar * 0.05, 0.9));
+    c += float3(0.10, 0.12, 0.55) * exp(-r2 * r2 * 4.0) * 0.20;
+    // gold dust ribbon from top left to bottom right
+    float d = p.x * 0.82 + p.y * 0.57 - 0.55;
+    float n = fbm3(p * 3.0 + 4.0);
+    float band = exp(-(d + (n - 0.5) * 0.25) * (d + (n - 0.5) * 0.25) * 18.0);
+    float g = stars(p * 90.0, 0.35, 0.0) * 0.6 + stars(p * 45.0 + 9.0, 0.25, 0.0) + stars(p * 22.0 + 2.0, 0.08, 0.0) * 1.2;
+    c += float3(1.0, 0.80, 0.42) * g * band * 1.4;
+    c += float3(0.85, 0.65, 0.30) * band * 0.06;
+    c += float3(1.0, 0.85, 0.5) * stars(p * 40.0 + 5.0, 0.04, 0.0) * 0.25;
+    float2 vv = uv - float2(0.5, 0.4);
+    c *= 1.0 - 0.55 * dot(vv, vv);
+    c += (hash(fc + 9.1) - 0.5) * 0.012;
+    return outc(c);
+}

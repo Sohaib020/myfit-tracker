@@ -1,0 +1,30 @@
+// Oceanic Teal: deep teal water, sunlight shafts from the surface, soft caustic net, drifting motes
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(0.020, 0.140, 0.160), float3(0.004, 0.030, 0.048), smoothstep(0.0, 1.0, uv.y));
+    float r1 = length(p - float2(ar * 0.3, -0.12));
+    c += float3(0.10, 0.55, 0.55) * exp(-r1 * r1 * 3.0) * 0.30;
+    // light shafts
+    float ray = noise(float2((p.x - p.y * 0.30) * 8.0, 2.0));
+    ray = ray * ray;
+    float fall = (1.0 - uv.y) * (1.0 - uv.y);
+    c += float3(0.30, 0.85, 0.80) * ray * fall * 0.16;
+    // caustics near the surface
+    float2 q = p * 4.5;
+    float a = 1.0 - abs(noise(q) * 2.0 - 1.0);
+    float b = 1.0 - abs(noise(q * 1.6 + 5.0) * 2.0 - 1.0);
+    float ca = a * b;
+    ca = ca * ca * ca;
+    c += float3(0.40, 0.95, 0.90) * ca * smoothstep(0.75, 0.0, uv.y) * 0.30;
+    // deep glow bottom right
+    float r2 = length(p - float2(ar * 1.0, 0.95));
+    c += float3(0.05, 0.30, 0.40) * exp(-r2 * r2 * 4.0) * 0.18;
+    // suspended particles
+    c += float3(0.6, 1.0, 0.95) * stars(p * 34.0, 0.10, 0.0) * 0.22 * (0.3 + uv.y);
+    float2 vv = uv - float2(0.5, 0.4);
+    c *= 1.0 - 0.5 * dot(vv, vv);
+    c += (hash(fc + 6.1) - 0.5) * 0.012;
+    return outc(c);
+}

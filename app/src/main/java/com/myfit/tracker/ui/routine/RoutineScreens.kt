@@ -1,30 +1,22 @@
 package com.myfit.tracker.ui.routine
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import com.myfit.tracker.AppContainer
-import com.myfit.tracker.ui.components.Caption
-import com.myfit.tracker.ui.components.GlassCard
-import com.myfit.tracker.ui.components.OverlayTopBar
-import com.myfit.tracker.ui.nav.LocalNav
 
+/** Reminders: water, meals, workout, weigh-in, sleep, supplements, custom + quiet hours. */
 @Composable
 fun RemindersScreen(container: AppContainer) {
-    val nav = LocalNav.current
-    Column(Modifier.fillMaxSize()) { OverlayTopBar("RemindersScreen", { nav.pop() }); Caption("Coming soon") }
+    RemindersContent(container)
 }
 
+/** Supplements: daily checklist, streaks, adherence, history, optional daily reminder. */
 @Composable
 fun SupplementsScreen(container: AppContainer) {
-    val nav = LocalNav.current
-    Column(Modifier.fillMaxSize()) { OverlayTopBar("SupplementsScreen", { nav.pop() }); Caption("Coming soon") }
+    SupplementsContent(container)
 }
 
+/** Fasting timer: presets, Ramadan mode, live ring, stages, history and weekly stats. */
 @Composable
 fun FastingScreen(container: AppContainer) {
-    val nav = LocalNav.current
-    Column(Modifier.fillMaxSize()) { OverlayTopBar("FastingScreen", { nav.pop() }); Caption("Coming soon") }
+    FastingContent(container)
 }
-

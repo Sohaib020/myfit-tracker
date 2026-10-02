@@ -1,0 +1,31 @@
+// Sakura Blush (light): soft blush gradient with scattered cherry-blossom petals
+float petal(float2 p, float scale, float seed) {
+    float2 q = p * scale;
+    float2 i = floor(q);
+    float2 f = fract(q) - 0.5;
+    float h = hash(i + seed);
+    if (h > 0.38) return 0.0;
+    float2 o = (hash2(i + seed + 2.0) - 0.5) * 0.5;
+    float a = h * 40.0;
+    float2 d = f - o;
+    d = float2(d.x * cos(a) - d.y * sin(a), d.x * sin(a) + d.y * cos(a));
+    float notch = smoothstep(0.07, 0.05, length(d - float2(0.0, 0.19)));
+    float e = length(d * float2(1.5 + d.y * 2.5, 1.0));
+    return smoothstep(0.17, 0.15, e) * (1.0 - notch) * (0.6 + 0.4 * h / 0.38) * (1.0 - smoothstep(0.0, 0.15, -d.y) * 0.35);
+}
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(1.0, 0.965, 0.970), float3(0.985, 0.910, 0.930), uv.y);
+    float r1 = length(p - float2(ar * 0.95, 0.06));
+    c = mix(c, float3(1.0, 0.80, 0.86), exp(-r1 * r1 * 4.0) * 0.6);
+    float r2 = length(p - float2(ar * 0.05, 0.85));
+    c = mix(c, float3(0.98, 0.84, 0.90), exp(-r2 * r2 * 3.5) * 0.5);
+    float r3 = length(p - float2(ar * 0.2, 0.25));
+    c = mix(c, float3(0.96, 0.92, 1.0), exp(-r3 * r3 * 5.0) * 0.35);
+    float pe = petal(p, 9.0, 1.0) * 0.55 + petal(p + 0.3, 5.0, 7.0) * 0.35;
+    c = mix(c, float3(0.97, 0.68, 0.78), pe * 0.55);
+    c += (hash(fc + 4.1) - 0.5) * 0.008;
+    return outc(c);
+}

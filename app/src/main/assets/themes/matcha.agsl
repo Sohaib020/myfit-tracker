@@ -1,0 +1,27 @@
+// Matcha Night: deep tea green, warm cream light, a faint brushed enso ring and washi grain
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(0.075, 0.105, 0.070), float3(0.025, 0.038, 0.026), smoothstep(0.0, 1.0, uv.y));
+    float r1 = length(p - float2(ar * 0.9, 0.05));
+    c += float3(0.95, 0.90, 0.72) * exp(-r1 * r1 * 6.0) * 0.20;
+    float r2 = length(p - float2(ar * 0.0, 0.85));
+    c += float3(0.35, 0.50, 0.22) * exp(-r2 * r2 * 3.5) * 0.18;
+    // enso: an open brush ring, uneven thickness
+    float2 e = p - float2(ar * 0.62, 0.30);
+    float er = length(e);
+    float ang = atan(e.y, e.x);
+    float thick = 0.010 + 0.012 * (0.5 + 0.5 * sin(ang * 0.5 + 1.0)) ;
+    float ring = smoothstep(thick, thick * 0.4, abs(er - 0.22 - 0.01 * noise(float2(ang * 3.0, 1.0))));
+    float gap = smoothstep(2.2, 2.6, ang);
+    float bristle = 0.6 + 0.4 * noise(float2(er * 400.0, ang * 2.0));
+    c += float3(0.93, 0.88, 0.70) * ring * (1.0 - gap) * bristle * 0.10;
+    // washi fibre grain
+    float fib = noise(float2(p.x * 160.0, p.y * 18.0));
+    c += (fib - 0.5) * 0.008;
+    float2 vv = uv - float2(0.5, 0.4);
+    c *= 1.0 - 0.5 * dot(vv, vv);
+    c += (hash(fc + 2.7) - 0.5) * 0.010;
+    return outc(c);
+}

@@ -135,6 +135,174 @@ object Themes {
         success = Color(0xFF17A85A), water = Color(0xFF1C7EE0), warning = Color(0xFFD98A00),
     )
 
-    val all = listOf(Kinetic, Cobalt, Graphite, Porcelain, Sandstone, Evergreen, Dusk, Steel, Golden, Lavender)
+    val Ember = FitTheme(
+        id = "ember", name = "Ember", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF120A08), bgBottom = Color(0xFF2A1208),
+        blobs = listOf(Color(0xFFFF7A2E), Color(0xFFFFB27F), Color(0xFF120A08), Color(0xFFB8451A)),
+        accent = Color(0xFFFF8F4D), accentBright = Color(0xFFFFB27F), onAccent = Color(0xFF1F0D03),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AFFB98A), glassFallback = Color(0xE01A110D),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        protein = Color(0xFFFFA36B), steps = Color(0xFFFFC46B),
+    )
+    val Oceanic = FitTheme(
+        id = "oceanic", name = "Oceanic Teal", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF06282C), bgBottom = Color(0xFF01090E),
+        blobs = listOf(Color(0xFF148F8A), Color(0xFF7EEADB), Color(0xFF06282C), Color(0xFF0E5A6E)),
+        accent = Color(0xFF2DD4BF), accentBright = Color(0xFF7EEADB), onAccent = Color(0xFF032420),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1A7EEADB), glassFallback = Color(0xE0062126),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        success = Color(0xFF6EE787),
+    )
+    val Aurora = FitTheme(
+        id = "aurora", name = "Aurora Night", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF050A18), bgBottom = Color(0xFF0A1424),
+        blobs = listOf(Color(0xFF2FD38A), Color(0xFFB794FF), Color(0xFF050A18), Color(0xFF5A3FCF)),
+        accent = Color(0xFFB794FF), accentBright = Color(0xFFD4BFFF), onAccent = Color(0xFF1A0B33),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AB8F5D8), glassFallback = Color(0xE00A1220),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        fat = Color(0xFFF08AF0),
+    )
+    val Carbon = FitTheme(
+        id = "carbon", name = "Carbon Fibre", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF16181C), bgBottom = Color(0xFF060708),
+        blobs = listOf(Color(0xFF3A3E46), Color(0xFFC6F432), Color(0xFF16181C), Color(0xFF24272D)),
+        accent = Color(0xFFC6F432), accentBright = Color(0xFFDDFF73), onAccent = Color(0xFF141A02),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x14FFFFFF), glassFallback = Color(0xE014161A),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        steps = Color(0xFFC6F432),
+    )
+    val Neon = FitTheme(
+        id = "neon", name = "Neon Pulse", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF0A0420), bgBottom = Color(0xFF08030F),
+        blobs = listOf(Color(0xFFFF4FD8), Color(0xFF3FE0FF), Color(0xFF0A0420), Color(0xFF6A1FB8)),
+        accent = Color(0xFFFF4FD8), accentBright = Color(0xFFFF8BE6), onAccent = Color(0xFF24041E),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AFF8BE6), glassFallback = Color(0xE0140826),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        water = Color(0xFF3FE0FF), fat = Color(0xFF9D8BFF),
+    )
+    val Sapphire = FitTheme(
+        id = "sapphire", name = "Royal Sapphire", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF0A122E), bgBottom = Color(0xFF02040C),
+        blobs = listOf(Color(0xFF1F3FB8), Color(0xFFE9C46A), Color(0xFF0A122E), Color(0xFF2A2A8A)),
+        accent = Color(0xFFE9C46A), accentBright = Color(0xFFF5DC9C), onAccent = Color(0xFF1C1404),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1A9DB4FF), glassFallback = Color(0xE00A1030),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        carbs = Color(0xFFFFA94D),
+    )
+    val Forest = FitTheme(
+        id = "forest", name = "Forest Mist", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF1A2626), bgBottom = Color(0xFF050B0B),
+        blobs = listOf(Color(0xFF3E5A55), Color(0xFFA3D977), Color(0xFF1A2626), Color(0xFF24403A)),
+        accent = Color(0xFFA3D977), accentBright = Color(0xFFC4EBA1), onAccent = Color(0xFF0F1C06),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AC4EBA1), glassFallback = Color(0xE00E1A1A),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+    )
+    val Volcanic = FitTheme(
+        id = "volcanic", name = "Volcanic", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF151415), bgBottom = Color(0xFF080707),
+        blobs = listOf(Color(0xFFFF6B35), Color(0xFFFF9566), Color(0xFF151415), Color(0xFF5A1E0A)),
+        accent = Color(0xFFFF6B35), accentBright = Color(0xFFFF9566), onAccent = Color(0xFF1F0A02),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x14FFB08A), glassFallback = Color(0xE0141212),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        protein = Color(0xFFFF8FA3),
+    )
+    val Cosmic = FitTheme(
+        id = "cosmic", name = "Cosmic", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF0C0A20), bgBottom = Color(0xFF030308),
+        blobs = listOf(Color(0xFF6A24A8), Color(0xFFF072B0), Color(0xFF0C0A20), Color(0xFF14607A)),
+        accent = Color(0xFFC084FC), accentBright = Color(0xFFDDB8FF), onAccent = Color(0xFF1E0838),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AC9A8FF), glassFallback = Color(0xE00C0A1E),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        fat = Color(0xFFF472B6),
+    )
+    val Matcha = FitTheme(
+        id = "matcha", name = "Matcha Night", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF14200F), bgBottom = Color(0xFF060A05),
+        blobs = listOf(Color(0xFF4E6E32), Color(0xFFE8DFC0), Color(0xFF14200F), Color(0xFF2C4220)),
+        accent = Color(0xFFE8DFC0), accentBright = Color(0xFFF7F1DC), onAccent = Color(0xFF18200F),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AEDE6C8), glassFallback = Color(0xE0111A10),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        steps = Color(0xFFA9D46E),
+    )
+    val Cloud = FitTheme(
+        id = "cloud", name = "Cloud", isLight = true, art = BackdropArt.FROST,
+        bgTop = Color(0xFFEAF2FD), bgBottom = Color(0xFFF5F8FD),
+        blobs = listOf(Color(0xFFB8D2F8), Color(0xFFFFFFFF), Color(0xFFD6E6FB), Color(0xFFF0F5FD)),
+        accent = Color(0xFF2563EB), accentBright = Color(0xFF4A82F0), onAccent = Color.White,
+        text = Color(0xFF16161A), textDim = Color(0xB316161A), textFaint = Color(0x6616161A),
+        glassTint = Color(0x99FFFFFF), glassFallback = Color(0xF2FFFFFF),
+        rimHigh = Color(0xFFFFFFFF), rimLow = Color(0x33FFFFFF),
+        success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF0E9FC6),
+    )
+    val Peach = FitTheme(
+        id = "peach", name = "Peach Sorbet", isLight = true, art = BackdropArt.FROST,
+        bgTop = Color(0xFFFFF5EE), bgBottom = Color(0xFFFCEDE4),
+        blobs = listOf(Color(0xFFFFC29A), Color(0xFFFFB4AE), Color(0xFFFFDCAA), Color(0xFFFFF3EA)),
+        accent = Color(0xFFC8492B), accentBright = Color(0xFFDD6444), onAccent = Color.White,
+        text = Color(0xFF16161A), textDim = Color(0xB316161A), textFaint = Color(0x6616161A),
+        glassTint = Color(0x99FFFFFF), glassFallback = Color(0xF2FFFFFF),
+        rimHigh = Color(0xFFFFFFFF), rimLow = Color(0x33FFFFFF),
+        success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF1C7EE0), protein = Color(0xFFE0457B),
+    )
+    val Mint = FitTheme(
+        id = "mint", name = "Mint Fresh", isLight = true, art = BackdropArt.FROST,
+        bgTop = Color(0xFFF2FBF8), bgBottom = Color(0xFFE6F5F2),
+        blobs = listOf(Color(0xFFB8EEDB), Color(0xFFC2E2F4), Color(0xFFB4E6E0), Color(0xFFF2FBF8)),
+        accent = Color(0xFF0E7490), accentBright = Color(0xFF1A8FAD), onAccent = Color.White,
+        text = Color(0xFF16161A), textDim = Color(0xB316161A), textFaint = Color(0x6616161A),
+        glassTint = Color(0x99FFFFFF), glassFallback = Color(0xF2FFFFFF),
+        rimHigh = Color(0xFFFFFFFF), rimLow = Color(0x33FFFFFF),
+        success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF2563EB),
+    )
+    val Sakura = FitTheme(
+        id = "sakura", name = "Sakura Blush", isLight = true, art = BackdropArt.FROST,
+        bgTop = Color(0xFFFFF6F7), bgBottom = Color(0xFFFBE8EE),
+        blobs = listOf(Color(0xFFFFCCDA), Color(0xFFF8D4E4), Color(0xFFF4EAFF), Color(0xFFFFF3F6)),
+        accent = Color(0xFFC2366E), accentBright = Color(0xFFD65A8A), onAccent = Color.White,
+        text = Color(0xFF16161A), textDim = Color(0xB316161A), textFaint = Color(0x6616161A),
+        glassTint = Color(0x99FFFFFF), glassFallback = Color(0xF2FFFFFF),
+        rimHigh = Color(0xFFFFFFFF), rimLow = Color(0x33FFFFFF),
+        success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF1C7EE0),
+    )
+    val Desert = FitTheme(
+        id = "desert", name = "Desert Dawn", isLight = true, art = BackdropArt.FROST,
+        bgTop = Color(0xFFEEEAF7), bgBottom = Color(0xFFF5E2D2),
+        blobs = listOf(Color(0xFFFFE6C8), Color(0xFFEEC2A0), Color(0xFFE8D8F0), Color(0xFFD9926E)),
+        accent = Color(0xFFA8432A), accentBright = Color(0xFFC25A3E), onAccent = Color.White,
+        text = Color(0xFF16161A), textDim = Color(0xB316161A), textFaint = Color(0x6616161A),
+        glassTint = Color(0x99FFFFFF), glassFallback = Color(0xF2FFFFFF),
+        rimHigh = Color(0xFFFFFFFF), rimLow = Color(0x33FFFFFF),
+        success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF1C7EE0),
+    )
+    val Arctic = FitTheme(
+        id = "arctic", name = "Arctic Light", isLight = true, art = BackdropArt.FROST,
+        bgTop = Color(0xFFF4F8FE), bgBottom = Color(0xFFE6EEF8),
+        blobs = listOf(Color(0xFFB0C8F8), Color(0xFFC8EAF8), Color(0xFFD0DCFF), Color(0xFFF4F8FE)),
+        accent = Color(0xFF1D4ED8), accentBright = Color(0xFF3B6AE8), onAccent = Color.White,
+        text = Color(0xFF16161A), textDim = Color(0xB316161A), textFaint = Color(0x6616161A),
+        glassTint = Color(0x99FFFFFF), glassFallback = Color(0xF2FFFFFF),
+        rimHigh = Color(0xFFFFFFFF), rimLow = Color(0x33FFFFFF),
+        success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF0891B2),
+    )
+
+    val all = listOf(
+        Kinetic,
+        // dark
+        Cobalt, Graphite, Evergreen, Dusk, Steel, Golden,
+        Ember, Oceanic, Aurora, Carbon, Neon, Sapphire, Forest, Volcanic, Cosmic, Matcha,
+        // light
+        Porcelain, Sandstone, Lavender,
+        Cloud, Peach, Mint, Sakura, Desert, Arctic,
+    )
     fun byId(id: String) = all.firstOrNull { it.id == id } ?: Kinetic
 }

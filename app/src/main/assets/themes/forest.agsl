@@ -1,0 +1,31 @@
+// Forest Mist: layered pine ridges fading into cool morning fog, soft light from above
+float pines(float x, float k, float base, float amp, float seed) {
+    float cell = floor(x * k);
+    float f = fract(x * k) - 0.5 - (hash(float2(cell, seed)) - 0.5) * 0.3;
+    float s = max(1.0 - abs(f) * 3.2, 0.0);
+    float hgt = 0.5 + 0.5 * hash(float2(cell, seed + 4.0));
+    return base + 0.06 * fbm3(float2(x * 3.0, seed)) - s * amp * hgt;
+}
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 fog = float3(0.22, 0.30, 0.29);
+    float3 c = mix(float3(0.09, 0.14, 0.15), fog, smoothstep(0.0, 0.6, uv.y));
+    float r1 = length(p - float2(ar * 0.7, -0.05));
+    c += float3(0.60, 0.66, 0.56) * exp(-r1 * r1 * 4.0) * 0.18;
+    float t1 = pines(p.x, 22.0, 0.54, 0.10, 1.0);
+    c = mix(c, float3(0.14, 0.21, 0.20), smoothstep(t1, t1 + 0.003, uv.y) * 0.85);
+    c += fog * 0.22 * exp(-(uv.y - t1 - 0.09) * (uv.y - t1 - 0.09) * 120.0);
+    float t2 = pines(p.x, 15.0, 0.68, 0.14, 7.0);
+    c = mix(c, float3(0.07, 0.12, 0.11), smoothstep(t2, t2 + 0.003, uv.y) * 0.92);
+    c += fog * 0.16 * exp(-(uv.y - t2 - 0.07) * (uv.y - t2 - 0.07) * 150.0);
+    float t3 = pines(p.x, 9.0, 0.84, 0.20, 13.0);
+    c = mix(c, float3(0.022, 0.042, 0.040), smoothstep(t3, t3 + 0.003, uv.y));
+    float m = fbm(float2(p.x * 2.0, p.y * 5.0) + 3.0);
+    c += fog * smoothstep(0.45, 0.8, m) * 0.10 * smoothstep(0.3, 0.7, uv.y);
+    float2 vv = uv - float2(0.5, 0.4);
+    c *= 1.0 - 0.5 * dot(vv, vv);
+    c += (hash(fc + 4.8) - 0.5) * 0.010;
+    return outc(c);
+}

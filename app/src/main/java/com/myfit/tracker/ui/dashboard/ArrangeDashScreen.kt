@@ -141,7 +141,16 @@ fun ArrangeDashScreen(container: AppContainer) {
                         Spacer(Modifier.width(10.dp))
                         IconBubble(iconFor(c), colorFor(c, th), 36.dp)
                         Spacer(Modifier.width(12.dp))
-                        Text(c.label, style = FitType.section, color = if (on) th.text else th.textDim, modifier = Modifier.weight(1f))
+                        Column(Modifier.weight(1f)) {
+                            Text(c.label, style = FitType.section, color = if (on) th.text else th.textDim, maxLines = 1)
+                            val note = when {
+                                c == DashCard.CYCLE && !settings.cycleEnabled -> "Off · switch on from Health hub"
+                                c == DashCard.GLUCOSE && !settings.glucoseEnabled -> "Off · switch on from Health hub"
+                                c in halfCards -> "Half width"
+                                else -> "Full width"
+                            }
+                            Caption(note)
+                        }
                         Icon(Duo.ArrowUpward, "Move up", tint = if (i > 0) th.textDim else th.textFaint.copy(alpha = 0.3f),
                             modifier = Modifier.size(34.dp).padding(6.dp).clickableNoRipple { if (i > 0) { val it0 = order.removeAt(i); order.add(i - 1, it0); tick() } })
                         Icon(Duo.ArrowDownward, "Move down", tint = if (i < order.lastIndex) th.textDim else th.textFaint.copy(alpha = 0.3f),

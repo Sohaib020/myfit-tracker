@@ -1,0 +1,25 @@
+// Ember: deep charcoal-brown, glowing coal bed along the bottom, drifting amber sparks
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(0.050, 0.034, 0.030), float3(0.070, 0.036, 0.024), uv.y);
+    // coal bed: warm glow rising from the bottom with an uneven edge
+    float n = fbm(float2(p.x * 3.0, p.y * 1.4) + 2.0);
+    float bed = smoothstep(0.58, 1.08, uv.y + (n - 0.5) * 0.28);
+    c += float3(0.95, 0.34, 0.10) * bed * 0.50;
+    float hot = smoothstep(0.60, 0.78, fbm(p * 6.0 + 3.0)) * smoothstep(0.80, 1.0, uv.y);
+    c += float3(1.0, 0.62, 0.26) * hot * 0.45;
+    // faint smouldering cracks just above the bed
+    // warm halo top right
+    float r1 = length(p - float2(ar * 0.95, 0.02));
+    c += float3(0.95, 0.48, 0.20) * exp(-r1 * r1 * 6.0) * 0.16;
+    // sparks, denser near the coals
+    float s = stars(p * 26.0, 0.10, 0.0) * smoothstep(0.15, 0.95, uv.y);
+    s += stars(p * 48.0 + 7.0, 0.08, 0.0) * smoothstep(0.4, 1.0, uv.y) * 0.6;
+    c += float3(1.0, 0.72, 0.38) * s * 0.65;
+    float2 vv = uv - float2(0.5, 0.42);
+    c *= 1.0 - 0.55 * dot(vv, vv);
+    c += (hash(fc + 2.2) - 0.5) * 0.012;
+    return outc(c);
+}
