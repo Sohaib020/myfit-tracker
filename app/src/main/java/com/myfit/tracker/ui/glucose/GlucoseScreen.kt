@@ -655,7 +655,7 @@ private fun LogReadingSheet(visible: Boolean, cfg: GlucoseConfig, container: App
     var at by remember(visible) { mutableStateOf(Clock.now()) }
     var tag by remember(visible) { mutableStateOf(Glucose.defaultTag(Clock.minuteOfDay(Clock.now(), Clock.zone().id))) }
     var notes by remember(visible) { mutableStateOf("") }
-    val canWrite by produceState(false, visible, permTick) { value = GlucoseHc.canWrite(container) }
+    val canWrite by produceState(false, visible, permTick) { this.value = GlucoseHc.canWrite(container) }
     var writeHc by remember(visible, canWrite) { mutableStateOf(cfg.writeHc && canWrite) }
 
     GlassSheet(visible = visible, onDismiss = onDismiss) {
