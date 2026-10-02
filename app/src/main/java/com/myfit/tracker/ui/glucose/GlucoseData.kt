@@ -36,6 +36,13 @@ data class GlucoseConfig(
     val high: Int = Glucose.DEFAULT_HIGH,
     val writeHc: Boolean = false,
     val setupDone: Boolean = false,
+    val testRemind: Boolean = false,
+    val testTimes: List<Int> = listOf(7 * 60 + 30, 21 * 60),   // minutes of day
+    val ramadan: Boolean = false,
+    val ramadanRemind: Boolean = true,
+    val suhoorMin: Int = 4 * 60 + 15,
+    val iftarMin: Int = 18 * 60 + 30,
+    val a1cRemind: Boolean = true,
 )
 
 object GlucoseConfigStore {
@@ -59,6 +66,13 @@ object GlucoseConfigStore {
             high = p.getInt("high", Glucose.DEFAULT_HIGH),
             writeHc = p.getBoolean("writeHc", false),
             setupDone = p.getBoolean("setupDone", false),
+            testRemind = p.getBoolean("testRemind", false),
+            testTimes = (p.getString("testTimes", null) ?: "450,1260").split(',').mapNotNull { it.trim().toIntOrNull() }.filter { it in 0..1439 }.distinct().sorted(),
+            ramadan = p.getBoolean("ramadan", false),
+            ramadanRemind = p.getBoolean("ramadanRemind", true),
+            suhoorMin = p.getInt("suhoorMin", 4 * 60 + 15),
+            iftarMin = p.getInt("iftarMin", 18 * 60 + 30),
+            a1cRemind = p.getBoolean("a1cRemind", true),
         )
     }.getOrDefault(GlucoseConfig())
 
@@ -67,7 +81,10 @@ object GlucoseConfigStore {
         runCatching {
             ctx.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
                 .putString("type", c.type).putBoolean("mmol", c.mmol).putInt("low", c.low).putInt("high", c.high)
-                .putBoolean("writeHc", c.writeHc).putBoolean("setupDone", c.setupDone).apply()
+                .putBoolean("writeHc", c.writeHc).putBoolean("setupDone", c.setupDone)
+                .putBoolean("testRemind", c.testRemind).putString("testTimes", c.testTimes.joinToString(","))
+                .putBoolean("ramadan", c.ramadan).putBoolean("ramadanRemind", c.ramadanRemind)
+                .putInt("suhoorMin", c.suhoorMin).putInt("iftarMin", c.iftarMin).putBoolean("a1cRemind", c.a1cRemind).apply()
         }
     }
 }

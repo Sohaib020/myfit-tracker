@@ -92,7 +92,6 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
     )
     /** Saving mindful minutes to Health Connect (asked from the Mindfulness screen). */
     val mindfulnessPermissions: Set<String> get() = setOf(
-        writePerm(androidx.health.connect.client.records.MindfulnessSessionRecord::class),
         readPerm(androidx.health.connect.client.records.HeartRateRecord::class),
         readPerm(androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord::class),
     )

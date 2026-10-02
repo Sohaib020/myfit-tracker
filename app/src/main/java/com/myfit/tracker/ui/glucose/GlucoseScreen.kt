@@ -291,6 +291,11 @@ private fun GlucoseMain(
         // ---- medicines
         item { MedsSummaryCard(container) { nav.push(Overlay.Meds) } }
 
+        // ---- HbA1c, reminders, Ramadan
+        item { HbA1cCard(container, cfg) }
+        item { CheckRemindersCard(cfg) }
+        item { RamadanCard(container, cfg) }
+
         // ---- report
         item {
             GlassCard {
