@@ -146,7 +146,7 @@ fun ArrangeDashScreen(container: AppContainer) {
                             val note = when {
                                 c == DashCard.CYCLE && !settings.cycleEnabled -> "Off · switch on from Health hub"
                                 c == DashCard.GLUCOSE && !settings.glucoseEnabled -> "Off · switch on from Health hub"
-                                c in halfCards -> "Half width"
+                                c in settings.dashSmall -> "Half width"
                                 else -> "Full width"
                             }
                             Caption(note)

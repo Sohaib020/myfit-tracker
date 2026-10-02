@@ -94,7 +94,7 @@ internal fun TileValue(value: String, unit: String? = null, color: Color? = null
 // ------------------------------------------------------------------ Hydration (with the 3D glass)
 
 @Composable
-internal fun HydrationTile(s: DashState, c: AppContainer, open: (Sheet) -> Unit) {
+internal fun HydrationTile(s: DashState, c: AppContainer, open: (Sheet) -> Unit, wide: Boolean = false) {
     val th = LocalFitTheme.current
     val units = LocalSettings.current.units
     val toaster = LocalToaster.current
@@ -107,7 +107,7 @@ internal fun HydrationTile(s: DashState, c: AppContainer, open: (Sheet) -> Unit)
     val fraction = s.waterMl?.let { w -> s.waterTarget?.takeIf { it > 0 }?.let { (w / it).toFloat() } } ?: 0f
     GlassCard(Modifier.height(TileHeight), onClick = { open(Sheet.Water()) }, padding = 12.dp) {
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-            WaterGlass3D(fraction, th.water, Modifier.width(50.dp).fillMaxHeight(), onTap = add250)
+            WaterGlass3D(fraction, th.water, Modifier.width(if (wide) 84.dp else 50.dp).fillMaxHeight(), onTap = add250)
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
                 Column {
