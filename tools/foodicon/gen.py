@@ -17,7 +17,7 @@ ids = [i for k, i in enumerate(ids) if k % nshards == shard]
 os.makedirs("raw", exist_ok=True)
 print("shard", shard, "items", len(ids), flush=True)
 fails = 0
-BUDGET = float(os.environ.get("BUDGET_MIN", "300")) * 60
+BUDGET = float(os.environ.get("BUDGET_MIN", "150")) * 60
 start = time.time()
 for n, i in enumerate(ids):
     if os.path.exists(f"raw/{i}.png"): continue
@@ -31,7 +31,7 @@ for n, i in enumerate(ids):
     cmd = [sd, "--diffusion-model", f"{models}/flux.gguf", "--vae", f"{models}/ae.safetensors",
            "--clip_l", f"{models}/clip_l.safetensors", "--t5xxl", f"{models}/t5xxl.gguf",
            "-p", prompt, "--cfg-scale", "1.0", "--sampling-method", "euler", "--steps", str(STYLE.get("steps", 4)),
-           "-W", size, "-H", size, "--vae-tiling", "--seed", str(seed), "-t", str(os.cpu_count()), "-o", f"raw/{i}.png"]
+           "-W", size, "-H", size, "--vae-tiling", "--seed", str(seed), "-t", str(max(1, (os.cpu_count() or 4) - 1)), "-o", f"raw/{i}.png"]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0 or not os.path.exists(f"raw/{i}.png"):
         print("FAIL", i, r.stdout[-2000:], r.stderr[-2000:], flush=True)
