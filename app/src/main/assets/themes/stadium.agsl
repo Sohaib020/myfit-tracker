@@ -1,0 +1,50 @@
+// Floodlights: night stadium, two light towers throwing soft beams through haze onto a striped pitch
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = mix(float3(0.018, 0.026, 0.055), float3(0.028, 0.045, 0.080), uv.y);
+    float haze = fbm(p * 2.2 + 3.0);
+    float beams = 0.0;
+    for (int i = 0; i < 2; i++) {
+        float side = (i == 0) ? -1.0 : 1.0;
+        float2 L = float2(ar * 0.5 + side * ar * 0.44, 0.075);
+        float2 d = p - L;
+        float2 dir = normalize(float2(-side * 0.55, 1.0));
+        float along = dot(d, dir);
+        float cosA = along / max(length(d), 0.0001);
+        float cone = smoothstep(0.80, 0.97, cosA) * step(0.0, along);
+        beams += cone * exp(-along * 1.3);
+        // lamp bank: a tilted panel of small bright dots
+        float2 b = d * float2(1.0, 1.0);
+        float panel = step(abs(b.x), 0.075) * step(abs(b.y), 0.018);
+        float2 g = fract(b * float2(55.0, 55.0)) - 0.5;
+        float dots = smoothstep(0.32, 0.12, length(g)) * panel;
+        c += float3(0.92, 0.96, 1.0) * dots * 0.9;
+        c += float3(0.55, 0.70, 1.0) * exp(-dot(d, d) * 90.0) * 0.35;
+        // tower mast
+        float mast = smoothstep(0.004, 0.002, abs(p.x - L.x)) * step(L.y, p.y) * step(p.y, 0.64);
+        c = mix(c, float3(0.05, 0.06, 0.09), mast * 0.8);
+    }
+    c += float3(0.60, 0.72, 0.98) * beams * (0.16 + 0.26 * haze);
+    // pitch: perspective mowing stripes on the lower part
+    float hz = 0.70;
+    float on = smoothstep(hz, hz + 0.004, uv.y);
+    float depth = max(uv.y - hz, 0.0) / (1.0 - hz);
+    float stripe = 0.5 + 0.5 * sign(sin(6.0 / (depth + 0.08)));
+    float3 turf = mix(float3(0.040, 0.12, 0.070), float3(0.055, 0.15, 0.085), stripe);
+    turf *= 0.65 + 0.5 * depth;
+    float sx = (p.x - ar * 0.5) * 2.0;
+    float spill = exp(-sx * sx) * (1.0 - depth * 0.5);
+    turf += float3(0.05, 0.09, 0.07) * spill;
+    float tl = smoothstep(0.003, 0.0, abs(uv.y - hz - 0.012));
+    c = mix(c, turf, on);
+    c += float3(0.7, 0.8, 0.9) * tl * 0.18;
+    // crowd tier silhouette just above the horizon
+    float tier = smoothstep(hz - 0.06, hz - 0.055, uv.y) * (1.0 - on);
+    c = mix(c, float3(0.030, 0.036, 0.060) + float3(0.08, 0.09, 0.12) * stars(p * 140.0, 0.30, 0.0), tier);
+    float2 vv = uv - float2(0.5, 0.5);
+    c *= 1.0 - 0.45 * dot(vv, vv);
+    c += (hash(fc + 6.6) - 0.5) * 0.014;
+    return outc(c);
+}

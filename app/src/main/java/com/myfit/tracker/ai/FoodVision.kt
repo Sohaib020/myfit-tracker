@@ -2,6 +2,8 @@ package com.myfit.tracker.ai
 
 import android.graphics.Bitmap
 import com.myfit.tracker.AppContainer
+import com.myfit.tracker.ai.ondevice.AiQuota
+import com.myfit.tracker.ai.ondevice.OnDeviceAi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -27,20 +29,43 @@ class FoodVision(private val c: AppContainer) {
     suspend fun analyze(photo: Bitmap, hint: String = ""): Result {
         val jpeg = withContext(Dispatchers.Default) { compress(photo, 1024f, 82) }
         val prompt = PROMPT + (if (hint.isNotBlank()) "\nUser note about this meal: $hint" else "")
-        return parse(c.aiRouter.vision(prompt, jpeg))
+        val ai = OnDeviceAi.get(c.app)
+        // 1) offline brain on the phone: free and unlimited
+        if (ai.llm.available()) {
+            try {
+                val r = parse(ai.llm.vision(prompt, jpeg))
+                onDevice = true
+                return r
+            } catch (e: NotFood) { throw e } catch (e: kotlinx.coroutines.CancellationException) {
+                if (e !is kotlinx.coroutines.TimeoutCancellationException) throw e
+            } catch (_: Exception) { /* fall back to the cloud below */ }
+        }
+        // 2) cloud, within today's free allowance
+        onDevice = false
+        ai.quota.require(AiQuota.Kind.PHOTO)
+        val r = parse(c.aiRouter.vision(prompt, jpeg))
+        ai.quota.consume(AiQuota.Kind.PHOTO)
+        return r
     }
+
+    /** True when the last [analyze] was answered by the offline brain. */
+    var onDevice: Boolean = false
+        private set
 
     /** Quick live guess while aiming the camera: just dish names (small image, fastest provider). */
     suspend fun quickNames(frame: Bitmap): List<String> {
+        val ai = OnDeviceAi.get(c.app)
+        if (!ai.quota.liveAllowed()) return emptyList()   // live guesses are a cloud extra; never block the snap
         val jpeg = withContext(Dispatchers.Default) { compress(frame, 512f, 70) }
         val raw = c.aiRouter.vision(QUICK, jpeg, fast = true, perProviderMs = 9_000)
+        ai.quota.consumeLive()
         val txt = raw.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
         val o = JSONObject(txt.substring(txt.indexOf('{').coerceAtLeast(0), txt.lastIndexOf('}') + 1))
         val arr = o.optJSONArray("foods") ?: return emptyList()
         return (0 until arr.length()).map { arr.optString(it) }.filter { it.isNotBlank() }.take(4)
     }
 
-    val lastProvider: String? get() = c.aiRouter.lastProvider
+    val lastProvider: String? get() = if (onDevice) "Offline brain (on this phone)" else c.aiRouter.lastProvider
 
     private fun compress(b: Bitmap, max: Float, q: Int): ByteArray {
         val sc = minOf(1f, max / maxOf(b.width, b.height))

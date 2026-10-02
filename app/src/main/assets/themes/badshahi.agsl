@@ -1,0 +1,69 @@
+// Badshahi Red: Lahore's red sandstone at dusk with white marble inlay — a row of pointed Mughal arches
+float archD(float2 p, float xc, float hw, float ys) {
+    float o = hw * 0.55;
+    float R = hw + o;
+    float dx = abs(p.x - xc);
+    float dy = p.y - ys;
+    float curve = abs(length(float2(dx + o, dy)) - R);
+    float jamb = abs(dx - hw);
+    return (dy < 0.0) ? curve : jamb;
+}
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float px = 1.5 / res.y;
+    // stone: ashlar courses + mottling
+    float course = 0.075;
+    float row = floor(p.y / course);
+    float bx = p.x / 0.16 + hash(float2(row, 1.0));
+    float blk = hash(float2(floor(bx), row));
+    float mott = fbm(p * 9.0);
+    float3 stone = mix(float3(0.42, 0.15, 0.10), float3(0.52, 0.20, 0.13), blk * 0.5 + mott * 0.5);
+    float jy = abs(fract(p.y / course) - 0.5) * course;
+    float jx = abs(fract(bx) - 0.5) * 0.16;
+    float joint = smoothstep(0.0028, 0.0008, min(0.5 * course - jy, 0.08 - jx));
+    stone *= 1.0 - joint * 0.30;
+    // dusk grade: deep at the top, warm lower
+    float grade = mix(0.30, 0.62, smoothstep(0.0, 1.0, uv.y));
+    float3 c = stone * grade;
+    c = mix(c, float3(0.05, 0.03, 0.06), smoothstep(0.45, 0.0, uv.y) * 0.55);
+    // marble arcade along the bottom
+    float3 marble = float3(0.93, 0.90, 0.86);
+    float n = 3.0;
+    float w = ar / n;
+    float ai = floor(p.x / w);
+    float xc = (ai + 0.5) * w;
+    float hw = w * 0.36;
+    float ys = 0.80;
+    float a1 = archD(p, xc, hw, ys);
+    float a2 = archD(p, xc, hw - 0.012, ys);
+    float lw = 0.0022;
+    float inl = max(smoothstep(lw + px, lw - px, a1), smoothstep(lw * 0.6 + px, lw * 0.6 - px, a2));
+    inl *= step(0.0, p.y - (ys - (hw * 1.3)));
+    // niche interior slightly darker
+    float o = hw * 0.55;
+    float R = hw + o;
+    float inside = (p.y < ys) ? step(length(float2(abs(p.x - xc) + o, p.y - ys)), R) : step(abs(p.x - xc), hw);
+    c = mix(c, c * 0.62, inside * smoothstep(0.55, 0.62, uv.y));
+    // spandrel rosette between arches
+    float2 sp = p - float2((ai + (p.x - ai * w > w * 0.5 ? 1.0 : 0.0)) * w, ys - hw * 1.05);
+    float spr = length(sp);
+    float spa = atan(sp.y, sp.x);
+    float rosR = 0.020 * (0.6 + 0.4 * abs(cos(spa * 4.0)));
+    float ros = smoothstep(rosR + px, rosR - px, spr);
+    // marble plinth band and top cornice line
+    float plinth = smoothstep(0.935 - px, 0.935 + px, uv.y) * (1.0 - smoothstep(0.96 - px, 0.96 + px, uv.y));
+    float topl = smoothstep(px * 1.5, 0.0, abs(uv.y - 0.045) - 0.0016);
+    float vein = 0.92 + 0.08 * noise(p * 50.0);
+    float lightUp = 0.55 + 0.45 * smoothstep(0.5, 1.0, uv.y);
+    c = mix(c, marble * vein * lightUp, max(max(inl, ros), plinth) * 0.85);
+    c = mix(c, marble * 0.6, topl * 0.5);
+    // sunset warmth from the right
+    float2 g = p - float2(ar * 1.0, 0.95);
+    c += float3(0.55, 0.25, 0.10) * exp(-dot(g, g) * 3.0) * 0.18;
+    float2 vv = uv - float2(0.5, 0.5);
+    c *= 1.0 - 0.45 * dot(vv, vv);
+    c += (hash(fc + 6.1) - 0.5) * 0.012;
+    return outc(c);
+}

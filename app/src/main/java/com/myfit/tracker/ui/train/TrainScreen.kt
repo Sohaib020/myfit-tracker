@@ -72,7 +72,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun TrainScreen(container: AppContainer, bottomPad: Int) {
+fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = false) {
     val th = LocalFitTheme.current
     val nav = LocalNav.current
     val toaster = LocalToaster.current
@@ -91,7 +91,7 @@ fun TrainScreen(container: AppContainer, bottomPad: Int) {
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = bottomPad.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item {
+        if (!embedded) item {
             Column(Modifier.statusBarsPadding().padding(top = com.myfit.tracker.ui.components.TopBarSpace)) {
                 Text("Train", style = FitType.display, color = th.text)
                 Caption("Templates, Gym Mode and your workout history.")

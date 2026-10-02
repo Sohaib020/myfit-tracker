@@ -284,25 +284,170 @@ object Themes {
         rimHigh = Color(0xFFFFFFFF), rimLow = Color(0x33FFFFFF),
         success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF1C7EE0),
     )
-    val Arctic = FitTheme(
-        id = "arctic", name = "Arctic Light", isLight = true, art = BackdropArt.FROST,
-        bgTop = Color(0xFFF4F8FE), bgBottom = Color(0xFFE6EEF8),
-        blobs = listOf(Color(0xFFB0C8F8), Color(0xFFC8EAF8), Color(0xFFD0DCFF), Color(0xFFF4F8FE)),
-        accent = Color(0xFF1D4ED8), accentBright = Color(0xFF3B6AE8), onAccent = Color.White,
+
+    // ---- sport & gym ----
+    val Track = FitTheme(
+        id = "track", name = "Track Day", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF0F0E10), bgBottom = Color(0xFF2A0F0B),
+        blobs = listOf(Color(0xFFB5361F), Color(0xFFFF6A55), Color(0xFF0F0E10), Color(0xFF4A1A12)),
+        accent = Color(0xFFFF6A55), accentBright = Color(0xFFFF9A88), onAccent = Color(0xFF2A0805),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AFFB4A8), glassFallback = Color(0xE0161012),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        protein = Color(0xFFFFA36B),
+    )
+    val Court = FitTheme(
+        id = "court", name = "Court Lines", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF0A0B10), bgBottom = Color(0xFF2B1A0E),
+        blobs = listOf(Color(0xFF8A4F24), Color(0xFFF28C38), Color(0xFF0A0B10), Color(0xFF5A3418)),
+        accent = Color(0xFFF59A4A), accentBright = Color(0xFFFFBE85), onAccent = Color(0xFF2A1404),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AFFC79A), glassFallback = Color(0xE0141010),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+    )
+    val Stadium = FitTheme(
+        id = "stadium", name = "Floodlights", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF05080F), bgBottom = Color(0xFF0B2416),
+        blobs = listOf(Color(0xFF3A5A9A), Color(0xFF8FB8FF), Color(0xFF05080F), Color(0xFF1A5A30)),
+        accent = Color(0xFF7FB2FF), accentBright = Color(0xFFAECFFF), onAccent = Color(0xFF061428),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AAECFFF), glassFallback = Color(0xE00A0F1A),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        water = Color(0xFF5FD4F5),
+    )
+    val NeonGym = FitTheme(
+        id = "neongym", name = "Neon Gym", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF0D0C10), bgBottom = Color(0xFF08070A),
+        blobs = listOf(Color(0xFFFF5473), Color(0xFF8C66FF), Color(0xFF0D0C10), Color(0xFF5A1A3A)),
+        accent = Color(0xFFFF5A7A), accentBright = Color(0xFFFF8FA5), onAccent = Color(0xFF2A0410),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AFF9FB5), glassFallback = Color(0xE0130F16),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        fat = Color(0xFF9D8BFF), protein = Color(0xFFFF9466),
+    )
+    val IronFloor = FitTheme(
+        id = "ironfloor", name = "Iron Floor", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF141517), bgBottom = Color(0xFF060607),
+        blobs = listOf(Color(0xFF3A3B3F), Color(0xFFFFD23F), Color(0xFF141517), Color(0xFF26272A)),
+        accent = Color(0xFFFFD23F), accentBright = Color(0xFFFFE380), onAccent = Color(0xFF1F1800),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x14FFFFFF), glassFallback = Color(0xE0121214),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        carbs = Color(0xFFFFA94D),
+    )
+    val Clay = FitTheme(
+        id = "clay", name = "Clay Court", isLight = true, art = BackdropArt.FROST,
+        bgTop = Color(0xFFFDF6EE), bgBottom = Color(0xFFEDC9B4),
+        blobs = listOf(Color(0xFFF1B89A), Color(0xFFF7D7C2), Color(0xFFFFF6EE), Color(0xFFE39D7A)),
+        accent = Color(0xFFB4441F), accentBright = Color(0xFFCC5A33), onAccent = Color.White,
         text = Color(0xFF16161A), textDim = Color(0xB316161A), textFaint = Color(0x6616161A),
         glassTint = Color(0x99FFFFFF), glassFallback = Color(0xF2FFFFFF),
         rimHigh = Color(0xFFFFFFFF), rimLow = Color(0x33FFFFFF),
-        success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF0891B2),
+        success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF1C7EE0),
+    )
+    val Chalk = FitTheme(
+        id = "chalk", name = "Chalk Dust", isLight = true, art = BackdropArt.FROST,
+        bgTop = Color(0xFFF2F1EF), bgBottom = Color(0xFFDCDDE0),
+        blobs = listOf(Color(0xFFFFFFFF), Color(0xFFF4DCDC), Color(0xFFDCE4F4), Color(0xFFEDEDED)),
+        accent = Color(0xFFBE123C), accentBright = Color(0xFFD63A5E), onAccent = Color.White,
+        text = Color(0xFF16161A), textDim = Color(0xB316161A), textFaint = Color(0x6616161A),
+        glassTint = Color(0x99FFFFFF), glassFallback = Color(0xF2FFFFFF),
+        rimHigh = Color(0xFFFFFFFF), rimLow = Color(0x33FFFFFF),
+        success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF1C7EE0),
+    )
+
+    // ---- Pakistani-inspired ----
+    val TruckArt = FitTheme(
+        id = "truckart", name = "Truck Art", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF0A0C18), bgBottom = Color(0xFF05060D),
+        blobs = listOf(Color(0xFFE8467C), Color(0xFFF7C531), Color(0xFF0A0C18), Color(0xFF2EA36B)),
+        accent = Color(0xFFFFB627), accentBright = Color(0xFFFFCF6B), onAccent = Color(0xFF241600),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AFFD98A), glassFallback = Color(0xE00C0E1C),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        protein = Color(0xFFFF6FA0), water = Color(0xFF4D8DF0),
+    )
+    val Mughal = FitTheme(
+        id = "mughal", name = "Mughal Tiles", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF0A1126), bgBottom = Color(0xFF050814),
+        blobs = listOf(Color(0xFF1F4FA0), Color(0xFF3FC1C9), Color(0xFF0A1126), Color(0xFF8A5A2A)),
+        accent = Color(0xFF47C9CF), accentBright = Color(0xFF8FE3E6), onAccent = Color(0xFF03282A),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1A9FE6EA), glassFallback = Color(0xE00A1228),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        carbs = Color(0xFFDDAA4E),
+    )
+    val Ajrak = FitTheme(
+        id = "ajrak", name = "Ajrak", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF2A0608), bgBottom = Color(0xFF0E0408),
+        blobs = listOf(Color(0xFF8A1218), Color(0xFF1A1A3A), Color(0xFF2A0608), Color(0xFFB02A2A)),
+        accent = Color(0xFFFF8F70), accentBright = Color(0xFFFFB59E), onAccent = Color(0xFF2E0A04),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AFFB59E), glassFallback = Color(0xE01C080B),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        water = Color(0xFF6E8BFF), protein = Color(0xFFFFB86B),
+    )
+    val Hunza = FitTheme(
+        id = "hunza", name = "Hunza Dusk", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF0E0E26), bgBottom = Color(0xFF0A0812),
+        blobs = listOf(Color(0xFF5C3866), Color(0xFFFFA36C), Color(0xFF0E0E26), Color(0xFF2A2040)),
+        accent = Color(0xFFFFA86F), accentBright = Color(0xFFFFC9A0), onAccent = Color(0xFF2B1204),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AFFCBA8), glassFallback = Color(0xE0141226),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+    )
+    val Badshahi = FitTheme(
+        id = "badshahi", name = "Badshahi Red", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF160A0C), bgBottom = Color(0xFF3A1610),
+        blobs = listOf(Color(0xFF8A3420), Color(0xFFF1E4CF), Color(0xFF160A0C), Color(0xFF5A2414)),
+        accent = Color(0xFFF2E3C8), accentBright = Color(0xFFFFF4E2), onAccent = Color(0xFF3A1610),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AFFE8D8), glassFallback = Color(0xE01E0F0D),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        protein = Color(0xFFFF8F6B),
+    )
+    val Thar = FitTheme(
+        id = "thar", name = "Thar Dusk", isLight = false, art = BackdropArt.AURORA,
+        bgTop = Color(0xFF120C24), bgBottom = Color(0xFF170808),
+        blobs = listOf(Color(0xFF7A3448), Color(0xFFFFA04D), Color(0xFF120C24), Color(0xFF2A6FA0)),
+        accent = Color(0xFF4AB0EE), accentBright = Color(0xFF8FD0F7), onAccent = Color(0xFF04223A),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1AFFC08A), glassFallback = Color(0xE0180E1C),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        carbs = Color(0xFFFFB45C),
+    )
+    val Multani = FitTheme(
+        id = "multani", name = "Multani Blue", isLight = true, art = BackdropArt.FROST,
+        bgTop = Color(0xFFFBFAF6), bgBottom = Color(0xFFF1F1EC),
+        blobs = listOf(Color(0xFFB8CCF2), Color(0xFFBFE6EC), Color(0xFFFFFFFF), Color(0xFFD8E2F6)),
+        accent = Color(0xFF1E4FBF), accentBright = Color(0xFF3A6AD6), onAccent = Color.White,
+        text = Color(0xFF16161A), textDim = Color(0xB316161A), textFaint = Color(0x6616161A),
+        glassTint = Color(0x99FFFFFF), glassFallback = Color(0xF2FFFFFF),
+        rimHigh = Color(0xFFFFFFFF), rimLow = Color(0x33FFFFFF),
+        success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF1597B0),
+    )
+    val Swat = FitTheme(
+        id = "swat", name = "Swat Valley", isLight = true, art = BackdropArt.FROST,
+        bgTop = Color(0xFFEEF4F7), bgBottom = Color(0xFFD6E6D8),
+        blobs = listOf(Color(0xFFC8DCC9), Color(0xFFDDEBF2), Color(0xFFFFFFFF), Color(0xFFA9C8AE)),
+        accent = Color(0xFF1F7A4D), accentBright = Color(0xFF2E9462), onAccent = Color.White,
+        text = Color(0xFF16161A), textDim = Color(0xB316161A), textFaint = Color(0x6616161A),
+        glassTint = Color(0x99FFFFFF), glassFallback = Color(0xF2FFFFFF),
+        rimHigh = Color(0xFFFFFFFF), rimLow = Color(0x33FFFFFF),
+        success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF1C7EE0), steps = Color(0xFF2E9462),
     )
 
     val all = listOf(
         Kinetic,
-        // dark
+        // premium dark
         Cobalt, Graphite, Evergreen, Dusk, Steel, Golden,
         Ember, Oceanic, Aurora, Carbon, Neon, Sapphire, Forest, Volcanic, Cosmic, Matcha,
-        // light
-        Porcelain, Sandstone, Lavender,
-        Cloud, Peach, Mint, Sakura, Desert, Arctic,
+        // clean light
+        Porcelain, Sandstone, Lavender, Cloud, Peach, Mint, Sakura, Desert,
+        // sport & gym
+        Track, Court, Stadium, NeonGym, IronFloor, Clay, Chalk,
+        // Pakistani-inspired
+        TruckArt, Mughal, Ajrak, Hunza, Badshahi, Thar, Multani, Swat,
     )
     fun byId(id: String) = all.firstOrNull { it.id == id } ?: Kinetic
 }

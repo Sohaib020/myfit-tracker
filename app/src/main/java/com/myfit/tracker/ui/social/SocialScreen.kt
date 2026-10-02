@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -84,16 +85,20 @@ fun formatMetric(m: Metric, v: Double): String = when (m) {
 
 /** Friends, challenges and leaderboards. */
 @Composable
-fun SocialScreen(container: AppContainer) {
+fun SocialScreen(container: AppContainer, asTab: Boolean = false, bottomPad: Int = 40) {
     val nav = LocalNav.current
     val social = container.social
     val user by social.user.collectAsState()
+    val sub = if (user != null) "Leaderboards, challenges & friends · only device-recorded activity counts" else "Sign in to challenge friends"
     Column(Modifier.fillMaxSize()) {
-        OverlayTopBar("Compete", { nav.pop() }, if (user != null) "Only device-recorded activity counts" else "Sign in to challenge friends")
+        if (asTab) Column(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = com.myfit.tracker.ui.components.TopBarSpace, bottom = 6.dp)) {
+            Text("Arena", style = com.myfit.tracker.ui.theme.FitType.display, color = LocalFitTheme.current.text)
+            Caption(sub)
+        } else OverlayTopBar("Arena", { nav.pop() }, sub)
         when {
             !social.available -> NotConfigured()
-            user == null -> SignIn(container)
-            else -> SignedIn(container)
+            user == null -> SignIn(container, bottomPad)
+            else -> SignedIn(container, bottomPad)
         }
     }
 }
@@ -112,7 +117,7 @@ private fun NotConfigured() {
 // ------------------------------------------------------------------ sign in
 
 @Composable
-private fun SignIn(container: AppContainer) {
+private fun SignIn(container: AppContainer, bottomPad: Int = 40) {
     val th = LocalFitTheme.current
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -161,7 +166,7 @@ private fun SignIn(container: AppContainer) {
         }
     }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = bottomPad.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Glass(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -231,7 +236,7 @@ private fun Field(v: String, on: (String) -> Unit, hint: String, kb: KeyboardTyp
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SignedIn(container: AppContainer) {
+private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
     val th = LocalFitTheme.current
     val social = container.social
     val scope = rememberCoroutineScope()
@@ -261,7 +266,7 @@ private fun SignedIn(container: AppContainer) {
         board = runCatching { if (global) social.globalBoard(metric) else social.friendsBoard(metric) }.getOrElse { error = it.message; emptyList() }
     }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 40.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = bottomPad.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Leaderboard", "Challenges", "Friends", "Me").forEachIndexed { i, l -> GlassChip(l, tab == i, { tab = i }) }

@@ -1,0 +1,67 @@
+// Multani Blue (light): ivory glaze with cobalt and turquoise kashi florals — a medallion and a corner spray
+float flower(float2 q, float R, float n, float px) {
+    float d = length(q);
+    float a = atan(q.y, q.x);
+    float pr = R * (0.45 + 0.55 * abs(cos(a * n * 0.5)));
+    return smoothstep(pr + px, pr - px, d);
+}
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float px = 1.5 / res.y;
+    float3 c = mix(float3(0.985, 0.980, 0.965), float3(0.955, 0.955, 0.945), uv.y);
+    float3 cob = float3(0.11, 0.27, 0.66);
+    float3 tq = float3(0.17, 0.62, 0.72);
+    // big medallion, lower right, partly off-screen
+    float2 m = p - float2(ar * 0.92, 0.86);
+    float md = length(m);
+    float ma = atan(m.y, m.x);
+    float ring1 = smoothstep(px * 2.0, 0.0, abs(md - 0.30) - 0.004);
+    float ring2 = smoothstep(px * 2.0, 0.0, abs(md - 0.255) - 0.0015);
+    float outerP = 0.30 + 0.05 * abs(cos(ma * 8.0));
+    float scallop = smoothstep(px * 2.0, 0.0, abs(md - outerP) - 0.0025) * step(0.30, md);
+    float inner = flower(m, 0.20, 12.0, px);
+    float inner2 = flower(m, 0.12, 8.0, px);
+    float hub = smoothstep(0.035 + px, 0.035 - px, md);
+    float3 med = c;
+    med = mix(med, tq, inner * 0.55);
+    med = mix(med, cob, inner2 * 0.80);
+    med = mix(med, float3(0.98, 0.97, 0.95), hub);
+    med = mix(med, cob, max(ring1, scallop) * 0.85);
+    med = mix(med, tq, ring2 * 0.8);
+    c = mix(c, med, 0.75);
+    // corner spray, top left: a vine arc with leaves and two small flowers
+    float2 v = p - float2(-0.05, -0.05);
+    float vr = length(v);
+    float vine = smoothstep(px * 2.0, 0.0, abs(vr - 0.30) - 0.0018);
+    c = mix(c, cob, vine * 0.6 * step(0.0, v.x) * step(0.0, v.y));
+    for (int i = 0; i < 4; i++) {
+        float ang = 0.20 + float(i) * 0.38;
+        float2 lp = float2(cos(ang), sin(ang)) * 0.30 - float2(0.05, 0.05);
+        float2 lq = p - lp;
+        float2 tdir = float2(-sin(ang), cos(ang));
+        float2 nrm = float2(cos(ang), sin(ang));
+        float lx = dot(lq, tdir);
+        float ly = dot(lq, nrm) - 0.03 * (i == 1 || i == 3 ? -1.0 : 1.0);
+        float leaf = smoothstep(1.0 + px * 40.0, 1.0, (lx * lx) / (0.034 * 0.034) + (ly * ly) / (0.012 * 0.012));
+        c = mix(c, tq, leaf * 0.65);
+    }
+    float f1 = flower(p - float2(0.30 * cos(0.95) - 0.05, 0.30 * sin(0.95) - 0.05), 0.040, 6.0, px);
+    float f2 = flower(p - float2(0.30 * cos(0.02) - 0.05 + 0.02, 0.30 * sin(0.02) - 0.05 + 0.045), 0.030, 6.0, px);
+    c = mix(c, cob, max(f1, f2) * 0.80);
+    // scattered tiny four-petal flowers, very light
+    float2 g = p * 7.0;
+    float2 gi = floor(g);
+    float h = hash(gi);
+    float2 gq = (fract(g) - 0.5 - (hash2(gi + 5.0) - 0.5) * 0.4) / 7.0;
+    float tiny = flower(gq, 0.012, 4.0, px) * step(h, 0.35);
+    c = mix(c, (h < 0.17) ? cob : tq, tiny * 0.28);
+    // glaze: faint crackle and a soft sheen
+    float cr = abs(noise(p * 22.0) - 0.5);
+    c -= float3(0.020, 0.018, 0.012) * smoothstep(0.02, 0.0, cr);
+    float2 s = p - float2(ar * 0.35, 0.30);
+    c = mix(c, float3(1.0), exp(-dot(s, s) * 5.0) * 0.30);
+    c += (hash(fc + 4.9) - 0.5) * 0.008;
+    return outc(c);
+}

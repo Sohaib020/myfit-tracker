@@ -60,7 +60,7 @@ private fun iconFor(c: DashCard): ImageVector = when (c) {
     DashCard.RINGS -> Duo.TrackChanges; DashCard.NUTRITION -> Duo.ForkKnife; DashCard.BODY -> Duo.MonitorWeight
     DashCard.HYDRATION -> Duo.WaterDrop; DashCard.RECOVERY -> Duo.Bedtime; DashCard.STEPS -> Duo.DirectionsWalk
     DashCard.CHECKIN -> Duo.Mood; DashCard.GOALS -> Duo.Flag; DashCard.SOCIAL -> Duo.EmojiEvents
-    DashCard.VITALS -> Duo.Pulse; DashCard.MIND -> Duo.SelfImprovement; DashCard.CYCLE -> Duo.CalendarMonth; DashCard.GLUCOSE -> Duo.Drop
+    DashCard.VITALS -> Duo.Pulse; DashCard.MIND -> Duo.SelfImprovement; DashCard.CYCLE -> Duo.CalendarMonth; DashCard.GLUCOSE -> Duo.Drop; DashCard.STREAKS -> Duo.Flame
 }
 
 private fun colorFor(c: DashCard, th: FitTheme): Color = when (c) {
@@ -68,7 +68,7 @@ private fun colorFor(c: DashCard, th: FitTheme): Color = when (c) {
     DashCard.RINGS -> th.success; DashCard.NUTRITION -> th.protein; DashCard.BODY -> th.fat
     DashCard.HYDRATION -> th.water; DashCard.RECOVERY -> th.sleep; DashCard.STEPS -> th.steps
     DashCard.CHECKIN -> th.warning; DashCard.GOALS -> th.carbs; DashCard.SOCIAL -> th.warning
-    DashCard.VITALS -> th.danger; DashCard.MIND -> th.sleep; DashCard.CYCLE -> th.protein; DashCard.GLUCOSE -> th.water
+    DashCard.VITALS -> th.danger; DashCard.MIND -> th.sleep; DashCard.CYCLE -> th.protein; DashCard.GLUCOSE -> th.water; DashCard.STREAKS -> th.warning
 }
 
 /** Reorder and show/hide dashboard cards. Long-press a row and drag, or use the arrows. */
@@ -146,7 +146,7 @@ fun ArrangeDashScreen(container: AppContainer) {
                             val note = when {
                                 c == DashCard.CYCLE && !settings.cycleEnabled -> "Off · switch on from Health hub"
                                 c == DashCard.GLUCOSE && !settings.glucoseEnabled -> "Off · switch on from Health hub"
-                                c in halfCards -> "Half width"
+                                c in settings.dashSmall -> "Half width"
                                 else -> "Full width"
                             }
                             Caption(note)

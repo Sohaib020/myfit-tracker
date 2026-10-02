@@ -71,6 +71,7 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
         readPerm(androidx.health.connect.client.records.RespiratoryRateRecord::class),
         readPerm(androidx.health.connect.client.records.BodyTemperatureRecord::class),
         readPerm(androidx.health.connect.client.records.Vo2MaxRecord::class),
+        readPerm(androidx.health.connect.client.records.SkinTemperatureRecord::class),
         readPerm(androidx.health.connect.client.records.BloodPressureRecord::class),
         writePerm(androidx.health.connect.client.records.BloodPressureRecord::class),
     )
@@ -87,6 +88,12 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
         readPerm(androidx.health.connect.client.records.CervicalMucusRecord::class), writePerm(androidx.health.connect.client.records.CervicalMucusRecord::class),
         readPerm(androidx.health.connect.client.records.BasalBodyTemperatureRecord::class), writePerm(androidx.health.connect.client.records.BasalBodyTemperatureRecord::class),
         readPerm(androidx.health.connect.client.records.IntermenstrualBleedingRecord::class), writePerm(androidx.health.connect.client.records.IntermenstrualBleedingRecord::class),
+        readPerm(androidx.health.connect.client.records.SkinTemperatureRecord::class),
+    )
+    /** Saving mindful minutes to Health Connect (asked from the Mindfulness screen). */
+    val mindfulnessPermissions: Set<String> get() = setOf(
+        readPerm(androidx.health.connect.client.records.HeartRateRecord::class),
+        readPerm(androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord::class),
     )
 
     private fun p(k: KClass<out Record>) = HealthPermission.getReadPermission(k)

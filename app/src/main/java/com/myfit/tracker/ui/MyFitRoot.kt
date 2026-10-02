@@ -67,6 +67,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -223,8 +224,8 @@ private class VmFactory(private val c: AppContainer) : ViewModelProvider.Factory
 private val tabs = listOf(
     TabItem("home", "Home", Duo.Home),
     TabItem("train", "Train", Duo.FitnessCenter),
-    TabItem("exercises", "Exercises", Duo.SportsGymnastics),
-    TabItem("log", "Log", Duo.ViewTimeline),
+    TabItem("food", "Food", Duo.ForkKnife),
+    TabItem("arena", "Arena", Duo.EmojiEvents),
     TabItem("settings", "Settings", Duo.Gear),
 )
 
@@ -255,14 +256,24 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 label = "tabs",
             ) { t ->
                 when (t) {
-                    0 -> DashboardScreen(dash, container, { sheet = it }, bottomPad)
-                    1 -> TrainScreen(container, bottomPad)
-                    2 -> ExercisesScreen(container, bottomPad)
-                    3 -> TimelineScreen(container, { sheet = it }, bottomPad)
+                    0 -> DashboardScreen(dash, container, { sheet = it }, bottomPad, goTab = { tab = it })
+                    1 -> com.myfit.tracker.ui.train.TrainHost(container, bottomPad)
+                    2 -> com.myfit.tracker.ui.food.FoodDiaryScreen(container, null, asTab = true, bottomPad = bottomPad)
+                    3 -> com.myfit.tracker.ui.social.SocialScreen(container, asTab = true, bottomPad = bottomPad)
                     else -> SettingsScreen(container, { sheet = it }, bottomPad)
                 }
             }
           }
+            // bottom gradient scrim behind the dock (content fades out instead of colliding with it)
+            AnimatedVisibility(top == null, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn(), exit = fadeOut()) {
+                val th = LocalFitTheme.current
+                val base = if (th.isLight) Color.White else Color.Black
+                Box(
+                    Modifier.fillMaxWidth().height(150.dp).drawBehind {
+                        drawRect(Brush.verticalGradient(listOf(Color.Transparent, base.copy(alpha = if (th.isLight) 0.55f else 0.45f), base.copy(alpha = if (th.isLight) 0.85f else 0.75f))))
+                    },
+                )
+            }
             AnimatedVisibility(top == null, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
                 LiquidTabBar(
                     items = tabs, selected = tab, onSelect = { tab = it },
@@ -275,7 +286,11 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 10.dp, end = 16.dp),
                 enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
             ) {
-                QuickAddOrb { sheet = Sheet.QuickAdd }
+                androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.myfit.tracker.ui.theme.GlassIconButton(Duo.CalendarMonth, { nav.push(Overlay.History) }, size = 50.dp)
+                    androidx.compose.foundation.layout.Spacer(Modifier.size(10.dp))
+                    QuickAddOrb { sheet = Sheet.QuickAdd }
+                }
             }
             // Me: profile, body & targets — top-left on every tab
             AnimatedVisibility(
@@ -318,6 +333,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.Records -> com.myfit.tracker.ui.exercises.RecordsScreen(container)
                         Overlay.Social -> com.myfit.tracker.ui.social.SocialScreen(container)
                         Overlay.Body -> com.myfit.tracker.ui.body.BodyScreen(container) { sheet = it }
+                        Overlay.Badges -> com.myfit.tracker.ui.badges.BadgesScreen(container)
                         Overlay.Cycle -> com.myfit.tracker.ui.cycle.CycleScreen(container)
                         Overlay.Glucose -> com.myfit.tracker.ui.glucose.GlucoseScreen(container)
                         Overlay.Meds -> com.myfit.tracker.ui.glucose.MedsScreen(container)
@@ -330,6 +346,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.Fasting -> com.myfit.tracker.ui.routine.FastingScreen(container)
                         Overlay.DevSettings -> com.myfit.tracker.ui.settings.DevSettingsScreen(container)
                         Overlay.HealthHub -> com.myfit.tracker.ui.dashboard.HealthHubScreen(container)
+                        Overlay.History -> TimelineScreen(container, { sheet = it }, 40, onBack = { nav.pop() })
                         is Overlay.DayLog -> com.myfit.tracker.ui.timeline.DayLogScreen(container, o.date) { sheet = it }
                         is Overlay.Food -> com.myfit.tracker.ui.food.FoodDiaryScreen(container, o.date)
                         is Overlay.FoodAdd -> com.myfit.tracker.ui.food.FoodAddScreen(container, o.mealType, o.date, o.tab)
@@ -338,6 +355,9 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 }
             }
 
+            LaunchedEffect(Unit) { com.myfit.tracker.domain.BadgeEngine.refresh(container, force = true) }
+            com.myfit.tracker.ui.badges.BadgeCelebration(container)
+            com.myfit.tracker.ui.settings.AiCapSheetHost()
             GlassSheet(visible = sheet != null, onDismiss = { sheet = null }) {
                 // keep showing the last content while the exit animation runs
                 val shown = sheet ?: lastSheet

@@ -1,0 +1,32 @@
+// Iron Floor: black rubber gym tiles with EPDM flecks, faint tile seams and a few chalk smudges
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float3 c = float3(0.060, 0.062, 0.066);
+    c *= 0.9 + 0.2 * noise(p * 20.0);
+    // flecks: grey everywhere, a few safety-yellow ones
+    float2 f = p * 420.0;
+    float h = hash(floor(f));
+    float2 o = hash2(floor(f) + 1.7) - 0.5;
+    float dot1 = smoothstep(0.42, 0.22, length(fract(f) - 0.5 - o * 0.3));
+    float3 fleck = float3(0.17, 0.17, 0.18);
+    if (h < 0.06) { fleck = float3(0.62, 0.52, 0.12); }
+    c = mix(c, fleck, dot1 * step(h, 0.32) * 0.75);
+    // tile seams
+    float ts = 0.48;
+    float2 g = abs(fract(p / ts + 0.5) - 0.5) * ts;
+    float seam = smoothstep(0.003, 0.0008, min(g.x, g.y));
+    c *= 1.0 - seam * 0.45;
+    // chalk smudges
+    float ch = fbm(p * 3.0 + 11.0);
+    float smudge = smoothstep(0.62, 0.80, ch) * fbm(p * 18.0);
+    c += float3(0.85, 0.85, 0.82) * smudge * 0.10;
+    // overhead light pool
+    float2 l = p - float2(ar * 0.6, 0.15);
+    c *= 0.55 + 0.75 * exp(-dot(l, l) * 1.8);
+    float2 vv = uv - float2(0.5, 0.5);
+    c *= 1.0 - 0.5 * dot(vv, vv);
+    c += (hash(fc + 8.8) - 0.5) * 0.012;
+    return outc(c);
+}

@@ -255,6 +255,7 @@ private fun Bubble(m: ChatMessage, animate: Boolean, onShowShared: (() -> Unit)?
                         val (label, color, icon) = when (m.source) {
                             "data" -> Triple("From your data", th.success, Duo.Insights)
                             "online" -> Triple("Online · Gemini", th.water, Duo.Cloud)
+                            "on-device" -> Triple("Offline brain · on this phone", th.accentBright, Duo.Lock)
                             "error" -> Triple("Couldn't reach Gemini", th.warning, Duo.Cloud)
                             else -> Triple("Pip", th.textFaint, Duo.Insights)
                         }

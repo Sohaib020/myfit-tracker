@@ -1,0 +1,47 @@
+// Swat Valley (light): misty morning — pale sky, snowy far range, layered pine hills, a glinting river
+float hill(float x, float seed, float amp) {
+    return amp * (fbm3(float2(x * 1.6 + seed, seed)) - 0.5) * 2.0;
+}
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float px = 1.5 / res.y;
+    float3 c = mix(float3(0.925, 0.955, 0.975), float3(0.985, 0.980, 0.955), smoothstep(0.0, 0.55, uv.y));
+    float2 sg = p - float2(ar * 0.80, 0.10);
+    c = mix(c, float3(1.0, 0.98, 0.92), exp(-dot(sg, sg) * 6.0) * 0.6);
+    // far snowy range
+    float x = p.x * 2.5;
+    float r = 0.0;
+    float a = 0.5;
+    float f = 1.0;
+    for (int i = 0; i < 4; i++) { r += a * (1.0 - abs(noise(float2(x * f, 2.0)) * 2.0 - 1.0)); f *= 2.0; a *= 0.5; }
+    float h0 = 0.56 - 0.16 * r;
+    float m0 = smoothstep(h0 - px, h0 + px, uv.y);
+    float snow = smoothstep(h0 + 0.05, h0 + 0.0, uv.y) * smoothstep(0.48, 0.42, h0);
+    float3 far = mix(float3(0.74, 0.80, 0.86), float3(0.97, 0.98, 1.0), snow);
+    c = mix(c, far, m0);
+    // mist band
+    c = mix(c, float3(0.97, 0.98, 0.98), smoothstep(0.56, 0.62, uv.y) * (1.0 - smoothstep(0.62, 0.70, uv.y)) * 0.7);
+    // layered green hills with pine texture
+    for (int i = 0; i < 4; i++) {
+        float fi = float(i);
+        float hb = 0.62 + fi * 0.075 + hill(p.x, 3.0 + fi * 7.0, 0.035 - fi * 0.004);
+        float tri = 1.0 - abs(fract(p.x * (140.0 - fi * 25.0) + fi * 0.37) - 0.5) * 2.0;
+        float pine = tri * smoothstep(0.35, 0.75, noise(float2(p.x * 25.0, fi * 3.0))) * 0.010 * (1.0 + fi * 0.35);
+        float hh = hb - pine;
+        float m = smoothstep(hh - px, hh + px, uv.y);
+        float t = fi / 3.0;
+        float3 col = mix(float3(0.74, 0.84, 0.76), float3(0.38, 0.56, 0.44), t);
+        col = mix(col, float3(0.95, 0.97, 0.96), smoothstep(hh, hh + 0.08, uv.y) * 0.25 * (1.0 - t));
+        c = mix(c, col, m);
+    }
+    // river winding through the valley floor
+    float rx = ar * 0.5 + 0.12 * sin(p.y * 9.0) + 0.04 * sin(p.y * 23.0);
+    float rw = 0.004 + (uv.y - 0.86) * 0.25;
+    float riv = smoothstep(rw + px, rw - px, abs(p.x - rx)) * step(0.86, uv.y);
+    float glint = 0.85 + 0.15 * noise(p * float2(30.0, 120.0));
+    c = mix(c, float3(0.86, 0.94, 0.97) * glint, riv);
+    c += (hash(fc + 8.2) - 0.5) * 0.008;
+    return outc(c);
+}

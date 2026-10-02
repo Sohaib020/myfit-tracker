@@ -204,6 +204,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
 
         // ---------- pip / AI
         item { PipSettingsCard(container, dev = false) }
+        item { OfflineBrainCard() }
         item { VoiceSettingsCard(container, dev = false) }
 
         // ---------- gym mode
@@ -296,6 +297,7 @@ fun DevSettingsScreen(container: AppContainer) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 40.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item { PipSettingsCard(container, dev = true) }
             item { AiProvidersCard(container) }
+            item { AiDevCard() }
             item { VoiceSettingsCard(container, dev = true) }
             item {
                 GlassCard {

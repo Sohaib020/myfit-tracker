@@ -3,7 +3,7 @@ half4 main(float2 fc) {
     float2 uv = fc / res;
     float ar = res.x / res.y;
     float2 p = float2(uv.x * ar, uv.y);
-    float3 c = mix(float3(0.66, 0.80, 0.97), float3(0.955, 0.970, 0.995), smoothstep(0.0, 0.9, uv.y));
+    float3 c = mix(float3(0.56, 0.74, 0.96), float3(0.93, 0.955, 0.99), smoothstep(0.0, 1.0, uv.y));
     float r1 = length(p - float2(ar * 0.85, 0.03));
     c = mix(c, float3(1.0, 0.99, 0.95), exp(-r1 * r1 * 9.0) * 0.85);
     // upper puffs
@@ -16,7 +16,7 @@ half4 main(float2 fc) {
     float n2 = fbm(float2(p.x * 2.0, p.y * 3.5) + 11.0);
     float band2 = smoothstep(0.55, 0.95, uv.y);
     float m2 = smoothstep(0.45, 0.65, n2 * 0.7 + band2 * 0.4);
-    c = mix(c, float3(1.0, 1.0, 1.0), m2 * 0.8);
+    c = mix(c, float3(0.99, 0.995, 1.0), m2 * 0.65);
     c += (hash(fc + 5.3) - 0.5) * 0.008;
     return outc(c);
 }

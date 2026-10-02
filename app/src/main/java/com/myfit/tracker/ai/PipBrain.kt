@@ -47,7 +47,27 @@ class PipBrain(private val c: AppContainer) {
     private suspend fun answer(q: String): Reply {
         data.answer(q)?.let { return Reply(it.text, "data", it.mood) }
         val s = c.settings.settings.first()
+        val ai = com.myfit.tracker.ai.ondevice.OnDeviceAi.get(c.app)
+        // offline brain first: free, unlimited, nothing leaves the phone
+        if (ai.llm.available()) {
+            runCatching {
+                val summary = data.summaryFor(q)
+                val system = Gemini.systemPrompt("Use the user's units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}. Keep answers short (under 120 words). Do not add [[ur]] or [[hi]] lines.")
+                val history = c.healthRepo.lastChat(7).dropLast(1).filter { it.source != "local" && it.source != "error" }
+                    .takeLast(4).map { (if (it.role == "user") "user" else "model") to it.text }
+                val out = ai.llm.chat(system, history + ("user" to "User data (only what's relevant; may be incomplete):\n$summary\n\nQuestion: $q"))
+                if (out.isNotBlank()) {
+                    router.lastProvider = "Offline brain"
+                    val (display, _, _) = splitSpeech(out)
+                    return Reply(display, "on-device", com.myfit.tracker.ui.pip.moodForReply(display, q))
+                }
+            }.onFailure { if (it is kotlinx.coroutines.CancellationException && it !is kotlinx.coroutines.TimeoutCancellationException) throw it }
+        }
         val chain = router.chain(s)
+        if (chain.isNotEmpty() && s.onlineAi) {
+            try { ai.quota.require(com.myfit.tracker.ai.ondevice.AiQuota.Kind.CHAT) }
+            catch (e: com.myfit.tracker.ai.ondevice.AiQuota.CapReached) { return Reply(e.message ?: "Today's free online answers are used up.", "local", PipMood.CURIOUS) }
+        }
         if (chain.isEmpty() || !s.onlineAi) {
             return Reply(
                 if (chain.isEmpty()) "That one needs my online brain, which isn't set up yet 🌱 Add an AI key in Settings → AI. Offline I can answer things like \"How many times did I train legs this month?\", \"Average sleep last week\" or \"How much did my bench improve?\""
@@ -79,6 +99,7 @@ class PipBrain(private val c: AppContainer) {
             }
         }
         if (text == null) throw (firstError ?: PipError("No AI service answered. Tap Try again in a moment.", true))
+        ai.quota.consume(com.myfit.tracker.ai.ondevice.AiQuota.Kind.CHAT)
         val (display, ur, hi) = splitSpeech(text)
         return Reply(display, "online", com.myfit.tracker.ui.pip.moodForReply(display, q), summary, ur, hi)
     }

@@ -20,4 +20,5 @@ interface CycleDao {
     @Query("SELECT * FROM cycle_day WHERE localDate = :localDate LIMIT 1") suspend fun byDate(localDate: String): CycleDay?
     @Query("SELECT * FROM cycle_day WHERE localDate BETWEEN :from AND :to ORDER BY localDate ASC") suspend fun range(from: String, to: String): List<CycleDay>
     @Query("DELETE FROM cycle_day WHERE localDate = :localDate") suspend fun deleteByDate(localDate: String)
+    @Query("DELETE FROM cycle_day") suspend fun deleteAll()
 }

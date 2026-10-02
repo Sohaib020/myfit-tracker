@@ -30,6 +30,11 @@ android {
         buildConfigField("String", "AZURE_SPEECH_KEY", "\"" + (System.getenv("AZURE_SPEECH_KEY") ?: "").trim() + "\"")
         buildConfigField("boolean", "SOCIAL", socialEnabled.toString())
         buildConfigField("String", "AZURE_SPEECH_REGION", "\"" + (System.getenv("AZURE_SPEECH_REGION") ?: "").trim() + "\"")
+        // Rewarded ads: Google's public TEST ids unless the ADMOB_* secrets are set in CI
+        val admobApp = (System.getenv("ADMOB_APP_ID") ?: "").trim().ifEmpty { "ca-app-pub-3940256099942544~3347511713" }
+        val admobRewarded = (System.getenv("ADMOB_REWARDED_ID") ?: "").trim().ifEmpty { "ca-app-pub-3940256099942544/5224354917" }
+        manifestPlaceholders["admobAppId"] = admobApp
+        buildConfigField("String", "ADMOB_REWARDED_ID", "\"" + admobRewarded + "\"")
         ndk { abiFilters += (System.getenv("MYFIT_ABIS") ?: "arm64-v8a").split(",") }
     }
 
@@ -63,7 +68,7 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
-        freeCompilerArgs += listOf("-opt-in=kotlin.RequiresOptIn")
+        freeCompilerArgs += listOf("-opt-in=kotlin.RequiresOptIn", "-Xskip-metadata-version-check")
     }
     buildFeatures {
         compose = true
@@ -103,6 +108,10 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.1")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+    // on-device LLM (Gemma via LiteRT-LM; the model itself is an optional in-app download, never bundled)
+    implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
+    // rewarded ads (only after the free daily AI allowance; SDK started on first tap)
+    implementation("com.google.android.gms:play-services-ads:23.6.0")
     implementation("androidx.health.connect:connect-client:1.1.0")
 
     val room = "2.6.1"

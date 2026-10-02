@@ -61,22 +61,22 @@ import com.myfit.tracker.ui.theme.LocalFitTheme
 
 /** Exercises tab. */
 @Composable
-fun ExercisesScreen(container: AppContainer, bottomPad: Int) {
+fun ExercisesScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = false) {
     val nav = LocalNav.current
     ExerciseBrowser(
         container = container,
-        header = { Header(onCustom = { nav.push(Overlay.ExerciseEditor(null)) }, onArchive = { nav.push(Overlay.Archive) }) },
+        header = { Header(embedded, onCustom = { nav.push(Overlay.ExerciseEditor(null)) }, onArchive = { nav.push(Overlay.Archive) }) },
         bottomPad = bottomPad,
         onOpen = { nav.push(Overlay.ExerciseDetail(it.id)) },
     )
 }
 
 @Composable
-private fun Header(onCustom: () -> Unit, onArchive: () -> Unit) {
+private fun Header(embedded: Boolean, onCustom: () -> Unit, onArchive: () -> Unit) {
     val th = LocalFitTheme.current
-    Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = com.myfit.tracker.ui.components.TopBarSpace), verticalAlignment = Alignment.CenterVertically) {
+    Row(if (embedded) Modifier.fillMaxWidth() else Modifier.fillMaxWidth().statusBarsPadding().padding(top = com.myfit.tracker.ui.components.TopBarSpace), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text("Exercises", style = FitType.display, color = th.text)
+            if (!embedded) Text("Exercises", style = FitType.display, color = th.text)
             Caption("876 exercises with photos · public-domain library + your own")
         }
         com.myfit.tracker.ui.theme.GlassIconButton(Duo.Inventory2, onArchive)

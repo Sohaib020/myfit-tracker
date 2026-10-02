@@ -35,8 +35,16 @@ object ReminderNotifier {
         )
     }
 
-    /** @param waterAction adds a "+250 ml" button that logs water without opening the app. */
-    fun post(ctx: Context, id: Int, title: String, text: String, waterAction: Boolean = false) {
+    /**
+     * @param doneLabel adds a "done" button (e.g. "+250 ml", "Taken") that logs without opening the app.
+     * @param payload the fire intent's extras; done/snooze buttons send them back to [ReminderReceiver].
+     * @param snooze adds a "Snooze" button.
+     * @param discreet keeps the lock-screen version neutral.
+     */
+    fun post(
+        ctx: Context, id: Int, title: String, text: String,
+        doneLabel: String? = null, payload: Intent? = null, snooze: Boolean = false, discreet: Boolean = false,
+    ) {
         val app = ctx.applicationContext
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(app, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -56,15 +64,29 @@ object ReminderNotifier {
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setContentIntent(open)
-        if (waterAction) {
-            val add = PendingIntent.getBroadcast(
-                app, id + ReminderScheduler.RC_WATER_ACTION_OFFSET,
-                Intent(app, ReminderReceiver::class.java)
-                    .setAction(ReminderScheduler.ACTION_WATER)
-                    .putExtra(ReminderScheduler.EXTRA_NOTIF, id),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        if (discreet) {
+            b.setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            b.setPublicVersion(
+                NotificationCompat.Builder(app, CHANNEL)
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setContentTitle("MyFit")
+                    .setContentText("Reminder")
+                    .build()
             )
-            b.addAction(R.drawable.ic_notification, "+250 ml", add)
+        }
+        if (doneLabel != null) {
+            val i = Intent(app, ReminderReceiver::class.java).setAction(ReminderScheduler.ACTION_DONE)
+            if (payload != null) i.putExtras(payload)
+            i.putExtra(ReminderScheduler.EXTRA_NOTIF, id)
+            val pi = PendingIntent.getBroadcast(app, id + ReminderScheduler.RC_DONE_OFFSET, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            b.addAction(R.drawable.ic_notification, doneLabel, pi)
+        }
+        if (snooze) {
+            val i = Intent(app, ReminderReceiver::class.java).setAction(ReminderScheduler.ACTION_SNOOZE)
+            if (payload != null) i.putExtras(payload)
+            i.putExtra(ReminderScheduler.EXTRA_NOTIF, id)
+            val pi = PendingIntent.getBroadcast(app, id + ReminderScheduler.RC_SNOOZE_ACTION_OFFSET, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            b.addAction(R.drawable.ic_notification, "Snooze ${ReminderScheduler.snoozeMin(app)} min", pi)
         }
         runCatching { NotificationManagerCompat.from(app).notify(id, b.build()) }
     }
