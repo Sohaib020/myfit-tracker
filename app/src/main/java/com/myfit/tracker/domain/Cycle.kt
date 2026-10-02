@@ -218,3 +218,161 @@ object CycleMath {
         return out
     }
 }
+
+// ------------------------------------------------------------------ "worth checking" flags
+
+/** A gentle pattern note. [doctor] = suggest seeing a doctor. Never a diagnosis. */
+data class CycleFlag(val id: String, val title: String, val body: String, val doctor: Boolean)
+
+object CycleFlags {
+    private fun days(a: LocalDate, b: LocalDate): Int = ChronoUnit.DAYS.between(a, b).toInt()
+
+    /** Symptom keys that, together with irregular or long cycles, are commonly linked to PCOS. */
+    val pcosSigns = setOf("acne", "hair_growth", "hair_loss", "weight_gain")
+
+    /**
+     * Patterns based on widely used clinical thresholds (NHS / ACOG): cycles shorter than 21 or longer than 35 days,
+     * cycle length varying by more than ~8 days, periods longer than 7 days, heavy bleeding, no period for 90+ days,
+     * bleeding between periods, and possible PCOS signs. All are prompts to talk to a doctor, not diagnoses.
+     */
+    fun compute(
+        p: CyclePrediction,
+        flows: Map<LocalDate, Int>,
+        symptoms: Map<LocalDate, Set<String>>,
+        today: LocalDate,
+        pregnant: Boolean,
+        peri: Boolean,
+    ): List<CycleFlag> {
+        val out = ArrayList<CycleFlag>()
+        val lengths = p.usedLengths
+        val recent3 = lengths.takeLast(3)
+        val short = recent3.count { it < 21 }
+        val long = recent3.count { it > 35 }
+        if (short >= 2) out += CycleFlag(
+            "short", "Short cycles",
+            "Two or more of your recent cycles were shorter than 21 days. That can happen now and then, but if it keeps happening it's worth mentioning to a doctor.",
+            true,
+        )
+        if (long >= 2 && !peri) out += CycleFlag(
+            "long", "Long cycles",
+            "Two or more of your recent cycles were longer than 35 days. Stress, weight changes, breastfeeding, thyroid problems or PCOS can all cause this — a doctor can help find out why.",
+            true,
+        )
+        if (lengths.size >= 3) {
+            val spread = (lengths.maxOrNull() ?: 0) - (lengths.minOrNull() ?: 0)
+            if (spread > 8) out += CycleFlag(
+                "variable", "Cycle length varies a lot",
+                "Your cycles ranged from ${lengths.minOrNull()} to ${lengths.maxOrNull()} days. Predictions are less reliable when cycles vary like this." +
+                    if (peri) " Changing cycle lengths are common in perimenopause." else " If it continues for several months, consider seeing a doctor.",
+                !peri,
+            )
+        }
+        val recentPeriods = p.periods.filter { it.end.isBefore(today.minusDays(1)) }.takeLast(3)
+        if (recentPeriods.any { it.length > 7 }) out += CycleFlag(
+            "long_period", "Periods longer than 7 days",
+            "A period lasting more than 7 days is worth checking with a doctor, especially if it happens more than once.",
+            true,
+        )
+        val heavy = recentPeriods.any { per ->
+            var n = 0
+            var d = per.start
+            while (!d.isAfter(per.end)) { if ((flows[d] ?: 0) >= 4) n++; d = d.plusDays(1) }
+            n >= 3
+        }
+        if (heavy) out += CycleFlag(
+            "heavy", "Heavy bleeding",
+            "You logged heavy flow on 3 or more days of a period. If you soak through a pad or tampon every 1–2 hours, pass large clots, or feel dizzy or very tired, please see a doctor — heavy periods are common and treatable.",
+            true,
+        )
+        val last = p.periods.lastOrNull()
+        if (last != null && !pregnant) {
+            val gap = days(last.start, today)
+            if (gap >= 90) out += CycleFlag(
+                "absent", "No period for $gap days",
+                if (peri) "Gaps like this are common in perimenopause. A period after 12 months without one should always be checked by a doctor."
+                else "Going 90 days or more without a period is a reason to see a doctor. If there's any chance you could be pregnant, take a pregnancy test.",
+                !peri,
+            )
+        }
+        // Bleeding between periods: bleeding/spotting days at least 3 days away from any logged period, last 90 days.
+        val between = flows.filter { (d, f) ->
+            f >= 1 && days(d, today) in 0..90 &&
+                p.periods.none { per -> d in per || days(per.end, d) in 1..2 || days(d, per.start) in 1..2 }
+        }
+        if (between.size >= 2) out += CycleFlag(
+            "between", "Bleeding between periods",
+            "You logged bleeding or spotting on ${between.size} days between periods recently. It's often harmless, but it's worth checking with a doctor if it keeps happening, or happens after sex.",
+            true,
+        )
+        if (peri && p.periods.size >= 2) {
+            val lastGap = days(p.periods[p.periods.size - 2].end, p.periods.last().start)
+            if (lastGap >= 365) out += CycleFlag(
+                "post_meno", "Bleeding after a year without periods",
+                "Any bleeding after 12 months without a period should be checked by a doctor soon, even if it's light.",
+                true,
+            )
+        }
+        val irregularish = p.irregular || long >= 1 || (last != null && days(last.start, today) >= 60 && !pregnant)
+        val signs = symptoms.filter { days(it.key, today) in 0..180 }.values.flatten().filter { it in pcosSigns }.toSet()
+        if (irregularish && signs.isNotEmpty() && !peri) out += CycleFlag(
+            "pcos", "Possible PCOS signs",
+            "Irregular or long cycles together with " + signs.joinToString(", ") { pcosLabel(it) } +
+                " can sometimes be signs of PCOS, a common hormone condition. Only a doctor can tell — tests are simple, and it's very treatable. Consider booking a check-up.",
+            true,
+        )
+        return out
+    }
+
+    private fun pcosLabel(k: String): String = when (k) {
+        "acne" -> "acne"
+        "hair_growth" -> "extra hair growth"
+        "hair_loss" -> "hair thinning"
+        "weight_gain" -> "weight gain"
+        else -> k
+    }
+}
+
+// ------------------------------------------------------------------ pregnancy
+
+object Pregnancy {
+    const val TERM_DAYS = 280L
+
+    data class Progress(val week: Int, val day: Int, val trimester: Int, val daysLeft: Int, val totalDays: Int)
+
+    fun dueFromLmp(lmp: LocalDate): LocalDate = lmp.plusDays(TERM_DAYS)
+    fun lmpFromDue(due: LocalDate): LocalDate = due.minusDays(TERM_DAYS)
+
+    /** Gestational age counted from the first day of the last period (standard obstetric dating). */
+    fun progress(due: LocalDate, today: LocalDate): Progress {
+        val start = lmpFromDue(due)
+        val d = ChronoUnit.DAYS.between(start, today).toInt().coerceAtLeast(0)
+        val week = d / 7
+        val tri = when { week < 14 -> 1; week < 28 -> 2; else -> 3 }
+        return Progress(week, d % 7, tri, ChronoUnit.DAYS.between(today, due).toInt(), d)
+    }
+
+    /** Short, general information for the current stage (not personal medical advice). */
+    fun stageNote(week: Int): String = when {
+        week < 4 -> "Very early days. If you haven't already, talk to a doctor or lady health visitor about folic acid and booking your first check-up."
+        week < 9 -> "Many people find out now. Nausea and tiredness are common. Folic acid is usually advised until week 12 — ask your doctor. Book your first antenatal visit."
+        week < 13 -> "The first scan is often done around now to check dates. Keep taking the supplements your doctor advised and rest when you can."
+        week < 17 -> "Second trimester. Nausea often eases. Routine blood pressure and urine checks continue at antenatal visits."
+        week < 21 -> "A detailed scan is often offered around 18–22 weeks. Many people start to feel movements between 16 and 24 weeks."
+        week < 25 -> "Keep active if your doctor agrees — walking is great. A glucose test for gestational diabetes is often done between 24 and 28 weeks."
+        week < 29 -> "The third trimester starts at 28 weeks. Get to know your baby's usual pattern of movements."
+        week < 34 -> "If movements slow down, change or stop, contact your doctor or hospital straight away — don't wait until the next day."
+        week < 37 -> "Plan how you'll get to hospital and keep your antenatal card with you. Rest on your side when lying down."
+        week < 41 -> "Full term from 37 weeks. Know the signs of labour: regular tightenings, waters breaking, or a 'show'. Call your hospital if unsure."
+        else -> "Past your due date — your doctor will talk to you about monitoring and options. Keep checking movements."
+    }
+
+    /** Warning signs that always need prompt medical advice in pregnancy (NHS / WHO general guidance). */
+    val urgentSigns = listOf(
+        "Vaginal bleeding or fluid leaking",
+        "Severe tummy pain",
+        "Severe headache, blurred vision, or sudden swelling of face, hands or feet",
+        "Fever, or burning when you pass urine",
+        "Your baby moving less than usual (after about 24 weeks)",
+        "Fits, fainting, or trouble breathing",
+    )
+}

@@ -208,14 +208,14 @@ object ReminderScheduler {
         val cp = app.getSharedPreferences("cycle_prefs", Context.MODE_PRIVATE)
         val pillOn = runCatching { cp.getBoolean("pill_on", false) }.getOrDefault(false)
         val pillTime = runCatching { cp.getInt("pill_time", 21 * 60) }.getOrDefault(21 * 60)
-        if (pillOn) arm(app, am, RC_PILL, dailyNext(pillTime, after, zone), KIND_PILL, 0, "Pill reminder", "Time to take your pill.")
+        if (pillOn) arm(app, am, RC_PILL, dailyNext(pillTime, after, zone), KIND_PILL, 0, "MyFit reminder", "")   // discreet: no content
         else disarm(app, am, RC_PILL)
 
         val periodOn = runCatching { cp.getBoolean("remind_period", false) }.getOrDefault(false)
         val nextStart = runCatching { cp.getString("next_period_start", null)?.let { LocalDate.parse(it) } }.getOrNull()
         val periodAt = nextStart?.minusDays(2)?.atTime(9, 0)?.atZone(zone)?.toInstant()?.toEpochMilli()
         if (periodOn && periodAt != null && periodAt > after)
-            arm(app, am, RC_PERIOD, periodAt, KIND_PERIOD, 0, "Cycle heads-up", "Your period may start in about 2 days.")
+            arm(app, am, RC_PERIOD, periodAt, KIND_PERIOD, 0, "MyFit reminder", "")   // discreet: no content
         else disarm(app, am, RC_PERIOD)
 
         // ---- fasting goal (one-off)
@@ -223,6 +223,9 @@ object ReminderScheduler {
         if (fastAt > System.currentTimeMillis())
             arm(app, am, RC_FAST, fastAt, KIND_FAST, 0, "Fasting goal reached", "You hit your fasting target. Nice work — break your fast gently.")
         else disarm(app, am, RC_FAST)
+
+        // ---- health features: medicines, blood-sugar checks, Ramadan, HbA1c, pregnancy appointments
+        runCatching { com.myfit.tracker.health.HealthReminders.arm(app) }
     }
 
     internal fun clearFastAlarm(ctx: Context) { prefs(ctx).edit().putLong(K_FAST_AT, 0L).apply() }
