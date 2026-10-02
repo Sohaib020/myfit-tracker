@@ -1,0 +1,36 @@
+// Clay Court (light): sunlit red clay, brushed surface, chalk-white court lines softened by dust
+float lineAA(float d, float w, float px) { return smoothstep(w + px, w - px, abs(d)); }
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float px = 1.5 / res.y;
+    float g = noise(fc * 0.8) * 0.4 + noise(fc * 0.15) * 0.3 + fbm3(p * 6.0) * 0.3;
+    float3 clay = mix(float3(0.95, 0.83, 0.75), float3(0.92, 0.77, 0.68), g);
+    // brushed drag marks (soft horizontal streaks)
+    float drag = noise(float2(p.x * 3.0, p.y * 90.0));
+    clay -= float3(0.02, 0.025, 0.025) * smoothstep(0.55, 0.9, drag);
+    // fade to warm cream at the top so headers stay airy
+    float3 c = mix(float3(0.985, 0.955, 0.925), clay, smoothstep(0.0, 0.6, uv.y));
+    // court lines (wobbly chalk)
+    float wob = (noise(p * 40.0) - 0.5) * 0.0015;
+    float lw = 0.0030;
+    float x1 = ar * 0.10; float x2 = ar * 0.90; float xs1 = ar * 0.22; float xs2 = ar * 0.78; float xc = ar * 0.5;
+    float yS = 0.40; float yB = 0.93;
+    float ln = 0.0;
+    ln = max(ln, lineAA(p.x - x1 + wob, lw, px) * step(0.28, p.y));
+    ln = max(ln, lineAA(p.x - x2 + wob, lw, px) * step(0.28, p.y));
+    ln = max(ln, lineAA(p.x - xs1 + wob, lw, px) * step(0.28, p.y));
+    ln = max(ln, lineAA(p.x - xs2 + wob, lw, px) * step(0.28, p.y));
+    ln = max(ln, lineAA(p.y - yS + wob, lw, px) * step(xs1, p.x) * step(p.x, xs2));
+    ln = max(ln, lineAA(p.y - yB + wob, lw * 1.6, px) * step(x1, p.x) * step(p.x, x2));
+    ln = max(ln, lineAA(p.x - xc + wob, lw, px) * step(yS, p.y) * step(p.y, yB));
+    float fadeIn = smoothstep(0.28, 0.42, uv.y);
+    float dusty = 0.75 + 0.25 * noise(p * 25.0);
+    c = mix(c, float3(1.0, 0.99, 0.97), ln * fadeIn * dusty * 0.70);
+    // sun glow
+    float2 s = p - float2(ar * 0.85, 0.05);
+    c = mix(c, float3(1.0, 0.97, 0.90), exp(-dot(s, s) * 4.0) * 0.45);
+    c += (hash(fc + 4.4) - 0.5) * 0.010;
+    return outc(c);
+}

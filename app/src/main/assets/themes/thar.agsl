@@ -1,0 +1,40 @@
+// Thar Dusk: Tharparkar dunes after sunset — violet sky into amber, sand crests rim-lit, first stars
+float dune(float x, float a, float b, float c0) {
+    return a * sin(x * b + c0) + a * 0.45 * sin(x * b * 2.3 + c0 * 1.7) + a * 0.2 * sin(x * b * 5.1 + c0 * 0.3);
+}
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float px = 1.5 / res.y;
+    float3 c = mix(float3(0.070, 0.050, 0.140), float3(0.48, 0.22, 0.32), smoothstep(0.08, 0.55, uv.y));
+    c = mix(c, float3(0.98, 0.62, 0.32), smoothstep(0.48, 0.68, uv.y));
+    float2 sg = p - float2(ar * 0.62, 0.68);
+    c += float3(1.0, 0.70, 0.40) * exp(-dot(sg * float2(0.6, 2.0), sg * float2(0.6, 2.0)) * 6.0) * 0.30;
+    c += float3(1.0) * stars(p * 60.0, 0.07, 0.0) * 0.5 * smoothstep(0.32, 0.0, uv.y);
+    // crescent moon
+    float2 mo = p - float2(ar * 0.22, 0.14);
+    float moon = smoothstep(0.022 + px, 0.022 - px, length(mo)) * smoothstep(0.020 - px, 0.020 + px, length(mo - float2(0.010, -0.006)));
+    c = mix(c, float3(1.0, 0.95, 0.85), moon * 0.9);
+    // dunes far -> near
+    float h1 = 0.68 + dune(p.x, 0.020, 4.0, 1.0);
+    float m1 = smoothstep(h1 - px, h1 + px, uv.y);
+    float3 d1 = mix(float3(0.62, 0.32, 0.24), float3(0.45, 0.22, 0.20), smoothstep(h1, h1 + 0.1, uv.y));
+    c = mix(c, d1, m1);
+    float h2 = 0.76 + dune(p.x, 0.035, 2.6, 3.0);
+    float m2 = smoothstep(h2 - px, h2 + px, uv.y);
+    float rim2 = exp(-(uv.y - h2) * 90.0) * m2;
+    float3 d2 = mix(float3(0.34, 0.15, 0.13), float3(0.22, 0.10, 0.10), smoothstep(h2, h2 + 0.15, uv.y));
+    c = mix(c, d2 + float3(0.85, 0.45, 0.20) * rim2 * 0.45, m2);
+    float h3 = 0.87 + dune(p.x, 0.040, 1.9, 5.0);
+    float m3 = smoothstep(h3 - px, h3 + px, uv.y);
+    float rim3 = exp(-(uv.y - h3) * 80.0) * m3;
+    float rip = smoothstep(0.7, 1.0, sin((uv.y - h3) * 300.0 + sin(p.x * 9.0) * 2.0)) * smoothstep(h3, h3 + 0.05, uv.y);
+    float3 d3 = mix(float3(0.16, 0.07, 0.07), float3(0.09, 0.04, 0.05), smoothstep(h3, 1.0, uv.y));
+    d3 += float3(0.03, 0.015, 0.01) * rip;
+    c = mix(c, d3 + float3(0.95, 0.50, 0.22) * rim3 * 0.40, m3);
+    float2 vv = uv - float2(0.5, 0.45);
+    c *= 1.0 - 0.35 * dot(vv, vv);
+    c += (hash(fc + 7.3) - 0.5) * 0.012;
+    return outc(c);
+}

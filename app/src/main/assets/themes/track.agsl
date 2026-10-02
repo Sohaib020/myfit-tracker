@@ -1,0 +1,40 @@
+// Track Day: night stadium track — terracotta lanes sweeping round a bend, crisp lane lines, rubber grain
+float lineAA(float d, float w, float px) { return smoothstep(w + px, w - px, abs(d)); }
+half4 main(float2 fc) {
+    float2 uv = fc / res;
+    float ar = res.x / res.y;
+    float2 p = float2(uv.x * ar, uv.y);
+    float px = 1.5 / res.y;
+    float3 c = mix(float3(0.060, 0.058, 0.065), float3(0.030, 0.028, 0.032), uv.y);
+    // the bend: concentric lanes around a centre off the lower right
+    float2 C = float2(ar * 1.05, 1.22);
+    float r = length(p - C);
+    float r0 = 0.52; float lw = 0.058; float n = 8.0;
+    float inTrack = smoothstep(r0 - px, r0 + px, r) * smoothstep(r0 + lw * n + px, r0 + lw * n - px, r);
+    float grain = noise(fc * 0.9) * 0.5 + noise(fc * 0.23) * 0.5;
+    float3 clay = mix(float3(0.34, 0.11, 0.075), float3(0.27, 0.085, 0.06), grain);
+    // light falls off towards the top of the screen so cards stay calm
+    float lit = smoothstep(0.15, 0.95, uv.y) * 0.85 + 0.15;
+    c = mix(c, clay * lit, inTrack);
+    // infield: dark turf with mowing bands
+    float infield = smoothstep(r0 + px, r0 - px, r);
+    float band = 0.5 + 0.5 * sign(sin(r * 70.0));
+    c = mix(c, mix(float3(0.035, 0.075, 0.050), float3(0.045, 0.090, 0.060), band) * lit, infield);
+    // lane lines
+    float k = (r - r0) / lw;
+    float d = (fract(k + 0.5) - 0.5) * lw;
+    float lines = lineAA(d, 0.0016, px) * step(-0.5, k) * step(k, n + 0.5);
+    c = mix(c, float3(0.93, 0.90, 0.86), lines * 0.60 * lit);
+    // staggered start marks on lanes
+    float ang = atan(p.y - C.y, p.x - C.x);
+    float lane = floor(k);
+    float mark = lineAA(ang - (-2.28 + lane * 0.035), 0.004, px / max(r, 0.1)) * step(0.0, k) * step(k, n);
+    c = mix(c, float3(0.93, 0.90, 0.86), mark * 0.55 * lit);
+    // floodlight wash from the top left
+    float2 q = p - float2(-0.1, -0.15);
+    c += float3(1.0, 0.92, 0.85) * exp(-dot(q, q) * 2.2) * 0.07;
+    float2 vv = uv - float2(0.5, 0.55);
+    c *= 1.0 - 0.55 * dot(vv, vv);
+    c += (hash(fc + 3.3) - 0.5) * 0.012;
+    return outc(c);
+}

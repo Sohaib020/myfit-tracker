@@ -8,15 +8,11 @@ half4 main(float2 fc) {
     c += float3(0.95, 0.90, 0.72) * exp(-r1 * r1 * 6.0) * 0.20;
     float r2 = length(p - float2(ar * 0.0, 0.85));
     c += float3(0.35, 0.50, 0.22) * exp(-r2 * r2 * 3.5) * 0.18;
-    // enso: an open brush ring, uneven thickness
-    float2 e = p - float2(ar * 0.62, 0.30);
-    float er = length(e);
-    float ang = atan(e.y, e.x);
-    float thick = 0.010 + 0.012 * (0.5 + 0.5 * sin(ang * 0.5 + 1.0)) ;
-    float ring = smoothstep(thick, thick * 0.4, abs(er - 0.22 - 0.01 * noise(float2(ang * 3.0, 1.0))));
-    float gap = smoothstep(2.2, 2.6, ang);
-    float bristle = 0.6 + 0.4 * noise(float2(er * 400.0, ang * 2.0));
-    c += float3(0.93, 0.88, 0.70) * ring * (1.0 - gap) * bristle * 0.10;
+    // soft tea-leaf shadows drifting across the lower half
+    float leaf = fbm(p * float2(2.0, 5.0) + float2(4.0, 1.0));
+    c = mix(c, c * 0.72, smoothstep(0.55, 0.75, leaf) * smoothstep(0.35, 0.8, uv.y) * 0.6);
+    float2 st = p - float2(ar * 0.30, 0.55);
+    c += float3(0.55, 0.62, 0.38) * exp(-dot(st, st) * 4.0) * 0.05;
     // washi fibre grain
     float fib = noise(float2(p.x * 160.0, p.y * 18.0));
     c += (fib - 0.5) * 0.008;
