@@ -15,13 +15,18 @@ env:
 jobs:
   describe:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       - name: Describe every food
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python3 tools/foodicon/describe.py
+        run: |
+          python3 tools/foodicon/describe.py
+          # keep the descriptions so later runs don't ask Gemini again
+          git config user.name "github-actions"; git config user.email "actions@github.com"
+          git add tools/foodicon/desc.json
+          git commit -m "Food icon descriptions for all foods [skip ci]" && git push || true
       - uses: actions/upload-artifact@v4
         with: { name: desc, path: tools/foodicon/desc.json }
 
