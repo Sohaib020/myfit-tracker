@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.myfit.tracker.AppContainer
 import com.myfit.tracker.ui.components.TopBarSpace
 import com.myfit.tracker.ui.components.clickableNoRipple
+import com.myfit.tracker.ui.components.fadeTopEdge
 import com.myfit.tracker.ui.exercises.ExercisesScreen
 import com.myfit.tracker.ui.theme.FitType
 import com.myfit.tracker.ui.theme.Glass
@@ -46,7 +47,7 @@ fun TrainHost(container: AppContainer, bottomPad: Int) {
             androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp))
             Segmented(listOf("Workouts", "Exercises"), seg) { seg = it }
         }
-        Box(Modifier.fillMaxWidth().weight(1f)) {
+        Box(Modifier.fillMaxWidth().weight(1f).fadeTopEdge()) {
             if (seg == 0) TrainScreen(container, bottomPad, embedded = true)
             else Box(Modifier.padding(horizontal = 0.dp)) { ExercisesScreen(container, bottomPad, embedded = true) }
         }

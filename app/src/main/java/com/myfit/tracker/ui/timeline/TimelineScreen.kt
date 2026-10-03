@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import com.myfit.tracker.ui.components.clickableNoRipple
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -77,6 +81,20 @@ data class TimelineItem(
     val title: String, val detail: String, val sheet: Sheet?, val overlay: Overlay? = null,
 )
 
+/** Category a log entry belongs to (one expandable tile per category in the daily log). */
+enum class LogGroup(val label: String) { FOOD("Food"), HYDRATION("Hydration"), WORKOUT("Workouts & activity"), WEIGHT("Weight & body"), SLEEP("Sleep"), STEPS("Steps"), CHECKIN("Check-ins"), NOTES("Notes") }
+
+fun groupOf(key: String): LogGroup = when {
+    key.startsWith("hs") || key.startsWith("s") -> LogGroup.SLEEP
+    key.startsWith("hc") || key.startsWith("ws") || key.startsWith("we") -> LogGroup.WORKOUT
+    key.startsWith("f") -> LogGroup.FOOD
+    key.startsWith("h") -> LogGroup.HYDRATION
+    key.startsWith("w") || key.startsWith("m") -> LogGroup.WEIGHT
+    key.startsWith("a") -> LogGroup.STEPS
+    key.startsWith("c") -> LogGroup.CHECKIN
+    else -> LogGroup.NOTES
+}
+
 fun buildTimeline(d: DayLog, u: UnitPrefs, th: FitTheme): List<TimelineItem> = buildList {
     d.weight.forEach { add(TimelineItem("w${it.id}", it.loggedAt, it.zoneId, Duo.MonitorWeight, th.accentBright, "Weight", Fmt.weight(it.weightKg, u.weight, 2) + (it.bodyFatPct?.let { f -> " · ${Fmt.trim(f)} % fat" } ?: "") + (if (it.note.isNotBlank()) " · ${it.note}" else ""), Sheet.Weight(it.id))) }
     d.water.forEach { add(TimelineItem("h${it.id}", it.loggedAt, it.zoneId, Duo.WaterDrop, th.water, "Water", Fmt.volume(it.amountMl, u.volume), Sheet.Water(it.id))) }
@@ -111,7 +129,8 @@ fun TimelineScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
     val workouts by remember(date) { container.workoutRepo.dayViews(Clock.dateKey(date)) }.collectAsState(initial = emptyList())
     val hcSessions by remember(date) { container.healthRepo.sessionsRange(date, date) }.collectAsState(initial = emptyList())
     val hcSleep by remember(date) { container.healthRepo.sleepRange(date, date) }.collectAsState(initial = emptyList())
-    val items = remember(day, workouts, hcSessions, hcSleep, u, th) {
+    val food by remember(date) { container.nutritionRepo.itemsOn(date) }.collectAsState(initial = emptyList())
+    val items = remember(day, workouts, hcSessions, hcSleep, food, u, th) {
         val detected = hcSessions.map { s ->
             TimelineItem("hc${s.id}", s.startAt, s.zoneId, com.myfit.tracker.ui.activity.sessionIcon(s.exerciseType), th.accentBright,
                 com.myfit.tracker.ui.activity.sessionTitle(s) + " · " + com.myfit.tracker.health.HealthSync.sourceLabel(s.sourcePackage),
@@ -120,9 +139,15 @@ fun TimelineScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         } + hcSleep.map { s ->
             TimelineItem("hs${s.id}", s.endAt, s.zoneId, Duo.Bedtime, th.sleep, "Sleep · " + com.myfit.tracker.health.HealthSync.sourceLabel(s.sourcePackage),
                 Fmt.duration((s.endAt - s.startAt) / 60_000) + " · ${Fmt.clock(Clock.minuteOfDay(s.startAt, s.zoneId))}–${Fmt.clock(Clock.minuteOfDay(s.endAt, s.zoneId))}", null, Overlay.Activity)
+        } + food.map { f ->
+            TimelineItem("f${f.id}", f.createdAt, java.time.ZoneId.systemDefault().id, Duo.ForkKnife, th.protein, f.foodName,
+                "${Fmt.int(f.quantity * f.caloriesPerServing)} kcal · P ${Fmt.int(f.quantity * f.proteinPerServing)} · C ${Fmt.int(f.quantity * f.carbsPerServing)} · F ${Fmt.int(f.quantity * f.fatPerServing)} g",
+                null, Overlay.Food(Clock.dateKey(date)))
         }
         (buildTimeline(day, u, th) + workoutItems(workouts, u, th) + detected).sortedBy { it.at }
     }
+    val groups = remember(items) { items.groupBy { groupOf(it.key) }.toSortedMap(compareBy { it.ordinal }) }
+    var expanded by remember(date) { mutableStateOf<LogGroup?>(null) }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -136,23 +161,73 @@ fun TimelineScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                     Spacer(Modifier.height(10.dp))
                 }
                 Text("Daily log", modifier = Modifier.padding(end = 62.dp), style = FitType.display, color = th.text)
-                Caption("Every entry, in the order it happened. Tap one to edit or delete.")
+                Caption("Tap a category to see its entries. Tap an entry to edit or delete.")
                 Spacer(Modifier.height(14.dp))
                 WeekStrip(date) { date = it }
             }
         }
-        item { Coverage(day) }
         if (items.isEmpty()) {
             item {
-                Glass(Modifier.fillMaxWidth().height(110.dp)) {
-                    Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Nothing recorded on ${date.pretty()}", style = FitType.section, color = th.text)
-                        Caption("Missing days stay missing — they're never counted as zero.")
+                Glass(Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 26.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Nothing recorded on ${date.pretty()}", style = FitType.section, color = th.text, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        Spacer(Modifier.height(4.dp))
+                        Caption("Missing days stay missing — they're never counted as zero.", Modifier.fillMaxWidth())
                     }
                 }
             }
         }
-        items(items, key = { it.key }) { row -> TimelineRow(row) { row.sheet?.let(open); row.overlay?.let { nav.push(it) } } }
+        groups.forEach { (g, list) ->
+            item(key = "g_" + g.name) {
+                GroupTile(g, list, expanded == g, onToggle = { expanded = if (expanded == g) null else g }) { row ->
+                    row.sheet?.let(open); row.overlay?.let { nav.push(it) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GroupTile(g: LogGroup, list: List<TimelineItem>, open: Boolean, onToggle: () -> Unit, onRow: (TimelineItem) -> Unit) {
+    val th = LocalFitTheme.current
+    val first = list.first()
+    val rot by androidx.compose.animation.core.animateFloatAsState(if (open) 90f else 0f, label = "chev")
+    Glass(Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(24.dp)) {
+        Column {
+            Row(Modifier.fillMaxWidth().clickableNoRipple(onToggle).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconBubble(first.icon, first.color)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(g.label, style = FitType.section, color = th.text)
+                    Caption(groupSummary(g, list))
+                }
+                Text("${list.size}", style = FitType.label, color = th.textDim)
+                Spacer(Modifier.width(6.dp))
+                androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim, modifier = Modifier.size(22.dp).graphicsLayer { rotationZ = rot })
+            }
+            if (open) Column(Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                list.forEach { row -> EntryRow(row) { onRow(row) } }
+            }
+        }
+    }
+}
+
+private fun groupSummary(g: LogGroup, list: List<TimelineItem>): String = when (g) {
+    LogGroup.FOOD -> "${list.size} item${if (list.size == 1) "" else "s"} · " + list.sumOf { it.detail.substringBefore(" kcal").replace(",", "").toDoubleOrNull() ?: 0.0 }.let { "${Fmt.int(it)} kcal" }
+    LogGroup.HYDRATION -> "${list.size} drink${if (list.size == 1) "" else "s"} · last at ${Fmt.clock(Clock.minuteOfDay(list.last().at, list.last().zoneId))}"
+    else -> list.last().let { "${it.title} · ${it.detail}" }.take(70)
+}
+
+@Composable
+private fun EntryRow(item: TimelineItem, onClick: () -> Unit) {
+    val th = LocalFitTheme.current
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(if (th.isLight) Color.Black.copy(alpha = 0.04f) else Color.White.copy(alpha = 0.06f)).clickableNoRipple(onClick).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(Fmt.clock(Clock.minuteOfDay(item.at, item.zoneId)), style = FitType.label, color = th.textDim, modifier = Modifier.width(50.dp))
+        Column(Modifier.weight(1f)) {
+            Text(item.title, style = FitType.body, color = th.text, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            if (item.detail.isNotBlank()) Text(item.detail, style = FitType.caption, color = th.textDim, maxLines = 2)
+        }
+        androidx.compose.material3.Icon(Duo.Edit, null, tint = th.textFaint, modifier = Modifier.size(16.dp))
     }
 }
 
@@ -162,69 +237,26 @@ private fun WeekStrip(selected: LocalDate, onSelect: (LocalDate) -> Unit) {
     val monday = selected.with(DayOfWeek.MONDAY)
     val today = Clock.today()
     Row(verticalAlignment = Alignment.CenterVertically) {
-        GlassIconButton(Duo.KeyboardArrowLeft, { onSelect(selected.minusWeeks(1)) }, size = 36.dp)
-        Row(Modifier.weight(1f).padding(horizontal = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        GlassIconButton(Duo.KeyboardArrowLeft, { onSelect(selected.minusWeeks(1)) }, size = 34.dp)
+        Row(Modifier.weight(1f).padding(horizontal = 4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
             (0..6).forEach { i ->
                 val d = monday.plusDays(i.toLong())
                 val sel = d == selected
                 val future = d.isAfter(today)
                 Glass(
-                    Modifier.width(40.dp).height(62.dp), shape = RoundedCornerShape(20.dp),
+                    Modifier.weight(1f).height(60.dp), shape = RoundedCornerShape(18.dp),
                     onClick = if (future) null else ({ onSelect(d) }), pressScale = 0.9f,
                 ) {
                     if (sel) Box(Modifier.matchParentSize().drawBehind { drawRect(Brush.verticalGradient(listOf(th.accentBright, th.accent))) })
                     Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(d.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.US), style = FitType.caption, color = if (sel) th.onAccent else th.textDim)
-                        Text("${d.dayOfMonth}", style = FitType.section, color = when { sel -> th.onAccent; future -> th.textFaint; else -> th.text })
+                        Text(d.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.US), style = FitType.caption, color = if (sel) th.onAccent else th.textDim, maxLines = 1)
+                        Text("${d.dayOfMonth}", style = FitType.label, color = when { sel -> th.onAccent; future -> th.textFaint; else -> th.text }, maxLines = 1, softWrap = false)
                         if (d == today) Box(Modifier.size(4.dp).drawBehind { drawCircle(if (sel) th.onAccent else th.accentBright) })
                     }
                 }
             }
         }
-        GlassIconButton(Duo.KeyboardArrowRight, { if (selected.plusWeeks(1) <= today) onSelect(selected.plusWeeks(1)) else onSelect(today) }, size = 36.dp)
-    }
-}
-
-@Composable
-private fun Coverage(d: DayLog) {
-    val th = LocalFitTheme.current
-    val steps = StepsCalc.dayTotal(d.activity.filter { it.steps != null }.map { StepsCalc.Entry(it.steps!!, it.isDayTotal, it.loggedAt, it.id) })
-    val parts = listOf(
-        "Weight" to d.weight.isNotEmpty(), "Water" to d.water.isNotEmpty(), "Sleep" to d.sleep.isNotEmpty(),
-        "Steps" to (steps != null), "Check-in" to d.checkIns.isNotEmpty(),
-    )
-    Glass(Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(22.dp)) {
-        Column(Modifier.padding(14.dp)) {
-            Text("DATA RECORDED THIS DAY", style = FitType.overline, color = th.textDim)
-            Spacer(Modifier.height(10.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                parts.forEach { (l, ok) ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(Modifier.size(12.dp).drawBehind {
-                            if (ok) drawCircle(th.success) else drawCircle(th.textFaint, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
-                        })
-                        Spacer(Modifier.height(4.dp))
-                        Caption(l, color = if (ok) th.text else th.textFaint)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TimelineRow(item: TimelineItem, onClick: () -> Unit) {
-    val th = LocalFitTheme.current
-    Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), onClick = onClick) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(Fmt.clock(Clock.minuteOfDay(item.at, item.zoneId)), style = FitType.label, color = th.textDim, modifier = Modifier.width(46.dp))
-            IconBubble(item.icon, item.color)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(item.title, style = FitType.section, color = th.text)
-                Text(item.detail, style = FitType.caption, color = th.textDim, maxLines = 2)
-            }
-        }
+        GlassIconButton(Duo.KeyboardArrowRight, { if (selected.plusWeeks(1) <= today) onSelect(selected.plusWeeks(1)) else onSelect(today) }, size = 34.dp)
     }
 }
 

@@ -123,6 +123,12 @@ class LogRepository(private val db: AppDatabase) {
         db.waterDao().update(old.copy(amountMl = ml, loggedAt = s.at, zoneId = s.zoneId, localDate = s.localDate, updatedAt = Clock.now()))
     }
     suspend fun deleteWater(id: Long) = db.waterDao().softDelete(id, Clock.now())
+    /** Removes today's most recent drink (the tile's "−" button). Returns its amount, or null if none. */
+    suspend fun removeLastWaterToday(): Double? {
+        val last = db.waterDao().lastOn(Clock.dateKey(Clock.today())) ?: return null
+        db.waterDao().softDelete(last.id, Clock.now())
+        return last.amountMl
+    }
     suspend fun getWater(id: Long) = db.waterDao().get(id)
 
     // ------------------------------------------------ weight

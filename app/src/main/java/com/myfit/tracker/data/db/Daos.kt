@@ -47,6 +47,9 @@ interface WaterDao {
     @Query("SELECT * FROM water_entry WHERE deletedAt IS NULL AND localDate = :date ORDER BY loggedAt")
     fun observeDay(date: String): Flow<List<WaterEntry>>
 
+    @Query("SELECT * FROM water_entry WHERE deletedAt IS NULL AND localDate = :date ORDER BY loggedAt DESC LIMIT 1")
+    suspend fun lastOn(date: String): WaterEntry?
+
     @Query("SELECT * FROM water_entry WHERE deletedAt IS NULL AND localDate BETWEEN :from AND :to ORDER BY loggedAt")
     fun observeRange(from: String, to: String): Flow<List<WaterEntry>>
 
