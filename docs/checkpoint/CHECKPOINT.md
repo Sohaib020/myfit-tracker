@@ -75,3 +75,4 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 - UI bugs: day strip clipped, empty-state text clipped, Train header overlap, Open camera label missing, history under dock.
 - NEXT PHASE: smaller on-device AI (<2.5 GB), more Pakistani foods + icons.
 - Tasks run one at a time; one CI build per group.
+- ✅ R3: UI fixes + grouped daily log (run 72); Home cards rework (run 73)
