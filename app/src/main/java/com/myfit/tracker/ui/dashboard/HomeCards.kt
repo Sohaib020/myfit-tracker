@@ -301,3 +301,45 @@ internal fun WaterButtons(w: WaterActions, compact: Boolean = false) {
         }
     }
 }
+
+
+// ------------------------------------------------------------------ Shariah & Health
+
+@Composable
+internal fun DeenCard() {
+    val th = LocalFitTheme.current
+    val nav = LocalNav.current
+    val ctx = LocalContext.current
+    val now by produceState(java.time.LocalTime.now()) { while (true) { value = java.time.LocalTime.now(); kotlinx.coroutines.delay(30_000) } }
+    val times = remember(now.hour) { com.myfit.tracker.ui.deen.prayerTimes(ctx) }
+    val sub = if (times == null) "Prayer times, Qibla, fasting & dhikr" else {
+        val n = now.hour * 60 + now.minute
+        val next = times.entries.firstOrNull { it.key.isSalah && it.value > n } ?: times.entries.first()
+        val until = (next.value - n).let { if (it < 0) it + 1440 else it }
+        "${next.key.label} at ${com.myfit.tracker.ui.deen.clock(next.value)} · in ${until / 60}h ${until % 60}m"
+    }
+    GlassCard(onClick = { nav.push(Overlay.Deen) }, padding = 14.dp) {
+        HomeCardHeader(Duo.Bedtime, "Shariah & Health", Color(0xFF2FA37A), sub)
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CardAction("Qibla", Duo.TrackChanges, Color(0xFFD9A441), Modifier.weight(1f)) { com.myfit.tracker.ui.deen.DeenLaunch.tab = 0; nav.push(Overlay.Deen) }
+            CardAction("Tasbeeh", Duo.RadioButtonUnchecked, Color(0xFF2FA37A), Modifier.weight(1f)) { com.myfit.tracker.ui.deen.DeenLaunch.tab = 2; nav.push(Overlay.Deen) }
+        }
+    }
+}
+
+/** One-time question for existing users (new users answer it during setup). */
+@Composable
+internal fun DeenAskCard(container: AppContainer) {
+    val th = LocalFitTheme.current
+    GlassCard(padding = 14.dp) {
+        HomeCardHeader(Duo.Bedtime, "Shariah & Health", Color(0xFF2FA37A), "Prayer times, Qibla, fasting, dhikr, halal check")
+        Spacer(Modifier.height(8.dp))
+        Caption("Would you like the Muslim health section? It's shown only if you say yes, and you can change it in Me.")
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CardAction("Yes, show it", Duo.Check, Color(0xFF2FA37A), Modifier.weight(1f)) { container.write { container.settings.setMuslim("yes") } }
+            CardAction("No thanks", Duo.Close, th.textDim, Modifier.weight(1f)) { container.write { container.settings.setMuslim("no") } }
+        }
+    }
+}

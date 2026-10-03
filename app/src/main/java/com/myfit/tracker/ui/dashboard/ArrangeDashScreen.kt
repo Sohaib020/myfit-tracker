@@ -60,7 +60,7 @@ private fun iconFor(c: DashCard): ImageVector = when (c) {
     DashCard.RINGS -> Duo.TrackChanges; DashCard.NUTRITION -> Duo.ForkKnife; DashCard.BODY -> Duo.MonitorWeight
     DashCard.HYDRATION -> Duo.WaterDrop; DashCard.RECOVERY -> Duo.Bedtime; DashCard.STEPS -> Duo.DirectionsWalk
     DashCard.CHECKIN -> Duo.Mood; DashCard.GOALS -> Duo.Flag; DashCard.SOCIAL -> Duo.EmojiEvents
-    DashCard.VITALS -> Duo.Pulse; DashCard.MIND -> Duo.SelfImprovement; DashCard.CYCLE -> Duo.CalendarMonth; DashCard.GLUCOSE -> Duo.Drop; DashCard.STREAKS -> Duo.Flame
+    DashCard.VITALS -> Duo.Pulse; DashCard.MIND -> Duo.SelfImprovement; DashCard.CYCLE -> Duo.CalendarMonth; DashCard.GLUCOSE -> Duo.Drop; DashCard.STREAKS -> Duo.Flame; DashCard.DEEN -> Duo.Bedtime
 }
 
 private fun colorFor(c: DashCard, th: FitTheme): Color = when (c) {
@@ -68,7 +68,7 @@ private fun colorFor(c: DashCard, th: FitTheme): Color = when (c) {
     DashCard.RINGS -> th.success; DashCard.NUTRITION -> th.protein; DashCard.BODY -> th.fat
     DashCard.HYDRATION -> th.water; DashCard.RECOVERY -> th.sleep; DashCard.STEPS -> th.steps
     DashCard.CHECKIN -> th.warning; DashCard.GOALS -> th.carbs; DashCard.SOCIAL -> th.warning
-    DashCard.VITALS -> th.danger; DashCard.MIND -> th.sleep; DashCard.CYCLE -> th.protein; DashCard.GLUCOSE -> th.water; DashCard.STREAKS -> th.warning
+    DashCard.VITALS -> th.danger; DashCard.MIND -> th.sleep; DashCard.CYCLE -> th.protein; DashCard.GLUCOSE -> th.water; DashCard.STREAKS -> th.warning; DashCard.DEEN -> th.success
 }
 
 /** Reorder and show/hide dashboard cards. Long-press a row and drag, or use the arrows. */

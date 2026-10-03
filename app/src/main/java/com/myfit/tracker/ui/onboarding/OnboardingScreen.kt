@@ -120,6 +120,7 @@ private class SetupState(units: UnitPrefs) {
     var protein by mutableStateOf("")
     var sleepH by mutableStateOf("8")
     var suggested by mutableStateOf(false)
+    var muslim by mutableStateOf<String?>(null)
     var diabetes by mutableStateOf<String?>(null)          // DiabetesTypes value ("none", "type1", …)
     var treatment by mutableStateOf("")
     var cgm by mutableStateOf<Boolean?>(null)
@@ -130,7 +131,7 @@ private class SetupState(units: UnitPrefs) {
     val targetKg get() = if (hasTarget) Units.toKg(targetDisplay, weightUnit) else null
 }
 
-private const val STEPS = 11
+private const val STEPS = 12
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -151,8 +152,9 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
         2 -> s.sex != null
         3 -> s.diabetes != null && (s.diabetes == "none" || (s.treatment.isNotEmpty() && s.cgm != null &&
             (s.low.toIntOrNull() ?: 0) in 50..120 && (s.high.toIntOrNull() ?: 0) in 120..300 && (s.low.toIntOrNull() ?: 0) < (s.high.toIntOrNull() ?: 0)))
-        7 -> s.goals.isNotEmpty()
-        10 -> listOf(s.waterL, s.steps, s.calories, s.protein, s.sleepH).all { it.toDoubleOrNull() != null && it.toDouble() > 0 }
+        4 -> s.muslim != null
+        8 -> s.goals.isNotEmpty()
+        11 -> listOf(s.waterL, s.steps, s.calories, s.protein, s.sleepH).all { it.toDoubleOrNull() != null && it.toDouble() > 0 }
         else -> true
     }
 
@@ -230,6 +232,10 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         }
                     }
                     4 -> {
+                        Header("Are you Muslim?", "If yes, you'll get Shariah & Health: prayer times, Qibla, fasting hub, dhikr and halal checks. Asked only to show the right features.")
+                        listOf("yes" to "Yes", "no" to "No", "skip" to "Prefer not to say").forEach { (k, v) -> OptionRow(v, s.muslim == k) { s.muslim = k }; Spacer(Modifier.height(8.dp)) }
+                    }
+                    5 -> {
                         Header("What's your height?", "Used for better progress tracking.")
                         if (s.lengthUnit == LengthUnit.CM) {
                             WheelPicker(101, (s.heightCm.roundToInt() - 120).coerceIn(0, 100), { s.heightCm = (it + 120).toDouble() }, { "${it + 120} cm" }, Modifier.fillMaxWidth())
@@ -240,13 +246,13 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         Spacer(Modifier.height(16.dp))
                         GlassSegmented(listOf(LengthUnit.CM, LengthUnit.IN), s.lengthUnit, { it.label }, { s.lengthUnit = it }, Modifier.width(180.dp))
                     }
-                    5 -> {
+                    6 -> {
                         Header("What's your current weight?", "This becomes your first weigh-in. You can log more any time.")
                         WeightPicker(s.weightDisplay, s.weightUnit, { s.weightDisplay = it }) { u ->
                             s.weightDisplay = round1(Units.kgTo(s.weightKg, u)); s.targetDisplay = round1(Units.kgTo(Units.toKg(s.targetDisplay, s.weightUnit), u)); s.weightUnit = u
                         }
                     }
-                    6 -> {
+                    7 -> {
                         Header("Target weight", "Optional. Used only to show distance to goal — never to judge a single weigh-in.")
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             GlassChip("Set a target", s.hasTarget, { s.hasTarget = true })
@@ -259,7 +265,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                             Caption("${Fmt.signed(diff)} ${s.weightUnit.label} from today's weight")
                         }
                     }
-                    7 -> {
+                    8 -> {
                         Header("Your fitness goal", "Choose what best matches your training journey.")
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             FitnessGoal.all.forEach { g ->
@@ -267,7 +273,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                             }
                         }
                     }
-                    8 -> {
+                    9 -> {
                         Header("Activity & experience", "Outside the gym, how active is a normal day?")
                         listOf(
                             ActivityLevel.SEDENTARY to "Mostly sitting", ActivityLevel.LIGHT to "Light — some walking",
@@ -283,7 +289,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                             }
                         }
                     }
-                    9 -> {
+                    10 -> {
                         Header("Your week", "Planned workout days and your daily rhythm. Reminders respect your sleep hours.")
                         val days = listOf("M", "T", "W", "T", "F", "S", "S")
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -297,7 +303,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         TimeRow("Wake-up time") { MinuteOfDayChip(s.wake) { s.wake = it } }
                         TimeRow("Sleep time") { MinuteOfDayChip(s.sleep) { s.sleep = it } }
                     }
-                    10 -> {
+                    11 -> {
                         Header("Daily targets", "Set them yourself, or let me suggest a starting point you can edit.")
                         GlassButton("Suggest from my profile", {
                             val male = s.sex == Sex.MALE
@@ -327,7 +333,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         TargetField("Protein", s.protein, "g", decimal = false) { s.protein = it }
                         TargetField("Sleep", s.sleepH, "hours") { s.sleepH = it }
                     }
-                    11 -> {
+                    12 -> {
                         Spacer(Modifier.height(40.dp))
                         Pip(PipMood.EXCITED, size = 150.dp)
                         Spacer(Modifier.height(16.dp))
@@ -376,6 +382,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                                 treatment = s.treatment, cgm = s.cgm == true, setupDone = true))
                         }
                         if (s.sex == Sex.FEMALE) container.settings.setCycle(true)
+                        container.settings.setMuslim(if (s.muslim == "yes") "yes" else "no")
                         container.settings.setUnits(UnitPrefs(weight = s.weightUnit, length = s.lengthUnit, volume = units.volume, distance = units.distance))
                         container.profileRepo.createProfile(profile, targets)
                     }

@@ -206,6 +206,11 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         item { PipSettingsCard(container, dev = false) }
         item { OfflineBrainCard() }
         item {
+            GlassCard {
+                ToggleRow("Shariah & Health", "Prayer times, Qibla, fasting hub, dhikr, halal check", settings.muslim == "yes") { v -> container.write { container.settings.setMuslim(if (v) "yes" else "no") } }
+            }
+        }
+        item {
             GlassButton("Replay Pip's tour", { container.write { container.settings.setTourDone(false) } }, Modifier.fillMaxWidth(), icon = Duo.AutoAwesome, height = 46.dp)
         }
         item { VoiceSettingsCard(container, dev = false) }

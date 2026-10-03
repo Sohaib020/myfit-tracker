@@ -186,6 +186,11 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
                 Spacer(Modifier.height(8.dp))
             }
             Text(f.name, style = FitType.title, color = th.text)
+            if (com.myfit.tracker.ui.theme.LocalSettings.current.muslim == "yes") {
+                val hc = remember(f.id) { com.myfit.tracker.ui.deen.HalalCheck.scan(f.name + " " + (f.brand ?: "")) }
+                if (hc.haram.isNotEmpty()) Caption("Not halal: " + hc.haram.joinToString(), color = th.danger)
+                else if (hc.doubtful.isNotEmpty()) Caption("Check halal: " + hc.doubtful.joinToString(), color = th.warning)
+            }
             Caption(listOfNotNull(f.brand, "${Fmt.int(f.calories)} kcal per ${Fmt.trim(f.servingSize, 1)} ${f.servingUnit}" + (f.servingGrams?.takeIf { !byWeight }?.let { " (~${Fmt.int(it)} g)" } ?: "")).joinToString(" · "))
             if (f.source == NutritionSource.DATABASE) Caption(f.sourceRef ?: "Typical values — recipes and portions vary.", color = th.textFaint)
             Spacer(Modifier.height(12.dp))

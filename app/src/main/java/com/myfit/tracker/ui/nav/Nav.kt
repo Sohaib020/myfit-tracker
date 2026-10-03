@@ -36,6 +36,7 @@ sealed interface Overlay {
     data class DayLog(val date: String? = null) : Overlay
     /** Full history (calendar icon in the top bar of every tab). */
     data object History : Overlay
+    data object Deen : Overlay
     /** Pick exercises to append to a template (templateId) or to a running workout (workoutId). */
     data class PickExercises(val templateId: Long? = null, val workoutId: Long? = null) : Overlay
     data class Food(val date: String? = null) : Overlay

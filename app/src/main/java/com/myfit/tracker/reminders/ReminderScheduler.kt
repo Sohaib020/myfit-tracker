@@ -374,6 +374,12 @@ object ReminderScheduler {
             arm(app, am, RC_FAST, fastAt, KIND_FAST, 0, "Fasting goal reached", "You hit your fasting target. Nice work — break your fast gently.")
         else disarm(app, am, RC_FAST)
 
+        // ---- Shariah & Health: adhan and suhoor alerts (next 2 days)
+        val deen = runCatching { com.myfit.tracker.ui.deen.DeenAlarms.upcoming(app, after) }.getOrDefault(emptyList())
+        val deenRcs = deen.map { it.rc }.toSet()
+        deen.forEach { a -> arm(app, am, a.rc, a.at, "deen", 0, a.title, a.text) }
+        for (rc in (920_000..920_016) + (920_100..920_101)) if (rc !in deenRcs) disarm(app, am, rc)
+
         // ---- health features: medicines, blood-sugar checks, Ramadan, HbA1c, pregnancy appointments
         runCatching { com.myfit.tracker.health.HealthReminders.arm(app) }
     }

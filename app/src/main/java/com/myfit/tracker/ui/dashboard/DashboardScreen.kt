@@ -155,6 +155,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
         DashCard.PIP -> settings.pipEnabled
         DashCard.CYCLE -> showCycle(state.profile, settings) && (settings.cycleEnabled || !settings.cycleAsked)
         DashCard.GLUCOSE -> showDiabetes(settings)
+        DashCard.DEEN -> settings.muslim == "yes"
         else -> true
     }
 
@@ -294,6 +295,9 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
             if (settings.diabetesType == "unset" && !settings.diabetesAsked && !settings.glucoseEnabled) {
                 item(key = "personalise", span = full) { Box(Modifier.animateItem()) { PersonaliseCard(container) } }
             }
+            if (settings.muslim == "unset") {
+                item(key = "deenask", span = full) { Box(Modifier.animateItem()) { DeenAskCard(container) } }
+            }
             order.forEach { c ->
                 if (!visible(c)) return@forEach
                 val small = c in smallSet
@@ -387,6 +391,7 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
         DashCard.CYCLE -> if (small) com.myfit.tracker.ui.cycle.CycleTile(container) { nav.push(Overlay.Cycle) } else CycleCard(container)
         DashCard.GLUCOSE -> com.myfit.tracker.ui.glucose.GlucoseTile(container) { nav.push(Overlay.Glucose) }
         DashCard.STREAKS -> com.myfit.tracker.ui.badges.StreaksTile(container) { nav.push(Overlay.Badges) }
+        DashCard.DEEN -> DeenCard()
     }
 }
 

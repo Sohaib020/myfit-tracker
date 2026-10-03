@@ -25,7 +25,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 enum class DashCard(val label: String) {
     // declaration order = default Home order
     RINGS("Today's progress"), SNAP("Snap a meal"), PIP("Pip"), VITALS("Vitals"), NUTRITION("Food & hydration"), MIND("Mindfulness"),
-    CYCLE("Menstrual cycle"), GLUCOSE("Blood sugar"), WORKOUT("Today's workout"), SOCIAL("Compete with friends"), STEPS("Steps & activity"),
+    CYCLE("Menstrual cycle"), DEEN("Shariah & Health"), GLUCOSE("Blood sugar"), WORKOUT("Today's workout"), SOCIAL("Compete with friends"), STEPS("Steps & activity"),
     RECOVERY("Sleep & recovery"), BODY("Body weight"), GOALS("Today's goals"), STREAKS("Streaks & badges"),
     // merged into RINGS / NUTRITION (kept so saved settings still parse)
     CHECKIN("Daily check-in"), HYDRATION("Hydration")
@@ -83,7 +83,8 @@ data class AppSettings(
     val liveAi: Boolean = false,         // camera: name foods live while aiming (uses AI quota)
     val permsAsked: Boolean = false,
     val tourDone: Boolean = false,
-    val pip3d: Boolean = true,           // live 3D Pip (falls back to rendered clips if unsupported)       // Pip's first-run tour seen     // first-launch permission walk-through done
+    val pip3d: Boolean = true,
+    val muslim: String = "unset",        // "yes" / "no" / "unset" — shows Shariah & Health
     val devMode: Boolean = false,        // developer options unlocked (tap version 7×)
     val cycleEnabled: Boolean = false,
     val cycleAsked: Boolean = false,
@@ -147,6 +148,7 @@ class SettingsStore(private val context: Context) {
         val perms = booleanPreferencesKey("perms_asked")
         val tour = booleanPreferencesKey("tour_done")
         val pip3d = booleanPreferencesKey("pip3d")
+        val muslim = stringPreferencesKey("muslim")
         val dev = booleanPreferencesKey("dev_mode")
         val cycle = booleanPreferencesKey("cycle_on")
         val cycleAsked = booleanPreferencesKey("cycle_asked")
@@ -207,6 +209,7 @@ class SettingsStore(private val context: Context) {
             permsAsked = p[K.perms] ?: false,
             tourDone = p[K.tour] ?: false,
             pip3d = p[K.pip3d] ?: true,
+            muslim = p[K.muslim] ?: "unset",
             devMode = p[K.dev] ?: false,
             cycleEnabled = p[K.cycle] ?: false,
             cycleAsked = p[K.cycleAsked] ?: false,
@@ -267,6 +270,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setPermsAsked(v: Boolean) = context.dataStore.edit { it[K.perms] = v }
     suspend fun setTourDone(v: Boolean) = context.dataStore.edit { it[K.tour] = v }
     suspend fun setPip3d(v: Boolean) = context.dataStore.edit { it[K.pip3d] = v }
+    suspend fun setMuslim(v: String) = context.dataStore.edit { it[K.muslim] = v }
     suspend fun setDevMode(v: Boolean) = context.dataStore.edit { it[K.dev] = v }
     suspend fun setCycle(enabled: Boolean) = context.dataStore.edit { it[K.cycle] = enabled; it[K.cycleAsked] = true }
     suspend fun setGlucose(enabled: Boolean) = context.dataStore.edit { it[K.glucose] = enabled }
