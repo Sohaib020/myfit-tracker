@@ -12,3 +12,4 @@ app/*.jks
 app/libs/
 app/google-services.json
 .claude/
+__pycache__/
