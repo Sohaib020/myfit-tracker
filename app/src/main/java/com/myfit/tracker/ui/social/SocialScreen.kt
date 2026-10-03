@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -117,7 +118,7 @@ private fun NotConfigured() {
 // ------------------------------------------------------------------ sign in
 
 @Composable
-private fun SignIn(container: AppContainer, bottomPad: Int = 40) {
+internal fun SignIn(container: AppContainer, bottomPad: Int = 40, gate: Boolean = false) {
     val th = LocalFitTheme.current
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -139,7 +140,7 @@ private fun SignIn(container: AppContainer, bottomPad: Int = 40) {
                 val cred = CredentialManager.create(ctx).getCredential(ctx, req).credential
                 if (cred is CustomCredential && cred.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                     social.signInWithGoogleToken(GoogleIdTokenCredential.createFrom(cred.data).idToken)
-                    social.uploadNow()
+                    runCatching { social.uploadNow() }
                     toaster.show("Signed in")
                 } else error = "That account type isn't supported."
             } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
@@ -158,7 +159,7 @@ private fun SignIn(container: AppContainer, bottomPad: Int = 40) {
         scope.launch {
             try {
                 if (mode == 0) social.signInEmail(email, pass) else social.createEmail(email, pass, name)
-                social.uploadNow()
+                runCatching { social.uploadNow() }
                 toaster.show(if (mode == 0) "Signed in" else "Account created")
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
             } catch (e: Exception) { error = friendly(e) }
@@ -170,11 +171,12 @@ private fun SignIn(container: AppContainer, bottomPad: Int = 40) {
         item {
             Glass(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Pip(PipMood.LETS_GO, size = 84.dp, interactive = false)
+                    Pip(if (gate) PipMood.WAVE else PipMood.LETS_GO, size = 84.dp, interactive = false)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Challenge your friends", style = FitType.section, color = th.text)
-                        Caption("Weekly leaderboards for steps, distance and watch-recorded workouts. Hand-typed numbers never count, so it's fair.")
+                        Text(if (gate) "Create your MyFit account" else "Challenge your friends", style = FitType.section, color = th.text)
+                        Caption(if (gate) "One account for leaderboards, challenges and friends. Your health logs still stay on this phone."
+                            else "Weekly leaderboards for steps, distance and watch-recorded workouts. Hand-typed numbers never count, so it's fair.")
                     }
                 }
             }
@@ -495,5 +497,19 @@ private fun RankRow(rank: Int, name: String, color: Long?, value: String, me: Bo
 fun Avatar(name: String, color: Long, sizeDp: Int) {
     Box(Modifier.size(sizeDp.dp).clip(CircleShape).background(Color(color)), contentAlignment = Alignment.Center) {
         Text(name.trim().take(1).uppercase().ifBlank { "?" }, style = FitType.section, color = Color.White)
+    }
+}
+
+
+/** Full-screen sign-in shown before setup: every MyFit user has an online account. */
+@Composable
+fun SignInGate(container: AppContainer) {
+    val th = LocalFitTheme.current
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
+        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 28.dp)) {
+            Text("Welcome to MyFit", style = FitType.display, color = th.text)
+            Caption("Sign in to get started — it takes one tap with Google.")
+        }
+        SignIn(container, 40, gate = true)
     }
 }

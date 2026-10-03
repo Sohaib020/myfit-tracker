@@ -42,6 +42,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -205,10 +206,14 @@ fun MyFitRoot(container: AppContainer) {
                 }
                 when (val ps = profileState) {
                     ProfileState.Loading -> Unit
-                    is ProfileState.Ready ->
-                        if (ps.profile == null) OnboardingScreen(container, s.units)
+                    is ProfileState.Ready -> {
+                        val socialOn = remember { container.social.start(); container.social.available }
+                        val account by container.social.user.collectAsState()
+                        if (socialOn && account == null) com.myfit.tracker.ui.social.SignInGate(container)
+                        else if (ps.profile == null) OnboardingScreen(container, s.units)
                         else if (!s.permsAsked) com.myfit.tracker.ui.onboarding.PermissionsScreen(container)
                         else MainShell(container, s)
+                    }
                 }
                 ToastHost(toaster, Modifier.align(Alignment.TopCenter))
             }

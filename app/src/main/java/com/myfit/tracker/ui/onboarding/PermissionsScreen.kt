@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,6 +80,13 @@ fun PermissionsScreen(container: AppContainer) {
     var hcGranted by remember { mutableStateOf<Set<String>>(emptySet()) }
     var refresh by remember { mutableIntStateOf(0) }
 
+    val settings = com.myfit.tracker.ui.theme.LocalSettings.current
+    val profile by container.profileRepo.profile.collectAsState(initial = null)
+    val female = profile?.sex == com.myfit.tracker.data.db.Sex.FEMALE
+    val diabetic = settings.glucoseEnabled || settings.diabetesType !in setOf("none", "unset")
+    val askSet = remember(female, diabetic) {
+        hs.allPermissions + (if (female) hs.cyclePermissions else emptySet()) + (if (diabetic) hs.glucosePermissions else emptySet())
+    }
     var finishing by remember { mutableStateOf(false) }
     fun finish() {
         if (finishing) return
@@ -104,7 +112,7 @@ fun PermissionsScreen(container: AppContainer) {
 
     fun askAll() {
         step = 1
-        if (hs.isAvailable) runCatching { health.launch(hs.allPermissions) }.onFailure { runtime.launch(runtimePermissions()) }
+        if (hs.isAvailable) runCatching { health.launch(askSet) }.onFailure { runtime.launch(runtimePermissions()) }
         else runtime.launch(runtimePermissions())
     }
 
@@ -125,6 +133,12 @@ fun PermissionsScreen(container: AppContainer) {
                 hcGranted.any { it in hs.dataPermissions }, hs.isAvailable)
             PermRow(Duo.Footprints, th.steps, "Phone step counter", "Counts steps even without the watch",
                 Build.VERSION.SDK_INT < 29 || hasPerm(ctx, Manifest.permission.ACTIVITY_RECOGNITION), PhoneSteps.hasSensor(ctx))
+            if (female) PermRow(Duo.CalendarMonth, com.myfit.tracker.ui.cycle.CycleColors.period, "Cycle tracking",
+                "Read & save period, ovulation and temperature via Health Connect — stays on this phone, never uploaded",
+                hcGranted.any { it in hs.cyclePermissions }, hs.isAvailable)
+            if (diabetic) PermRow(Duo.Drop, th.water, "Blood sugar",
+                "Read readings from your meter or CGM app via Health Connect",
+                hcGranted.any { it in hs.glucosePermissions }, hs.isAvailable)
             PermRow(Duo.Camera, th.protein, "Camera", "Snap meals for instant calories & macros", hasPerm(ctx, Manifest.permission.CAMERA), true)
             if (Build.VERSION.SDK_INT >= 33)
                 PermRow(Duo.Bell, th.warning, "Notifications", "Rest-timer alerts and reminders", hasPerm(ctx, Manifest.permission.POST_NOTIFICATIONS), true)

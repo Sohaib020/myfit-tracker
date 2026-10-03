@@ -43,6 +43,9 @@ data class GlucoseConfig(
     val suhoorMin: Int = 4 * 60 + 15,
     val iftarMin: Int = 18 * 60 + 30,
     val a1cRemind: Boolean = true,
+    /** "insulin", "tablets", "both", "diet" or "" (not asked). Record only — never used to calculate doses. */
+    val treatment: String = "",
+    val cgm: Boolean = false,
 )
 
 object GlucoseConfigStore {
@@ -73,6 +76,8 @@ object GlucoseConfigStore {
             suhoorMin = p.getInt("suhoorMin", 4 * 60 + 15),
             iftarMin = p.getInt("iftarMin", 18 * 60 + 30),
             a1cRemind = p.getBoolean("a1cRemind", true),
+            treatment = p.getString("treatment", "") ?: "",
+            cgm = p.getBoolean("cgm", false),
         )
     }.getOrDefault(GlucoseConfig())
 
@@ -84,7 +89,8 @@ object GlucoseConfigStore {
                 .putBoolean("writeHc", c.writeHc).putBoolean("setupDone", c.setupDone)
                 .putBoolean("testRemind", c.testRemind).putString("testTimes", c.testTimes.joinToString(","))
                 .putBoolean("ramadan", c.ramadan).putBoolean("ramadanRemind", c.ramadanRemind)
-                .putInt("suhoorMin", c.suhoorMin).putInt("iftarMin", c.iftarMin).putBoolean("a1cRemind", c.a1cRemind).apply()
+                .putInt("suhoorMin", c.suhoorMin).putInt("iftarMin", c.iftarMin).putBoolean("a1cRemind", c.a1cRemind)
+                .putString("treatment", c.treatment).putBoolean("cgm", c.cgm).apply()
         }
     }
 }

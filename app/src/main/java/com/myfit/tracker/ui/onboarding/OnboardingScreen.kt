@@ -72,6 +72,10 @@ import com.myfit.tracker.domain.LengthUnit
 import com.myfit.tracker.domain.UnitPrefs
 import com.myfit.tracker.domain.Units
 import com.myfit.tracker.domain.WeightUnit
+import com.myfit.tracker.ui.glucose.DiabetesType
+import com.myfit.tracker.ui.glucose.GlucoseConfigStore
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import com.myfit.tracker.ui.components.Caption
 import com.myfit.tracker.ui.components.DataBadge
 import com.myfit.tracker.ui.components.DataKind
@@ -116,12 +120,17 @@ private class SetupState(units: UnitPrefs) {
     var protein by mutableStateOf("")
     var sleepH by mutableStateOf("8")
     var suggested by mutableStateOf(false)
+    var diabetes by mutableStateOf<String?>(null)          // DiabetesTypes value ("none", "type1", …)
+    var treatment by mutableStateOf("")
+    var cgm by mutableStateOf<Boolean?>(null)
+    var low by mutableStateOf("70")
+    var high by mutableStateOf("180")
 
     val weightKg get() = Units.toKg(weightDisplay, weightUnit)
     val targetKg get() = if (hasTarget) Units.toKg(targetDisplay, weightUnit) else null
 }
 
-private const val STEPS = 10
+private const val STEPS = 11
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -130,14 +139,20 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
     val s = remember { SetupState(units) }
     var step by remember { mutableIntStateOf(0) }
     var saving by remember { mutableStateOf(false) }
+    val appCtx = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    // prefill the name from the signed-in account
+    val account by container.social.user.collectAsState()
+    LaunchedEffect(account) { if (s.name.isBlank()) account?.displayName?.takeIf { it.isNotBlank() }?.let { s.name = it.substringBefore(' ').take(40) } }
 
     BackHandler(enabled = step > 0) { step-- }
 
     val canNext = when (step) {
         1 -> s.name.isNotBlank()
         2 -> s.sex != null
-        6 -> s.goals.isNotEmpty()
-        9 -> listOf(s.waterL, s.steps, s.calories, s.protein, s.sleepH).all { it.toDoubleOrNull() != null && it.toDouble() > 0 }
+        3 -> s.diabetes != null && (s.diabetes == "none" || (s.treatment.isNotEmpty() && s.cgm != null &&
+            (s.low.toIntOrNull() ?: 0) in 50..120 && (s.high.toIntOrNull() ?: 0) in 120..300 && (s.low.toIntOrNull() ?: 0) < (s.high.toIntOrNull() ?: 0)))
+        7 -> s.goals.isNotEmpty()
+        10 -> listOf(s.waterL, s.steps, s.calories, s.protein, s.sleepH).all { it.toDoubleOrNull() != null && it.toDouble() > 0 }
         else -> true
     }
 
@@ -184,6 +199,37 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         SexCard("Female", Duo.Female, s.sex == Sex.FEMALE) { s.sex = Sex.FEMALE }
                     }
                     3 -> {
+                        Header("Do you have diabetes?", "Only people who manage diabetes see the blood-sugar tools. You can change this any time in Me.")
+                        val opts = buildList {
+                            add("none" to "No"); add("type1" to "Type 1"); add("type2" to "Type 2"); add("prediabetes" to "Prediabetes")
+                            if (s.sex == Sex.FEMALE) add("gestational" to "Gestational (pregnancy)")
+                            add("other" to "Other / not sure")
+                        }
+                        opts.forEach { (k, v) -> OptionRow(v, s.diabetes == k) { s.diabetes = k }; Spacer(Modifier.height(8.dp)) }
+                        if (s.diabetes != null && s.diabetes != "none") {
+                            Spacer(Modifier.height(14.dp))
+                            Text("How do you manage it?", style = FitType.label, color = th.textDim)
+                            Spacer(Modifier.height(8.dp))
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf("insulin" to "Insulin", "tablets" to "Tablets", "both" to "Insulin + tablets", "diet" to "Diet & exercise").forEach { (k, v) ->
+                                    GlassChip(v, s.treatment == k, { s.treatment = k })
+                                }
+                            }
+                            Spacer(Modifier.height(14.dp))
+                            Text("Do you wear a glucose sensor (CGM)?", style = FitType.label, color = th.textDim)
+                            Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                GlassChip("Yes", s.cgm == true, { s.cgm = true })
+                                GlassChip("No, finger-prick", s.cgm == false, { s.cgm = false })
+                            }
+                            Spacer(Modifier.height(14.dp))
+                            Text("Target range (mg/dL)", style = FitType.label, color = th.textDim)
+                            TargetField("Low", s.low, "mg/dL", decimal = false) { s.low = it }
+                            TargetField("High", s.high, "mg/dL", decimal = false) { s.high = it }
+                            Caption("Most adults use 70–180 (ADA). Ask your doctor for your own range. MyFit records readings only — it never calculates doses.")
+                        }
+                    }
+                    4 -> {
                         Header("What's your height?", "Used for better progress tracking.")
                         if (s.lengthUnit == LengthUnit.CM) {
                             WheelPicker(101, (s.heightCm.roundToInt() - 120).coerceIn(0, 100), { s.heightCm = (it + 120).toDouble() }, { "${it + 120} cm" }, Modifier.fillMaxWidth())
@@ -194,13 +240,13 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         Spacer(Modifier.height(16.dp))
                         GlassSegmented(listOf(LengthUnit.CM, LengthUnit.IN), s.lengthUnit, { it.label }, { s.lengthUnit = it }, Modifier.width(180.dp))
                     }
-                    4 -> {
+                    5 -> {
                         Header("What's your current weight?", "This becomes your first weigh-in. You can log more any time.")
                         WeightPicker(s.weightDisplay, s.weightUnit, { s.weightDisplay = it }) { u ->
                             s.weightDisplay = round1(Units.kgTo(s.weightKg, u)); s.targetDisplay = round1(Units.kgTo(Units.toKg(s.targetDisplay, s.weightUnit), u)); s.weightUnit = u
                         }
                     }
-                    5 -> {
+                    6 -> {
                         Header("Target weight", "Optional. Used only to show distance to goal — never to judge a single weigh-in.")
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             GlassChip("Set a target", s.hasTarget, { s.hasTarget = true })
@@ -213,7 +259,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                             Caption("${Fmt.signed(diff)} ${s.weightUnit.label} from today's weight")
                         }
                     }
-                    6 -> {
+                    7 -> {
                         Header("Your fitness goal", "Choose what best matches your training journey.")
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             FitnessGoal.all.forEach { g ->
@@ -221,7 +267,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                             }
                         }
                     }
-                    7 -> {
+                    8 -> {
                         Header("Activity & experience", "Outside the gym, how active is a normal day?")
                         listOf(
                             ActivityLevel.SEDENTARY to "Mostly sitting", ActivityLevel.LIGHT to "Light — some walking",
@@ -237,7 +283,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                             }
                         }
                     }
-                    8 -> {
+                    9 -> {
                         Header("Your week", "Planned workout days and your daily rhythm. Reminders respect your sleep hours.")
                         val days = listOf("M", "T", "W", "T", "F", "S", "S")
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -251,7 +297,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         TimeRow("Wake-up time") { MinuteOfDayChip(s.wake) { s.wake = it } }
                         TimeRow("Sleep time") { MinuteOfDayChip(s.sleep) { s.sleep = it } }
                     }
-                    9 -> {
+                    10 -> {
                         Header("Daily targets", "Set them yourself, or let me suggest a starting point you can edit.")
                         GlassButton("Suggest from my profile", {
                             val male = s.sex == Sex.MALE
@@ -281,7 +327,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         TargetField("Protein", s.protein, "g", decimal = false) { s.protein = it }
                         TargetField("Sleep", s.sleepH, "hours") { s.sleepH = it }
                     }
-                    10 -> {
+                    11 -> {
                         Spacer(Modifier.height(40.dp))
                         Pip(PipMood.EXCITED, size = 150.dp)
                         Spacer(Modifier.height(16.dp))
@@ -319,7 +365,17 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         TargetType.SLEEP_MIN to s.sleepH.toDouble() * 60.0,
                         TargetType.WEEKLY_WORKOUTS to Integer.bitCount(s.workoutDays).toDouble(),
                     )
+                    val ctx0 = appCtx
                     container.write {
+                        val d = s.diabetes ?: "none"
+                        container.settings.setDiabetesType(d)
+                        if (d != "none") {
+                            container.settings.setGlucose(true)
+                            val gt = when (d) { "type1" -> DiabetesType.TYPE1; "type2" -> DiabetesType.TYPE2; "prediabetes" -> DiabetesType.PREDIABETES; "gestational" -> DiabetesType.GESTATIONAL; else -> DiabetesType.OTHER }
+                            GlucoseConfigStore.save(ctx0, GlucoseConfigStore.get(ctx0).copy(type = gt, low = s.low.toIntOrNull() ?: 70, high = s.high.toIntOrNull() ?: 180,
+                                treatment = s.treatment, cgm = s.cgm == true, setupDone = true))
+                        }
+                        if (s.sex == Sex.FEMALE) container.settings.setCycle(true)
                         container.settings.setUnits(UnitPrefs(weight = s.weightUnit, length = s.lengthUnit, volume = units.volume, distance = units.distance))
                         container.profileRepo.createProfile(profile, targets)
                     }
