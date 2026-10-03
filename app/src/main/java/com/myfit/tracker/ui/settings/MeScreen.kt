@@ -301,11 +301,6 @@ fun DevSettingsScreen(container: AppContainer) {
             item { PipSettingsCard(container, dev = true) }
             item { AiProvidersCard(container) }
             item { AiDevCard() }
-            item {
-                GlassCard {
-                    ToggleRow("Live 3D Pip", "Real-time Pip with smooth head turns. Off = the pre-rendered animations.", settings.pip3d) { v -> container.write { container.settings.setPip3d(v) } }
-                }
-            }
             item { VoiceSettingsCard(container, dev = true) }
             item {
                 GlassCard {

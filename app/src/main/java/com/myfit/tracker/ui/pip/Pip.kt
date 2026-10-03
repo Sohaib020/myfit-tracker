@@ -195,10 +195,6 @@ fun Pip(
     idleActions: Boolean = true,
     level: Float = 0.5f,
 ) {
-    if (com.myfit.tracker.ui.theme.LocalSettings.current.pip3d && !Pip3DSupport.failed && mood in Pip3DMoods) {
-        Pip3D(mood, modifier, size, onTap, talking, interactive)
-        return
-    }
     val th = LocalFitTheme.current
     val ctx = LocalContext.current
     val tick = rememberTick()
