@@ -8,9 +8,12 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 env:
   NSH: 19
+  PREV_RUN: '37073366023'   # earlier run whose raw icons are reused
+  BUDGET_MIN: '320'
 
 jobs:
   describe:
@@ -51,7 +54,7 @@ jobs:
   gen:
     needs: [setup, describe]
     runs-on: ubuntu-latest
-    timeout-minutes: 340
+    timeout-minutes: 350
     strategy:
       fail-fast: false
       matrix:
@@ -72,6 +75,11 @@ jobs:
       - uses: actions/download-artifact@v4
         if: steps.c.outputs.n != '0'
         with: { name: sdbin, path: sdbin }
+      - name: Reuse icons from the earlier run
+        if: steps.c.outputs.n != '0'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with: { name: 'raw-${{ matrix.shard }}', path: raw, run-id: '${{ env.PREV_RUN }}', github-token: '${{ secrets.GITHUB_TOKEN }}' }
       - name: Free disk
         if: steps.c.outputs.n != '0'
         run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL; df -h /
@@ -87,7 +95,7 @@ jobs:
       - name: Generate
         if: steps.c.outputs.n != '0'
         run: |
-          chmod +x sdbin/sd; nproc; free -g
+          chmod +x sdbin/sd; nproc; free -g; mkdir -p raw; echo "reused: $(ls raw | wc -l)"
           python3 tools/foodicon/gen.py ${{ matrix.shard }} $NSH $PWD/sdbin/sd $PWD/models
           ls raw | wc -l
       - uses: actions/upload-artifact@v4
@@ -104,6 +112,9 @@ jobs:
       - uses: actions/download-artifact@v4
         with: { name: desc, path: tools/foodicon }
       - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with: { pattern: 'raw-*', path: raw, merge-multiple: true, run-id: '${{ env.PREV_RUN }}', github-token: '${{ secrets.GITHUB_TOKEN }}' }
+      - uses: actions/download-artifact@v4
         with: { pattern: 'raw-*', path: raw, merge-multiple: true }
       - run: pip install "rembg[cpu]" pillow || pip install rembg onnxruntime pillow
       - run: ls raw | wc -l; python3 tools/foodicon/post.py
@@ -112,6 +123,15 @@ jobs:
           cp tools/foodicon/desc.json out/desc.json
           python3 -c "import json,os;ids=[f['id'] for f in json.load(open('app/src/main/assets/foods_pk.json'))];m=[i for i in ids if not os.path.exists('out/foodicon/'+i+'.webp')];print('MISSING',len(m),m);open('out/missing.txt','w').write(chr(10).join(m))"
           cd out && zip -qr foodicon.zip foodicon && zip -qr rawjpg.zip rawjpg && du -sh foodicon && ls -la
+      - name: Save icons to the foodicon-assets branch (readable with git)
+        run: |
+          git config user.name "github-actions"; git config user.email "actions@github.com"
+          git fetch origin foodicon-assets && git checkout foodicon-assets || git checkout --orphan foodicon-assets
+          git rm -rq --cached . >/dev/null 2>&1 || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name out -exec rm -rf {} +
+          mkdir -p foodicon sheets && cp out/foodicon/*.webp foodicon/ && cp out/sheet_*.jpg sheets/ && cp out/missing.txt out/desc.json .
+          git add foodicon sheets missing.txt desc.json
+          git commit -qm "Food icons run ${{ github.run_number }} [skip ci]" && git push origin foodicon-assets
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: foodicon-${{ github.run_number }}
