@@ -90,3 +90,4 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 - Pakistani dishes + icons moved to the phase after this.
 - ✅ R4: old Pip restored (3D removed), UI fixes (run 83). Next: smaller offline AI
 - ✅ R4: offline brain → gemma-4-E2B-it-gpu.litertlm (2.0 GB), auto-download once on Wi-Fi (run 84). Next: Shariah & Health
+- ✅ R4: Shariah & Health section (ui/deen/*), onboarding step, Home card, halal tags (run 85). Next: Arena revamp
