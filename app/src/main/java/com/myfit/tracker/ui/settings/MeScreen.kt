@@ -205,6 +205,9 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         // ---------- pip / AI
         item { PipSettingsCard(container, dev = false) }
         item { OfflineBrainCard() }
+        item {
+            GlassButton("Replay Pip's tour", { container.write { container.settings.setTourDone(false) } }, Modifier.fillMaxWidth(), icon = Duo.AutoAwesome, height = 46.dp)
+        }
         item { VoiceSettingsCard(container, dev = false) }
 
         // ---------- gym mode

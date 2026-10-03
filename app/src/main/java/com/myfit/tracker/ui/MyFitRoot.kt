@@ -97,6 +97,10 @@ import com.myfit.tracker.ui.entries.EntrySheetContent
 import com.myfit.tracker.ui.entries.Sheet
 import com.myfit.tracker.ui.nav.LiquidTabBar
 import com.myfit.tracker.ui.nav.TabItem
+import com.myfit.tracker.ui.components.PipTour
+import com.myfit.tracker.ui.components.TourStep
+import com.myfit.tracker.ui.components.tourTarget
+import com.myfit.tracker.ui.pip.PipMood
 import com.myfit.tracker.ui.onboarding.OnboardingScreen
 import com.myfit.tracker.ui.settings.BackgroundImages
 import com.myfit.tracker.ui.settings.MeScreen
@@ -282,7 +286,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             AnimatedVisibility(top == null, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
                 LiquidTabBar(
                     items = tabs, selected = tab, onSelect = { tab = it },
-                    modifier = Modifier.navigationBarsPadding().padding(bottom = 8.dp),
+                    modifier = Modifier.navigationBarsPadding().padding(bottom = 8.dp).tourTarget("dock"),
                 )
             }
             // quick add: floating glass orb, top-right on every tab
@@ -292,9 +296,9 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
             ) {
                 androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
-                    com.myfit.tracker.ui.theme.GlassIconButton(Duo.CalendarMonth, { nav.push(Overlay.History) }, size = 50.dp)
+                    com.myfit.tracker.ui.theme.GlassIconButton(Duo.CalendarMonth, { nav.push(Overlay.History) }, Modifier.tourTarget("cal"), size = 50.dp)
                     androidx.compose.foundation.layout.Spacer(Modifier.size(10.dp))
-                    QuickAddOrb { sheet = Sheet.QuickAdd }
+                    Box(Modifier.tourTarget("add")) { QuickAddOrb { sheet = Sheet.QuickAdd } }
                 }
             }
             // Me: profile, body & targets — top-left on every tab
@@ -303,7 +307,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(top = 10.dp, start = 16.dp),
                 enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
             ) {
-                MePill(dash.profile?.name ?: "", com.myfit.tracker.ui.social.rememberAccountPhoto(container)) { nav.push(Overlay.Me) }
+                Box(Modifier.tourTarget("me")) { MePill(dash.profile?.name ?: "", com.myfit.tracker.ui.social.rememberAccountPhoto(container)) { nav.push(Overlay.Me) } }
             }
 
             // full-screen overlays (Gym Mode, details, editors) — each sits on its own copy of the backdrop
@@ -362,6 +366,23 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 }
             }
 
+            if (!s.tourDone && top == null) {
+                val steps = remember {
+                    listOf(
+                        TourStep(null, "Hi, I'm Pip!", "Let me show you where everything is. It takes 30 seconds.", PipMood.WAVE) { tab = 0 },
+                        TourStep("me", "You", "Your profile, online account, body numbers and daily targets."),
+                        TourStep("cal", "Daily log", "Everything you recorded, grouped by type. Tap a day to look back."),
+                        TourStep("add", "Quick add", "Water, weight, sleep, food, a note — log anything from any tab.", PipMood.EXCITED),
+                        TourStep("card_RINGS", "Your Home cards", "Tap a card to open it. Hold it to move, resize or hide it. Buttons on cards work without opening them."),
+                        TourStep("tab:1", "Train", "Workouts, templates and the exercise library. Tap + on any exercise to add it."),
+                        TourStep("tab:2", "Food", "Your food diary, meal snaps, fasting and supplements."),
+                        TourStep("tab:3", "Arena", "Leaderboards, challenges and friends. Only watch-recorded activity counts."),
+                        TourStep("tab:4", "Settings", "Themes, reminders, health connections and privacy."),
+                        TourStep(null, "That's it!", "Tap me on Home any time to chat. Let's get moving!", PipMood.CELEBRATE),
+                    )
+                }
+                PipTour(steps) { container.write { container.settings.setTourDone(true) } }
+            }
             LaunchedEffect(Unit) { com.myfit.tracker.domain.BadgeEngine.refresh(container, force = true) }
             com.myfit.tracker.ui.badges.BadgeCelebration(container)
             com.myfit.tracker.ui.settings.AiCapSheetHost()

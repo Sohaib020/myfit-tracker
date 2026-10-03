@@ -80,6 +80,7 @@ import androidx.compose.ui.zIndex
 import com.myfit.tracker.AppContainer
 import com.myfit.tracker.data.prefs.DashCard
 import com.myfit.tracker.domain.Clock
+import com.myfit.tracker.ui.components.tourTarget
 import com.myfit.tracker.domain.Fmt
 import com.myfit.tracker.ui.components.Caption
 import com.myfit.tracker.ui.components.CardHeader
@@ -299,7 +300,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
                 item(key = keyOf(c), span = if (small) half else full) {
                     val place: androidx.compose.animation.core.FiniteAnimationSpec<IntOffset>? =
                         if (dragKey == c) null else spring(stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntOffset.VisibilityThreshold)
-                    Box(Modifier.animateItem(placementSpec = place).movable(c)) {
+                    Box(Modifier.animateItem(placementSpec = place).movable(c).tourTarget(keyOf(c))) {
                         if (small) {
                             // every small card is exactly one tile tall so the two cards in a row line up
                             Box(Modifier.fillMaxWidth().height(TileHeight), propagateMinConstraints = true) {

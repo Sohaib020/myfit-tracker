@@ -81,7 +81,8 @@ data class AppSettings(
     val azureRegion: String = "",
     val aiPrimary: String = "auto",      // auto | gemini | groq | openrouter | mistral
     val liveAi: Boolean = false,         // camera: name foods live while aiming (uses AI quota)
-    val permsAsked: Boolean = false,     // first-launch permission walk-through done
+    val permsAsked: Boolean = false,
+    val tourDone: Boolean = false,       // Pip's first-run tour seen     // first-launch permission walk-through done
     val devMode: Boolean = false,        // developer options unlocked (tap version 7×)
     val cycleEnabled: Boolean = false,
     val cycleAsked: Boolean = false,
@@ -143,6 +144,7 @@ class SettingsStore(private val context: Context) {
         val aiPrimary = stringPreferencesKey("ai_primary")
         val liveAi = booleanPreferencesKey("live_ai")
         val perms = booleanPreferencesKey("perms_asked")
+        val tour = booleanPreferencesKey("tour_done")
         val dev = booleanPreferencesKey("dev_mode")
         val cycle = booleanPreferencesKey("cycle_on")
         val cycleAsked = booleanPreferencesKey("cycle_asked")
@@ -201,6 +203,7 @@ class SettingsStore(private val context: Context) {
             aiPrimary = p[K.aiPrimary] ?: "auto",
             liveAi = p[K.liveAi] ?: false,
             permsAsked = p[K.perms] ?: false,
+            tourDone = p[K.tour] ?: false,
             devMode = p[K.dev] ?: false,
             cycleEnabled = p[K.cycle] ?: false,
             cycleAsked = p[K.cycleAsked] ?: false,
@@ -259,6 +262,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setAiPrimary(v: String) = context.dataStore.edit { it[K.aiPrimary] = v }
     suspend fun setLiveAi(v: Boolean) = context.dataStore.edit { it[K.liveAi] = v }
     suspend fun setPermsAsked(v: Boolean) = context.dataStore.edit { it[K.perms] = v }
+    suspend fun setTourDone(v: Boolean) = context.dataStore.edit { it[K.tour] = v }
     suspend fun setDevMode(v: Boolean) = context.dataStore.edit { it[K.dev] = v }
     suspend fun setCycle(enabled: Boolean) = context.dataStore.edit { it[K.cycle] = enabled; it[K.cycleAsked] = true }
     suspend fun setGlucose(enabled: Boolean) = context.dataStore.edit { it[K.glucose] = enabled }
