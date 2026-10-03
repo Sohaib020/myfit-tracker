@@ -88,3 +88,4 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 - Offline AI: total app ≈1.8–1.9 GB; model 1.3–1.5 GB max, smarter, auto-download after install (Wi-Fi), chat + photos.
 - New section "Shariah & Health" (shown only to Muslims; asked in onboarding): prayer times + Qibla, fasting hub (Ramadan, Sunnah fasts, qada), Sunnah habits & dhikr (tasbeeh, adhkar), halal food tags + Hajj/Umrah tracker.
 - Pakistani dishes + icons moved to the phase after this.
+- ✅ R4: old Pip restored (3D removed), UI fixes (run 83). Next: smaller offline AI
