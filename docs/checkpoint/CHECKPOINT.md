@@ -92,4 +92,4 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 - ✅ R4: offline brain → gemma-4-E2B-it-gpu.litertlm (2.0 GB), auto-download once on Wi-Fi (run 84). Next: Shariah & Health
 - ✅ R4: Shariah & Health section (ui/deen/*), onboarding step, Home card, halal tags (run 85). Next: Arena revamp
 - ✅ R4: Arena revamp (ui/arena/*) — run 86. Next: more Pip look poses + new emotes (render in CI)
-- ✅ R4: Pip 13×13 look grid (169 poses, ±32° yaw) + 12 new emotes (thumbsup, salute, facepalm, cheer, grumpy, peekaboo, highfive, bow, meditate, dizzy, sneeze, hearteyes) rendered in CI (tools/piprender, .github/workflows/piprender.yml → pip-assets branch). Meditation screen uses meditate loop.
+- ✅ R4: Pip 13×13 look grid (169 poses, ±32° yaw) + 12 new emotes (thumbsup, salute, facepalm, cheer, grumpy, peekaboo, highfive, bow, meditate, dizzy, sneeze, hearteyes) rendered in CI (tools/piprender, .github/workflows/piprender.yml → pip-assets branch). Meditation screen uses meditate loop. — build-87
