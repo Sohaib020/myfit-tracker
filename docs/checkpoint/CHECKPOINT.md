@@ -76,3 +76,4 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 - NEXT PHASE: smaller on-device AI (<2.5 GB), more Pakistani foods + icons.
 - Tasks run one at a time; one CI build per group.
 - ✅ R3: UI fixes + grouped daily log (run 72); Home cards rework (run 73)
+- ✅ R3: onboarding sign-in/diabetes/cycle perms (run 74); Me account+photo, Train template quick edit + add-to-workout (run 75)
