@@ -42,6 +42,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -624,15 +626,15 @@ private fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
         Spacer(Modifier.height(14.dp))
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             // rings take ~40% of the card so the legend always has room (checked down to 360dp screens)
-            val ring = (maxWidth * 0.40f).coerceIn(96.dp, 124.dp)
+            val ring = (maxWidth * 0.42f).coerceIn(104.dp, 144.dp)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 TripleRings(s, ring)
                 Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     RingLegend(th.water, "Water", s.waterMl?.let { Fmt.volume(it, units.volume) } ?: "—",
-                        s.waterTarget?.let { "of ${Fmt.volume(it, units.volume)}" }) { open(Sheet.Water()) }
-                    RingLegend(th.steps, "Steps", s.steps?.let { Fmt.int(it) } ?: "—", s.stepTarget?.let { "of ${Fmt.int(it)}" }) { open(Sheet.Steps()) }
-                    RingLegend(th.sleep, "Sleep", s.sleepMin?.let { Fmt.duration(it) } ?: "—", s.sleepTarget?.let { "of ${Fmt.duration(it.toLong())}" }) { open(Sheet.Sleep()) }
+                        s.waterTarget?.let { "of ${Fmt.volume(it, units.volume)}" }, { open(Sheet.Water()) }, frac(s.waterMl, s.waterTarget))
+                    RingLegend(th.steps, "Steps", s.steps?.let { Fmt.int(it) } ?: "—", s.stepTarget?.let { "of ${Fmt.int(it)}" }, { open(Sheet.Steps()) }, frac(s.steps?.toDouble(), s.stepTarget))
+                    RingLegend(th.sleep, "Sleep", s.sleepMin?.let { Fmt.duration(it) } ?: "—", s.sleepTarget?.let { "of ${Fmt.duration(it.toLong())}" }, { open(Sheet.Sleep()) }, frac(s.sleepMin?.toDouble(), s.sleepTarget))
                 }
             }
         }
@@ -643,19 +645,30 @@ private fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
     }
 }
 
-/** Legend row: dot + label, then the value with its target underneath — wraps instead of clipping. */
+/** Legend row: dot + label + %, then a big value that shrinks to fit (never clips), target underneath. */
 @Composable
-private fun RingLegend(color: Color, label: String, value: String, of: String?, onClick: () -> Unit) {
+private fun RingLegend(color: Color, label: String, value: String, of: String?, onClick: () -> Unit, pct: Float? = null) {
     val th = LocalFitTheme.current
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickableNoRipple(onClick)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(9.dp).clip(CircleShape)) { Canvas(Modifier.fillMaxSize()) { drawCircle(color) } }
-            Spacer(Modifier.width(8.dp))
-            Text(label, style = FitType.caption, color = th.textDim, modifier = Modifier.weight(1f), maxLines = 1)
-            Text(value, style = FitType.section, color = th.text, maxLines = 1, softWrap = false)
+            Spacer(Modifier.width(7.dp))
+            Text(label.uppercase(), style = FitType.overline, color = th.textDim, modifier = Modifier.weight(1f), maxLines = 1)
+            if (pct != null) Text("${(pct * 100).toInt().coerceAtMost(999)}%", style = FitType.label, color = color, maxLines = 1)
         }
-        if (of != null) Text(of, style = FitType.caption, color = th.textDim, maxLines = 1, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End)
+        ShrinkText(value, FitType.metric, th.text)
+        if (of != null) Text(of, style = FitType.caption, color = th.textDim, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
+}
+
+/** Single-line text that steps its font size down until it fits the width. */
+@Composable
+private fun ShrinkText(text: String, style: androidx.compose.ui.text.TextStyle, color: Color) {
+    var size by remember(text) { mutableStateOf(style.fontSize) }
+    var ready by remember(text) { mutableStateOf(false) }
+    Text(text, style = style.copy(fontSize = size, lineHeight = size * 1.1f), color = color, maxLines = 1, softWrap = false,
+        modifier = Modifier.fillMaxWidth().drawWithContent { if (ready) drawContent() },
+        onTextLayout = { r -> if (r.didOverflowWidth && size.value > 13f) size = (size.value * 0.9f).sp else ready = true })
 }
 
 @Composable

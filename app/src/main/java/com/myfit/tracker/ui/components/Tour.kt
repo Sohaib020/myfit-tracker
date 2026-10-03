@@ -40,21 +40,15 @@ object TourTargets {
     val rects = mutableStateMapOf<String, Rect>()
 }
 
-fun Modifier.tourTarget(id: String): Modifier = onGloballyPositioned { TourTargets.rects[id] = it.boundsInRoot() }
+fun Modifier.tourTarget(id: String): Modifier = onGloballyPositioned {
+    val r = it.boundsInRoot()   // clipped to what's actually on screen
+    if (it.isAttached && r.width > 1f && r.height > 1f) TourTargets.rects[id] = r else TourTargets.rects.remove(id)
+}
 
 data class TourStep(val target: String?, val title: String, val text: String, val mood: PipMood = PipMood.HAPPY, val before: (() -> Unit)? = null)
 
-/** Rect for a target; "tab:N" is the N-th of 5 equal slots in the dock. */
-private fun rectFor(id: String?): Rect? {
-    if (id == null) return null
-    if (id.startsWith("tab:")) {
-        val d = TourTargets.rects["dock"] ?: return null
-        val i = id.removePrefix("tab:").toIntOrNull() ?: return null
-        val w = d.width / 5f
-        return Rect(d.left + w * i, d.top, d.left + w * (i + 1), d.bottom)
-    }
-    return TourTargets.rects[id]
-}
+/** Live rect for a target ("tab:N" anchors are registered by the dock itself). */
+private fun rectFor(id: String?): Rect? = id?.let { TourTargets.rects[it] }
 
 /**
  * Pip's first-run tour: the screen dims, a soft spotlight frames one real control at a time,
@@ -68,12 +62,12 @@ fun PipTour(steps: List<TourStep>, onDone: () -> Unit) {
     val step = steps[i]
     LaunchedEffect(i) { step.before?.invoke() }
     val target = rectFor(step.target)
-    // animate the spotlight between targets
+    // animate from wherever the spotlight was to the live target (which may still be moving into place)
     val anim = remember { Animatable(0f) }
     var from by remember { mutableStateOf<Rect?>(null) }
-    var to by remember { mutableStateOf<Rect?>(null) }
-    LaunchedEffect(i, target) {
-        from = currentSpot(from, to, anim.value); to = target
+    val drawn = remember { arrayOfNulls<Rect>(1) }
+    LaunchedEffect(i) {
+        from = drawn[0]
         anim.snapTo(0f); anim.animateTo(1f, spring(0.85f, 260f))
     }
     val appear = remember { Animatable(0f) }
@@ -85,7 +79,7 @@ fun PipTour(steps: List<TourStep>, onDone: () -> Unit) {
     Box(Modifier.fillMaxSize().onSizeChanged { box = it }.pointerInput(i) { detectTapGestures(onTap = { next() }) }) {
         Canvas(Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen; alpha = appear.value }) {
             drawRect(Color.Black.copy(alpha = 0.66f))
-            val spot = currentSpot(from, to, anim.value)
+            val spot = currentSpot(from, target, anim.value); drawn[0] = spot
             if (spot != null) {
                 val r = Rect(spot.left - pad, spot.top - pad, spot.right + pad, spot.bottom + pad)
                 val cr = CornerRadius(minOf(r.height / 2f, 30.dp.toPx()))

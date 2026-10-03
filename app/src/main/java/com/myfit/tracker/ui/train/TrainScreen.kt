@@ -151,7 +151,7 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
                 onStart = { start { container.workoutRepo.startFromTemplate(t.template.id) } },
                 onEdit = { nav.push(Overlay.TemplateEditor(t.template.id)) },
                 onDuplicate = { container.write { container.workoutRepo.duplicateTemplate(t.template.id) }; toaster.show("Duplicated") },
-                onArchive = { container.write { container.workoutRepo.archiveTemplate(t.template.id) }; toaster.show("Template archived") },
+                onArchive = { val id = t.template.id; container.write { container.workoutRepo.archiveTemplate(id) }; toaster.show("Deleted \"${t.template.name}\"", "Undo") { container.write { container.workoutRepo.unarchiveTemplate(id) } } },
                 onRemoveItem = { itemId -> container.write { container.workoutRepo.removeFromTemplate(t.template.id, itemId) } },
                 onAddItems = { nav.push(Overlay.PickExercises(templateId = t.template.id)) },
             )
@@ -210,7 +210,7 @@ private fun TemplateCard(t: TemplateView, onStart: () -> Unit, onEdit: () -> Uni
                     DropdownMenu(menu, { menu = false }) {
                         DropdownMenuItem({ Text("Edit") }, { menu = false; onEdit() }, leadingIcon = { Icon(Duo.Edit, null) })
                         DropdownMenuItem({ Text("Duplicate") }, { menu = false; onDuplicate() }, leadingIcon = { Icon(Duo.ContentCopy, null) })
-                        DropdownMenuItem({ Text("Archive") }, { menu = false; onArchive() }, leadingIcon = { Icon(Duo.Inventory2, null) })
+                        DropdownMenuItem({ Text("Delete template", color = th.danger) }, { menu = false; onArchive() }, leadingIcon = { Icon(Duo.DeleteOutline, null, tint = th.danger) })
                     }
                 }
             }
@@ -246,6 +246,11 @@ private fun TemplateCard(t: TemplateView, onStart: () -> Unit, onEdit: () -> Uni
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     GlassButton("Add exercise", onAddItems, Modifier.weight(1f), icon = Duo.Add, height = 42.dp)
                     GlassButton("Full editor", onEdit, Modifier.weight(1f), icon = Duo.Edit, height = 42.dp)
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickableNoRipple(onArchive).padding(vertical = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Duo.DeleteOutline, null, tint = th.danger, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
+                    Text("Delete template", style = FitType.label, color = th.danger)
                 }
             }
         }

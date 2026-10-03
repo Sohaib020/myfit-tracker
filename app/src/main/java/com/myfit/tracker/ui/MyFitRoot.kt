@@ -377,7 +377,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         TourStep("card_RINGS", "Your Home cards", "Tap a card to open it. Hold it to move, resize or hide it. Buttons on cards work without opening them."),
                         TourStep("tab:1", "Train", "Workouts, templates and the exercise library. Tap + on any exercise to add it."),
                         TourStep("tab:2", "Food", "Your food diary, meal snaps, fasting and supplements."),
-                        TourStep("tab:3", "Arena", "Leaderboards, challenges and friends. Only watch-recorded activity counts."),
+                        TourStep("tab:3", "Arena", "Weekly & monthly challenges, journeys, duels, games and friends. Only device-recorded activity counts."),
                         TourStep("tab:4", "Settings", "Themes, reminders, health connections and privacy."),
                         TourStep(null, "That's it!", "Tap me on Home any time to chat. Let's get moving!", PipMood.CELEBRATE),
                     )

@@ -5,6 +5,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
+import com.myfit.tracker.ui.components.tourTarget
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -113,6 +114,10 @@ fun LiquidTabBar(
             val itemWPx = with(density) { itemW.toPx() }
             val insetPx = with(density) { inset.toPx() }
             val last = items.lastIndex.toFloat()
+            // invisible per-tab anchors so Pip's tour spotlights the exact slot
+            androidx.compose.foundation.layout.Row(Modifier.fillMaxSize()) {
+                items.indices.forEach { i -> Box(Modifier.weight(1f).fillMaxHeight().tourTarget("tab:$i")) }
+            }
 
             // ---------- lens ----------
             val p = pop.value

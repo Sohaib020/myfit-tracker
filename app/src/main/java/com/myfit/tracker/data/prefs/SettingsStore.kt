@@ -38,7 +38,7 @@ val DefaultSmallCards: Set<DashCard> = setOf(
 )
 
 /** Cards that are folded into another card on Home. */
-val MergedCards: Set<DashCard> = setOf(DashCard.CHECKIN, DashCard.HYDRATION)
+val MergedCards: Set<DashCard> = setOf(DashCard.CHECKIN, DashCard.HYDRATION, DashCard.SOCIAL)   // SOCIAL: Arena has its own tab
 private const val DASH_LAYOUT = 3
 
 /** Values for [AppSettings.diabetesType]. */
