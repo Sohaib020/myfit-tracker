@@ -46,6 +46,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.myfit.tracker.AppContainer
+import com.myfit.tracker.ui.components.clickableNoRipple
+import androidx.compose.ui.graphics.Brush
+import kotlinx.coroutines.launch
 import com.myfit.tracker.data.db.Exercise
 import com.myfit.tracker.data.db.MuscleGroup
 import com.myfit.tracker.ui.components.Caption
@@ -63,12 +66,50 @@ import com.myfit.tracker.ui.theme.LocalFitTheme
 @Composable
 fun ExercisesScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = false) {
     val nav = LocalNav.current
+    val toaster = com.myfit.tracker.ui.components.LocalToaster.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val active by container.workoutRepo.inProgress.collectAsState(initial = null)
+    val templates by container.workoutRepo.templates.collectAsState(initial = emptyList())
+    var adding by remember { mutableStateOf<Exercise?>(null) }
     ExerciseBrowser(
         container = container,
         header = { Header(embedded, onCustom = { nav.push(Overlay.ExerciseEditor(null)) }, onArchive = { nav.push(Overlay.Archive) }) },
         bottomPad = bottomPad,
         onOpen = { nav.push(Overlay.ExerciseDetail(it.id)) },
+        onAdd = { ex ->
+            val w = active
+            if (w != null) scope.launch { container.workoutRepo.addExercise(w.id, ex.id); toaster.show("Added ${ex.name} to ${w.name}", "Open") { nav.push(Overlay.Gym(w.id)) } }
+            else adding = ex
+        },
     )
+    val ex = adding
+    com.myfit.tracker.ui.components.GlassSheet(visible = ex != null, onDismiss = { adding = null }) {
+        if (ex != null) {
+            val th = LocalFitTheme.current
+            Text("Add ${ex.name}", style = FitType.title, color = th.text)
+            Caption("No workout is running. Start one with it, or add it to a template.")
+            Spacer(Modifier.height(12.dp))
+            com.myfit.tracker.ui.theme.AccentButton("Start a workout with it", {
+                adding = null
+                scope.launch {
+                    val id = container.workoutRepo.startEmpty()
+                    container.workoutRepo.addExercise(id, ex.id)
+                    nav.push(Overlay.Gym(id))
+                }
+            }, Modifier.fillMaxWidth(), icon = Duo.PlayArrow, height = 50.dp)
+            if (templates.isNotEmpty()) {
+                Spacer(Modifier.height(14.dp))
+                Text("ADD TO A TEMPLATE", style = FitType.overline, color = th.textDim)
+                Spacer(Modifier.height(6.dp))
+                templates.forEach { t ->
+                    GlassButton(t.template.name, {
+                        adding = null
+                        scope.launch { container.workoutRepo.addToTemplate(t.template.id, listOf(ex.id)); toaster.show("Added to ${t.template.name}") }
+                    }, Modifier.fillMaxWidth().padding(vertical = 3.dp), icon = Duo.Add, height = 44.dp)
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -98,6 +139,7 @@ fun ExerciseBrowser(
     selected: List<Long>? = null,
     onToggle: ((Exercise) -> Unit)? = null,
     onConfirm: (() -> Unit)? = null,
+    onAdd: ((Exercise) -> Unit)? = null,
 ) {
     val th = LocalFitTheme.current
     val all by container.exerciseRepo.active.collectAsState(initial = emptyList())
@@ -162,6 +204,7 @@ fun ExerciseBrowser(
                     ex, logged = ex.id in used,
                     selectedIndex = selected?.indexOf(ex.id)?.takeIf { it >= 0 },
                     onClick = { if (pickMode) onToggle!!(ex) else onOpen(ex) },
+                    onAdd = if (pickMode) null else onAdd?.let { f -> { f(ex) } },
                 )
             }
         }
@@ -177,7 +220,7 @@ fun ExerciseBrowser(
 }
 
 @Composable
-fun ExerciseCard(ex: Exercise, logged: Boolean, selectedIndex: Int?, onClick: () -> Unit) {
+fun ExerciseCard(ex: Exercise, logged: Boolean, selectedIndex: Int?, onClick: () -> Unit, onAdd: (() -> Unit)? = null) {
     val th = LocalFitTheme.current
     val mc = muscleColor(ex.primaryMuscle)
     Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), onClick = onClick) {
@@ -190,6 +233,14 @@ fun ExerciseCard(ex: Exercise, logged: Boolean, selectedIndex: Int?, onClick: ()
                         Modifier.align(Alignment.TopEnd).padding(8.dp).size(28.dp).clip(CircleShape).drawBehind { drawCircle(th.accent) },
                         contentAlignment = Alignment.Center,
                     ) { Text("${selectedIndex + 1}", style = FitType.label, color = th.onAccent) }
+                }
+                if (onAdd != null) {
+                    Box(
+                        Modifier.align(Alignment.TopEnd).padding(8.dp).size(34.dp).clip(CircleShape)
+                            .drawBehind { drawCircle(Brush.verticalGradient(listOf(th.accentBright, th.accent))) }
+                            .clickableNoRipple(onAdd),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Duo.Add, "Add to workout", tint = th.onAccent, modifier = Modifier.size(20.dp)) }
                 }
                 if (logged) {
                     Box(Modifier.align(Alignment.TopStart).padding(8.dp).clip(RoundedCornerShape(8.dp)).drawBehind { drawRect(Color.Black.copy(alpha = 0.55f)) }.padding(horizontal = 6.dp, vertical = 2.dp)) {

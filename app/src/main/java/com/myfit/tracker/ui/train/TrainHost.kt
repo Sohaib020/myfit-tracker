@@ -75,3 +75,29 @@ private fun Segmented(labels: List<String>, selected: Int, onSelect: (Int) -> Un
         }
     }
 }
+
+
+/** Full-screen exercise picker that appends the chosen exercises to a template or a running workout. */
+@Composable
+fun PickExercisesScreen(container: AppContainer, templateId: Long?, workoutId: Long?) {
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
+    val toaster = com.myfit.tracker.ui.components.LocalToaster.current
+    val picked = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateListOf<Long>() }
+    com.myfit.tracker.ui.exercises.ExerciseBrowser(
+        container = container,
+        header = { com.myfit.tracker.ui.components.OverlayTopBar("Add exercises", { nav.pop() }, "Tap to select, in the order you'll do them") },
+        bottomPad = 24,
+        onOpen = {},
+        selected = picked,
+        onToggle = { e -> if (e.id in picked) picked.remove(e.id) else picked.add(e.id) },
+        onConfirm = {
+            val ids = picked.toList()
+            container.write {
+                if (templateId != null) container.workoutRepo.addToTemplate(templateId, ids)
+                if (workoutId != null) ids.forEach { container.workoutRepo.addExercise(workoutId, it) }
+            }
+            toaster.show("Added ${ids.size} exercise${if (ids.size == 1) "" else "s"}")
+            nav.pop()
+        },
+    )
+}

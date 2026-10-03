@@ -353,6 +353,8 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit) {
             }
         }
 
+        item { com.myfit.tracker.ui.social.AccountCard(container) }
+
         // ---------- targets
         item {
             GlassCard(onClick = { open(Sheet.EditTargets) }) {

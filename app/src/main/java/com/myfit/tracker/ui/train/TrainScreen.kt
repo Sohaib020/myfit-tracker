@@ -3,6 +3,7 @@ package com.myfit.tracker.ui.train
 import com.myfit.tracker.ui.theme.Duo
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -150,6 +151,8 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
                 onEdit = { nav.push(Overlay.TemplateEditor(t.template.id)) },
                 onDuplicate = { container.write { container.workoutRepo.duplicateTemplate(t.template.id) }; toaster.show("Duplicated") },
                 onArchive = { container.write { container.workoutRepo.archiveTemplate(t.template.id) }; toaster.show("Template archived") },
+                onRemoveItem = { itemId -> container.write { container.workoutRepo.removeFromTemplate(t.template.id, itemId) } },
+                onAddItems = { nav.push(Overlay.PickExercises(templateId = t.template.id)) },
             )
         }
 
@@ -179,16 +182,22 @@ private fun ResumeCard(container: AppContainer, workoutId: Long, onResume: () ->
                 Text(w.workout.name, style = FitType.title, color = th.text)
                 Caption("${mmss((now - w.workout.startedAt) / 1000)} · ${w.totals.sets} sets · ${w.exercises.size} exercises", color = th.text)
             }
-            AccentButton("Resume", onResume, height = 44.dp)
+            Column(horizontalAlignment = Alignment.End) {
+                AccentButton("Resume", onResume, height = 44.dp)
+                Spacer(Modifier.height(6.dp))
+                val nav = LocalNav.current
+                GlassButton("Add exercise", { nav.push(Overlay.PickExercises(workoutId = workoutId)) }, icon = Duo.Add, height = 36.dp)
+            }
         }
     }
 }
 
 @Composable
-private fun TemplateCard(t: TemplateView, onStart: () -> Unit, onEdit: () -> Unit, onDuplicate: () -> Unit, onArchive: () -> Unit) {
+private fun TemplateCard(t: TemplateView, onStart: () -> Unit, onEdit: () -> Unit, onDuplicate: () -> Unit, onArchive: () -> Unit, onRemoveItem: (Long) -> Unit = {}, onAddItems: () -> Unit = {}) {
     val th = LocalFitTheme.current
     var menu by remember { mutableStateOf(false) }
-    Glass(Modifier.fillMaxWidth(), onClick = onEdit) {
+    var open by remember { mutableStateOf(false) }
+    Glass(Modifier.fillMaxWidth().animateContentSize(), onClick = { open = !open }) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -215,7 +224,25 @@ private fun TemplateCard(t: TemplateView, onStart: () -> Unit, onEdit: () -> Uni
                 AccentButton("Start", onStart, icon = Duo.PlayArrow, height = 46.dp)
             }
             Spacer(Modifier.height(8.dp))
-            Caption(t.items.joinToString(" · ") { it.second.name }, )
+            if (!open) Caption(t.items.joinToString(" · ") { it.second.name } + "  ·  tap to edit", )
+            else {
+                t.items.forEach { (item, ex) ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ExerciseImage(ex, Modifier.size(36.dp).clip(CircleShape))
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(ex.name, style = FitType.label, color = th.text, maxLines = 1)
+                            Caption("${item.targetSets} sets" + (item.targetRepsMin?.let { mn -> " · $mn" + (item.targetRepsMax?.takeIf { it != mn }?.let { "–$it" } ?: "") + " reps" } ?: ""))
+                        }
+                        GlassIconButton(Duo.Close, { onRemoveItem(item.id) }, size = 34.dp, tint = th.danger)
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GlassButton("Add exercise", onAddItems, Modifier.weight(1f), icon = Duo.Add, height = 42.dp)
+                    GlassButton("Full editor", onEdit, Modifier.weight(1f), icon = Duo.Edit, height = 42.dp)
+                }
+            }
         }
     }
 }

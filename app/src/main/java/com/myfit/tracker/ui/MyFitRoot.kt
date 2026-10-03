@@ -303,7 +303,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(top = 10.dp, start = 16.dp),
                 enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
             ) {
-                MePill(dash.profile?.name ?: "") { nav.push(Overlay.Me) }
+                MePill(dash.profile?.name ?: "", com.myfit.tracker.ui.social.rememberAccountPhoto(container)) { nav.push(Overlay.Me) }
             }
 
             // full-screen overlays (Gym Mode, details, editors) — each sits on its own copy of the backdrop
@@ -351,6 +351,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.Fasting -> com.myfit.tracker.ui.routine.FastingScreen(container)
                         Overlay.DevSettings -> com.myfit.tracker.ui.settings.DevSettingsScreen(container)
                         Overlay.HealthHub -> com.myfit.tracker.ui.dashboard.HealthHubScreen(container)
+                        is Overlay.PickExercises -> com.myfit.tracker.ui.train.PickExercisesScreen(container, o.templateId, o.workoutId)
                         Overlay.History -> TimelineScreen(container, { sheet = it }, 40, onBack = { nav.pop() })
                         is Overlay.DayLog -> com.myfit.tracker.ui.timeline.DayLogScreen(container, o.date) { sheet = it }
                         is Overlay.Food -> com.myfit.tracker.ui.food.FoodDiaryScreen(container, o.date)
@@ -405,7 +406,7 @@ private fun QuickAddOrb(onClick: () -> Unit) {
 
 /** Top-left "Me" button: your initial in an accent circle + label, on a glass capsule. */
 @Composable
-private fun MePill(name: String, onClick: () -> Unit) {
+private fun MePill(name: String, photo: androidx.compose.ui.graphics.ImageBitmap?, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     val tick = com.myfit.tracker.ui.theme.rememberTick()
     com.myfit.tracker.ui.theme.Glass(
@@ -415,7 +416,8 @@ private fun MePill(name: String, onClick: () -> Unit) {
             Modifier.padding(start = 5.dp, end = 16.dp).align(Alignment.CenterStart),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
+            if (photo != null) androidx.compose.foundation.Image(photo, null, Modifier.size(40.dp).clip(CircleShape), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+            else Box(
                 Modifier.size(40.dp).clip(CircleShape).drawBehind { drawCircle(Brush.verticalGradient(listOf(th.accentBright, th.accent))) },
                 contentAlignment = Alignment.Center,
             ) {

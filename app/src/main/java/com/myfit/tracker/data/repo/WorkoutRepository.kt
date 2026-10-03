@@ -275,6 +275,22 @@ class WorkoutRepository(private val db: AppDatabase) {
         tid
     }
 
+    /** Quick edit from the Train list: drop one exercise from a template. */
+    suspend fun removeFromTemplate(templateId: Long, itemId: Long) {
+        val t = tdao.getTemplate(templateId) ?: return
+        saveTemplate(templateId, t.name, t.notes, tdao.getItems(templateId).filter { it.id != itemId })
+    }
+
+    /** Quick edit: append exercises to a template with sensible defaults (3 × 8–12, 90 s rest). */
+    suspend fun addToTemplate(templateId: Long, exerciseIds: List<Long>) {
+        val t = tdao.getTemplate(templateId) ?: return
+        val cur = tdao.getItems(templateId)
+        val add = exerciseIds.filter { id -> cur.none { it.exerciseId == id } }.map { id ->
+            WorkoutTemplateExercise(templateId = templateId, exerciseId = id, position = 0, targetSets = 3, targetRepsMin = 8, targetRepsMax = 12, targetWeightKg = null, restSeconds = 90)
+        }
+        if (add.isNotEmpty()) saveTemplate(templateId, t.name, t.notes, cur + add)
+    }
+
     suspend fun duplicateTemplate(id: Long): Long? {
         val t = tdao.getTemplate(id) ?: return null
         return saveTemplate(null, "${t.name} (copy)", t.notes, tdao.getItems(id))
