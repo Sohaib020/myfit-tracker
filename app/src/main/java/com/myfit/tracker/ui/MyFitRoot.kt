@@ -384,6 +384,15 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 PipTour(steps) { container.write { container.settings.setTourDone(true) } }
             }
             LaunchedEffect(Unit) { com.myfit.tracker.domain.BadgeEngine.refresh(container, force = true) }
+            // queue Pip's offline brain once after install: Wi-Fi only, resumable, in the background
+            LaunchedEffect(Unit) {
+                runCatching {
+                    val ai = com.myfit.tracker.ai.ondevice.OnDeviceAi.get(container.app)
+                    val spec = ai.models.spec()
+                    val ok = com.myfit.tracker.ai.ondevice.DeviceCheck.check(container.app, spec).tier != com.myfit.tracker.ai.ondevice.DeviceCheck.Tier.UNSUPPORTED
+                    if (ok && !ai.models.isInstalled(spec) && ai.prefs.takeAutoDownload()) ai.models.start()
+                }
+            }
             com.myfit.tracker.ui.badges.BadgeCelebration(container)
             com.myfit.tracker.ui.settings.AiCapSheetHost()
             GlassSheet(visible = sheet != null, onDismiss = { sheet = null }) {

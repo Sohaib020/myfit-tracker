@@ -52,6 +52,7 @@ class AiPrefs(private val ctx: Context) {
         val bPhoto = intPreferencesKey("q_bonus_photo")
         val bChat = intPreferencesKey("q_bonus_chat")
         val ads = intPreferencesKey("q_ads")
+        val autoDl = booleanPreferencesKey("auto_dl_done")
     }
 
     val config: Flow<AiConfig> = ctx.aiStore.data.map { p ->
@@ -103,6 +104,13 @@ class AiPrefs(private val ctx: Context) {
             p[K.bChat] = (p[K.bChat] ?: 0) + bonusChat
             p[K.ads] = (p[K.ads] ?: 0) + ads
         }
+    }
+
+    /** True the first time it's called, so the offline brain auto-download is queued only once per install. */
+    suspend fun takeAutoDownload(): Boolean {
+        var first = false
+        ctx.aiStore.edit { p -> if (p[K.autoDl] != true) { first = true; p[K.autoDl] = true } }
+        return first
     }
 
     suspend fun resetToday() = ctx.aiStore.edit { p -> listOf(K.uPhoto, K.uChat, K.uLive, K.bPhoto, K.bChat, K.ads).forEach { p[it] = 0 } }

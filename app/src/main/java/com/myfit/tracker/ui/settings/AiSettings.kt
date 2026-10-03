@@ -78,7 +78,7 @@ fun OfflineBrainCard() {
     GlassCard {
         CardHeader(Duo.Lock, "Offline brain", th.accentBright)
         Spacer(Modifier.height(8.dp))
-        Caption("Download ${spec.label.substringBefore(" (")} (${if (spec.sizeBytes > 0) DeviceCheck.gb(spec.sizeBytes) else "size unknown"}, ${spec.license}) and Pip answers questions and reads food photos right on your phone — free, unlimited, and nothing leaves the device. Answers are slower than online and still estimates.")
+        Caption("Download ${spec.label.substringBefore(" (")} (${ModelCatalog.approxBytes(spec).let { if (it > 0) "about " + DeviceCheck.gb(it) else "size unknown" }}, ${spec.license}) and Pip answers questions and reads food photos right on your phone — free, unlimited, and nothing leaves the device. Answers are slower than online and still estimates.")
         Spacer(Modifier.height(10.dp))
         when {
             cap.tier == DeviceCheck.Tier.UNSUPPORTED -> Caption(cap.reason ?: "This phone can't run it.", color = th.warning)
@@ -118,7 +118,7 @@ fun OfflineBrainCard() {
                     ToggleRow("Allow mobile data", "Off = waits for Wi-Fi (recommended, it's a big file)", cfg.allowMobileData) { v -> scope.launch { ai.prefs.setAllowMobile(v) } }
                     Spacer(Modifier.height(8.dp))
                     val free = cap.freeBytes
-                    if (spec.sizeBytes > 0 && free < spec.sizeBytes + 300_000_000L) Caption("Free up space first: ${DeviceCheck.gb(free)} free, needs about ${DeviceCheck.gb(spec.sizeBytes + 300_000_000L)}.", color = th.warning)
+                    ModelCatalog.approxBytes(spec).let { need -> if (need > 0 && free < need + 300_000_000L) Caption("Free up space first: ${DeviceCheck.gb(free)} free, needs about ${DeviceCheck.gb(need + 300_000_000L)}.", color = th.warning) }
                     AccentButton(if (partial > 0) "Resume download (${DeviceCheck.gb(partial)} done)" else "Download offline brain", { scope.launch { ai.models.start() } }, Modifier.fillMaxWidth(), icon = Duo.ArrowDownward, height = 48.dp)
                 }
             }

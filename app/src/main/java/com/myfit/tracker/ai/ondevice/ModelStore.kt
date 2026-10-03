@@ -43,9 +43,18 @@ data class ModelSpec(
 object ModelCatalog {
     private const val HF = "https://huggingface.co/litert-community"
 
-    /** Gemma 4 E2B instruction-tuned, LiteRT-LM format. Apache 2.0, ungated (no login needed). Text + image input. */
+    /** Gemma 4 E2B instruction-tuned, LiteRT-LM GPU build (about 2.0 GB). Apache 2.0, ungated. Text + image input. Size/checksum come from the server headers. */
     val DEFAULT = ModelSpec(
-        id = "gemma4-e2b", label = "Gemma 4 E2B (recommended)",
+        id = "gemma4-e2b-gpu", label = "Gemma 4 E2B (2.0 GB)",
+        fileName = "gemma-4-E2B-it-gpu.litertlm",
+        url = "$HF/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-gpu.litertlm",
+        sizeBytes = 0L, sha256 = null,
+        minRamBytes = 5_300_000_000L, license = "Apache 2.0", source = "Hugging Face · litert-community",
+    )
+
+    /** The earlier CPU build (2.6 GB): developer option for phones whose GPU can't run the GPU build. */
+    val CPU = ModelSpec(
+        id = "gemma4-e2b", label = "Gemma 4 E2B CPU (2.6 GB)",
         fileName = "gemma-4-E2B-it.litertlm",
         url = "$HF/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
         sizeBytes = 2_588_147_712L,
@@ -62,7 +71,9 @@ object ModelCatalog {
         minRamBytes = 10_000_000_000L, license = "Apache 2.0", source = "Hugging Face · litert-community",
     )
 
-    val all = listOf(DEFAULT, E4B)
+    val all = listOf(DEFAULT, CPU, E4B)
+    /** Approximate download size for display before the server reports the exact one. */
+    fun approxBytes(s: ModelSpec): Long = if (s.sizeBytes > 0) s.sizeBytes else if (s.id == DEFAULT.id) 2_010_000_000L else 0L
 
     fun resolve(c: AiConfig): ModelSpec {
         val base = all.firstOrNull { it.id == c.modelPreset } ?: DEFAULT
