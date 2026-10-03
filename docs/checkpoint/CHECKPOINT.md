@@ -78,3 +78,4 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 - ✅ R3: UI fixes + grouped daily log (run 72); Home cards rework (run 73)
 - ✅ R3: onboarding sign-in/diabetes/cycle perms (run 74); Me account+photo, Train template quick edit + add-to-workout (run 75)
 - ✅ R3: iOS-style grow-open (run 76); Pip spotlight tour + replay (run 78). Next: real-time 3D Pip
+- ✅ R3: real-time 3D Pip (Filament 1.56, assets/pip/pip3d.glb from docs/checkpoint/pip3d/export_glb.py), dev toggle 'Live 3D Pip', auto-fallback — run 81. Untested on device: lighting/size may need tuning from user screenshots.
