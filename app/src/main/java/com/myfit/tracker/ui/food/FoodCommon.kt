@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -111,16 +112,16 @@ fun EstimateTag() {
     Text("ESTIMATE", style = FitType.overline, color = th.warning, modifier = Modifier.padding(start = 6.dp))
 }
 
-/** Small in-memory cache of decoded food photos (assets/foodimg, 256 px). */
+/** Small in-memory cache of decoded 3D food icons (assets/foodicon, 192 px, transparent). */
 object FoodPhotos {
-    private val cache = object : android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(60) {}
-    fun load(ctx: android.content.Context, slug: String): androidx.compose.ui.graphics.ImageBitmap? =
-        cache.get(slug) ?: runCatching {
-            ctx.assets.open("foodimg/$slug.webp").use { android.graphics.BitmapFactory.decodeStream(it) }.asImageBitmap()
-        }.getOrNull()?.also { cache.put(slug, it) }
+    private val cache = object : android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(80) {}
+    fun load(ctx: android.content.Context, id: String): androidx.compose.ui.graphics.ImageBitmap? =
+        cache.get(id) ?: runCatching {
+            ctx.assets.open("foodicon/$id.webp").use { android.graphics.BitmapFactory.decodeStream(it) }.asImageBitmap()
+        }.getOrNull()?.also { cache.put(id, it) }
 }
 
-/** Food photo thumbnail, or a coloured icon tile when there's no photo. */
+/** The food's own 3D icon on a soft tile, or a generic icon when the food has none (custom / barcode foods). */
 @Composable
 fun FoodThumb(photo: String?, size: androidx.compose.ui.unit.Dp, corner: androidx.compose.ui.unit.Dp = 14.dp, modifier: Modifier = Modifier) {
     val th = LocalFitTheme.current
@@ -129,9 +130,13 @@ fun FoodThumb(photo: String?, size: androidx.compose.ui.unit.Dp, corner: android
         value = photo?.let { p -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { FoodPhotos.load(ctx, p) } }
     }
     val m = if (modifier == Modifier) Modifier.size(size) else modifier
-    Box(m.clip(androidx.compose.foundation.shape.RoundedCornerShape(corner)), contentAlignment = Alignment.Center) {
-        val i = img
-        if (i != null) androidx.compose.foundation.Image(i, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-        else com.myfit.tracker.ui.components.IconBubble(com.myfit.tracker.ui.theme.Duo.ForkKnife, th.protein, size)
+    val i = img
+    if (i == null) {
+        Box(m, contentAlignment = Alignment.Center) { com.myfit.tracker.ui.components.IconBubble(com.myfit.tracker.ui.theme.Duo.ForkKnife, th.protein, size) }
+        return
+    }
+    val tile = if (th.isLight) androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.05f) else androidx.compose.ui.graphics.Color.White.copy(alpha = 0.08f)
+    Box(m.clip(androidx.compose.foundation.shape.RoundedCornerShape(corner)).background(tile), contentAlignment = Alignment.Center) {
+        androidx.compose.foundation.Image(i, null, Modifier.fillMaxSize().padding(size * 0.06f), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
     }
 }

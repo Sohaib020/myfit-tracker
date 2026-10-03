@@ -142,7 +142,7 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
                             ItemRow(row, onClick = { editing = row }, onDelete = {
                                 container.write { container.nutritionRepo.deleteItem(row) }
                                 toaster.show("Removed ${row.foodName}")
-                            })
+                            }, icon = container.nutritionRepo.iconForName(row.foodName))
                         }
                         if (list.size >= 2) {
                             Spacer(Modifier.height(10.dp))
@@ -220,9 +220,10 @@ private fun QuickTile(label: String, icon: androidx.compose.ui.graphics.vector.I
 }
 
 @Composable
-fun ItemRow(i: MealItem, onClick: () -> Unit, onDelete: () -> Unit) {
+fun ItemRow(i: MealItem, onClick: () -> Unit, onDelete: () -> Unit, icon: String? = null) {
     val th = LocalFitTheme.current
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickableNoRipple(onClick).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (icon != null) { FoodThumb(icon, 40.dp, 12.dp); Spacer(Modifier.width(10.dp)) }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(i.foodName, style = FitType.body, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
