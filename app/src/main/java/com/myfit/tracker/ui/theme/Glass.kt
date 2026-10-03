@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -83,6 +84,7 @@ fun Glass(
     val st = LocalSettings.current
     val strength = st.glassStrength
     val pos = remember { mutableStateOf(Offset.Zero) }
+    val bounds = remember { arrayOfNulls<androidx.compose.ui.geometry.Rect>(1) }
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed && onClick != null) pressScale else 1f, spring(0.45f, 700f), label = "glassPress")
@@ -99,10 +101,10 @@ fun Glass(
     Box(
         modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .onGloballyPositioned { pos.value = it.positionInRoot() }
+            .onGloballyPositioned { pos.value = it.positionInRoot(); if (onClick != null) bounds[0] = it.boundsInRoot() }
             .clip(shape)
             .then(
-                if (onClick != null) Modifier.clickable(interaction, indication = null) { tick(); onClick() }
+                if (onClick != null) Modifier.clickable(interaction, indication = null) { tick(); OpenOrigin.mark(bounds[0]); onClick() }
                 else Modifier
             )
     ) {
@@ -265,5 +267,19 @@ fun GlassChip(text: String, selected: Boolean, onClick: () -> Unit, modifier: Mo
             }
             Text(text, style = FitType.label, color = if (selected) th.onAccent else th.text)
         }
+    }
+}
+
+
+/** Where the last tapped card/tile was, so a screen it opens can grow out of it (iOS-style). */
+object OpenOrigin {
+    private var rect: androidx.compose.ui.geometry.Rect? = null
+    private var at = 0L
+    fun mark(r: androidx.compose.ui.geometry.Rect?) { rect = r; at = android.os.SystemClock.uptimeMillis() }
+    /** The tapped bounds if the tap was in the last moment, else null. Consumed once. */
+    fun take(): androidx.compose.ui.geometry.Rect? {
+        val r = rect.takeIf { android.os.SystemClock.uptimeMillis() - at < 700 }
+        rect = null
+        return r
     }
 }

@@ -310,12 +310,13 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             AnimatedContent(
                 targetState = top,
                 transitionSpec = {
-                    (slideInVertically(spring(0.85f, 320f)) { it / 6 } + fadeIn(tween(220)))
-                        .togetherWith(fadeOut(tween(160)))
+                    // the new screen grows out of the tapped card (GrowFrom); the old one shrinks away
+                    androidx.compose.animation.EnterTransition.None
+                        .togetherWith(fadeOut(tween(200)) + scaleOut(tween(220), targetScale = 0.92f))
                 },
                 label = "overlay",
             ) { o ->
-                if (o != null) Box(Modifier.fillMaxSize()) {
+                if (o != null) com.myfit.tracker.ui.components.GrowFrom {
                     Canvas(Modifier.fillMaxSize()) {
                         val l = backdrop.layer
                         val bi = backdrop.bgImg
