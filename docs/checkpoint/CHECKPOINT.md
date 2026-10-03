@@ -63,3 +63,15 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 
 - ✅ 3 Oct ~18:10 PKT: all 455 icons generated (run 37103950225, saved on branch foodicon-assets); 453 added to app/src/main/assets/foodicon (firni, cheesecake dropped as wrong → generic tile); Wikimedia photos/credits removed; diary rows show icons — CI green run 71. Sheets 1,3,6,9,12,15 reviewed; others not individually checked.
 - ⏭ next: user device testing feedback; move AI keys behind a Cloudflare Worker before launch; haiz mode (scholar-reviewed) later; app name.
+
+## Round 3 request (3 Oct 19:19 PKT) — decisions
+- Sign-in REQUIRED at start (Google + email). Diabetes onboarding: type + insulin/tablets + CGM + target range (default 70–180). Female → ask cycle Health Connect permissions automatically.
+- Pip: real-time 3D model (smooth head turns, blink, nod, wave), no pose cross-fades.
+- Tour: spotlight on real screen with Pip pointing.
+- Home order: Progress(+check-in merged; splits when small) → Snap a meal + Chat with Pip (one row; small Pip tile keeps Chat button) → Vitals (camera HR + log BP buttons on card) → Food+Hydration (glass always, undo water, splits into 2 when small; rename "Food log" → "Add food") → Mindfulness (breathing + mood buttons) → Menstrual cycle (females; Today's log + Set PIN). All cards visibly openable.
+- Me: show online account type + profile photo (also in Me pill).
+- Train: remove exercise from template; add exercise to live workout; + on each library exercise.
+- iOS-style grow-to-fullscreen open animation. Calendar logs grouped by category tiles. Less clutter overall.
+- UI bugs: day strip clipped, empty-state text clipped, Train header overlap, Open camera label missing, history under dock.
+- NEXT PHASE: smaller on-device AI (<2.5 GB), more Pakistani foods + icons.
+- Tasks run one at a time; one CI build per group.
