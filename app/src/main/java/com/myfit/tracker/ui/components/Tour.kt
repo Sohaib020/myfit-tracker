@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -81,7 +82,7 @@ fun PipTour(steps: List<TourStep>, onDone: () -> Unit) {
     val pad = with(density) { 8.dp.toPx() }
     fun next() { if (i < steps.lastIndex) i++ else onDone() }
 
-    Box(Modifier.fillMaxSize().onSizeChanged { box = it }.pointerInput(i) { detectTapGesturesCompat { next() } }) {
+    Box(Modifier.fillMaxSize().onSizeChanged { box = it }.pointerInput(i) { detectTapGestures(onTap = { next() }) }) {
         Canvas(Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen; alpha = appear.value }) {
             drawRect(Color.Black.copy(alpha = 0.66f))
             val spot = currentSpot(from, to, anim.value)
@@ -136,5 +137,3 @@ private fun currentSpot(a: Rect?, b: Rect?, t: Float): Rect? = when {
     else -> Rect(a.left + (b.left - a.left) * t, a.top + (b.top - a.top) * t, a.right + (b.right - a.right) * t, a.bottom + (b.bottom - a.bottom) * t)
 }
 
-private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.detectTapGesturesCompat(onTap: () -> Unit) =
-    androidx.compose.foundation.gestures.detectTapGestures(onTap = { onTap() })
