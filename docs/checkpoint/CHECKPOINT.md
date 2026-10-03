@@ -79,3 +79,12 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 - ✅ R3: onboarding sign-in/diabetes/cycle perms (run 74); Me account+photo, Train template quick edit + add-to-workout (run 75)
 - ✅ R3: iOS-style grow-open (run 76); Pip spotlight tour + replay (run 78). Next: real-time 3D Pip
 - ✅ R3: real-time 3D Pip (Filament 1.56, assets/pip/pip3d.glb from docs/checkpoint/pip3d/export_glb.py), dev toggle 'Live 3D Pip', auto-fallback — run 81. Untested on device: lighting/size may need tuning from user screenshots.
+
+## Round 4 request (4 Oct 00:37 PKT) — decisions
+- Pip: bring back the rendered (old) Pip; remove the 3D one. Add MORE head-look poses (denser grid → smoother, less fade) and MORE emotes/animations.
+- UI fixes: hydration small tile "+250 ml" clipped; card-open animation must be consistent everywhere (iOS-style), Home→Train tab switch lags; sheets drawn under the dock (Exercises "Add …" sheet); Today's progress card empty space; exercise remove option in Train; daily-log calendar should be a swipe slider with haptic ticks.
+- Camera blood pressure: answer only (no validated camera/sensor-free BP method — don't ship).
+- Arena revamp: weekly & monthly challenges, virtual journeys with original characters + map track, 1-on-1 duels & team battles, mini-games; graphs, tracks, style (Samsung Together-like).
+- Offline AI: total app ≈1.8–1.9 GB; model 1.3–1.5 GB max, smarter, auto-download after install (Wi-Fi), chat + photos.
+- New section "Shariah & Health" (shown only to Muslims; asked in onboarding): prayer times + Qibla, fasting hub (Ramadan, Sunnah fasts, qada), Sunnah habits & dhikr (tasbeeh, adhkar), halal food tags + Hajj/Umrah tracker.
+- Pakistani dishes + icons moved to the phase after this.
