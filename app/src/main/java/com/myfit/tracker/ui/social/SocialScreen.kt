@@ -86,13 +86,14 @@ fun formatMetric(m: Metric, v: Double): String = when (m) {
 
 /** Friends, challenges and leaderboards. */
 @Composable
-fun SocialScreen(container: AppContainer, asTab: Boolean = false, bottomPad: Int = 40) {
+fun SocialScreen(container: AppContainer, asTab: Boolean = false, bottomPad: Int = 40, embedded: Boolean = false) {
     val nav = LocalNav.current
     val social = container.social
     val user by social.user.collectAsState()
     val sub = if (user != null) "Leaderboards, challenges & friends · only device-recorded activity counts" else "Sign in to challenge friends"
     Column(Modifier.fillMaxSize()) {
-        if (asTab) Column(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = com.myfit.tracker.ui.components.TopBarSpace, bottom = 6.dp)) {
+        if (embedded) Unit
+        else if (asTab) Column(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = com.myfit.tracker.ui.components.TopBarSpace, bottom = 6.dp)) {
             Text("Arena", style = com.myfit.tracker.ui.theme.FitType.display, color = LocalFitTheme.current.text)
             Caption(sub)
         } else OverlayTopBar("Arena", { nav.pop() }, sub)

@@ -268,7 +268,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                     0 -> DashboardScreen(dash, container, { sheet = it }, bottomPad, goTab = { tab = it })
                     1 -> com.myfit.tracker.ui.train.TrainHost(container, bottomPad)
                     2 -> com.myfit.tracker.ui.food.FoodDiaryScreen(container, null, asTab = true, bottomPad = bottomPad)
-                    3 -> com.myfit.tracker.ui.social.SocialScreen(container, asTab = true, bottomPad = bottomPad)
+                    3 -> com.myfit.tracker.ui.arena.ArenaScreen(container, bottomPad)
                     else -> SettingsScreen(container, { sheet = it }, bottomPad)
                 }
             }
