@@ -8894,5 +8894,1932 @@
    "weight gainer"
   ],
   "basis": "typical"
+ },
+ {
+  "id": "khamiri_roti",
+  "name": "Khamiri roti",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 90,
+  "kcal": 250,
+  "p": 7.5,
+  "c": 46,
+  "f": 4,
+  "fiber": 2.5,
+  "aliases": [
+   "khameeri roti",
+   "khamiri"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "garlic_naan",
+  "name": "Garlic naan",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 110,
+  "kcal": 330,
+  "p": 9,
+  "c": 52,
+  "f": 9.5,
+  "fiber": 2,
+  "aliases": [
+   "lehsan naan",
+   "garlic nan"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "aloo_naan",
+  "name": "Aloo naan (stuffed)",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 160,
+  "kcal": 400,
+  "p": 10,
+  "c": 66,
+  "f": 10,
+  "fiber": 4,
+  "aliases": [
+   "potato naan",
+   "aloo wala naan"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "chicken_naan",
+  "name": "Chicken naan (stuffed)",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 170,
+  "kcal": 450,
+  "p": 22,
+  "c": 58,
+  "f": 14,
+  "fiber": 2.5,
+  "aliases": [
+   "chicken stuffed naan",
+   "murgh naan"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "rumali_roti",
+  "name": "Rumali roti",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 45,
+  "kcal": 125,
+  "p": 3.5,
+  "c": 24,
+  "f": 1.5,
+  "fiber": 1,
+  "aliases": [
+   "roomali roti",
+   "handkerchief roti"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "missi_roti",
+  "name": "Missi roti",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 60,
+  "kcal": 185,
+  "p": 7,
+  "c": 27,
+  "f": 5.5,
+  "fiber": 4.5,
+  "aliases": [
+   "besan roti",
+   "missi"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "methi_paratha",
+  "name": "Methi paratha",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 90,
+  "kcal": 280,
+  "p": 6,
+  "c": 36,
+  "f": 12.5,
+  "fiber": 4,
+  "aliases": [
+   "fenugreek paratha",
+   "methi wala paratha"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "gobi_paratha",
+  "name": "Gobhi paratha",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 140,
+  "kcal": 340,
+  "p": 8,
+  "c": 48,
+  "f": 13,
+  "fiber": 5,
+  "aliases": [
+   "cauliflower paratha",
+   "gobi paratha"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "bakarkhani",
+  "name": "Bakarkhani",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 60,
+  "kcal": 260,
+  "p": 4.5,
+  "c": 31,
+  "f": 13,
+  "fiber": 1,
+  "aliases": [
+   "baqarkhani",
+   "bakar khani"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "tandoori_paratha",
+  "name": "Tandoori paratha",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 110,
+  "kcal": 330,
+  "p": 7.5,
+  "c": 45,
+  "f": 13,
+  "fiber": 3,
+  "aliases": [
+   "tandoori lachha",
+   "tandoor paratha"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "daal_paratha",
+  "name": "Chana daal paratha",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 140,
+  "kcal": 360,
+  "p": 11,
+  "c": 50,
+  "f": 13,
+  "fiber": 6.5,
+  "aliases": [
+   "daal wala paratha",
+   "lentil paratha"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "tahiri",
+  "name": "Tahiri (vegetable rice)",
+  "category": "Rice",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 300,
+  "kcal": 420,
+  "p": 8,
+  "c": 72,
+  "f": 11,
+  "fiber": 4,
+  "aliases": [
+   "tehri",
+   "tahari",
+   "aloo tahiri"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "memoni_biryani",
+  "name": "Memoni biryani",
+  "category": "Rice",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 620,
+  "p": 28,
+  "c": 74,
+  "f": 22,
+  "fiber": 3,
+  "aliases": [
+   "memon biryani",
+   "kutchi memoni biryani"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "tikka_biryani",
+  "name": "Chicken tikka biryani",
+  "category": "Rice",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 600,
+  "p": 32,
+  "c": 72,
+  "f": 19,
+  "fiber": 2.5,
+  "aliases": [
+   "tikka biryani"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "prawn_biryani",
+  "name": "Prawn biryani",
+  "category": "Rice",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 540,
+  "p": 26,
+  "c": 74,
+  "f": 15,
+  "fiber": 2.5,
+  "aliases": [
+   "jheenga biryani",
+   "shrimp biryani"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "egg_biryani",
+  "name": "Egg biryani",
+  "category": "Rice",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 330,
+  "kcal": 520,
+  "p": 18,
+  "c": 74,
+  "f": 17,
+  "fiber": 2.5,
+  "aliases": [
+   "anda biryani"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "sabzi_pulao",
+  "name": "Sabzi pulao",
+  "category": "Rice",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 300,
+  "kcal": 400,
+  "p": 8,
+  "c": 70,
+  "f": 10,
+  "fiber": 4.5,
+  "aliases": [
+   "vegetable pulao",
+   "veg pulao"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "kashmiri_pulao",
+  "name": "Kashmiri pulao",
+  "category": "Rice",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 300,
+  "kcal": 470,
+  "p": 8,
+  "c": 76,
+  "f": 15,
+  "fiber": 3,
+  "aliases": [
+   "mewa pulao",
+   "dry fruit pulao"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "anda_bhurji",
+  "name": "Anda bhurji",
+  "category": "Breakfast",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 150,
+  "kcal": 260,
+  "p": 15,
+  "c": 5,
+  "f": 20,
+  "fiber": 1,
+  "aliases": [
+   "egg bhurji",
+   "scrambled eggs desi",
+   "khagina masala"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "kulcha_cholay",
+  "name": "Kulcha cholay",
+  "category": "Breakfast",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 330,
+  "kcal": 600,
+  "p": 19,
+  "c": 84,
+  "f": 21,
+  "fiber": 13,
+  "aliases": [
+   "cholay kulcha",
+   "chole kulche"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "cheese_omelette",
+  "name": "Cheese omelette",
+  "category": "Breakfast",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 140,
+  "kcal": 300,
+  "p": 19,
+  "c": 2,
+  "f": 24,
+  "fiber": 0,
+  "aliases": [
+   "omelette with cheese"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "khajla",
+  "name": "Khajla (sehri)",
+  "category": "Breakfast",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 60,
+  "kcal": 300,
+  "p": 4,
+  "c": 30,
+  "f": 18.5,
+  "fiber": 1,
+  "aliases": [
+   "khajla pheni",
+   "khajlay"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "chicken_achari",
+  "name": "Achari chicken",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 400,
+  "p": 30,
+  "c": 9,
+  "f": 27,
+  "fiber": 2,
+  "aliases": [
+   "achari murgh",
+   "chicken achar"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "kat_a_kat",
+  "name": "Kat-a-kat (tawa mix)",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 250,
+  "kcal": 450,
+  "p": 30,
+  "c": 6,
+  "f": 34,
+  "fiber": 1.5,
+  "aliases": [
+   "takatak",
+   "kata kat",
+   "tak a tak"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "dum_keema",
+  "name": "Dum keema",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 220,
+  "kcal": 420,
+  "p": 26,
+  "c": 7,
+  "f": 32,
+  "fiber": 1.5,
+  "aliases": [
+   "dum qeema",
+   "smoked keema"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "chicken_bhuna",
+  "name": "Bhuna chicken",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 380,
+  "p": 32,
+  "c": 8,
+  "f": 24,
+  "fiber": 2,
+  "aliases": [
+   "bhuna murgh",
+   "chicken bhuna masala"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "mutton_dopiaza",
+  "name": "Mutton do pyaza",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 470,
+  "p": 27,
+  "c": 12,
+  "f": 35,
+  "fiber": 2.5,
+  "aliases": [
+   "gosht do pyaza",
+   "mutton dopiaza"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "chicken_dopiaza",
+  "name": "Chicken do pyaza",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 370,
+  "p": 30,
+  "c": 12,
+  "f": 22,
+  "fiber": 2.5,
+  "aliases": [
+   "murgh do pyaza",
+   "chicken dopiaza"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "sindhi_kadhi",
+  "name": "Sindhi kadhi",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 300,
+  "kcal": 230,
+  "p": 7,
+  "c": 26,
+  "f": 11,
+  "fiber": 6,
+  "aliases": [
+   "sindhi karhi"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "murgh_cholay",
+  "name": "Murgh cholay",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 280,
+  "kcal": 430,
+  "p": 29,
+  "c": 32,
+  "f": 20,
+  "fiber": 9,
+  "aliases": [
+   "murgh chanay",
+   "lahori murgh cholay",
+   "chicken chickpeas"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "saag_gosht",
+  "name": "Saag gosht",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 420,
+  "p": 25,
+  "c": 9,
+  "f": 32,
+  "fiber": 4,
+  "aliases": [
+   "palak saag gosht",
+   "sarson gosht"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "methi_gosht",
+  "name": "Methi gosht",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 440,
+  "p": 26,
+  "c": 8,
+  "f": 34,
+  "fiber": 3,
+  "aliases": [
+   "methi mutton",
+   "fenugreek mutton"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "matar_gosht",
+  "name": "Matar gosht",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 430,
+  "p": 26,
+  "c": 14,
+  "f": 30,
+  "fiber": 4.5,
+  "aliases": [
+   "mutton peas",
+   "gosht matar"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "chicken_palak",
+  "name": "Palak chicken",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 330,
+  "p": 30,
+  "c": 8,
+  "f": 20,
+  "fiber": 3.5,
+  "aliases": [
+   "palak murgh",
+   "spinach chicken"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "nargisi_kofta",
+  "name": "Nargisi kofta",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 480,
+  "p": 28,
+  "c": 10,
+  "f": 36,
+  "fiber": 2,
+  "aliases": [
+   "nargisi koftay",
+   "egg kofta"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "chicken_stew",
+  "name": "Chicken stew (desi)",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 300,
+  "kcal": 340,
+  "p": 28,
+  "c": 18,
+  "f": 17,
+  "fiber": 4,
+  "aliases": [
+   "murgh stew",
+   "chicken vegetable stew"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "mutton_stew",
+  "name": "Mutton stew (desi)",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 300,
+  "kcal": 430,
+  "p": 27,
+  "c": 18,
+  "f": 28,
+  "fiber": 4,
+  "aliases": [
+   "gosht stew"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "dhaga_kebab",
+  "name": "Dhaga kebab",
+  "category": "BBQ & Kebabs",
+  "serving": 4,
+  "unit": "piece",
+  "grams": 160,
+  "kcal": 420,
+  "p": 24,
+  "c": 6,
+  "f": 33,
+  "fiber": 1,
+  "aliases": [
+   "dhaagay wala kebab",
+   "thread kebab"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "charsi_tikka",
+  "name": "Charsi tikka (lamb)",
+  "category": "BBQ & Kebabs",
+  "serving": 6,
+  "unit": "piece",
+  "grams": 200,
+  "kcal": 520,
+  "p": 34,
+  "c": 1,
+  "f": 42,
+  "fiber": 0,
+  "aliases": [
+   "charsi tikka",
+   "peshawari tikka",
+   "namak mandi tikka"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "galouti_kebab",
+  "name": "Galouti kebab",
+  "category": "BBQ & Kebabs",
+  "serving": 4,
+  "unit": "piece",
+  "grams": 160,
+  "kcal": 440,
+  "p": 22,
+  "c": 8,
+  "f": 35,
+  "fiber": 1,
+  "aliases": [
+   "galawati kebab",
+   "galauti"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "kalmi_tikka",
+  "name": "Kalmi tikka",
+  "category": "BBQ & Kebabs",
+  "serving": 2,
+  "unit": "piece",
+  "grams": 220,
+  "kcal": 400,
+  "p": 40,
+  "c": 4,
+  "f": 25,
+  "fiber": 0.5,
+  "aliases": [
+   "kalmi kebab",
+   "chicken leg tikka"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "hariyali_tikka",
+  "name": "Hariyali chicken tikka",
+  "category": "BBQ & Kebabs",
+  "serving": 8,
+  "unit": "piece",
+  "grams": 200,
+  "kcal": 330,
+  "p": 40,
+  "c": 5,
+  "f": 16,
+  "fiber": 1.5,
+  "aliases": [
+   "green tikka",
+   "hariyali boti"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "sajji_full",
+  "name": "Sajji (whole chicken with rice)",
+  "category": "BBQ & Kebabs",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 900,
+  "kcal": 1700,
+  "p": 130,
+  "c": 130,
+  "f": 72,
+  "fiber": 3,
+  "aliases": [
+   "balochi sajji",
+   "full sajji",
+   "sajji"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "kachaloo_chaat",
+  "name": "Kachaloo chaat",
+  "category": "Street food",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 200,
+  "kcal": 190,
+  "p": 3,
+  "c": 42,
+  "f": 1,
+  "fiber": 4,
+  "aliases": [
+   "kachalu chaat",
+   "arvi chaat"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "corn_chaat",
+  "name": "Corn chaat",
+  "category": "Street food",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 180,
+  "kcal": 220,
+  "p": 6,
+  "c": 34,
+  "f": 7,
+  "fiber": 4,
+  "aliases": [
+   "bhutta chaat",
+   "sweet corn chaat"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "dahi_puri",
+  "name": "Dahi puri",
+  "category": "Street food",
+  "serving": 6,
+  "unit": "piece",
+  "grams": 180,
+  "kcal": 300,
+  "p": 8,
+  "c": 42,
+  "f": 11,
+  "fiber": 4,
+  "aliases": [
+   "dahi gol gappay",
+   "dahi phulki"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "zinger_roll",
+  "name": "Zinger paratha roll",
+  "category": "Street food",
+  "serving": 1,
+  "unit": "roll",
+  "grams": 260,
+  "kcal": 680,
+  "p": 26,
+  "c": 62,
+  "f": 36,
+  "fiber": 3,
+  "aliases": [
+   "zinger roll",
+   "zinger paratha"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "malai_boti_roll",
+  "name": "Malai boti roll",
+  "category": "Street food",
+  "serving": 1,
+  "unit": "roll",
+  "grams": 240,
+  "kcal": 560,
+  "p": 28,
+  "c": 48,
+  "f": 28,
+  "fiber": 2.5,
+  "aliases": [
+   "malai roll",
+   "boti roll"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "fish_pakora",
+  "name": "Fish pakora",
+  "category": "Street food",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 200,
+  "kcal": 420,
+  "p": 30,
+  "c": 20,
+  "f": 24,
+  "fiber": 2,
+  "aliases": [
+   "machli pakora",
+   "lahori fish pakora"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "samosa_chaat",
+  "name": "Samosa chaat",
+  "category": "Street food",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 280,
+  "kcal": 480,
+  "p": 13,
+  "c": 58,
+  "f": 22,
+  "fiber": 10,
+  "aliases": [
+   "samosa chole chaat"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "rabri",
+  "name": "Rabri",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 120,
+  "kcal": 300,
+  "p": 9,
+  "c": 30,
+  "f": 16,
+  "fiber": 0,
+  "aliases": [
+   "rabdi",
+   "rabri doodh"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "chum_chum",
+  "name": "Chum chum",
+  "category": "Sweets",
+  "serving": 2,
+  "unit": "piece",
+  "grams": 80,
+  "kcal": 280,
+  "p": 6,
+  "c": 44,
+  "f": 9,
+  "fiber": 0,
+  "aliases": [
+   "cham cham"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "nan_khatai",
+  "name": "Nan khatai",
+  "category": "Sweets",
+  "serving": 2,
+  "unit": "piece",
+  "grams": 40,
+  "kcal": 210,
+  "p": 3,
+  "c": 22,
+  "f": 12.5,
+  "fiber": 0.5,
+  "aliases": [
+   "naan khatai",
+   "nankhatai"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "shakarpara",
+  "name": "Shakarpara",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 50,
+  "kcal": 250,
+  "p": 3,
+  "c": 30,
+  "f": 13,
+  "fiber": 0.5,
+  "aliases": [
+   "shakar paray",
+   "shakarparay"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "lab_e_shireen",
+  "name": "Lab-e-shireen",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 180,
+  "kcal": 330,
+  "p": 7,
+  "c": 46,
+  "f": 13,
+  "fiber": 1.5,
+  "aliases": [
+   "labe shireen",
+   "lab e shireen"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "malpura",
+  "name": "Malpura",
+  "category": "Sweets",
+  "serving": 2,
+  "unit": "piece",
+  "grams": 100,
+  "kcal": 380,
+  "p": 6,
+  "c": 48,
+  "f": 18,
+  "fiber": 1,
+  "aliases": [
+   "malpuray",
+   "malpua"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "pheni",
+  "name": "Pheni with milk",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 220,
+  "kcal": 380,
+  "p": 10,
+  "c": 46,
+  "f": 17,
+  "fiber": 1,
+  "aliases": [
+   "phenian",
+   "doodh pheni",
+   "feni"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "anday_ka_halwa",
+  "name": "Anday ka halwa",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 120,
+  "kcal": 460,
+  "p": 11,
+  "c": 44,
+  "f": 27,
+  "fiber": 0.5,
+  "aliases": [
+   "egg halwa"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "badam_halwa",
+  "name": "Badam halwa",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 100,
+  "kcal": 480,
+  "p": 10,
+  "c": 40,
+  "f": 31,
+  "fiber": 4,
+  "aliases": [
+   "almond halwa"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "chikki",
+  "name": "Gur chikki",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 40,
+  "kcal": 200,
+  "p": 5.5,
+  "c": 22,
+  "f": 10,
+  "fiber": 2,
+  "aliases": [
+   "peanut chikki",
+   "gajak",
+   "til chikki"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "dodha_barfi",
+  "name": "Dodha barfi",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 50,
+  "kcal": 210,
+  "p": 5,
+  "c": 26,
+  "f": 10,
+  "fiber": 1,
+  "aliases": [
+   "dhodha",
+   "khushab dodha",
+   "doda"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "balushahi",
+  "name": "Balushahi",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 60,
+  "kcal": 260,
+  "p": 2.5,
+  "c": 34,
+  "f": 13,
+  "fiber": 0.5,
+  "aliases": [
+   "badusha",
+   "balu shahi"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "kalakand",
+  "name": "Kalakand",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 50,
+  "kcal": 180,
+  "p": 6,
+  "c": 21,
+  "f": 8,
+  "fiber": 0,
+  "aliases": [
+   "kalaqand"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "panjiri",
+  "name": "Panjiri",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 60,
+  "kcal": 320,
+  "p": 6,
+  "c": 32,
+  "f": 19,
+  "fiber": 3,
+  "aliases": [
+   "panjeeri"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "pinni",
+  "name": "Pinni",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 50,
+  "kcal": 240,
+  "p": 4.5,
+  "c": 24,
+  "f": 14,
+  "fiber": 2,
+  "aliases": [
+   "pinniyan",
+   "atta pinni"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "til_ladoo",
+  "name": "Til ladoo",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 30,
+  "kcal": 150,
+  "p": 4,
+  "c": 14,
+  "f": 9,
+  "fiber": 2.5,
+  "aliases": [
+   "sesame ladoo",
+   "tilkut"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "meethi_boondi",
+  "name": "Meethi boondi",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 60,
+  "kcal": 260,
+  "p": 3.5,
+  "c": 36,
+  "f": 11.5,
+  "fiber": 1,
+  "aliases": [
+   "boondi",
+   "sweet boondi"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "gur_wale_chawal",
+  "name": "Gur wale chawal",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 200,
+  "kcal": 400,
+  "p": 5,
+  "c": 72,
+  "f": 10,
+  "fiber": 1.5,
+  "aliases": [
+   "jaggery rice",
+   "gurh walay chawal"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "doodh_soda",
+  "name": "Doodh soda",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 300,
+  "kcal": 150,
+  "p": 5,
+  "c": 22,
+  "f": 4.5,
+  "fiber": 0,
+  "aliases": [
+   "milk soda",
+   "dudh soda"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "kahwa",
+  "name": "Kahwa (sweetened)",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 200,
+  "kcal": 30,
+  "p": 0,
+  "c": 7.5,
+  "f": 0,
+  "fiber": 0,
+  "aliases": [
+   "qehwa",
+   "peshawari kahwa",
+   "kehwa"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "haldi_doodh",
+  "name": "Haldi doodh",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 250,
+  "kcal": 170,
+  "p": 8,
+  "c": 15,
+  "f": 8.5,
+  "fiber": 0,
+  "aliases": [
+   "turmeric milk",
+   "haldi wala doodh"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "thadal",
+  "name": "Thadal (Sindhi)",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 250,
+  "kcal": 260,
+  "p": 7,
+  "c": 32,
+  "f": 12,
+  "fiber": 1,
+  "aliases": [
+   "thandai",
+   "sindhi thadal",
+   "sardai"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "jaljeera",
+  "name": "Jaljeera",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 250,
+  "kcal": 40,
+  "p": 0.5,
+  "c": 10,
+  "f": 0,
+  "fiber": 0.5,
+  "aliases": [
+   "jal jeera"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "kanji",
+  "name": "Kanji (black carrot)",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 250,
+  "kcal": 35,
+  "p": 0.5,
+  "c": 8,
+  "f": 0,
+  "fiber": 1,
+  "aliases": [
+   "kaanji",
+   "gajar kanji"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "mango_lassi",
+  "name": "Mango lassi",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 300,
+  "kcal": 270,
+  "p": 8,
+  "c": 46,
+  "f": 6,
+  "fiber": 1,
+  "aliases": [
+   "aam lassi"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "khajoor_shake",
+  "name": "Khajoor shake",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 300,
+  "kcal": 340,
+  "p": 10,
+  "c": 58,
+  "f": 8,
+  "fiber": 3.5,
+  "aliases": [
+   "date shake",
+   "dates milkshake"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "chikoo_shake",
+  "name": "Chikoo shake",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 300,
+  "kcal": 300,
+  "p": 8,
+  "c": 50,
+  "f": 7.5,
+  "fiber": 4,
+  "aliases": [
+   "sapota shake",
+   "chiku shake"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "makhana",
+  "name": "Roasted makhana",
+  "category": "Snacks & Nuts",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 30,
+  "kcal": 110,
+  "p": 3.5,
+  "c": 20,
+  "f": 1.5,
+  "fiber": 4,
+  "aliases": [
+   "phool makhana",
+   "fox nuts",
+   "lotus seeds"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "namak_pare",
+  "name": "Namak pare",
+  "category": "Snacks & Nuts",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 50,
+  "kcal": 260,
+  "p": 4,
+  "c": 28,
+  "f": 14.5,
+  "fiber": 1,
+  "aliases": [
+   "namak paray",
+   "nimki"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "mathri",
+  "name": "Mathri",
+  "category": "Snacks & Nuts",
+  "serving": 2,
+  "unit": "piece",
+  "grams": 40,
+  "kcal": 210,
+  "p": 3,
+  "c": 22,
+  "f": 12,
+  "fiber": 1,
+  "aliases": [
+   "mathi",
+   "mathiyan"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "chana_jor_garam",
+  "name": "Chana jor garam",
+  "category": "Snacks & Nuts",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 50,
+  "kcal": 190,
+  "p": 9,
+  "c": 28,
+  "f": 5,
+  "fiber": 7,
+  "aliases": [
+   "chana chor garam",
+   "flattened chana"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "cake_rusk",
+  "name": "Cake rusk",
+  "category": "Snacks & Nuts",
+  "serving": 2,
+  "unit": "piece",
+  "grams": 40,
+  "kcal": 180,
+  "p": 3,
+  "c": 26,
+  "f": 7,
+  "fiber": 0.5,
+  "aliases": [
+   "cake rus",
+   "bakery rusk"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "aloo_baingan",
+  "name": "Aloo baingan",
+  "category": "Vegetables",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 200,
+  "kcal": 190,
+  "p": 3.5,
+  "c": 22,
+  "f": 10,
+  "fiber": 6,
+  "aliases": [
+   "baingan aloo",
+   "eggplant potato"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "aloo_shimla_mirch",
+  "name": "Aloo shimla mirch",
+  "category": "Vegetables",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 200,
+  "kcal": 180,
+  "p": 3.5,
+  "c": 22,
+  "f": 9,
+  "fiber": 4.5,
+  "aliases": [
+   "capsicum aloo",
+   "shimla mirch aloo"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "kaddu",
+  "name": "Kaddu (sweet pumpkin)",
+  "category": "Vegetables",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 200,
+  "kcal": 150,
+  "p": 2.5,
+  "c": 20,
+  "f": 7,
+  "fiber": 4,
+  "aliases": [
+   "kaddu ki sabzi",
+   "sitaphal",
+   "pumpkin curry"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "aloo_methi",
+  "name": "Aloo methi",
+  "category": "Vegetables",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 200,
+  "kcal": 190,
+  "p": 4,
+  "c": 23,
+  "f": 9,
+  "fiber": 5,
+  "aliases": [
+   "methi aloo"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "kachnar",
+  "name": "Kachnar ki sabzi",
+  "category": "Vegetables",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 200,
+  "kcal": 160,
+  "p": 4,
+  "c": 14,
+  "f": 10,
+  "fiber": 6,
+  "aliases": [
+   "kachnar",
+   "kachnar gosht"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "gajar_matar",
+  "name": "Gajar matar",
+  "category": "Vegetables",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 200,
+  "kcal": 160,
+  "p": 4.5,
+  "c": 18,
+  "f": 8,
+  "fiber": 6,
+  "aliases": [
+   "carrot peas",
+   "matar gajar"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "aloo_tamatar",
+  "name": "Aloo tamatar",
+  "category": "Vegetables",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 220,
+  "kcal": 200,
+  "p": 3.5,
+  "c": 26,
+  "f": 9,
+  "fiber": 4,
+  "aliases": [
+   "aloo tamatar ki sabzi",
+   "potato tomato curry"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "sem_phali",
+  "name": "Sem ki phali",
+  "category": "Vegetables",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 200,
+  "kcal": 140,
+  "p": 4,
+  "c": 13,
+  "f": 8,
+  "fiber": 6,
+  "aliases": [
+   "green beans",
+   "phaliyan",
+   "french beans"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "mooli_bhujia",
+  "name": "Mooli bhujia",
+  "category": "Vegetables",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 180,
+  "kcal": 120,
+  "p": 2.5,
+  "c": 10,
+  "f": 8,
+  "fiber": 4,
+  "aliases": [
+   "mooli ki bhujia",
+   "radish sabzi"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "daal_palak",
+  "name": "Daal palak",
+  "category": "Daal & Beans",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 230,
+  "p": 12,
+  "c": 28,
+  "f": 8,
+  "fiber": 9,
+  "aliases": [
+   "palak daal",
+   "spinach daal"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "lauki_chana_daal",
+  "name": "Lauki chana daal",
+  "category": "Daal & Beans",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 240,
+  "p": 11,
+  "c": 30,
+  "f": 8.5,
+  "fiber": 9,
+  "aliases": [
+   "kaddu chana daal",
+   "ghiya daal"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "chapshoro",
+  "name": "Chapshoro (GB meat pie)",
+  "category": "Regional",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 220,
+  "kcal": 560,
+  "p": 26,
+  "c": 52,
+  "f": 27,
+  "fiber": 3,
+  "aliases": [
+   "chap shuro",
+   "hunza pizza",
+   "gilgiti chapshoro"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "mantu",
+  "name": "Mantu (steamed dumplings)",
+  "category": "Regional",
+  "serving": 6,
+  "unit": "piece",
+  "grams": 200,
+  "kcal": 380,
+  "p": 20,
+  "c": 40,
+  "f": 15,
+  "fiber": 3,
+  "aliases": [
+   "mantoo",
+   "mantu dumplings"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "bolani",
+  "name": "Bolani",
+  "category": "Regional",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 150,
+  "kcal": 360,
+  "p": 8,
+  "c": 46,
+  "f": 16,
+  "fiber": 4,
+  "aliases": [
+   "bolani kachalu",
+   "boulani"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "kashmiri_harissa",
+  "name": "Kashmiri harissa",
+  "category": "Regional",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 520,
+  "p": 30,
+  "c": 18,
+  "f": 36,
+  "fiber": 3,
+  "aliases": [
+   "harissa",
+   "hareesa"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "goshtaba",
+  "name": "Goshtaba",
+  "category": "Regional",
+  "serving": 3,
+  "unit": "piece",
+  "grams": 280,
+  "kcal": 520,
+  "p": 32,
+  "c": 10,
+  "f": 39,
+  "fiber": 0.5,
+  "aliases": [
+   "gushtaba",
+   "kashmiri goshtaba"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "rista",
+  "name": "Rista",
+  "category": "Regional",
+  "serving": 3,
+  "unit": "piece",
+  "grams": 250,
+  "kcal": 470,
+  "p": 30,
+  "c": 7,
+  "f": 36,
+  "fiber": 1,
+  "aliases": [
+   "kashmiri rista"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "sai_bhaji",
+  "name": "Sai bhaji",
+  "category": "Regional",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 240,
+  "p": 11,
+  "c": 28,
+  "f": 9,
+  "fiber": 9,
+  "aliases": [
+   "sindhi sai bhaji",
+   "sae bhaji"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "koki",
+  "name": "Koki (Sindhi)",
+  "category": "Regional",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 90,
+  "kcal": 330,
+  "p": 6.5,
+  "c": 38,
+  "f": 17,
+  "fiber": 3,
+  "aliases": [
+   "sindhi koki",
+   "kokee"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "seyal_phulka",
+  "name": "Seyal phulka",
+  "category": "Regional",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 200,
+  "kcal": 330,
+  "p": 8,
+  "c": 42,
+  "f": 14,
+  "fiber": 4,
+  "aliases": [
+   "sayal phulka",
+   "sindhi seyal maani"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "bhee_curry",
+  "name": "Bhee (lotus stem) curry",
+  "category": "Regional",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 220,
+  "kcal": 210,
+  "p": 4,
+  "c": 24,
+  "f": 11,
+  "fiber": 6,
+  "aliases": [
+   "bhee",
+   "kamal kakri",
+   "lotus stem"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "khaddi_kebab",
+  "name": "Khaddi kebab (Balochi lamb)",
+  "category": "Regional",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 250,
+  "kcal": 600,
+  "p": 50,
+  "c": 0,
+  "f": 44,
+  "fiber": 0,
+  "aliases": [
+   "khaddi kabab",
+   "balochi khaddi"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "sohbat",
+  "name": "Sohbat (Balochi)",
+  "category": "Regional",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 350,
+  "kcal": 520,
+  "p": 30,
+  "c": 50,
+  "f": 22,
+  "fiber": 3,
+  "aliases": [
+   "sobat",
+   "balochi sohbat"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "kaak",
+  "name": "Kaak (Balochi rock bread)",
+  "category": "Regional",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 120,
+  "kcal": 320,
+  "p": 9,
+  "c": 62,
+  "f": 3,
+  "fiber": 3,
+  "aliases": [
+   "kak",
+   "balochi kaak"
+  ],
+  "basis": "typical"
+ },
+ {
+  "id": "rosh",
+  "name": "Rosh (Namkeen gosht)",
+  "category": "Regional",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 300,
+  "kcal": 450,
+  "p": 32,
+  "c": 4,
+  "f": 34,
+  "fiber": 0.5,
+  "aliases": [
+   "landi rosh",
+   "rosh gosht"
+  ],
+  "basis": "typical"
  }
 ]

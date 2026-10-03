@@ -51,7 +51,7 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
     fun iconForName(name: String): String? { metaMap.size; return iconByName[name.lowercase()] }
 
     fun meta(f: Food): FoodMeta? = metaMap[f.uuid]
-    val categories: List<String> get() = listOf("Breakfast", "Breads", "Rice", "Curries", "Daal & Beans", "BBQ & Kebabs", "Vegetables", "Street food", "Fast food", "Restaurant", "Indian", "Sweets", "Drinks", "Fruit", "Dairy & Eggs", "Meat & Fish", "Snacks & Nuts", "Basics")
+    val categories: List<String> get() = listOf("Breakfast", "Breads", "Rice", "Curries", "Daal & Beans", "BBQ & Kebabs", "Vegetables", "Street food", "Fast food", "Restaurant", "Indian", "Regional", "Sweets", "Drinks", "Fruit", "Dairy & Eggs", "Meat & Fish", "Snacks & Nuts", "Basics")
 
     /** Name/brand search plus Roman-Urdu aliases ("kardi", "nehari", "anda"). */
     fun search(q: String): kotlinx.coroutines.flow.Flow<List<Food>> {
