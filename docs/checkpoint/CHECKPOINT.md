@@ -89,3 +89,4 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 - New section "Shariah & Health" (shown only to Muslims; asked in onboarding): prayer times + Qibla, fasting hub (Ramadan, Sunnah fasts, qada), Sunnah habits & dhikr (tasbeeh, adhkar), halal food tags + Hajj/Umrah tracker.
 - Pakistani dishes + icons moved to the phase after this.
 - ✅ R4: old Pip restored (3D removed), UI fixes (run 83). Next: smaller offline AI
+- ✅ R4: offline brain → gemma-4-E2B-it-gpu.litertlm (2.0 GB), auto-download once on Wi-Fi (run 84). Next: Shariah & Health
