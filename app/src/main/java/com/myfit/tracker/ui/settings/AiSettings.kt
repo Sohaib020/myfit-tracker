@@ -68,8 +68,8 @@ fun OfflineBrainCard() {
     val scope = rememberCoroutineScope()
     val cfg by ai.prefs.config.collectAsState(initial = AiConfig())
     val st by ai.models.state.collectAsState()
-    val photo by ai.quota.allowance(AiQuota.Kind.PHOTO).collectAsState(initial = null)
-    val chat by ai.quota.allowance(AiQuota.Kind.CHAT).collectAsState(initial = null)
+    val photo by remember { ai.quota.allowance(AiQuota.Kind.PHOTO) }.collectAsState(initial = null)
+    val chat by remember { ai.quota.allowance(AiQuota.Kind.CHAT) }.collectAsState(initial = null)
     val spec = remember(cfg) { ModelCatalog.resolve(cfg) }
     val cap = remember(spec) { DeviceCheck.check(ctx, spec) }
     // poll while a download may be running (the worker updates the shared state too)
@@ -211,7 +211,7 @@ fun AiCapSheetHost() {
     var error by remember { mutableStateOf<String?>(null) }
     val ai = remember { OnDeviceAi.get(ctx) }
     val k = kind
-    val allowance by (k?.let { ai.quota.allowance(it) } ?: kotlinx.coroutines.flow.flowOf(null)).collectAsState(initial = null)
+    val allowance by remember(k) { k?.let { ai.quota.allowance(it) } ?: kotlinx.coroutines.flow.flowOf(null) }.collectAsState(initial = null)
     GlassSheet(visible = k != null, onDismiss = { if (!busy) { AiCapPrompt.dismiss(); error = null } }) {
         if (k != null) {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
