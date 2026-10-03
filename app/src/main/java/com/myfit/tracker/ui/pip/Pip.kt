@@ -75,11 +75,11 @@ import kotlin.random.Random
  */
 enum class PipMood {
     HAPPY, EXCITED, SLEEPY, THINKING, CONCERNED, WAVE, PROUD, NEUTRAL, LOVE, TALKING, CURIOUS, CELEBRATE,
-    TRAIN, HYDRATE, FUEL, LETS_GO, SURPRISED, WINK, DANCE, SPIN, FLEX, LAUGH,
+    TRAIN, HYDRATE, FUEL, LETS_GO, SURPRISED, WINK, DANCE, SPIN, FLEX, LAUGH, MEDITATE, GRUMPY, CHEER, THUMBS_UP,
 }
 
 /** Rendered animations in assets/pip/<name>.webp. Loops repeat; the rest play once then return to idle. */
-private val LOOPS = setOf("thinking", "love", "sleepy", "concerned", "dance", "train", "sad")
+private val LOOPS = setOf("thinking", "love", "sleepy", "concerned", "dance", "train", "sad", "meditate", "grumpy")
 
 private fun animFor(m: PipMood) = when (m) {
     PipMood.HAPPY, PipMood.NEUTRAL, PipMood.TALKING -> "idle"
@@ -100,13 +100,18 @@ private fun animFor(m: PipMood) = when (m) {
     PipMood.SPIN -> "spin"
     PipMood.FLEX -> "flex"
     PipMood.LAUGH -> "laugh"
+    PipMood.MEDITATE -> "meditate"
+    PipMood.GRUMPY -> "grumpy"
+    PipMood.CHEER -> "cheer"
+    PipMood.THUMBS_UP -> "thumbsup"
 }
 
 private val TAP_REACTIONS = listOf(
+    "thumbsup", "salute", "facepalm", "cheer", "peekaboo", "highfive", "bow", "dizzy", "sneeze", "hearteyes", "grumpy",
     "wave", "laugh", "wink", "surprised", "dance", "spin", "flex", "letsgo", "love", "celebrate", "hydrate", "train", "fuel", "curious",
     "jumpingjacks", "jog", "squat", "stretch", "clap", "shrug", "yes", "no", "shy", "pout", "yawn", "blowkiss", "point",
 )
-private val IDLE_ACTS = listOf("wave", "wink", "hydrate", "curious", "flex", "stretch", "clap", "yawn", "point", "shrug", "blowkiss")
+private val IDLE_ACTS = listOf("wave", "wink", "hydrate", "curious", "flex", "stretch", "clap", "yawn", "point", "shrug", "blowkiss", "thumbsup", "salute", "peekaboo", "bow", "sneeze", "hearteyes", "cheer")
 private val CALM = setOf(PipMood.HAPPY, PipMood.NEUTRAL, PipMood.TALKING, PipMood.PROUD, PipMood.WAVE)
 private val BUSY = setOf(PipMood.CELEBRATE, PipMood.EXCITED, PipMood.LOVE, PipMood.DANCE, PipMood.SLEEPY, PipMood.THINKING)
 
@@ -116,14 +121,14 @@ private val CHEEK = Color(0xFFFF8FAB)
 private val confettiColors = listOf(Color(0xFFFF5C8A), Color(0xFFFFD34D), Color(0xFF4FC3FF), Color(0xFF7CFFB2), Color(0xFFB57CFF))
 
 /**
- * Look-at stills: a 7×7 grid, assets/pip/look/look_RC.webp. Row 0 = finger above Pip, col 0 = finger to
- * his left (screen left), 3,3 = neutral. Frames are decoded lazily (only the ones the head passes
+ * Look-at stills: a 13×13 grid, assets/pip/look/look_RR_CC.webp. Row 0 = finger above Pip, col 0 = finger to
+ * his left (screen left), 06_06 = neutral. Frames are decoded lazily (only the ones the head passes
  * through) into a byte-capped LRU shared by every Pip, and dropped when no Pip is on screen.
  */
 private object LookFrames {
-    const val N = 7
-    const val MID = 3f
-    private const val MAX_BYTES = 14 * 1024 * 1024   // ≈17 full-res or all 49 half-res frames
+    const val N = 13
+    const val MID = 6f
+    private const val MAX_BYTES = 14 * 1024 * 1024   // ≈17 full-res or ≈70 half-res frames (only the ones near the gaze are kept)
     private val cache = object : android.util.LruCache<Int, ImageBitmap>(MAX_BYTES) {
         override fun sizeOf(key: Int, value: ImageBitmap) = value.width * value.height * 4
     }
@@ -149,7 +154,7 @@ private object LookFrames {
                 val bmp = withContext(Dispatchers.IO) {
                     runCatching {
                         val opts = BitmapFactory.Options().apply { inSampleSize = s }
-                        ctx.assets.open("pip/look/look_${idx / N}${idx % N}.webp").use { BitmapFactory.decodeStream(it, null, opts) }?.asImageBitmap()
+                        ctx.assets.open("pip/look/look_%02d_%02d.webp".format(idx / N, idx % N)).use { BitmapFactory.decodeStream(it, null, opts) }?.asImageBitmap()
                     }.getOrNull()
                 }
                 if (bmp != null && s == sample) { cache.put(key, bmp); onLoaded() }

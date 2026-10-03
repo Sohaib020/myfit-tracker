@@ -252,7 +252,7 @@ fun MeditationSession(container: AppContainer, choice: MedChoice, onClose: (Bool
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Pip(PipMood.NEUTRAL, size = 92.dp, talking = speaking && !paused, interactive = false, idleActions = false, level = level)
+                    Pip(if (speaking && !paused) PipMood.NEUTRAL else PipMood.MEDITATE, size = 92.dp, talking = speaking && !paused, interactive = false, idleActions = false, level = level)
                     Spacer(Modifier.height(24.dp))
                     val l = script.lines.getOrNull(lineIdx)
                     val text = when {
