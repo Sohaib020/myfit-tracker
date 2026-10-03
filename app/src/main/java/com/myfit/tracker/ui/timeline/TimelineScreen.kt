@@ -231,32 +231,47 @@ private fun EntryRow(item: TimelineItem, onClick: () -> Unit) {
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun WeekStrip(selected: LocalDate, onSelect: (LocalDate) -> Unit) {
     val th = LocalFitTheme.current
-    val monday = selected.with(DayOfWeek.MONDAY)
     val today = Clock.today()
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        GlassIconButton(Duo.KeyboardArrowLeft, { onSelect(selected.minusWeeks(1)) }, size = 34.dp)
-        Row(Modifier.weight(1f).padding(horizontal = 4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            (0..6).forEach { i ->
-                val d = monday.plusDays(i.toLong())
-                val sel = d == selected
-                val future = d.isAfter(today)
-                Glass(
-                    Modifier.weight(1f).height(60.dp), shape = RoundedCornerShape(18.dp),
-                    onClick = if (future) null else ({ onSelect(d) }), pressScale = 0.9f,
-                ) {
-                    if (sel) Box(Modifier.matchParentSize().drawBehind { drawRect(Brush.verticalGradient(listOf(th.accentBright, th.accent))) })
-                    Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(d.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.US), style = FitType.caption, color = if (sel) th.onAccent else th.textDim, maxLines = 1)
-                        Text("${d.dayOfMonth}", style = FitType.label, color = when { sel -> th.onAccent; future -> th.textFaint; else -> th.text }, maxLines = 1, softWrap = false)
-                        if (d == today) Box(Modifier.size(4.dp).drawBehind { drawCircle(if (sel) th.onAccent else th.accentBright) })
-                    }
+    val days = 400
+    val tick = com.myfit.tracker.ui.theme.rememberTick()
+    // index 0 = oldest day, last = today
+    fun indexOf(d: LocalDate) = (days - 1 - java.time.temporal.ChronoUnit.DAYS.between(d, today).toInt()).coerceIn(0, days - 1)
+    val state = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (indexOf(selected) - 3).coerceAtLeast(0))
+    val fling = androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior(state)
+    // a light haptic tick for every day that scrolls past
+    androidx.compose.runtime.LaunchedEffect(state) {
+        var last = state.firstVisibleItemIndex
+        androidx.compose.runtime.snapshotFlow { state.firstVisibleItemIndex }.collect { if (it != last) { last = it; tick() } }
+    }
+    androidx.compose.runtime.LaunchedEffect(selected) {
+        val i = indexOf(selected)
+        val vis = state.layoutInfo.visibleItemsInfo
+        if (vis.none { it.index == i } || vis.firstOrNull()?.index == i || vis.lastOrNull()?.index == i) state.animateScrollToItem((i - 3).coerceAtLeast(0))
+    }
+    androidx.compose.foundation.lazy.LazyRow(
+        state = state, flingBehavior = fling,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        items(days) { i ->
+            val d = today.minusDays((days - 1 - i).toLong())
+            val sel = d == selected
+            Glass(
+                Modifier.width(46.dp).height(64.dp), shape = RoundedCornerShape(18.dp),
+                onClick = { tick(); onSelect(d) }, pressScale = 0.9f,
+            ) {
+                if (sel) Box(Modifier.matchParentSize().drawBehind { drawRect(Brush.verticalGradient(listOf(th.accentBright, th.accent))) })
+                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(d.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.US), style = FitType.caption, color = if (sel) th.onAccent else th.textDim, maxLines = 1)
+                    Text("${d.dayOfMonth}", style = FitType.label, color = if (sel) th.onAccent else th.text, maxLines = 1, softWrap = false)
+                    if (d.dayOfMonth == 1 || d == today) Text(if (d == today) "today" else d.month.getDisplayName(TextStyle.SHORT, Locale.US), style = FitType.caption, color = if (sel) th.onAccent else th.accentBright, maxLines = 1)
                 }
             }
         }
-        GlassIconButton(Duo.KeyboardArrowRight, { if (selected.plusWeeks(1) <= today) onSelect(selected.plusWeeks(1)) else onSelect(today) }, size = 34.dp)
     }
 }
 

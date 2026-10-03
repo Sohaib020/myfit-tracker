@@ -15,6 +15,7 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
@@ -23,50 +24,37 @@ import androidx.compose.ui.util.lerp
 import com.myfit.tracker.ui.theme.OpenOrigin
 
 /**
- * iOS-style "app open": the screen grows out of the card that was tapped — its window expands from the
- * card's rounded rectangle to the full screen while the content scales up from the card's size.
- * Runs once when the screen first appears. Without a recent tap it rises gently from the centre.
+ * iOS-style "app open". One rectangle R(t) animates from the tapped card to the full screen; the new screen is
+ * scaled uniformly so its width always equals R's width, placed at R's top-left, and clipped to R's height with
+ * rounded corners — so the window and its content move together (no half-scaled frames).
  */
 @Composable
 fun GrowFrom(content: @Composable BoxScope.() -> Unit) {
     val origin = remember { OpenOrigin.take() }
     val p = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { p.animateTo(1f, spring(dampingRatio = 0.86f, stiffness = 340f)) }
-    val corner = with(androidx.compose.ui.platform.LocalDensity.current) { 28.dp.toPx() }
+    LaunchedEffect(Unit) { p.animateTo(1f, spring(dampingRatio = 0.9f, stiffness = 420f)) }
+    val corner = with(androidx.compose.ui.platform.LocalDensity.current) { 26.dp.toPx() }
     Box(
         Modifier.fillMaxSize().graphicsLayer {
-            val t = p.value
-            val o = origin
-            if (o != null && size.width > 0f) {
-                // content starts at the card's scale, centred on the card, and grows to full screen
-                val s0 = (o.width / size.width).coerceIn(0.2f, 1f)
-                val sc = lerp(s0, 1f, t.coerceIn(0f, 1f))
-                scaleX = sc; scaleY = sc
-                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(
-                    (o.center.x / size.width).coerceIn(0f, 1f), (o.center.y / size.height).coerceIn(0f, 1f),
-                )
-            } else {
-                val sc = lerp(0.94f, 1f, t.coerceIn(0f, 1f)); scaleX = sc; scaleY = sc
-            }
-            alpha = (t * 3f).coerceIn(0f, 1f)
-            // window: card rect → full screen (in the layer's own, unscaled coordinates)
-            val tt = t.coerceIn(0f, 1f)
-            val from = o?.let { r ->
-                // undo the content scale so the window lines up with the card on screen
-                val s0 = scaleX.coerceAtLeast(0.01f)
-                val ox = transformOrigin.pivotFractionX * size.width; val oy = transformOrigin.pivotFractionY * size.height
-                Rect(ox + (r.left - ox) / s0, oy + (r.top - oy) / s0, ox + (r.right - ox) / s0, oy + (r.bottom - oy) / s0)
-            } ?: Rect(0f, 0f, size.width, size.height)
-            val rect = Rect(lerp(from.left, 0f, tt), lerp(from.top, 0f, tt), lerp(from.right, size.width, tt), lerp(from.bottom, size.height, tt))
-            val c = lerp(corner / scaleX.coerceAtLeast(0.2f), 0f, tt)
-            this.shape = RectShape(rect, c)
-            clip = tt < 0.999f
+            val t = p.value.coerceIn(0f, 1f)
+            val w = size.width; val h = size.height
+            if (w <= 0f || h <= 0f) return@graphicsLayer
+            val from = origin ?: Rect(w * 0.08f, h * 0.18f, w * 0.92f, h * 0.82f)
+            val r = Rect(lerp(from.left, 0f, t), lerp(from.top, 0f, t), lerp(from.right, w, t), lerp(from.bottom, h, t))
+            val s = (r.width / w).coerceIn(0.05f, 1f)
+            transformOrigin = TransformOrigin(0f, 0f)
+            scaleX = s; scaleY = s
+            translationX = r.left; translationY = r.top
+            alpha = if (origin == null) (t * 2.5f).coerceIn(0f, 1f) else (t * 6f).coerceIn(0f, 1f)
+            val visibleH = (r.height / s).coerceAtMost(h)
+            shape = ClipShape(Rect(0f, 0f, w, visibleH), corner / s * (1f - t))
+            clip = t < 0.999f
         },
         content = content,
     )
 }
 
-private class RectShape(private val r: Rect, private val c: Float) : Shape {
+private class ClipShape(private val r: Rect, private val c: Float) : Shape {
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline =
         Outline.Rounded(RoundRect(r, CornerRadius(c)))
 }

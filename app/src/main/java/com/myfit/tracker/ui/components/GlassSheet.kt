@@ -54,6 +54,11 @@ fun GlassSheet(
     val scope = rememberCoroutineScope()
     LaunchedEffect(visible) { if (visible) drag.snapTo(0f) }
     if (visible) BackHandler(onBack = onDismiss)
+    // while any sheet is open the floating dock hides, so sheets are never drawn under it
+    androidx.compose.runtime.DisposableEffect(visible) {
+        if (visible) SheetsOpen.count.intValue++
+        onDispose { if (visible) SheetsOpen.count.intValue = (SheetsOpen.count.intValue - 1).coerceAtLeast(0) }
+    }
 
     Box(Modifier.fillMaxSize()) {
         AnimatedVisibility(visible, enter = fadeIn(tween(220)), exit = fadeOut(tween(200))) {
@@ -109,3 +114,7 @@ fun GlassSheet(
         }
     }
 }
+
+
+/** Number of GlassSheets currently open (the dock hides while > 0). */
+object SheetsOpen { val count = androidx.compose.runtime.mutableIntStateOf(0) }

@@ -77,9 +77,7 @@ fun ExercisesScreen(container: AppContainer, bottomPad: Int, embedded: Boolean =
         bottomPad = bottomPad,
         onOpen = { nav.push(Overlay.ExerciseDetail(it.id)) },
         onAdd = { ex ->
-            val w = active
-            if (w != null) scope.launch { container.workoutRepo.addExercise(w.id, ex.id); toaster.show("Added ${ex.name} to ${w.name}", "Open") { nav.push(Overlay.Gym(w.id)) } }
-            else adding = ex
+            adding = ex
         },
     )
     val ex = adding
@@ -87,9 +85,14 @@ fun ExercisesScreen(container: AppContainer, bottomPad: Int, embedded: Boolean =
         if (ex != null) {
             val th = LocalFitTheme.current
             Text("Add ${ex.name}", style = FitType.title, color = th.text)
-            Caption("No workout is running. Start one with it, or add it to a template.")
+            val w = active
+            Caption(if (w != null) "Add it to your running workout, a template, or hide it." else "No workout is running. Start one with it, add it to a template, or hide it.")
             Spacer(Modifier.height(12.dp))
-            com.myfit.tracker.ui.theme.AccentButton("Start a workout with it", {
+            if (w != null) com.myfit.tracker.ui.theme.AccentButton("Add to ${w.name}", {
+                adding = null
+                scope.launch { container.workoutRepo.addExercise(w.id, ex.id); toaster.show("Added to ${w.name}", "Open") { nav.push(Overlay.Gym(w.id)) } }
+            }, Modifier.fillMaxWidth(), icon = Duo.Add, height = 50.dp)
+            else com.myfit.tracker.ui.theme.AccentButton("Start a workout with it", {
                 adding = null
                 scope.launch {
                     val id = container.workoutRepo.startEmpty()
@@ -97,6 +100,11 @@ fun ExercisesScreen(container: AppContainer, bottomPad: Int, embedded: Boolean =
                     nav.push(Overlay.Gym(id))
                 }
             }, Modifier.fillMaxWidth(), icon = Duo.PlayArrow, height = 50.dp)
+            Spacer(Modifier.height(8.dp))
+            GlassButton("Hide from library", {
+                adding = null
+                scope.launch { container.exerciseRepo.archive(ex.id); toaster.show("${ex.name} hidden", "Undo") { scope.launch { container.exerciseRepo.unarchive(ex.id) } } }
+            }, Modifier.fillMaxWidth(), icon = Duo.DeleteOutline, height = 44.dp)
             if (templates.isNotEmpty()) {
                 Spacer(Modifier.height(14.dp))
                 Text("ADD TO A TEMPLATE", style = FitType.overline, color = th.textDim)

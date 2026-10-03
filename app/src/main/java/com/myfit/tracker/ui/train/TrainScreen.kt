@@ -59,6 +59,7 @@ import com.myfit.tracker.ui.components.SectionTitle
 import com.myfit.tracker.ui.exercises.ExerciseImage
 import com.myfit.tracker.ui.exercises.mmss
 import com.myfit.tracker.ui.nav.LocalNav
+import com.myfit.tracker.ui.components.clickableNoRipple
 import com.myfit.tracker.ui.nav.Overlay
 import com.myfit.tracker.ui.pip.Pip
 import com.myfit.tracker.ui.pip.PipMood
@@ -224,7 +225,11 @@ private fun TemplateCard(t: TemplateView, onStart: () -> Unit, onEdit: () -> Uni
                 AccentButton("Start", onStart, icon = Duo.PlayArrow, height = 46.dp)
             }
             Spacer(Modifier.height(8.dp))
-            if (!open) Caption(t.items.joinToString(" · ") { it.second.name } + "  ·  tap to edit", )
+            if (!open) {
+                Caption(t.items.joinToString(" · ") { it.second.name })
+                Spacer(Modifier.height(6.dp))
+                Text("Edit exercises", style = FitType.label, color = th.accentBright, modifier = Modifier.clickableNoRipple { open = true }.padding(vertical = 4.dp))
+            }
             else {
                 t.items.forEach { (item, ex) ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -259,8 +259,8 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             AnimatedContent(
                 targetState = tab,
                 transitionSpec = {
-                    (fadeIn(tween(260)) + scaleIn(spring(0.8f, 300f), initialScale = 0.96f))
-                        .togetherWith(fadeOut(tween(160)) + scaleOut(tween(160), targetScale = 1.02f))
+                    // quick cross-fade (like iOS tab bars): no scaling, so heavy tabs never stutter
+                    fadeIn(tween(160, delayMillis = 40)).togetherWith(fadeOut(tween(90)))
                 },
                 label = "tabs",
             ) { t ->
@@ -283,7 +283,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                     },
                 )
             }
-            AnimatedVisibility(top == null, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
+            AnimatedVisibility(top == null && com.myfit.tracker.ui.components.SheetsOpen.count.intValue == 0, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
                 LiquidTabBar(
                     items = tabs, selected = tab, onSelect = { tab = it },
                     modifier = Modifier.navigationBarsPadding().padding(bottom = 8.dp).tourTarget("dock"),

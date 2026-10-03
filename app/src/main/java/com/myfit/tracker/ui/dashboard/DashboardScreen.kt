@@ -620,10 +620,10 @@ private fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             // rings take ~40% of the card so the legend always has room (checked down to 360dp screens)
             val ring = (maxWidth * 0.40f).coerceIn(96.dp, 124.dp)
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 TripleRings(s, ring)
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     RingLegend(th.water, "Water", s.waterMl?.let { Fmt.volume(it, units.volume) } ?: "—",
                         s.waterTarget?.let { "of ${Fmt.volume(it, units.volume)}" }) { open(Sheet.Water()) }
                     RingLegend(th.steps, "Steps", s.steps?.let { Fmt.int(it) } ?: "—", s.stepTarget?.let { "of ${Fmt.int(it)}" }) { open(Sheet.Steps()) }
@@ -642,19 +642,14 @@ private fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
 @Composable
 private fun RingLegend(color: Color, label: String, value: String, of: String?, onClick: () -> Unit) {
     val th = LocalFitTheme.current
-    Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickableNoRipple(onClick)) {
-        Box(Modifier.padding(top = 3.dp).size(9.dp).clip(CircleShape)) { Canvas(Modifier.fillMaxSize()) { drawCircle(color) } }
-        Spacer(Modifier.width(8.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                buildAnnotatedString {
-                    withStyle(SpanStyle(color = th.textDim, fontSize = FitType.caption.fontSize)) { append(label) }
-                },
-                style = FitType.caption,
-            )
-            Text(value, style = FitType.section, color = th.text)
-            if (of != null) Text(of, style = FitType.caption, color = th.textDim)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickableNoRipple(onClick)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(9.dp).clip(CircleShape)) { Canvas(Modifier.fillMaxSize()) { drawCircle(color) } }
+            Spacer(Modifier.width(8.dp))
+            Text(label, style = FitType.caption, color = th.textDim, modifier = Modifier.weight(1f), maxLines = 1)
+            Text(value, style = FitType.section, color = th.text, maxLines = 1, softWrap = false)
         }
+        if (of != null) Text(of, style = FitType.caption, color = th.textDim, maxLines = 1, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End)
     }
 }
 

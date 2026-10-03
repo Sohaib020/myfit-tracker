@@ -295,9 +295,9 @@ internal fun WaterButtons(w: WaterActions, compact: Boolean = false) {
                 .clickableNoRipple(w.add),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
         ) {
-            Icon(Duo.Add, null, tint = Color.White, modifier = Modifier.size(15.dp))
-            Spacer(Modifier.width(3.dp))
-            Text("250 ml", style = FitType.label, color = Color.White, maxLines = 1, softWrap = false)
+            Icon(Duo.Add, null, tint = Color.White, modifier = Modifier.size(if (compact) 13.dp else 15.dp))
+            Spacer(Modifier.width(2.dp))
+            Text(if (compact) "250" else "250 ml", style = if (compact) FitType.caption else FitType.label, color = Color.White, maxLines = 1, softWrap = false)
         }
     }
 }
