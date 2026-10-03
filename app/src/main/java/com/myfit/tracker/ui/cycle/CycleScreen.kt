@@ -200,7 +200,7 @@ private fun CycleContent(container: AppContainer, requestHc: () -> Unit) {
     val today = remember { Clock.today() }
     val state = remember(rows, today) { CycleState(rows.orEmpty(), today) }
     var month by remember { mutableStateOf(YearMonth.from(today)) }
-    var sheetDate by remember { mutableStateOf<LocalDate?>(null) }
+    var sheetDate by remember { mutableStateOf<LocalDate?>(if (com.myfit.tracker.ui.nav.Launch.takeCycle() == "log") today else null) }
     var hcGranted by remember { mutableStateOf<Set<String>?>(null) }
     val hcAvailable = remember { container.healthSync.isAvailable }
     var mode by remember { mutableStateOf(CyclePrefs.mode(ctx)) }
@@ -574,7 +574,7 @@ fun CycleTile(container: AppContainer, onClick: () -> Unit) {
 }
 
 @Composable
-private fun CycleTileBody(container: AppContainer) {
+internal fun CycleTileBody(container: AppContainer) {
     val th = LocalFitTheme.current
     val rows by remember { container.db.cycleDao().observeAll() }.collectAsState(initial = null)
     val today = remember { Clock.today() }

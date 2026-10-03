@@ -181,7 +181,7 @@ private fun QuickAddContent(container: AppContainer, open: (Sheet?) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         val today = com.myfit.tracker.domain.Clock.today().toString()
         GlassButton("Snap meal", { open(null); nav.push(com.myfit.tracker.ui.nav.Overlay.FoodPhoto(com.myfit.tracker.ui.food.mealForNow(), today)) }, Modifier.weight(1f), icon = Duo.Camera, height = 48.dp)
-        GlassButton("Log food", { open(null); nav.push(com.myfit.tracker.ui.nav.Overlay.FoodAdd(com.myfit.tracker.ui.food.mealForNow(), today, 0)) }, Modifier.weight(1f), icon = Duo.ForkKnife, height = 48.dp)
+        GlassButton("Add food", { open(null); nav.push(com.myfit.tracker.ui.nav.Overlay.FoodAdd(com.myfit.tracker.ui.food.mealForNow(), today, 0)) }, Modifier.weight(1f), icon = Duo.ForkKnife, height = 48.dp)
     }
     Gap()
     // one-tap water

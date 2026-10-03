@@ -79,7 +79,7 @@ fun ArrangeDashScreen(container: AppContainer) {
     val toaster = LocalToaster.current
     val settings = LocalSettings.current
     val tick = rememberTick()
-    val order = remember { mutableStateListOf<DashCard>().apply { addAll(settings.dashOrder) } }
+    val order = remember { mutableStateListOf<DashCard>().apply { addAll(settings.dashOrder.filter { it !in com.myfit.tracker.data.prefs.MergedCards }) } }
     val shown = remember { mutableStateListOf<DashCard>().apply { addAll(settings.dashCards) } }
     var pipOn by remember { androidx.compose.runtime.mutableStateOf(settings.pipEnabled) }
     var dragIdx by remember { mutableIntStateOf(-1) }
@@ -169,7 +169,7 @@ fun ArrangeDashScreen(container: AppContainer) {
             Spacer(Modifier.height(4.dp))
             Caption("Reset puts every card back in the default order.", Modifier.padding(horizontal = 4.dp))
             Text("Reset to default", style = FitType.label, color = th.accentBright, modifier = Modifier.padding(4.dp).clickableNoRipple {
-                order.clear(); order.addAll(DashCard.entries); shown.clear(); shown.addAll(DashCard.entries); pipOn = true
+                order.clear(); order.addAll(DashCard.entries.filter { it !in com.myfit.tracker.data.prefs.MergedCards }); shown.clear(); shown.addAll(DashCard.entries); pipOn = true
             })
         }
         AccentButton("Save layout", { save() }, Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 12.dp), icon = Duo.Check)

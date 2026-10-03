@@ -97,17 +97,12 @@ internal fun TileValue(value: String, unit: String? = null, color: Color? = null
 internal fun HydrationTile(s: DashState, c: AppContainer, open: (Sheet) -> Unit, wide: Boolean = false) {
     val th = LocalFitTheme.current
     val units = LocalSettings.current.units
-    val toaster = LocalToaster.current
-    val add250: () -> Unit = {
-        c.write {
-            val id = c.logRepo.addWater(250.0)
-            toaster.show("Added 250 ml of water", "Undo") { c.write { c.logRepo.deleteWater(id) } }
-        }
-    }
+    val water = rememberWaterActions(c)
+    val add250: () -> Unit = water.add
     val fraction = s.waterMl?.let { w -> s.waterTarget?.takeIf { it > 0 }?.let { (w / it).toFloat() } } ?: 0f
     GlassCard(Modifier.height(TileHeight), onClick = { open(Sheet.Water()) }, padding = 12.dp) {
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-            WaterGlass3D(fraction, th.water, Modifier.width(if (wide) 84.dp else 50.dp).fillMaxHeight(), onTap = add250)
+            WaterGlass3D(fraction, th.water, Modifier.width(if (wide) 84.dp else 44.dp).fillMaxHeight(), onTap = add250)
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
                 Column {
@@ -125,17 +120,7 @@ internal fun HydrationTile(s: DashState, c: AppContainer, open: (Sheet) -> Unit,
                         else -> TileLine("of ${Fmt.volume(t, units.volume)}")
                     }
                 }
-                Row(
-                    Modifier.height(30.dp).clip(RoundedCornerShape(15.dp))
-                        .background(th.water.copy(alpha = 0.18f))
-                        .clickableNoRipple(add250)
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Duo.Add, "Add 250 ml", tint = th.water, modifier = Modifier.size(13.dp))
-                    Spacer(Modifier.width(3.dp))
-                    Text("250 ml", style = FitType.label, color = th.text, maxLines = 1, softWrap = false)
-                }
+                WaterButtons(water, compact = true)
             }
         }
     }

@@ -78,7 +78,9 @@ private sealed interface MindView {
 @Composable
 fun MindScreen(container: AppContainer) {
     val nav = LocalNav.current
-    var view by remember { mutableStateOf<MindView>(MindView.Hub) }
+    var view by remember {
+        mutableStateOf<MindView>(if (com.myfit.tracker.ui.nav.Launch.takeMind() == "breath") MindView.Breath(BreathPatterns.first(), 3, false) else MindView.Hub)
+    }
     var moodSheet by remember { mutableStateOf(false) }
 
     when (val v = view) {

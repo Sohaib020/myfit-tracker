@@ -23,15 +23,23 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 enum class DashCard(val label: String) {
-    PIP("Pip"), SNAP("Snap a meal"), VITALS("Vitals"), MIND("Mindfulness"), CYCLE("Cycle"), GLUCOSE("Blood sugar"), WORKOUT("Today's workout"), RINGS("Today's rings"), SOCIAL("Compete with friends"), NUTRITION("Food & calories"), BODY("Body weight"), HYDRATION("Hydration"), RECOVERY("Sleep & recovery"),
-    STEPS("Steps & activity"), CHECKIN("Daily check-in"), GOALS("Today's goals"), STREAKS("Streaks & badges")
+    // declaration order = default Home order
+    RINGS("Today's progress"), SNAP("Snap a meal"), PIP("Pip"), VITALS("Vitals"), NUTRITION("Food & hydration"), MIND("Mindfulness"),
+    CYCLE("Menstrual cycle"), GLUCOSE("Blood sugar"), WORKOUT("Today's workout"), SOCIAL("Compete with friends"), STEPS("Steps & activity"),
+    RECOVERY("Sleep & recovery"), BODY("Body weight"), GOALS("Today's goals"), STREAKS("Streaks & badges"),
+    // merged into RINGS / NUTRITION (kept so saved settings still parse)
+    CHECKIN("Daily check-in"), HYDRATION("Hydration")
 }
 
 /** Cards that start out half width (two per row). Users can resize any card by long-pressing it. */
 val DefaultSmallCards: Set<DashCard> = setOf(
-    DashCard.HYDRATION, DashCard.STEPS, DashCard.RECOVERY, DashCard.CHECKIN, DashCard.BODY,
-    DashCard.GOALS, DashCard.VITALS, DashCard.MIND, DashCard.CYCLE, DashCard.GLUCOSE, DashCard.STREAKS,
+    DashCard.SNAP, DashCard.PIP, DashCard.STEPS, DashCard.RECOVERY, DashCard.BODY, DashCard.GOALS, DashCard.GLUCOSE, DashCard.STREAKS,
+    DashCard.CHECKIN, DashCard.HYDRATION,
 )
+
+/** Cards that are folded into another card on Home. */
+val MergedCards: Set<DashCard> = setOf(DashCard.CHECKIN, DashCard.HYDRATION)
+private const val DASH_LAYOUT = 3
 
 /** Values for [AppSettings.diabetesType]. */
 val DiabetesTypes = listOf("unset", "none", "type1", "type2", "gestational", "prediabetes", "other")
@@ -139,7 +147,8 @@ class SettingsStore(private val context: Context) {
         val cycle = booleanPreferencesKey("cycle_on")
         val cycleAsked = booleanPreferencesKey("cycle_asked")
         val glucose = booleanPreferencesKey("glucose_on")
-        val dashSize = stringSetPreferencesKey("dash_size")   // "CARD:S" / "CARD:L" overrides of DefaultSmallCards
+        val dashSize = stringSetPreferencesKey("dash_size")
+        val dashV = androidx.datastore.preferences.core.intPreferencesKey("dash_layout")   // "CARD:S" / "CARD:L" overrides of DefaultSmallCards
         val diabetes = stringPreferencesKey("diabetes_type")
         val diabetesAsked = booleanPreferencesKey("diabetes_asked")
     }
@@ -180,7 +189,8 @@ class SettingsStore(private val context: Context) {
             pipVoice = p[K.voice] ?: true,
             pipVoiceOnline = p[K.voiceOnline] ?: true,
             dashOrder = run {
-                val saved = p[K.order]?.split(',')?.mapNotNull { n -> runCatching { DashCard.valueOf(n) }.getOrNull() }?.distinct() ?: emptyList()
+                val saved = if ((p[K.dashV] ?: 0) < DASH_LAYOUT) emptyList()
+                    else p[K.order]?.split(',')?.mapNotNull { n -> runCatching { DashCard.valueOf(n) }.getOrNull() }?.distinct() ?: emptyList()
                 saved + DashCard.entries.filter { it !in saved }
             },
             groqKey = p[K.groq] ?: "",
@@ -196,7 +206,7 @@ class SettingsStore(private val context: Context) {
             cycleAsked = p[K.cycleAsked] ?: false,
             glucoseEnabled = p[K.glucose] ?: false,
             dashSmall = run {
-                val o = p[K.dashSize].orEmpty().mapNotNull { e ->
+                val o = (if ((p[K.dashV] ?: 0) < DASH_LAYOUT) emptySet() else p[K.dashSize].orEmpty()).mapNotNull { e ->
                     val c = runCatching { DashCard.valueOf(e.substringBefore(':')) }.getOrNull() ?: return@mapNotNull null
                     c to (e.substringAfter(':') == "S")
                 }.toMap()
@@ -238,7 +248,10 @@ class SettingsStore(private val context: Context) {
     suspend fun setPipVoiceOnline(v: Boolean) = context.dataStore.edit { it[K.voiceOnline] = v }
     suspend fun setHaptics(v: Boolean) = context.dataStore.edit { it[K.haptics] = v }
     suspend fun setPip(v: Boolean) = context.dataStore.edit { it[K.pip] = v }
-    suspend fun setDashOrder(o: List<DashCard>) = context.dataStore.edit { it[K.order] = o.joinToString(",") { c -> c.name } }
+    suspend fun setDashOrder(o: List<DashCard>) = context.dataStore.edit {
+        if ((it[K.dashV] ?: 0) < DASH_LAYOUT) { it.remove(K.dashSize); it[K.dashV] = DASH_LAYOUT }
+        it[K.order] = o.joinToString(",") { c -> c.name }
+    }
     suspend fun setAiKey(provider: String, v: String) = context.dataStore.edit {
         val k = when (provider) { "groq" -> K.groq; "openrouter" -> K.orKey; "mistral" -> K.mistral; "azure" -> K.azure; "azure_region" -> K.azureRegion; else -> return@edit }
         if (v.isBlank()) it.remove(k) else it[k] = v.trim()
@@ -251,6 +264,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setGlucose(enabled: Boolean) = context.dataStore.edit { it[K.glucose] = enabled }
     /** Half width (small = true) or full width for one dashboard card. */
     suspend fun setDashSize(card: DashCard, small: Boolean) = context.dataStore.edit {
+        if ((it[K.dashV] ?: 0) < DASH_LAYOUT) { it.remove(K.dashSize); it.remove(K.order); it[K.dashV] = DASH_LAYOUT }
         val cur = it[K.dashSize].orEmpty().filterNot { e -> e.substringBefore(':') == card.name }
         it[K.dashSize] = (cur + "${card.name}:${if (small) "S" else "L"}").toSet()
     }

@@ -150,7 +150,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
     fun infoOf(c: DashCard): LazyGridItemInfo? = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == keyOf(c) }
     fun boundsOf(i: LazyGridItemInfo) = Rect(i.offset.x.toFloat(), i.offset.y.toFloat(), (i.offset.x + i.size.width).toFloat(), (i.offset.y + i.size.height).toFloat())
 
-    fun visible(c: DashCard): Boolean = c in cards && when (c) {
+    fun visible(c: DashCard): Boolean = c in cards && c !in com.myfit.tracker.data.prefs.MergedCards && when (c) {
         DashCard.PIP -> settings.pipEnabled
         DashCard.CYCLE -> showCycle(state.profile, settings) && (settings.cycleEnabled || !settings.cycleAsked)
         DashCard.GLUCOSE -> showDiabetes(settings)
@@ -308,6 +308,15 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
                         } else DashCardContent(c, false, state, container, open, goTab)
                     }
                 }
+                // combined cards split into two tiles when small
+                if (small && (c == DashCard.RINGS || c == DashCard.NUTRITION)) item(key = keyOf(c) + "_b", span = half) {
+                    Box(Modifier.animateItem().movable(c)) {
+                        Box(Modifier.fillMaxWidth().height(TileHeight), propagateMinConstraints = true) {
+                            if (c == DashCard.RINGS) CheckInTile(state) { open(Sheet.CheckIn()) }
+                            else HydrationTile(state, container, open)
+                        }
+                    }
+                }
             }
             item(key = "arrange", span = full) {
                 val nav = LocalNav.current
@@ -364,7 +373,7 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
         DashCard.SNAP -> if (small) SnapSmall() else SnapHeroCard()
         DashCard.WORKOUT -> if (small) WorkoutSmall(state.workout, container) { goTab(Tabs.TRAIN) } else WorkoutCard(state.workout, container)
         DashCard.RINGS -> if (small) RingsSmall(state) { nav.push(Overlay.Activity) } else RingsCard(state, open)
-        DashCard.NUTRITION -> if (small) NutritionSmall(container) { goTab(Tabs.FOOD) } else NutritionCard(container) { goTab(Tabs.FOOD) }
+        DashCard.NUTRITION -> if (small) NutritionSmall(container) { goTab(Tabs.FOOD) } else FoodHydrationCard(state, container, open) { goTab(Tabs.FOOD) }
         DashCard.SOCIAL -> if (small) CompeteSmall(container) { goTab(Tabs.ARENA) } else CompeteCard(container) { goTab(Tabs.ARENA) }
         DashCard.HYDRATION -> HydrationTile(state, container, open, wide = !small)
         DashCard.STEPS -> StepsTile(state) { nav.push(Overlay.Activity) }
@@ -372,9 +381,9 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
         DashCard.CHECKIN -> CheckInTile(state) { open(Sheet.CheckIn()) }
         DashCard.BODY -> BodyTile(state) { nav.push(Overlay.Body) }
         DashCard.GOALS -> GoalsTile(state, null)
-        DashCard.VITALS -> com.myfit.tracker.ui.vitals.VitalsTile(container) { nav.push(Overlay.Vitals) }
-        DashCard.MIND -> com.myfit.tracker.ui.mind.MindTile(container) { nav.push(Overlay.Mind) }
-        DashCard.CYCLE -> com.myfit.tracker.ui.cycle.CycleTile(container) { nav.push(Overlay.Cycle) }
+        DashCard.VITALS -> if (small) com.myfit.tracker.ui.vitals.VitalsTile(container) { nav.push(Overlay.Vitals) } else VitalsCard(container)
+        DashCard.MIND -> if (small) com.myfit.tracker.ui.mind.MindTile(container) { nav.push(Overlay.Mind) } else MindCard(container)
+        DashCard.CYCLE -> if (small) com.myfit.tracker.ui.cycle.CycleTile(container) { nav.push(Overlay.Cycle) } else CycleCard(container)
         DashCard.GLUCOSE -> com.myfit.tracker.ui.glucose.GlucoseTile(container) { nav.push(Overlay.Glucose) }
         DashCard.STREAKS -> com.myfit.tracker.ui.badges.StreaksTile(container) { nav.push(Overlay.Badges) }
     }
@@ -576,8 +585,10 @@ private fun PipSmall(s: DashState) {
             Text("PIP", style = FitType.overline, color = th.accentBright, modifier = Modifier.weight(1f))
             Icon(Duo.ChatBubble, "Chat", tint = th.textDim, modifier = Modifier.size(15.dp))
         }
-        Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { Pip(mood, size = 74.dp, interactive = false) }
-        Text(line, style = FitType.caption, color = th.text, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { Pip(mood, size = 70.dp, interactive = false) }
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            CompactPill("Chat with Pip", Duo.ChatBubble, { nav.push(Overlay.PipChat) }, height = 34.dp)
+        }
     }
 }
 
@@ -619,7 +630,9 @@ private fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
                 }
             }
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
+        CheckInStrip(s, open)
+        Spacer(Modifier.height(8.dp))
         Caption("Dashed ring = nothing logged yet (not zero).")
     }
 }
@@ -694,7 +707,7 @@ private fun NutritionCard(c: AppContainer, onOpen: () -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val meal = com.myfit.tracker.ui.food.mealForNow()
             com.myfit.tracker.ui.theme.GlassButton("Snap meal", { nav.push(Overlay.FoodPhoto(meal, key)) }, Modifier.weight(1f), icon = Duo.Camera, height = 44.dp)
-            com.myfit.tracker.ui.theme.GlassButton("Log food", { nav.push(Overlay.FoodAdd(meal, key, 0)) }, Modifier.weight(1f), icon = Duo.ForkKnife, height = 44.dp)
+            com.myfit.tracker.ui.theme.GlassButton("Add food", { nav.push(Overlay.FoodAdd(meal, key, 0)) }, Modifier.weight(1f), icon = Duo.ForkKnife, height = 44.dp)
         }
     }
 }

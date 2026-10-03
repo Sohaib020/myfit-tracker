@@ -53,3 +53,11 @@ class Nav {
 }
 
 val LocalNav = staticCompositionLocalOf { Nav() }
+
+/** One-shot requests for a screen to jump straight to an action when it opens (set by Home card buttons). */
+object Launch {
+    @Volatile var mind: String? = null
+    @Volatile var cycle: String? = null
+    fun takeMind(): String? = mind.also { mind = null }
+    fun takeCycle(): String? = cycle.also { cycle = null }
+}
