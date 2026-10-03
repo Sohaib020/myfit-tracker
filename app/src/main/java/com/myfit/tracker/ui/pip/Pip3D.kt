@@ -165,7 +165,7 @@ internal class PipRig : Choreographer.FrameCallback {
             val sc = e.createScene(); scene = sc
             camEntity = EntityManager.get().create()
             val cam = e.createCamera(camEntity); camera = cam
-            cam.setExposure(16f, 1f / 125f, 100f)
+            cam.setExposure(1f)   // unit exposure: light values are relative, and glint emissive 1.0 reads as white
             val v = e.createView(); view = v
             v.scene = sc; v.camera = cam
             v.blendMode = View.BlendMode.TRANSLUCENT
@@ -180,10 +180,10 @@ internal class PipRig : Choreographer.FrameCallback {
                 LightManager.Builder(LightManager.Type.DIRECTIONAL).color(r, g, b).intensity(lux).direction(x, y, z).castShadows(false).build(e, l)
                 sc.addEntity(l); lights += l
             }
-            dir(1.0f, 0.97f, 0.93f, 70_000f, 0.45f, -0.55f, -0.70f)
-            dir(0.92f, 0.96f, 1.0f, 26_000f, -0.6f, -0.25f, -0.75f)
-            dir(1f, 1f, 1f, 34_000f, -0.05f, -0.45f, 0.9f)
-            ibl = IndirectLight.Builder().irradiance(1, floatArrayOf(1f, 1f, 1.02f)).intensity(26_000f).build(e).also { sc.indirectLight = it }
+            dir(1.0f, 0.97f, 0.93f, 3.0f, 0.45f, -0.55f, -0.70f)
+            dir(0.92f, 0.96f, 1.0f, 1.1f, -0.6f, -0.25f, -0.75f)
+            dir(1f, 1f, 1f, 1.4f, -0.05f, -0.45f, 0.9f)
+            ibl = IndirectLight.Builder().irradiance(1, floatArrayOf(1f, 1f, 1.02f)).intensity(1.2f).build(e).also { sc.indirectLight = it }
 
             val ld = AssetLoader(e, UbershaderProvider(e), EntityManager.get()); loader = ld
             val buf = ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder()).put(bytes).also { it.flip() }
