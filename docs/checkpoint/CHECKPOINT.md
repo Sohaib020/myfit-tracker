@@ -77,3 +77,4 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 - Tasks run one at a time; one CI build per group.
 - ✅ R3: UI fixes + grouped daily log (run 72); Home cards rework (run 73)
 - ✅ R3: onboarding sign-in/diabetes/cycle perms (run 74); Me account+photo, Train template quick edit + add-to-workout (run 75)
+- ✅ R3: iOS-style grow-open (run 76); Pip spotlight tour + replay (run 78). Next: real-time 3D Pip
