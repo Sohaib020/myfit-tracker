@@ -102,8 +102,8 @@ fun PipTour(steps: List<TourStep>, onDone: () -> Unit) {
             target == null -> (h - card.height) / 2f
             target.center.y < h / 2f -> target.bottom + pad * 3
             else -> target.top - pad * 3 - card.height
-        }.coerceIn(with(density) { 40.dp.toPx() }, (h - card.height - with(density) { 24.dp.toPx() }).coerceAtLeast(0f))
-        val x = ((target?.center?.x ?: (w / 2f)) - minOf(bubbleW, w - 32f) / 2f).coerceIn(with(density) { 16.dp.toPx() }, (w - minOf(bubbleW, w - 32f) - with(density) { 16.dp.toPx() }).coerceAtLeast(0f))
+        }.clampSafe(with(density) { 40.dp.toPx() }, h - card.height - with(density) { 24.dp.toPx() })
+        val x = ((target?.center?.x ?: (w / 2f)) - minOf(bubbleW, w - 32f) / 2f).clampSafe(with(density) { 16.dp.toPx() }, w - minOf(bubbleW, w - 32f) - with(density) { 16.dp.toPx() })
         Column(
             Modifier.offset { IntOffset(x.roundToInt(), y.roundToInt()) }.width(300.dp).onSizeChanged { card = it }
                 .graphicsLayer { alpha = appear.value },
@@ -137,3 +137,6 @@ private fun currentSpot(a: Rect?, b: Rect?, t: Float): Rect? = when {
     else -> Rect(a.left + (b.left - a.left) * t, a.top + (b.top - a.top) * t, a.right + (b.right - a.right) * t, a.bottom + (b.bottom - a.bottom) * t)
 }
 
+
+/** coerceIn that never throws: if the range is empty (e.g. before the first layout) the lower bound wins. */
+private fun Float.clampSafe(lo: Float, hi: Float): Float = if (hi < lo) lo else coerceIn(lo, hi)
