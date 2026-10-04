@@ -8,12 +8,14 @@ enum class WeightUnit(val label: String) { KG("kg"), LB("lb") }
 enum class LengthUnit(val label: String) { CM("cm"), IN("in") }
 enum class VolumeUnit(val label: String) { ML("ml"), L("L"), FL_OZ("fl oz") }
 enum class DistanceUnit(val label: String) { KM("km"), MI("mi") }
+enum class EnergyUnits(val label: String) { CAL("Cal"), KCAL("kcal") }
 
 data class UnitPrefs(
     val weight: WeightUnit = WeightUnit.KG,
     val length: LengthUnit = LengthUnit.IN,
     val volume: VolumeUnit = VolumeUnit.L,
     val distance: DistanceUnit = DistanceUnit.KM,
+    val energy: EnergyUnits = EnergyUnits.CAL,
 )
 
 /**
@@ -90,4 +92,9 @@ object Fmt {
         val h = ((minOfDay / 60) % 24 + 24) % 24; val m = ((minOfDay % 60) + 60) % 60
         return "%02d:%02d".format(Locale.US, h, m)
     }
+}
+
+/** Display unit for food/activity energy: "Cal" (default) or "kcal" — same number, set in Settings → Units. */
+object EnergyUnit {
+    @Volatile var label: String = "Cal"
 }

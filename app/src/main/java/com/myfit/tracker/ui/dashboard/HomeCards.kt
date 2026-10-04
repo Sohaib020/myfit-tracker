@@ -228,7 +228,7 @@ internal fun FoodHydrationCard(s: DashState, c: AppContainer, open: (Sheet) -> U
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(if (items.isEmpty()) "—" else Fmt.int(t.kcal), style = FitType.title, color = th.text)
                     Spacer(Modifier.width(4.dp))
-                    Text(kcalT?.let { "/ ${Fmt.int(it)} kcal" } ?: "kcal", style = FitType.caption, color = th.textDim, modifier = Modifier.padding(bottom = 3.dp))
+                    Text(kcalT?.let { "/ ${Fmt.int(it)} ${com.myfit.tracker.domain.EnergyUnit.label}" } ?: "${com.myfit.tracker.domain.EnergyUnit.label}", style = FitType.caption, color = th.textDim, modifier = Modifier.padding(bottom = 3.dp))
                 }
                 com.myfit.tracker.ui.components.GlassProgressBar(if (items.isEmpty() || kcalT == null || kcalT <= 0) null else (t.kcal / kcalT).toFloat(), th.protein, height = 6.dp)
                 Text("P ${Fmt.int(t.protein)} · C ${Fmt.int(t.carbs)} · F ${Fmt.int(t.fat)} g", style = FitType.caption, color = th.textDim, maxLines = 1)

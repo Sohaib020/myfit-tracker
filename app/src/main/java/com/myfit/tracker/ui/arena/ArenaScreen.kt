@@ -104,26 +104,29 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Column(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = TopBarSpace)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Arena", style = FitType.display, color = th.text, modifier = Modifier.weight(1f))
-                    StarPill(total)
-                }
-                Spacer(Modifier.height(10.dp))
-                LevelHero(lvl, partner) { tab = 4 }
-                Spacer(Modifier.height(10.dp))
-            }
-            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val tabs = listOf("Challenges", "Journeys", "Battles", "Games", "Rewards")
-                items(tabs.size) { i -> GlassChip(tabs[i], tab == i, { tab = i }) }
-            }
-            Spacer(Modifier.height(8.dp))
             Box(Modifier.weight(1f).fillMaxWidth()) {
+                // the header (title, tier card, tabs) scrolls away with the content so the list gets the whole screen
                 LazyColumn(
                     Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = bottomPad.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = bottomPad.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
+                    item(key = "head") {
+                        Column(Modifier.statusBarsPadding().padding(top = TopBarSpace)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Arena", style = FitType.display, color = th.text, modifier = Modifier.weight(1f))
+                                StarPill(total)
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            LevelHero(lvl, partner) { tab = 4 }
+                        }
+                    }
+                    item(key = "tabs") {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val tabs = listOf("Challenges", "Journeys", "Battles", "Games", "Rewards")
+                            items(tabs.size) { i -> GlassChip(tabs[i], tab == i, { tab = i }) }
+                        }
+                    }
                     if (tab == 0) item(key = "friends") { com.myfit.tracker.ui.social.FriendsGlimpse(container) }
                     val d = days
                     if (d == null) item { Caption("Loading your activity…") }
@@ -135,7 +138,6 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                             items(wk, key = { it.id }) { ChallengeCard(it, d, today, partner, ver) { openCh = it } }
                             item { PeriodHeader("THIS MONTH", mo.firstOrNull()?.to, today) }
                             items(mo, key = { it.id }) { ChallengeCard(it, d, today, partner, ver) { openCh = it } }
-                            item { Caption("Goals are set from your last 4 weeks, about 10% above what you already do. Each checkpoint earns stars; finishing early earns a bonus.", color = th.textFaint) }
                         }
                         1 -> item { JourneyHub(d, partner) { ver++ } }
                         2 -> { item { DuelsPane(container, award) { nav.push(com.myfit.tracker.ui.nav.Overlay.Social) } }; item { Leaderboard(container, lvl, partner) } }
@@ -650,7 +652,6 @@ private fun RewardsPane(l: Level, days: List<Day>, partner: Mascot, ver: Int, pi
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         GlassCard(padding = 14.dp) {
             Text("Your partner", style = FitType.section, color = th.text)
-            Caption("Your partner runs with you on every track. Level up to unlock the whole cast.")
             Spacer(Modifier.height(8.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(Mascot.entries.toList()) { m ->
@@ -666,7 +667,7 @@ private fun RewardsPane(l: Level, days: List<Day>, partner: Mascot, ver: Int, pi
                     ) {
                         if (open) CastImage(m, 76.dp) else CastLocked(m, 76.dp)
                         Text(m.label.substringBefore(' '), style = FitType.label, color = th.text)
-                        Caption(if (open) (if (sel) "Partner" else "Tap to pick") else "Lv ${m.unlock} · preview")
+                        Caption(if (open) (if (sel) "Partner" else "Tap to pick") else "Lv ${m.unlock}")
                     }
                 }
             }
@@ -675,7 +676,6 @@ private fun RewardsPane(l: Level, days: List<Day>, partner: Mascot, ver: Int, pi
         // level road
         GlassCard(padding = 14.dp) {
             Text("Level road", style = FitType.section, color = th.text)
-            Caption("Stars from checkpoints, daily steps, journeys, games and battles all count.")
             Spacer(Modifier.height(10.dp))
             Tier.entries.forEach { t ->
                 val last = Tier.entries.getOrNull(t.ordinal + 1)?.from?.minus(1) ?: MAX_LEVEL

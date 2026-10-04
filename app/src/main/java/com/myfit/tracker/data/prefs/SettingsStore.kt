@@ -13,6 +13,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.myfit.tracker.domain.DistanceUnit
+import com.myfit.tracker.domain.EnergyUnits
 import com.myfit.tracker.domain.LengthUnit
 import com.myfit.tracker.domain.UnitPrefs
 import com.myfit.tracker.domain.VolumeUnit
@@ -115,6 +116,7 @@ class SettingsStore(private val context: Context) {
         val lu = stringPreferencesKey("unit_length")
         val vu = stringPreferencesKey("unit_volume")
         val du = stringPreferencesKey("unit_distance")
+        val eu = stringPreferencesKey("unit_energy")
         val hidden = stringSetPreferencesKey("dash_hidden")   // stores HIDDEN cards so new cards default to visible
         val restAuto = booleanPreferencesKey("rest_auto")
         val restSec = intPreferencesKey("rest_sec")
@@ -171,6 +173,7 @@ class SettingsStore(private val context: Context) {
                 length = p[K.lu]?.let { runCatching { LengthUnit.valueOf(it) }.getOrNull() } ?: LengthUnit.IN,
                 volume = p[K.vu]?.let { runCatching { VolumeUnit.valueOf(it) }.getOrNull() } ?: VolumeUnit.L,
                 distance = p[K.du]?.let { runCatching { DistanceUnit.valueOf(it) }.getOrNull() } ?: DistanceUnit.KM,
+                energy = p[K.eu]?.let { runCatching { EnergyUnits.valueOf(it) }.getOrNull() } ?: EnergyUnits.CAL,
             ),
             dashCards = DashCard.entries.toSet() - (p[K.hidden]?.mapNotNull { runCatching { DashCard.valueOf(it) }.getOrNull() }?.toSet() ?: emptySet()),
             haptics = p[K.haptics] ?: true,
@@ -234,7 +237,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setAnimated(v: Boolean) = context.dataStore.edit { it[K.animated] = v }
     suspend fun setGlassStrength(v: Float) = context.dataStore.edit { it[K.glass] = v }
     suspend fun setUnits(u: UnitPrefs) = context.dataStore.edit {
-        it[K.wu] = u.weight.name; it[K.lu] = u.length.name; it[K.vu] = u.volume.name; it[K.du] = u.distance.name
+        it[K.wu] = u.weight.name; it[K.lu] = u.length.name; it[K.vu] = u.volume.name; it[K.du] = u.distance.name; it[K.eu] = u.energy.name
     }
     suspend fun setDashCards(c: Set<DashCard>) = context.dataStore.edit { it[K.hidden] = (DashCard.entries.toSet() - c).map { x -> x.name }.toSet() }
     suspend fun setRestAuto(v: Boolean) = context.dataStore.edit { it[K.restAuto] = v }

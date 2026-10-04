@@ -38,7 +38,6 @@ fun BuddyChooser(modifier: Modifier = Modifier) {
     preview?.let { pm -> com.myfit.tracker.ui.arena.CharacterPreview(pm, level, { preview = null }, onUse = { Buddy.choose(ctx, pm) }) }
     Column(modifier) {
         Text("Home buddy", style = FitType.section, color = th.text)
-        Caption("Who lives on your Home screen and answers in chat.")
         Spacer(Modifier.height(8.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(Mascot.entries.toList()) { m ->
@@ -59,7 +58,7 @@ fun BuddyChooser(modifier: Modifier = Modifier) {
                     if (open) CastImage(m, 70.dp) else com.myfit.tracker.ui.arena.CastLocked(m, 70.dp)
                     Text(m.label.substringBefore(' '), style = FitType.label, color = th.text)
                     when {
-                        !open -> Caption("Lv ${m.unlock} · preview")
+                        !open -> Caption("Lv ${m.unlock}")
                         sel -> Caption("Active")
                         else -> Caption("Tap to use")
                     }

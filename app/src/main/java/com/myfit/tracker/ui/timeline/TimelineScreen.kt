@@ -141,7 +141,7 @@ fun TimelineScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 Fmt.duration((s.endAt - s.startAt) / 60_000) + " · ${Fmt.clock(Clock.minuteOfDay(s.startAt, s.zoneId))}–${Fmt.clock(Clock.minuteOfDay(s.endAt, s.zoneId))}", null, Overlay.Activity)
         } + food.map { f ->
             TimelineItem("f${f.id}", f.createdAt, java.time.ZoneId.systemDefault().id, Duo.ForkKnife, th.protein, f.foodName,
-                "${Fmt.int(f.quantity * f.caloriesPerServing)} kcal · P ${Fmt.int(f.quantity * f.proteinPerServing)} · C ${Fmt.int(f.quantity * f.carbsPerServing)} · F ${Fmt.int(f.quantity * f.fatPerServing)} g",
+                "${Fmt.int(f.quantity * f.caloriesPerServing)} ${com.myfit.tracker.domain.EnergyUnit.label} · P ${Fmt.int(f.quantity * f.proteinPerServing)} · C ${Fmt.int(f.quantity * f.carbsPerServing)} · F ${Fmt.int(f.quantity * f.fatPerServing)} g",
                 null, Overlay.Food(Clock.dateKey(date)))
         }
         (buildTimeline(day, u, th) + workoutItems(workouts, u, th) + detected).sortedBy { it.at }
@@ -213,7 +213,7 @@ private fun GroupTile(g: LogGroup, list: List<TimelineItem>, open: Boolean, onTo
 }
 
 private fun groupSummary(g: LogGroup, list: List<TimelineItem>): String = when (g) {
-    LogGroup.FOOD -> "${list.size} item${if (list.size == 1) "" else "s"} · " + list.sumOf { it.detail.substringBefore(" kcal").replace(",", "").toDoubleOrNull() ?: 0.0 }.let { "${Fmt.int(it)} kcal" }
+    LogGroup.FOOD -> "${list.size} item${if (list.size == 1) "" else "s"} · " + list.sumOf { it.detail.substringBefore(" ${com.myfit.tracker.domain.EnergyUnit.label}").replace(",", "").toDoubleOrNull() ?: 0.0 }.let { "${Fmt.int(it)} ${com.myfit.tracker.domain.EnergyUnit.label}" }
     LogGroup.HYDRATION -> "${list.size} drink${if (list.size == 1) "" else "s"} · last at ${Fmt.clock(Clock.minuteOfDay(list.last().at, list.last().zoneId))}"
     else -> list.last().let { "${it.title} · ${it.detail}" }.take(70)
 }

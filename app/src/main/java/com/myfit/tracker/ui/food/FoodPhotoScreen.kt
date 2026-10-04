@@ -244,7 +244,7 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
                                 val sel = items.filter { it.on }
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text("Total", style = FitType.section, color = th.text, modifier = Modifier.weight(1f))
-                                    Text("≈ ${Fmt.int(sel.sumOf { it.kcal })} kcal", style = FitType.title, color = th.text)
+                                    Text("≈ ${Fmt.int(sel.sumOf { it.kcal })} ${com.myfit.tracker.domain.EnergyUnit.label}", style = FitType.title, color = th.text)
                                 }
                                 Caption("P ${Fmt.int(sel.sumOf { it.p })} g · C ${Fmt.int(sel.sumOf { it.c })} g · F ${Fmt.int(sel.sumOf { it.f })} g")
                             }
@@ -277,7 +277,7 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
                         )
                     }
                     container.write { container.nutritionRepo.log(date, mealType, lines) }
-                    toaster.show("Logged ≈ ${Fmt.int(sel.sumOf { it.kcal })} kcal")
+                    toaster.show("Logged ≈ ${Fmt.int(sel.sumOf { it.kcal })} ${com.myfit.tracker.domain.EnergyUnit.label}")
                     nav.pop()
                 },
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 12.dp),
@@ -307,7 +307,7 @@ private fun PhotoItemRow(it: PhotoItem) {
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("≈ ${Fmt.int(it.kcal)}", style = FitType.section, color = th.text, textAlign = TextAlign.End)
-                    Caption("kcal")
+                    Caption("${com.myfit.tracker.domain.EnergyUnit.label}")
                 }
             }
             if (it.on) {

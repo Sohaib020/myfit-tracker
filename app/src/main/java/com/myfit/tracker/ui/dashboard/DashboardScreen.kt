@@ -330,7 +330,6 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
             item(key = "arrange", span = full) {
                 val nav = LocalNav.current
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Caption("Tip: hold any card to move it, resize it or hide it.")
                     Spacer(Modifier.height(8.dp))
                     com.myfit.tracker.ui.theme.GlassButton("Show / hide cards", { nav.push(Overlay.ArrangeDash) }, icon = Duo.Tune, height = 44.dp)
                 }
@@ -640,14 +639,12 @@ internal fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
                     RingLegend(th.water, "Water", s.waterMl?.let { Fmt.volume(it, units.volume) } ?: "—",
                         s.waterTarget?.let { "of ${Fmt.volume(it, units.volume)}" }, { open(Sheet.Water()) }, frac(s.waterMl, s.waterTarget))
                     RingLegend(th.steps, "Steps", s.steps?.let { Fmt.int(it) } ?: "—", s.stepTarget?.let { "of ${Fmt.int(it)}" }, { open(Sheet.Steps()) }, frac(s.steps?.toDouble(), s.stepTarget))
-                    RingLegend(CaloriesColor, "Calories", s.health.daily?.activeKcal?.let { Fmt.int(it.toLong()) + " kcal" } ?: "—", "of ${Fmt.int(ACTIVE_KCAL_TARGET.toLong())} active", { nav.push(Overlay.Today) }, frac(s.health.daily?.activeKcal, ACTIVE_KCAL_TARGET))
+                    RingLegend(CaloriesColor, "Calories", s.health.daily?.activeKcal?.let { Fmt.int(it.toLong()) + " ${com.myfit.tracker.domain.EnergyUnit.label}" } ?: "—", "of ${Fmt.int(ACTIVE_KCAL_TARGET.toLong())} active", { nav.push(Overlay.Today) }, frac(s.health.daily?.activeKcal, ACTIVE_KCAL_TARGET))
                 }
             }
         }
         Spacer(Modifier.height(12.dp))
         CheckInStrip(s, open)
-        Spacer(Modifier.height(8.dp))
-        Caption("Tap for hourly activity · dashed ring = nothing logged yet")
     }
 }
 
@@ -753,10 +750,10 @@ private fun NutritionSmall(c: AppContainer, onOpen: () -> Unit) {
     val t = com.myfit.tracker.ui.food.totalsOf(items)
     val kcalT = com.myfit.tracker.domain.Targets.on(targets, com.myfit.tracker.data.db.TargetType.CALORIES, today)
     HalfTile(Duo.ForkKnife, "Food", th.protein, onOpen) {
-        TileValue(if (items.isEmpty()) "—" else Fmt.int(t.kcal), "kcal")
+        TileValue(if (items.isEmpty()) "—" else Fmt.int(t.kcal), "${com.myfit.tracker.domain.EnergyUnit.label}")
         TileLine(when {
             items.isEmpty() -> "Nothing logged yet"
-            kcalT != null -> "of ${Fmt.int(kcalT)} kcal"
+            kcalT != null -> "of ${Fmt.int(kcalT)} ${com.myfit.tracker.domain.EnergyUnit.label}"
             else -> "${items.size} ${if (items.size == 1) "item" else "items"}"
         })
         Spacer(Modifier.height(8.dp))

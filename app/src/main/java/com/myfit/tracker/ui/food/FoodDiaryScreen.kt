@@ -129,7 +129,7 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
                     GlassCard(padding = 14.dp) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(mealLabel(type), style = FitType.section, color = th.text, modifier = Modifier.weight(1f))
-                            if (list.isNotEmpty()) Text("${Fmt.int(list.sumOf { it.quantity * it.caloriesPerServing })} kcal", style = FitType.label, color = th.textDim)
+                            if (list.isNotEmpty()) Text("${Fmt.int(list.sumOf { it.quantity * it.caloriesPerServing })} ${com.myfit.tracker.domain.EnergyUnit.label}", style = FitType.label, color = th.textDim)
                             Spacer(Modifier.width(8.dp))
                             Box(
                                 Modifier.size(32.dp).clip(CircleShape).clickableNoRipple { nav.push(Overlay.FoodAdd(type, dateKey, 0)) },
@@ -161,7 +161,7 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
         if (e != null) {
             var qty by remember(e.id) { mutableStateOf(Fmt.trim(if (e.servingUnit == "g" || e.servingUnit == "ml") e.quantity * e.servingSize else e.quantity, 2)) }
             Text(e.foodName, style = FitType.title, color = th.text)
-            Caption("${Fmt.int(e.caloriesPerServing)} kcal per ${Fmt.trim(e.servingSize, 1)} ${e.servingUnit}")
+            Caption("${Fmt.int(e.caloriesPerServing)} ${com.myfit.tracker.domain.EnergyUnit.label} per ${Fmt.trim(e.servingSize, 1)} ${e.servingUnit}")
             Spacer(Modifier.height(12.dp))
             val grams = e.servingUnit == "g" || e.servingUnit == "ml"
             NumberInput(qty, { qty = it }, if (grams) e.servingUnit else "servings")
@@ -232,7 +232,7 @@ fun ItemRow(i: MealItem, onClick: () -> Unit, onDelete: () -> Unit, icon: String
             Caption("${servingText(i.quantity, i.servingSize, i.servingUnit)} · P ${Fmt.int(i.quantity * i.proteinPerServing)} · C ${Fmt.int(i.quantity * i.carbsPerServing)} · F ${Fmt.int(i.quantity * i.fatPerServing)} g")
         }
         Text("${Fmt.int(i.quantity * i.caloriesPerServing)}", style = FitType.section, color = th.text)
-        Text(" kcal", style = FitType.caption, color = th.textDim)
+        Text(" ${com.myfit.tracker.domain.EnergyUnit.label}", style = FitType.caption, color = th.textDim)
         Box(Modifier.size(34.dp).clip(CircleShape).clickableNoRipple(onDelete), contentAlignment = Alignment.Center) {
             Icon(Duo.Close, "Remove", tint = th.textDim, modifier = Modifier.size(16.dp))
         }

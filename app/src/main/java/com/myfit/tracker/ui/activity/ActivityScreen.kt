@@ -347,7 +347,7 @@ private fun SessionsCard(sessions: List<HcSession>) {
                         val bits = listOfNotNull(
                             s.distanceM?.takeIf { it > 0 }?.let { Fmt.distance(it, u.distance) + if ("treadmill" in HealthSync.exerciseName(s.exerciseType).lowercase()) " (estimate)" else "" },
                             s.steps?.takeIf { it > 0 }?.let { "${Fmt.int(it)} steps" },
-                            s.activeKcal?.takeIf { it > 0 }?.let { "${Fmt.int(it.toLong())} kcal (est.)" },
+                            s.activeKcal?.takeIf { it > 0 }?.let { "${Fmt.int(it.toLong())} ${com.myfit.tracker.domain.EnergyUnit.label} (est.)" },
                             s.avgHr?.let { "avg ${it} bpm" }, s.maxHr?.let { "max $it" },
                         )
                         if (bits.isNotEmpty()) Caption(bits.joinToString(" · "), color = th.text)

@@ -104,12 +104,19 @@ fun ArrangeDashScreen(container: AppContainer) {
             order.forEachIndexed { i, c ->
               androidx.compose.runtime.key(c) {
                 val dragging = i == dragIdx
+                // rows glide to their new place when the order changes (arrows, drag, reset)
+                val shift = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
+                var lastI by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(i) }
+                androidx.compose.runtime.LaunchedEffect(i) {
+                    if (lastI != i && !dragging) { shift.snapTo((lastI - i) * rowPx); shift.animateTo(0f, androidx.compose.animation.core.spring(0.78f, 380f)) }
+                    lastI = i
+                }
                 val on = if (c == DashCard.PIP) pipOn && c in shown else c in shown
                 Glass(
                     Modifier.fillMaxWidth().height(64.dp)
                         .zIndex(if (dragging) 1f else 0f)
                         .graphicsLayer {
-                            translationY = if (dragging) dragDy else 0f
+                            translationY = if (dragging) dragDy else shift.value
                             val sc = if (dragging) 1.03f else 1f; scaleX = sc; scaleY = sc
                             shadowElevation = if (dragging) 16f else 0f
                         }

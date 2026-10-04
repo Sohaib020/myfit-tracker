@@ -73,7 +73,6 @@ fun HealthHubScreen(container: AppContainer) {
                     }
                 }
             }
-            item(span = { GridItemSpan(2) }) { Caption("Data from your watch arrives through Health Connect. Nothing here is medical advice.", Modifier.padding(top = 6.dp), color = th.textFaint) }
         }
     }
 }

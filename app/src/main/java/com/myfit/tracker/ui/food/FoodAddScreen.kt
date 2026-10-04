@@ -163,7 +163,7 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(m.name, style = FitType.section, color = th.text)
-                                Caption("${sum?.items ?: 0} items · ${Fmt.int(sum?.kcal ?: 0.0)} kcal")
+                                Caption("${sum?.items ?: 0} items · ${Fmt.int(sum?.kcal ?: 0.0)} ${com.myfit.tracker.domain.EnergyUnit.label}")
                             }
                             Text("Delete", style = FitType.caption, color = th.textDim, modifier = Modifier.clickableNoRipple { container.write { container.nutritionRepo.deleteSaved(m.id) } }.padding(8.dp))
                         }
@@ -191,12 +191,12 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
                 if (hc.haram.isNotEmpty()) Caption("Not halal: " + hc.haram.joinToString(), color = th.danger)
                 else if (hc.doubtful.isNotEmpty()) Caption("Check halal: " + hc.doubtful.joinToString(), color = th.warning)
             }
-            Caption(listOfNotNull(f.brand, "${Fmt.int(f.calories)} kcal per ${Fmt.trim(f.servingSize, 1)} ${f.servingUnit}" + (f.servingGrams?.takeIf { !byWeight }?.let { " (~${Fmt.int(it)} g)" } ?: "")).joinToString(" · "))
+            Caption(listOfNotNull(f.brand, "${Fmt.int(f.calories)} ${com.myfit.tracker.domain.EnergyUnit.label} per ${Fmt.trim(f.servingSize, 1)} ${f.servingUnit}" + (f.servingGrams?.takeIf { !byWeight }?.let { " (~${Fmt.int(it)} g)" } ?: "")).joinToString(" · "))
             if (f.source == NutritionSource.DATABASE) Caption(f.sourceRef ?: "Typical values — recipes and portions vary.", color = th.textFaint)
             Spacer(Modifier.height(12.dp))
             NumberInput(amount, { amount = it }, if (byWeight) f.servingUnit else "servings")
             Spacer(Modifier.height(10.dp))
-            Text("${Fmt.int(q * f.calories)} kcal · P ${Fmt.int(q * f.proteinG)} · C ${Fmt.int(q * f.carbsG)} · F ${Fmt.int(q * f.fatG)} g", style = FitType.section, color = th.text)
+            Text("${Fmt.int(q * f.calories)} ${com.myfit.tracker.domain.EnergyUnit.label} · P ${Fmt.int(q * f.proteinG)} · C ${Fmt.int(q * f.carbsG)} · F ${Fmt.int(q * f.fatG)} g", style = FitType.section, color = th.text)
             Spacer(Modifier.height(12.dp))
             AccentButton("Add to ${mealLabel(mealType)}", {
                 if (q <= 0) return@AccentButton
@@ -230,7 +230,7 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
             }
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                NumberInput(kcal, { kcal = it }, "kcal", Modifier.weight(1f), big = false)
+                NumberInput(kcal, { kcal = it }, "${com.myfit.tracker.domain.EnergyUnit.label}", Modifier.weight(1f), big = false)
                 NumberInput(p, { p = it }, "P g", Modifier.weight(1f), big = false)
             }
             Spacer(Modifier.height(8.dp))
@@ -267,7 +267,7 @@ private fun FoodRow(f: Food, photo: String?, onClick: () -> Unit) {
                 Caption(listOfNotNull(f.brand, "${Fmt.trim(f.servingSize, 1)} ${f.servingUnit}", "P ${Fmt.int(f.proteinG)} · C ${Fmt.int(f.carbsG)} · F ${Fmt.int(f.fatG)}").joinToString(" · "))
             }
             Text(Fmt.int(f.calories), style = FitType.section, color = th.text)
-            Text(" kcal", style = FitType.caption, color = th.textDim)
+            Text(" ${com.myfit.tracker.domain.EnergyUnit.label}", style = FitType.caption, color = th.textDim)
         }
     }
 }

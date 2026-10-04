@@ -77,10 +77,10 @@ fun TodayScreen(container: AppContainer) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Target("Steps", Fmt.int(steps), "/${Fmt.int(stepTarget.toLong())}", STEPS_C, Modifier.weight(1f))
                     Target("Active time", "$activeMin", "/$ACTIVE_TARGET mins", ACTIVE_C, Modifier.weight(1f))
-                    Target("Activity kcal", Fmt.int(kcal.toLong()), "/${KCAL_TARGET.toInt()}", KCAL_C, Modifier.weight(1f))
+                    Target("Activity ${com.myfit.tracker.domain.EnergyUnit.label}", Fmt.int(kcal.toLong()), "/${KCAL_TARGET.toInt()}", KCAL_C, Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(14.dp))
-                Line("Total burned calories", d?.totalKcal?.let { "${Fmt.int(it.toLong())} kcal" } ?: "—")
+                Line("Total burned calories", d?.totalKcal?.let { "${Fmt.int(it.toLong())} ${com.myfit.tracker.domain.EnergyUnit.label}" } ?: "—")
                 Line("Distance", d?.distanceM?.let { "${Fmt.trim(it / 1000.0, 2)} km" } ?: "—")
             }
             // ---- hourly charts
@@ -110,7 +110,7 @@ fun TodayScreen(container: AppContainer) {
                 Spacer(Modifier.height(14.dp))
                 Text("Calories", style = FitType.section, color = th.text)
                 Spacer(Modifier.height(8.dp))
-                Row { Pair2("Exercise calories", hourly?.let { "${Fmt.int(it.exerciseKcal.toLong())} kcal" } ?: "—", Modifier.weight(1f)); Pair2("Activity calories", "${Fmt.int(kcal.toLong())} kcal", Modifier.weight(1f)) }
+                Row { Pair2("Exercise calories", hourly?.let { "${Fmt.int(it.exerciseKcal.toLong())} ${com.myfit.tracker.domain.EnergyUnit.label}" } ?: "—", Modifier.weight(1f)); Pair2("Activity calories", "${Fmt.int(kcal.toLong())} ${com.myfit.tracker.domain.EnergyUnit.label}", Modifier.weight(1f)) }
             }
             // ---- monthly badge progress
             val hit = month.count { (it.steps ?: 0L) >= stepTarget }

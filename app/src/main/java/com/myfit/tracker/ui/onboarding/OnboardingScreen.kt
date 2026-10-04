@@ -15,11 +15,13 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -191,216 +193,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                when (st) {
-                    0 -> Welcome()
-                    1 -> {
-                        Header("What should I call you?", "Pip will greet you by name.")
-                        Glass(Modifier.fillMaxWidth().height(64.dp), shape = RoundedCornerShape(22.dp)) {
-                            BasicTextField(
-                                s.name, { s.name = it.take(40) }, singleLine = true,
-                                textStyle = FitType.title.copy(color = th.text),
-                                cursorBrush = SolidColor(th.accent),
-                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                                modifier = Modifier.align(Alignment.CenterStart).padding(horizontal = 20.dp).fillMaxWidth(),
-                                decorationBox = { inner -> Box { if (s.name.isEmpty()) Text("Your name", style = FitType.title, color = th.textFaint); inner() } },
-                            )
-                        }
-                    }
-                    2 -> {
-                        Header("When were you born?", "Scroll the wheels to set your date of birth. Used for your targets — never shown to friends.")
-                        val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-                        val nowY = java.time.LocalDate.now().year
-                        Row(Modifier.fillMaxWidth()) {
-                            listOf("DAY", "MONTH", "YEAR").forEach { Text(it, style = FitType.overline, color = th.textDim, textAlign = TextAlign.Center, modifier = Modifier.weight(1f)) }
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Row(Modifier.fillMaxWidth()) {
-                            WheelPicker(31, s.dobDay - 1, { s.dobDay = it + 1; s.syncAge() }, { "${it + 1}" }, Modifier.weight(1f))
-                            WheelPicker(12, s.dobMonth - 1, { s.dobMonth = it + 1; s.syncAge() }, { months[it] }, Modifier.weight(1f))
-                            WheelPicker(88, (s.dobYear - (nowY - 100)).coerceIn(0, 87), { s.dobYear = nowY - 100 + it; s.syncAge() }, { "${nowY - 100 + it}" }, Modifier.weight(1f))
-                        }
-                        Spacer(Modifier.height(22.dp))
-                        LaunchedEffect(Unit) { s.syncAge() }
-                        Glass(shape = RoundedCornerShape(50)) {
-                            Row(Modifier.padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(18.dp).clip(androidx.compose.foundation.shape.CircleShape).background(th.success), contentAlignment = Alignment.Center) { Text("✓", color = Color.White, style = FitType.caption) }
-                                Spacer(Modifier.width(8.dp))
-                                Text("You're ", style = FitType.section, color = th.text)
-                                AnimatedContent(s.age, transitionSpec = {
-                                    val up = targetState > initialState
-                                    (slideInVertically(spring(0.7f, 400f)) { if (up) it else -it } + fadeIn()).togetherWith(slideOutVertically(tween(150)) { if (up) -it else it } + fadeOut(tween(120)))
-                                }, label = "age") { a -> Text("$a", style = FitType.section, color = th.accentBright) }
-                                Text(" years old", style = FitType.section, color = th.text)
-                            }
-                        }
-                    }
-                    3 -> {
-                        Header("What's your sex?", "Used for energy estimates and body-composition context.")
-                        SexCard("Male", Duo.Male, s.sex == Sex.MALE) { s.sex = Sex.MALE }
-                        Spacer(Modifier.height(16.dp))
-                        SexCard("Female", Duo.Female, s.sex == Sex.FEMALE) { s.sex = Sex.FEMALE }
-                    }
-                    4 -> {
-                        Header("Do you have diabetes?", "Only people who manage diabetes see the blood-sugar tools. You can change this any time in Me.")
-                        val opts = buildList {
-                            add("none" to "No"); add("type1" to "Type 1"); add("type2" to "Type 2"); add("prediabetes" to "Prediabetes")
-                            if (s.sex == Sex.FEMALE) add("gestational" to "Gestational (pregnancy)")
-                            add("other" to "Other / not sure")
-                        }
-                        opts.forEach { (k, v) -> OptionRow(v, s.diabetes == k) { s.diabetes = k }; Spacer(Modifier.height(8.dp)) }
-                        if (s.diabetes != null && s.diabetes != "none") {
-                            Spacer(Modifier.height(14.dp))
-                            Text("How do you manage it?", style = FitType.label, color = th.textDim)
-                            Spacer(Modifier.height(8.dp))
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf("insulin" to "Insulin", "tablets" to "Tablets", "both" to "Insulin + tablets", "diet" to "Diet & exercise").forEach { (k, v) ->
-                                    GlassChip(v, s.treatment == k, { s.treatment = k })
-                                }
-                            }
-                            Spacer(Modifier.height(14.dp))
-                            Text("Do you wear a glucose sensor (CGM)?", style = FitType.label, color = th.textDim)
-                            Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                GlassChip("Yes", s.cgm == true, { s.cgm = true })
-                                GlassChip("No, finger-prick", s.cgm == false, { s.cgm = false })
-                            }
-                            Spacer(Modifier.height(14.dp))
-                            Text("Target range (mg/dL)", style = FitType.label, color = th.textDim)
-                            TargetField("Low", s.low, "mg/dL", decimal = false) { s.low = it }
-                            TargetField("High", s.high, "mg/dL", decimal = false) { s.high = it }
-                            Caption("Most adults use 70–180 (ADA). Ask your doctor for your own range. MyFit records readings only — it never calculates doses.")
-                        }
-                    }
-                    5 -> {
-                        Header("Are you Muslim?", "If yes, you'll get Shariah & Health: prayer times, Qibla, fasting hub, dhikr and halal checks. Asked only to show the right features.")
-                        listOf("yes" to "Yes", "no" to "No", "skip" to "Prefer not to say").forEach { (k, v) -> OptionRow(v, s.muslim == k) { s.muslim = k }; Spacer(Modifier.height(8.dp)) }
-                    }
-                    6 -> {
-                        Header("What's your height?", "Used for better progress tracking.")
-                        if (s.lengthUnit == LengthUnit.CM) {
-                            WheelPicker(101, (s.heightCm.roundToInt() - 120).coerceIn(0, 100), { s.heightCm = (it + 120).toDouble() }, { "${it + 120} cm" }, Modifier.fillMaxWidth())
-                        } else {
-                            val inches = (s.heightCm / Units.CM_PER_IN).roundToInt()
-                            WheelPicker(43, (inches - 48).coerceIn(0, 42), { s.heightCm = (it + 48) * Units.CM_PER_IN }, { val i = it + 48; "${i / 12}' ${i % 12}\"  ·  $i in" }, Modifier.fillMaxWidth())
-                        }
-                        Spacer(Modifier.height(16.dp))
-                        GlassSegmented(listOf(LengthUnit.CM, LengthUnit.IN), s.lengthUnit, { it.label }, { s.lengthUnit = it }, Modifier.width(180.dp))
-                    }
-                    7 -> {
-                        Header("What's your current weight?", "This becomes your first weigh-in. You can log more any time.")
-                        WeightPicker(s.weightDisplay, s.weightUnit, { s.weightDisplay = it }) { u ->
-                            s.weightDisplay = round1(Units.kgTo(s.weightKg, u)); s.targetDisplay = round1(Units.kgTo(Units.toKg(s.targetDisplay, s.weightUnit), u)); s.weightUnit = u
-                        }
-                    }
-                    8 -> {
-                        Header("Target weight", "Optional. Used only to show distance to goal — never to judge a single weigh-in.")
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            GlassChip("Set a target", s.hasTarget, { s.hasTarget = true })
-                            GlassChip("No target", !s.hasTarget, { s.hasTarget = false })
-                        }
-                        Spacer(Modifier.height(20.dp))
-                        if (s.hasTarget) {
-                            WeightPicker(s.targetDisplay, s.weightUnit, { s.targetDisplay = it }, null)
-                            val diff = s.targetDisplay - s.weightDisplay
-                            Caption("${Fmt.signed(diff)} ${s.weightUnit.label} from today's weight")
-                        }
-                    }
-                    9 -> {
-                        Header("Your fitness goal", "Choose what best matches your training journey.")
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            FitnessGoal.all.forEach { g ->
-                                GlassChip(g, g in s.goals, { s.goals = if (g in s.goals) s.goals - g else s.goals + g })
-                            }
-                        }
-                    }
-                    10 -> {
-                        Header("Activity & experience", "Outside the gym, how active is a normal day?")
-                        listOf(
-                            ActivityLevel.SEDENTARY to "Mostly sitting", ActivityLevel.LIGHT to "Light — some walking",
-                            ActivityLevel.MODERATE to "Moderate — on my feet often", ActivityLevel.ACTIVE to "Active — physical job / lots of walking",
-                            ActivityLevel.VERY_ACTIVE to "Very active — hard physical work daily",
-                        ).forEach { (k, v) -> OptionRow(v, s.activity == k) { s.activity = k }; Spacer(Modifier.height(8.dp)) }
-                        Spacer(Modifier.height(16.dp))
-                        Text("Training experience", style = FitType.label, color = th.textDim)
-                        Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf(Experience.BEGINNER to "Beginner", Experience.INTERMEDIATE to "Intermediate", Experience.ADVANCED to "Advanced").forEach { (k, v) ->
-                                GlassChip(v, s.experience == k, { s.experience = k })
-                            }
-                        }
-                    }
-                    11 -> {
-                        Header("How many days can you train each week?", "Pick a number you can realistically hit. Consistency beats ambition.")
-                        listOf(2 to "Light, recovery-focused.", 3 to "Balanced full body or upper/lower.", 4 to "Upper/lower or push/pull split.", 5 to "Targeted muscle splits.", 6 to "Athlete-level high volume.").forEach { (n, d) ->
-                            Glass(Modifier.fillMaxWidth().padding(vertical = 5.dp), shape = RoundedCornerShape(20.dp), onClick = {
-                                s.trainDays = n
-                                // pre-fill the week with a sensible spread (editable on the next page)
-                                s.workoutDays = when (n) { 2 -> 0b0001001; 3 -> 0b0010101; 4 -> 0b0011011; 5 -> 0b0011111; else -> 0b0111111 }
-                            }) {
-                                Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text("$n days / week", style = FitType.section, color = th.text)
-                                        Caption(d)
-                                    }
-                                    if (s.trainDays == n) Box(Modifier.size(22.dp).clip(androidx.compose.foundation.shape.CircleShape).background(th.accent), contentAlignment = Alignment.Center) { Text("✓", color = th.onAccent, style = FitType.caption) }
-                                }
-                                if (s.trainDays == n) Box(Modifier.matchParentSize().border(1.5.dp, th.accent, RoundedCornerShape(20.dp)))
-                            }
-                        }
-                    }
-                    12 -> {
-                        Header("Your week", "Planned workout days and your daily rhythm. Reminders respect your sleep hours.")
-                        val days = listOf("M", "T", "W", "T", "F", "S", "S")
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            days.forEachIndexed { i, d ->
-                                val on = s.workoutDays and (1 shl i) != 0
-                                GlassChip(d, on, { s.workoutDays = s.workoutDays xor (1 shl i) })
-                            }
-                        }
-                        Spacer(Modifier.height(24.dp))
-                        TimeRow("Typical workout time") { MinuteOfDayChip(s.workoutTime) { s.workoutTime = it } }
-                        TimeRow("Wake-up time") { MinuteOfDayChip(s.wake) { s.wake = it } }
-                        TimeRow("Sleep time") { MinuteOfDayChip(s.sleep) { s.sleep = it } }
-                    }
-                    13 -> {
-                        Header("Daily targets", "Set them yourself, or let me suggest a starting point you can edit.")
-                        GlassButton("Suggest from my profile", {
-                            val male = s.sex == Sex.MALE
-                            val maint = EnergyEstimate.maintenance(s.weightKg, s.heightCm, s.age, male, s.activity)
-                            val adj = when {
-                                "Lose Fat" in s.goals -> -400.0
-                                "Build Muscle" in s.goals -> 250.0
-                                else -> 0.0
-                            }
-                            s.calories = ((maint + adj) / 10).roundToInt().times(10).toString()
-                            s.protein = (s.weightKg * 1.8).roundToInt().toString()
-                            s.waterL = Fmt.num(s.weightKg * 0.035, 1)
-                            s.suggested = true
-                        }, icon = Duo.AutoAwesome)
-                        if (s.suggested) {
-                            Spacer(Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                DataBadge(DataKind.ESTIMATED)
-                                Spacer(Modifier.width(8.dp))
-                                Caption("Mifflin–St Jeor × activity; protein 1.8 g/kg; water 35 ml/kg. Starting points, not prescriptions.")
-                            }
-                        }
-                        Spacer(Modifier.height(16.dp))
-                        TargetField("Water", s.waterL, "L") { s.waterL = it }
-                        TargetField("Steps", s.steps, "steps", decimal = false) { s.steps = it }
-                        TargetField("Calories", s.calories, "kcal", decimal = false) { s.calories = it }
-                        TargetField("Protein", s.protein, "g", decimal = false) { s.protein = it }
-                        TargetField("Sleep", s.sleepH, "hours") { s.sleepH = it }
-                    }
-                    14 -> {
-                        Spacer(Modifier.height(40.dp))
-                        Pip(PipMood.EXCITED, size = 150.dp)
-                        Spacer(Modifier.height(16.dp))
-                        Text("You're all set, ${s.name.trim()}!", style = FitType.display, color = th.text, textAlign = TextAlign.Center)
-                        Spacer(Modifier.height(10.dp))
-                        Caption("I'm Pip. I only ever talk about numbers you've actually logged — no guesses dressed up as facts.", Modifier.padding(horizontal = 12.dp))
-                    }
-                }
+                StepBody(st, s)
                 Spacer(Modifier.height(24.dp))
             }
         }
@@ -443,11 +236,302 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         if (s.sex == Sex.FEMALE) container.settings.setCycle(true)
                         container.settings.setMuslim(if (s.muslim == "yes") "yes" else "no")
                         container.settings.setUnits(UnitPrefs(weight = s.weightUnit, length = s.lengthUnit, volume = units.volume, distance = units.distance))
+                        OnboardingVersion.markDone(ctx0)   // before the profile exists, so no catch-up flashes
                         container.profileRepo.createProfile(profile, targets)
                     }
                 }, Modifier.width(200.dp), enabled = !saving)
                 else -> AccentButton("Next", { if (canNext) step++ }, Modifier.width(150.dp), icon = Duo.ArrowForward, enabled = canNext)
             }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ColumnScope.StepBody(st: Int, s: SetupState) {
+    val th = LocalFitTheme.current
+    when (st) {
+        0 -> Welcome()
+        1 -> {
+            Header("What should I call you?", "Pip will greet you by name.")
+            Glass(Modifier.fillMaxWidth().height(64.dp), shape = RoundedCornerShape(22.dp)) {
+                BasicTextField(
+                    s.name, { s.name = it.take(40) }, singleLine = true,
+                    textStyle = FitType.title.copy(color = th.text),
+                    cursorBrush = SolidColor(th.accent),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                    modifier = Modifier.align(Alignment.CenterStart).padding(horizontal = 20.dp).fillMaxWidth(),
+                    decorationBox = { inner -> Box { if (s.name.isEmpty()) Text("Your name", style = FitType.title, color = th.textFaint); inner() } },
+                )
+            }
+        }
+        2 -> {
+            Header("When were you born?", "Scroll the wheels to set your date of birth. Used for your targets — never shown to friends.")
+            val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+            val nowY = java.time.LocalDate.now().year
+            Row(Modifier.fillMaxWidth()) {
+                listOf("DAY", "MONTH", "YEAR").forEach { Text(it, style = FitType.overline, color = th.textDim, textAlign = TextAlign.Center, modifier = Modifier.weight(1f)) }
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.fillMaxWidth()) {
+                WheelPicker(31, s.dobDay - 1, { s.dobDay = it + 1; s.syncAge() }, { "${it + 1}" }, Modifier.weight(1f))
+                WheelPicker(12, s.dobMonth - 1, { s.dobMonth = it + 1; s.syncAge() }, { months[it] }, Modifier.weight(1f))
+                WheelPicker(88, (s.dobYear - (nowY - 100)).coerceIn(0, 87), { s.dobYear = nowY - 100 + it; s.syncAge() }, { "${nowY - 100 + it}" }, Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(22.dp))
+            LaunchedEffect(Unit) { s.syncAge() }
+            Glass(shape = RoundedCornerShape(50)) {
+                Row(Modifier.padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(18.dp).clip(androidx.compose.foundation.shape.CircleShape).background(th.success), contentAlignment = Alignment.Center) { Text("✓", color = Color.White, style = FitType.caption) }
+                    Spacer(Modifier.width(8.dp))
+                    Text("You're ", style = FitType.section, color = th.text)
+                    AnimatedContent(s.age, transitionSpec = {
+                        val up = targetState > initialState
+                        (slideInVertically(spring(0.7f, 400f)) { if (up) it else -it } + fadeIn()).togetherWith(slideOutVertically(tween(150)) { if (up) -it else it } + fadeOut(tween(120)))
+                    }, label = "age") { a -> Text("$a", style = FitType.section, color = th.accentBright) }
+                    Text(" years old", style = FitType.section, color = th.text)
+                }
+            }
+        }
+        3 -> {
+            Header("What's your sex?", "Used for energy estimates and body-composition context.")
+            SexCard("Male", Duo.Male, s.sex == Sex.MALE) { s.sex = Sex.MALE }
+            Spacer(Modifier.height(16.dp))
+            SexCard("Female", Duo.Female, s.sex == Sex.FEMALE) { s.sex = Sex.FEMALE }
+        }
+        4 -> {
+            Header("Do you have diabetes?", "Only people who manage diabetes see the blood-sugar tools. You can change this any time in Me.")
+            val opts = buildList {
+                add("none" to "No"); add("type1" to "Type 1"); add("type2" to "Type 2"); add("prediabetes" to "Prediabetes")
+                if (s.sex == Sex.FEMALE) add("gestational" to "Gestational (pregnancy)")
+                add("other" to "Other / not sure")
+            }
+            opts.forEach { (k, v) -> OptionRow(v, s.diabetes == k) { s.diabetes = k }; Spacer(Modifier.height(8.dp)) }
+            if (s.diabetes != null && s.diabetes != "none") {
+                Spacer(Modifier.height(14.dp))
+                Text("How do you manage it?", style = FitType.label, color = th.textDim)
+                Spacer(Modifier.height(8.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("insulin" to "Insulin", "tablets" to "Tablets", "both" to "Insulin + tablets", "diet" to "Diet & exercise").forEach { (k, v) ->
+                        GlassChip(v, s.treatment == k, { s.treatment = k })
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
+                Text("Do you wear a glucose sensor (CGM)?", style = FitType.label, color = th.textDim)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GlassChip("Yes", s.cgm == true, { s.cgm = true })
+                    GlassChip("No, finger-prick", s.cgm == false, { s.cgm = false })
+                }
+                Spacer(Modifier.height(14.dp))
+                Text("Target range (mg/dL)", style = FitType.label, color = th.textDim)
+                TargetField("Low", s.low, "mg/dL", decimal = false) { s.low = it }
+                TargetField("High", s.high, "mg/dL", decimal = false) { s.high = it }
+                Caption("Most adults use 70–180 (ADA). Ask your doctor for your own range. MyFit records readings only — it never calculates doses.")
+            }
+        }
+        5 -> {
+            Header("Are you Muslim?", "If yes, you'll get Shariah & Health: prayer times, Qibla, fasting hub, dhikr and halal checks. Asked only to show the right features.")
+            listOf("yes" to "Yes", "no" to "No", "skip" to "Prefer not to say").forEach { (k, v) -> OptionRow(v, s.muslim == k) { s.muslim = k }; Spacer(Modifier.height(8.dp)) }
+        }
+        6 -> {
+            Header("What's your height?", "Used for better progress tracking.")
+            if (s.lengthUnit == LengthUnit.CM) {
+                WheelPicker(101, (s.heightCm.roundToInt() - 120).coerceIn(0, 100), { s.heightCm = (it + 120).toDouble() }, { "${it + 120} cm" }, Modifier.fillMaxWidth())
+            } else {
+                val inches = (s.heightCm / Units.CM_PER_IN).roundToInt()
+                WheelPicker(43, (inches - 48).coerceIn(0, 42), { s.heightCm = (it + 48) * Units.CM_PER_IN }, { val i = it + 48; "${i / 12}' ${i % 12}\"  ·  $i in" }, Modifier.fillMaxWidth())
+            }
+            Spacer(Modifier.height(16.dp))
+            GlassSegmented(listOf(LengthUnit.CM, LengthUnit.IN), s.lengthUnit, { it.label }, { s.lengthUnit = it }, Modifier.width(180.dp))
+        }
+        7 -> {
+            Header("What's your current weight?", "This becomes your first weigh-in. You can log more any time.")
+            WeightPicker(s.weightDisplay, s.weightUnit, { s.weightDisplay = it }) { u ->
+                s.weightDisplay = round1(Units.kgTo(s.weightKg, u)); s.targetDisplay = round1(Units.kgTo(Units.toKg(s.targetDisplay, s.weightUnit), u)); s.weightUnit = u
+            }
+        }
+        8 -> {
+            Header("Target weight", "Optional. Used only to show distance to goal — never to judge a single weigh-in.")
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GlassChip("Set a target", s.hasTarget, { s.hasTarget = true })
+                GlassChip("No target", !s.hasTarget, { s.hasTarget = false })
+            }
+            Spacer(Modifier.height(20.dp))
+            if (s.hasTarget) {
+                WeightPicker(s.targetDisplay, s.weightUnit, { s.targetDisplay = it }, null)
+                val diff = s.targetDisplay - s.weightDisplay
+                Caption("${Fmt.signed(diff)} ${s.weightUnit.label} from today's weight")
+            }
+        }
+        9 -> {
+            Header("Your fitness goal", "Choose what best matches your training journey.")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                FitnessGoal.all.forEach { g ->
+                    GlassChip(g, g in s.goals, { s.goals = if (g in s.goals) s.goals - g else s.goals + g })
+                }
+            }
+        }
+        10 -> {
+            Header("Activity & experience", "Outside the gym, how active is a normal day?")
+            listOf(
+                ActivityLevel.SEDENTARY to "Mostly sitting", ActivityLevel.LIGHT to "Light — some walking",
+                ActivityLevel.MODERATE to "Moderate — on my feet often", ActivityLevel.ACTIVE to "Active — physical job / lots of walking",
+                ActivityLevel.VERY_ACTIVE to "Very active — hard physical work daily",
+            ).forEach { (k, v) -> OptionRow(v, s.activity == k) { s.activity = k }; Spacer(Modifier.height(8.dp)) }
+            Spacer(Modifier.height(16.dp))
+            Text("Training experience", style = FitType.label, color = th.textDim)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(Experience.BEGINNER to "Beginner", Experience.INTERMEDIATE to "Intermediate", Experience.ADVANCED to "Advanced").forEach { (k, v) ->
+                    GlassChip(v, s.experience == k, { s.experience = k })
+                }
+            }
+        }
+        11 -> {
+            Header("How many days can you train each week?", "Pick a number you can realistically hit. Consistency beats ambition.")
+            listOf(2 to "Light, recovery-focused.", 3 to "Balanced full body or upper/lower.", 4 to "Upper/lower or push/pull split.", 5 to "Targeted muscle splits.", 6 to "Athlete-level high volume.").forEach { (n, d) ->
+                Glass(Modifier.fillMaxWidth().padding(vertical = 5.dp), shape = RoundedCornerShape(20.dp), onClick = {
+                    s.trainDays = n
+                    // pre-fill the week with a sensible spread (editable on the next page)
+                    s.workoutDays = when (n) { 2 -> 0b0001001; 3 -> 0b0010101; 4 -> 0b0011011; 5 -> 0b0011111; else -> 0b0111111 }
+                }) {
+                    Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("$n days / week", style = FitType.section, color = th.text)
+                            Caption(d)
+                        }
+                        if (s.trainDays == n) Box(Modifier.size(22.dp).clip(androidx.compose.foundation.shape.CircleShape).background(th.accent), contentAlignment = Alignment.Center) { Text("✓", color = th.onAccent, style = FitType.caption) }
+                    }
+                    if (s.trainDays == n) Box(Modifier.matchParentSize().border(1.5.dp, th.accent, RoundedCornerShape(20.dp)))
+                }
+            }
+        }
+        12 -> {
+            Header("Your week", "Planned workout days and your daily rhythm. Reminders respect your sleep hours.")
+            val days = listOf("M", "T", "W", "T", "F", "S", "S")
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                days.forEachIndexed { i, d ->
+                    val on = s.workoutDays and (1 shl i) != 0
+                    GlassChip(d, on, { s.workoutDays = s.workoutDays xor (1 shl i) })
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+            TimeRow("Typical workout time") { MinuteOfDayChip(s.workoutTime) { s.workoutTime = it } }
+            TimeRow("Wake-up time") { MinuteOfDayChip(s.wake) { s.wake = it } }
+            TimeRow("Sleep time") { MinuteOfDayChip(s.sleep) { s.sleep = it } }
+        }
+        13 -> {
+            Header("Daily targets", "Set them yourself, or let me suggest a starting point you can edit.")
+            GlassButton("Suggest from my profile", {
+                val male = s.sex == Sex.MALE
+                val maint = EnergyEstimate.maintenance(s.weightKg, s.heightCm, s.age, male, s.activity)
+                val adj = when {
+                    "Lose Fat" in s.goals -> -400.0
+                    "Build Muscle" in s.goals -> 250.0
+                    else -> 0.0
+                }
+                s.calories = ((maint + adj) / 10).roundToInt().times(10).toString()
+                s.protein = (s.weightKg * 1.8).roundToInt().toString()
+                s.waterL = Fmt.num(s.weightKg * 0.035, 1)
+                s.suggested = true
+            }, icon = Duo.AutoAwesome)
+            if (s.suggested) {
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    DataBadge(DataKind.ESTIMATED)
+                    Spacer(Modifier.width(8.dp))
+                    Caption("Mifflin–St Jeor × activity; protein 1.8 g/kg; water 35 ml/kg. Starting points, not prescriptions.")
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            TargetField("Water", s.waterL, "L") { s.waterL = it }
+            TargetField("Steps", s.steps, "steps", decimal = false) { s.steps = it }
+            TargetField("Calories", s.calories, "${com.myfit.tracker.domain.EnergyUnit.label}", decimal = false) { s.calories = it }
+            TargetField("Protein", s.protein, "g", decimal = false) { s.protein = it }
+            TargetField("Sleep", s.sleepH, "hours") { s.sleepH = it }
+        }
+        14 -> {
+            Spacer(Modifier.height(40.dp))
+            Pip(PipMood.EXCITED, size = 150.dp)
+            Spacer(Modifier.height(16.dp))
+            Text("You're all set, ${s.name.trim()}!", style = FitType.display, color = th.text, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(10.dp))
+            Caption("I'm Pip. I only ever talk about numbers you've actually logged — no guesses dressed up as facts.", Modifier.padding(horizontal = 12.dp))
+        }
+    }
+}
+
+/**
+ * Onboarding is versioned. When an update adds or changes setup questions, bump [CURRENT] and list the new
+ * step numbers under it in [ADDED]; existing users are asked just those, once, on the first launch after updating.
+ */
+object OnboardingVersion {
+    const val CURRENT = 2
+    private val ADDED = mapOf(2 to listOf(2, 11, 12))   // v2: date of birth, training days, your week
+    private fun prefs(c: android.content.Context) = c.getSharedPreferences("onboarding", android.content.Context.MODE_PRIVATE)
+    /** Profiles created before versioning existed count as v1. */
+    fun stored(c: android.content.Context) = prefs(c).getInt("version", 1)
+    fun markDone(c: android.content.Context) = prefs(c).edit().putInt("version", CURRENT).apply()
+    fun pendingSteps(c: android.content.Context): List<Int> = ((stored(c) + 1)..CURRENT).flatMap { ADDED[it].orEmpty() }.distinct().sorted()
+}
+
+/** "A few new questions" — shown to existing users after an update that changed onboarding. Saves into their profile. */
+@Composable
+fun OnboardingCatchUp(container: AppContainer, profile: UserProfile, units: UnitPrefs, steps: List<Int>, onDone: () -> Unit) {
+    val th = LocalFitTheme.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val s = remember {
+        SetupState(units).apply {
+            name = profile.name; sex = profile.sex
+            val now = java.time.LocalDate.now()
+            age = profile.age; dobYear = now.year - profile.age; dobMonth = now.monthValue; dobDay = 1
+            workoutDays = profile.workoutDaysMask; trainDays = Integer.bitCount(profile.workoutDaysMask).coerceIn(2, 6)
+            workoutTime = profile.workoutTimeMin ?: workoutTime; wake = profile.wakeTimeMin; sleep = profile.sleepTimeMin
+        }
+    }
+    var i by remember { mutableIntStateOf(-1) }      // -1 = intro
+    var saving by remember { mutableStateOf(false) }
+    BackHandler(enabled = i > -1) { i-- }
+    fun finish() {
+        if (saving) return
+        saving = true
+        container.write {
+            container.profileRepo.updateProfile(profile.copy(
+                age = s.age, ageRecordedOn = Clock.dateKey(Clock.today()), workoutDaysMask = s.workoutDays,
+                workoutTimeMin = s.workoutTime, wakeTimeMin = s.wake, sleepTimeMin = s.sleep,
+            ))
+            OnboardingVersion.markDone(ctx)
+        }
+        onDone()
+    }
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+        if (i >= 0) GlassProgressBar((i + 1) / steps.size.toFloat(), th.accent, Modifier.padding(horizontal = 24.dp, vertical = 12.dp), height = 6.dp)
+        AnimatedContent(i, Modifier.weight(1f).fillMaxWidth(), transitionSpec = {
+            val dir = if (targetState > initialState) 1 else -1
+            (slideInHorizontally(spring(0.85f, 300f)) { it * dir / 3 } + fadeIn(tween(250)))
+                .togetherWith(slideOutHorizontally(tween(220)) { -it * dir / 3 } + fadeOut(tween(180)))
+        }, label = "catchup") { k ->
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                if (k < 0) {
+                    Spacer(Modifier.height(48.dp))
+                    Pip(PipMood.EXCITED, size = 130.dp)
+                    Spacer(Modifier.height(16.dp))
+                    Text("A few new questions", style = FitType.display, color = th.text, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(10.dp))
+                    Caption("This update improves your plan. ${steps.size} quick question${if (steps.size == 1) "" else "s"} and you're back in.", Modifier.padding(horizontal = 12.dp))
+                } else StepBody(steps[k], s)
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (i >= 0) GlassIconButton(Duo.ArrowBack, { i-- }, size = 52.dp)
+            else Text("Later", style = FitType.label, color = th.textDim, modifier = Modifier.clickable { onDone() }.padding(12.dp))
+            Spacer(Modifier.weight(1f))
+            val last = i == steps.lastIndex
+            AccentButton(if (i < 0) "Let's go" else if (last) (if (saving) "Saving…" else "Done") else "Next",
+                { if (last) finish() else i++ }, Modifier.width(160.dp), icon = if (last) null else Duo.ArrowForward, enabled = !saving)
         }
     }
 }

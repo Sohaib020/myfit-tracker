@@ -91,23 +91,36 @@ import kotlin.math.min
 private const val MEASURE_SEC = 30.0
 private const val WARMUP_SEC = 2.0
 
+/** Estimate from brightness and from red chroma; keep whichever signal is cleaner. */
+private fun bestEstimate(b: PpgBuffer): Ppg.Result {
+    val (t, v) = b.snapshot(); val (t2, r) = b.snapshotRed()
+    val a = Ppg.estimate(t, v); val c = Ppg.estimate(t2, r)
+    return when {
+        a.bpm != null && c.bpm != null -> if (c.quality > a.quality) c else a
+        a.bpm != null -> a
+        c.bpm != null -> c
+        else -> if (c.quality > a.quality) c else a
+    }
+}
+
 /** Per-frame brightness samples written by the camera thread and read by the UI. */
 private class PpgBuffer {
     private val lock = Any()
     private val t = ArrayList<Double>(2048)
     private val v = ArrayList<Double>(2048)
+    private val cr = ArrayList<Double>(2048)          // red chroma (V plane): often a cleaner pulse than brightness
     @Volatile var finger: Boolean = false
     private var missFrames = 0
 
-    fun onFrame(timeSec: Double, luma: Double, fingerOn: Boolean) {
+    fun onFrame(timeSec: Double, luma: Double, red: Double, fingerOn: Boolean) {
         synchronized(lock) {
             finger = fingerOn
             if (fingerOn) {
                 missFrames = 0
-                if (t.isEmpty() || timeSec > t.last()) { t.add(timeSec); v.add(luma) }
+                if (t.isEmpty() || timeSec > t.last()) { t.add(timeSec); v.add(luma); cr.add(red) }
             } else {
                 missFrames++
-                if (missFrames > 8) { t.clear(); v.clear() }   // finger lifted → start over
+                if (missFrames > 8) { t.clear(); v.clear(); cr.clear() }   // finger lifted → start over
             }
             Unit
         }
@@ -123,6 +136,9 @@ private class PpgBuffer {
         }
         t.subList(from, t.size).toDoubleArray() to v.subList(from, v.size).toDoubleArray()
     }
+
+    /** Red-chroma samples for the whole recording. */
+    fun snapshotRed(): Pair<DoubleArray, DoubleArray> = synchronized(lock) { t.toDoubleArray() to cr.toDoubleArray() }
 
     fun duration(): Double = synchronized(lock) { if (t.size < 2) 0.0 else t.last() - t.first() }
 }
@@ -203,6 +219,9 @@ internal fun CameraHrContent(container: AppContainer) {
         if (hasCam) { result = null; saved = false; phase = Phase.MEASURING } else camPerm.launch(android.Manifest.permission.CAMERA)
     }
 
+    // keep the screen awake for the whole measurement screen (a timeout would stop the camera mid-reading)
+    val hostView = androidx.compose.ui.platform.LocalView.current
+    DisposableEffect(Unit) { hostView.keepScreenOn = true; onDispose { hostView.keepScreenOn = false } }
     Column(Modifier.fillMaxSize()) {
         OverlayTopBar("Camera heart rate", { nav.pop() }, "Beta · estimate, not for medical use")
         LazyColumn(
@@ -217,9 +236,9 @@ internal fun CameraHrContent(container: AppContainer) {
                         Spacer(Modifier.height(10.dp))
                         Step(1, "Rest your hand on a table and sit still for a moment.")
                         Step(2, "Cover the back camera and the flash with your fingertip — gently, don't press hard.")
-                        Step(3, "Stay still for 30 seconds while the flash is on. The flash gets warm, so keep it short.")
+                        Step(3, "Stay still while the flash is on — it usually takes 15–30 seconds.")
                         Spacer(Modifier.height(14.dp))
-                        AccentButton("Start · 30 seconds", { start() }, Modifier.fillMaxWidth(), icon = Duo.PlayArrow, height = 50.dp)
+                        AccentButton("Start measuring", { start() }, Modifier.fillMaxWidth(), icon = Duo.PlayArrow, height = 50.dp)
                     }
                     Phase.MEASURING -> MeasureCard(
                         onDone = { r -> result = r; resultAt = Clock.now(); phase = Phase.DONE },
@@ -346,7 +365,7 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
         analysis.setAnalyzer(exec) { proxy ->
             try {
                 val s = frameStats(proxy)
-                if (s != null) buffer.onFrame(proxy.imageInfo.timestamp / 1e9, s.y, fingerOn(s))
+                if (s != null) buffer.onFrame(proxy.imageInfo.timestamp / 1e9, s.y, s.v, fingerOn(s))
             } finally {
                 proxy.close()
             }
@@ -379,6 +398,7 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
     LaunchedEffect(Unit) {
         var lastBeat = 0.0
         var tick = 0
+        var early: Int? = null
         while (true) {
             delay(50)
             tick++
@@ -387,10 +407,17 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
             settling = dur < WARMUP_SEC
             progress = ((dur - WARMUP_SEC) / MEASURE_SEC).toFloat().coerceIn(0f, 1f)
             if (dur >= WARMUP_SEC + MEASURE_SEC) {
-                val (t, v) = buffer.snapshot()
-                val r = withContext(Dispatchers.Default) { Ppg.estimate(t, v) }
-                onDone(r)
+                onDone(withContext(Dispatchers.Default) { bestEstimate(buffer) })
                 break
+            }
+            // finish early once the pulse is clearly steady (usually 15–20 s)
+            if (dur >= WARMUP_SEC + 15.0 && tick % 20 == 0) {
+                val r = withContext(Dispatchers.Default) { bestEstimate(buffer) }
+                val b = r.bpm
+                if (b != null && r.quality >= 0.8) {
+                    if (early != null && kotlin.math.abs(early!! - b) <= 3) { onDone(r); break }
+                    early = b
+                } else early = null
             }
             if (dur >= 3.0) {
                 // waveform + beat detection over the last 5 s

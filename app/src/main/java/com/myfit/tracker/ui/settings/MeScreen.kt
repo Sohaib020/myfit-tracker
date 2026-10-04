@@ -249,6 +249,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 UnitRow("Body measurements") { GlassSegmented(LengthUnit.entries, u.length, { it.label }, { container.write { container.settings.setUnits(u.copy(length = it)) } }, Modifier.width(170.dp)) }
                 UnitRow("Water") { GlassSegmented(VolumeUnit.entries, u.volume, { it.label }, { container.write { container.settings.setUnits(u.copy(volume = it)) } }, Modifier.width(200.dp)) }
                 UnitRow("Distance") { GlassSegmented(DistanceUnit.entries, u.distance, { it.label }, { container.write { container.settings.setUnits(u.copy(distance = it)) } }, Modifier.width(170.dp)) }
+                UnitRow("Energy") { GlassSegmented(com.myfit.tracker.domain.EnergyUnits.entries, u.energy, { it.label }, { container.write { container.settings.setUnits(u.copy(energy = it)) } }, Modifier.width(170.dp)) }
                 Caption("Data is stored in metric at full precision; units only change how it's shown.")
             }
         }
@@ -375,7 +376,7 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     KV("Water", Targets.on(targets, TargetType.WATER_ML, today)?.let { Fmt.volume(it, settings.units.volume) } ?: "—")
                     KV("Steps", Targets.on(targets, TargetType.STEPS, today)?.let { Fmt.int(it) } ?: "—")
-                    KV("Calories", Targets.on(targets, TargetType.CALORIES, today)?.let { "${Fmt.int(it)} kcal" } ?: "—")
+                    KV("Calories", Targets.on(targets, TargetType.CALORIES, today)?.let { "${Fmt.int(it)} ${com.myfit.tracker.domain.EnergyUnit.label}" } ?: "—")
                     KV("Protein", Targets.on(targets, TargetType.PROTEIN_G, today)?.let { "${Fmt.int(it)} g" } ?: "—")
                     KV("Sleep", Targets.on(targets, TargetType.SLEEP_MIN, today)?.let { Fmt.duration(it.toLong()) } ?: "—")
                     KV("Workouts/wk", Targets.on(targets, TargetType.WEEKLY_WORKOUTS, today)?.let { Fmt.int(it) } ?: "—")
@@ -565,7 +566,7 @@ fun EditTargetsForm(c: AppContainer, close: () -> Unit) {
     }
     field("Water", water, waterUnit.label, true) { water = it }
     field("Steps", steps, "steps", false) { steps = it }
-    field("Calories", kcal, "kcal", false) { kcal = it }
+    field("Calories", kcal, "${com.myfit.tracker.domain.EnergyUnit.label}", false) { kcal = it }
     field("Protein", protein, "g", false) { protein = it }
     field("Sleep", sleepH, "hours", true) { sleepH = it }
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {

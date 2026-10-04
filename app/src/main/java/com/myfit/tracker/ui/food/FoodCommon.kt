@@ -73,8 +73,8 @@ fun MacroSummary(t: Totals, kcalTarget: Double?, proteinTarget: Double?, carbsTa
         ProgressRing(kcalTarget?.let { (t.kcal / it).toFloat() } ?: (if (t.kcal > 0) 1f else null), th.protein, size = ringSize.dp, stroke = 11.dp) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(Fmt.int(t.kcal), style = FitType.title, color = th.text, maxLines = 1)
-                Text(kcalTarget?.let { "/ ${Fmt.int(it)}" } ?: "kcal", style = FitType.caption, color = th.textDim, maxLines = 1)
-                if (kcalTarget != null) Text("kcal", style = FitType.caption, color = th.textFaint, maxLines = 1)
+                Text(kcalTarget?.let { "/ ${Fmt.int(it)}" } ?: "${com.myfit.tracker.domain.EnergyUnit.label}", style = FitType.caption, color = th.textDim, maxLines = 1)
+                if (kcalTarget != null) Text("${com.myfit.tracker.domain.EnergyUnit.label}", style = FitType.caption, color = th.textFaint, maxLines = 1)
             }
         }
         Spacer(Modifier.width(16.dp))

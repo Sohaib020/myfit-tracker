@@ -107,7 +107,6 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Ready when you are", style = FitType.section, color = th.text)
-                        Caption("Start from a template below, or go freestyle.")
                         Spacer(Modifier.height(10.dp))
                         AccentButton("Empty workout", { start { container.workoutRepo.startEmpty() } }, icon = Duo.PlayArrow, height = 46.dp)
                     }
@@ -122,7 +121,6 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Progress & PRs", style = FitType.section, color = th.text)
-                        Caption("Every personal record, detected from your sets. Open an exercise for its graph.")
                     }
                     androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim)
                 }

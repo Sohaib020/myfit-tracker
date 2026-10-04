@@ -215,8 +215,11 @@ fun MyFitRoot(container: AppContainer) {
                     is ProfileState.Ready -> {
                         val socialOn = remember { container.social.start(); container.social.available }
                         val account by container.social.user.collectAsState()
+                        val obCtx = androidx.compose.ui.platform.LocalContext.current
+                        var catchUp by remember(ps.profile == null) { mutableStateOf(if (ps.profile == null) emptyList() else com.myfit.tracker.ui.onboarding.OnboardingVersion.pendingSteps(obCtx)) }
                         if (socialOn && account == null) com.myfit.tracker.ui.social.SignInGate(container)
                         else if (ps.profile == null) OnboardingScreen(container, s.units)
+                        else if (catchUp.isNotEmpty()) com.myfit.tracker.ui.onboarding.OnboardingCatchUp(container, ps.profile, s.units, catchUp) { catchUp = emptyList() }
                         else if (!s.permsAsked) com.myfit.tracker.ui.onboarding.PermissionsScreen(container)
                         else MainShell(container, s)
                     }
@@ -242,6 +245,7 @@ private val tabs = listOf(
 
 @Composable
 private fun MainShell(container: AppContainer, s: AppSettings) {
+    com.myfit.tracker.domain.EnergyUnit.label = s.units.energy.label
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var sheet by remember { mutableStateOf<Sheet?>(null) }
     var lastSheet by remember { mutableStateOf<Sheet?>(null) }
@@ -327,7 +331,9 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 label = "overlay",
             ) { o ->
                 if (o != null) com.myfit.tracker.ui.components.GrowFrom {
+                    val solid = LocalFitTheme.current.bgBottom.copy(alpha = 1f)
                     Canvas(Modifier.fillMaxSize()) {
+                        drawRect(solid)       // nothing from the screen underneath may show through (e.g. behind the nav bar)
                         val l = backdrop.layer
                         val bi = backdrop.bgImg
                         if (bi != null) drawBaked(bi, size)
