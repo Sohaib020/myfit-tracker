@@ -13,8 +13,14 @@ def get(url, headers=None, t=40):
 def search(q):
     """[(image_url, credit dict)] best first"""
     if PIX:
-        r = json.loads(get('https://pixabay.com/api/?' + urllib.parse.urlencode({'key': PIX, 'q': q, 'image_type': 'photo', 'orientation': 'horizontal', 'per_page': 12, 'safesearch': 'true', 'min_width': 1200})))
-        return [(h['largeImageURL'], dict(source='Pixabay', author=h.get('user'), page=h.get('pageURL'), license='Pixabay Content License')) for h in r.get('hits', [])]
+        out = []
+        for cat in ('sports', 'health', ''):
+            args = {'key': PIX, 'q': q, 'image_type': 'photo', 'orientation': 'horizontal', 'per_page': 12, 'safesearch': 'true', 'min_width': 1200, 'order': 'popular'}
+            if cat: args['category'] = cat
+            r = json.loads(get('https://pixabay.com/api/?' + urllib.parse.urlencode(args)))
+            out += [(h['largeImageURL'], dict(source='Pixabay', author=h.get('user'), page=h.get('pageURL'), license='Pixabay Content License', id=h.get('id'))) for h in r.get('hits', [])]
+            if len(out) >= 6: break
+        return out
     if PEX:
         r = json.loads(get('https://api.pexels.com/v1/search?' + urllib.parse.urlencode({'query': q, 'orientation': 'landscape', 'per_page': 12}), {'Authorization': PEX}))
         return [(p['src']['large2x'], dict(source='Pexels', author=p.get('photographer'), page=p.get('url'), license='Pexels License')) for p in r.get('photos', [])]
@@ -28,12 +34,13 @@ for pid, q in Q.items():
     except Exception as e: print('ERR', pid, e); time.sleep(5); continue
     picked = None
     for k, (url, cr) in enumerate(res[:8]):
-        if url in used: continue
+        key = cr.get('id') or url
+        if key in used: continue
         try: im = Image.open(io.BytesIO(get(url, t=40))).convert('RGB')
         except Exception: continue
         if im.width < 900 or im.width / im.height < 1.15: continue
         if picked is None:
-            picked = (im, cr); used.add(url)
+            picked = (im, cr); used.add(key)
         if k < 4: im.copy().resize((240, int(240 * im.height / im.width))).save(f'cand/{pid}_{k}.jpg', quality=80)
     if picked is None: print('none', pid); continue
     im, cr = picked
