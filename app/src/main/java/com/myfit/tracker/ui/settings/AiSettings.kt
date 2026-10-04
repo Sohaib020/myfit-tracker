@@ -121,6 +121,7 @@ fun OfflineBrainCard() {
                 }
                 is ModelStore.DlState.Failed, is ModelStore.DlState.NotInstalled -> {
                     if (s is ModelStore.DlState.Failed) { Caption(s.message, color = th.warning); Spacer(Modifier.height(8.dp)) }
+                    if (ai.models.legacy() != null) { Caption("You have the older 2 GB text-only model: offline chat works, but it can't read meal photos. Download the photo model below — it replaces the old one.", color = th.accentBright); Spacer(Modifier.height(8.dp)) }
                     val partial = (s as? ModelStore.DlState.NotInstalled)?.partialBytes ?: 0L
                     ToggleRow("Allow mobile data", "Off = waits for Wi-Fi (recommended, it's a big file)", cfg.allowMobileData) { v -> scope.launch { ai.prefs.setAllowMobile(v) } }
                     Spacer(Modifier.height(8.dp))

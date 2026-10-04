@@ -39,6 +39,10 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
     private var engine: Engine? = null
     private var enginePath: String? = null
     private var idleJob: Job? = null
+    /** False when the loaded model has no image encoder (text-only build) — set from the catalog or learned at runtime. */
+    @Volatile var hasVision: Boolean = true
+        private set
+    private val noVisionFiles = mutableSetOf<String>()
 
     /** True when the model is downloaded, the user wants it, and developers haven't forced cloud. */
     suspend fun available(): Boolean {
@@ -72,9 +76,21 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
         val errors = mutableListOf<String>()
         for ((b, v) in backendsToTry(c.backendPref, c.workingBackend)) {
             try {
-                val e = Engine(EngineConfig(modelPath = file.absolutePath, backend = backend(b), visionBackend = backend(v),
-                    maxNumTokens = 4096, maxNumImages = 1, cacheDir = app.cacheDir.path))
+                val vision = file.absolutePath !in noVisionFiles && (ModelCatalog.all.firstOrNull { it.fileName == file.name }?.vision ?: true)
+                var e = Engine(EngineConfig(modelPath = file.absolutePath, backend = backend(b), visionBackend = if (vision) backend(v) else null,
+                    maxNumTokens = 4096, maxNumImages = if (vision) 1 else null, cacheDir = app.cacheDir.path))
                 e.initialize()
+                hasVision = vision
+                if (vision) {
+                    // some builds ship without the image encoder: then a conversation can't be created — reload text-only
+                    val probe = runCatching { e.createConversation().close() }.exceptionOrNull()
+                    if (probe != null && (probe.message ?: "").contains("VISION", ignoreCase = true)) {
+                        runCatching { e.close() }
+                        noVisionFiles += file.absolutePath; hasVision = false
+                        e = Engine(EngineConfig(modelPath = file.absolutePath, backend = backend(b), maxNumTokens = 4096, cacheDir = app.cacheDir.path))
+                        e.initialize()
+                    }
+                }
                 engine = e; enginePath = file.absolutePath; backendInUse = "$b/$v"
                 if (c.workingBackend != "$b/$v") hub.prefs.setWorkingBackend("$b/$v")
                 _status.value = Status.READY
@@ -140,6 +156,7 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
 
     /** Image + prompt → text (food photos). */
     suspend fun vision(prompt: String, jpeg: ByteArray): String = run(120_000) { e ->
+        if (!hasVision) throw IllegalStateException("this offline model can't read photos — download the photo model (2.6 GB) in Settings → Pip → Offline brain")
         e.createConversation().use { conv -> conv.sendMessage(Contents.of(Content.ImageBytes(jpeg), Content.Text(prompt))).toString().trim() }
     }
 

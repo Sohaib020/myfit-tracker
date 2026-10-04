@@ -43,24 +43,25 @@ data class ModelSpec(
 object ModelCatalog {
     private const val HF = "https://huggingface.co/litert-community"
 
-    /** Gemma 4 E2B instruction-tuned, LiteRT-LM GPU build (about 2.0 GB). Apache 2.0, ungated. Text + image input. Size/checksum come from the server headers. */
+    /** Gemma 4 E2B instruction-tuned, full LiteRT-LM build (2.6 GB): text + image input (reads meal photos), runs on GPU or CPU. Apache 2.0. */
     val DEFAULT = ModelSpec(
-        id = "gemma4-e2b-gpu", label = "Gemma 4 E2B (2.0 GB)",
-        fileName = "gemma-4-E2B-it-gpu.litertlm",
-        url = "$HF/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-gpu.litertlm",
-        sizeBytes = 0L, sha256 = null,
-        minRamBytes = 5_300_000_000L, license = "Apache 2.0", source = "Hugging Face · litert-community",
-    )
-
-    /** The earlier CPU build (2.6 GB): developer option for phones whose GPU can't run the GPU build. */
-    val CPU = ModelSpec(
-        id = "gemma4-e2b", label = "Gemma 4 E2B CPU (2.6 GB)",
+        id = "gemma4-e2b", label = "Gemma 4 E2B (2.6 GB · chat + photos)",
         fileName = "gemma-4-E2B-it.litertlm",
         url = "$HF/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
         sizeBytes = 2_588_147_712L,
         sha256 = "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
         minRamBytes = 5_300_000_000L, license = "Apache 2.0", source = "Hugging Face · litert-community",
     )
+
+    /** The GPU-only build (2.0 GB) has no image encoder: chat only. Kept so phones that downloaded it still chat offline. */
+    val TEXT = ModelSpec(
+        id = "gemma4-e2b-gpu", label = "Gemma 4 E2B text-only (2.0 GB)",
+        fileName = "gemma-4-E2B-it-gpu.litertlm",
+        url = "$HF/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-gpu.litertlm",
+        sizeBytes = 0L, sha256 = null,
+        minRamBytes = 5_300_000_000L, license = "Apache 2.0", source = "Hugging Face · litert-community", vision = false,
+    )
+    @Deprecated("same as DEFAULT now") val CPU get() = DEFAULT
 
     /** Bigger, smarter, slower sibling — for 12 GB phones. Developer option only. */
     val E4B = ModelSpec(
@@ -71,12 +72,13 @@ object ModelCatalog {
         minRamBytes = 10_000_000_000L, license = "Apache 2.0", source = "Hugging Face · litert-community",
     )
 
-    val all = listOf(DEFAULT, CPU, E4B)
+    val all = listOf(DEFAULT, TEXT, E4B)
     /** Approximate download size for display before the server reports the exact one. */
-    fun approxBytes(s: ModelSpec): Long = if (s.sizeBytes > 0) s.sizeBytes else if (s.id == DEFAULT.id) 2_010_000_000L else 0L
+    fun approxBytes(s: ModelSpec): Long = if (s.sizeBytes > 0) s.sizeBytes else if (s.id == TEXT.id) 2_010_000_000L else 0L
 
     fun resolve(c: AiConfig): ModelSpec {
-        val base = all.firstOrNull { it.id == c.modelPreset } ?: DEFAULT
+        // the old default (text-only GPU build) is migrated to the photo-capable model
+        val base = all.firstOrNull { it.id == c.modelPreset && it.id != TEXT.id } ?: DEFAULT
         val o = c.modelUrlOverride.trim()
         if (o.isBlank() || !o.startsWith("https://")) return base
         val name = o.substringBefore('?').substringAfterLast('/').replace(Regex("[^A-Za-z0-9._-]"), "_").ifBlank { "custom.litertlm" }
@@ -132,7 +134,13 @@ class ModelStore(private val ctx: Context, private val prefs: AiPrefs) {
     suspend fun spec() = ModelCatalog.resolve(prefs.cfg())
 
     /** Installed model file, or null. Cheap: only file checks. */
-    suspend fun installedFile(): File? = spec().let { s -> if (isInstalled(s)) file(s) else null }
+    suspend fun installedFile(): File? = spec().let { s -> if (isInstalled(s)) file(s) else legacy() }
+
+    /** A previously downloaded model that isn't the current choice (e.g. the 2 GB text-only one) — still good for chat. */
+    fun legacy(): File? = ModelCatalog.all.firstOrNull { isInstalled(it) }?.let { file(it) }
+
+    /** Does the model file that will be used read images? */
+    suspend fun installedHasVision(): Boolean = spec().let { s -> isInstalled(s) && s.vision }
 
     /** Recompute state from disk + WorkManager (call when the settings card opens / polls). */
     suspend fun refresh() = withContext(Dispatchers.IO) {
@@ -284,6 +292,8 @@ class ModelStore(private val ctx: Context, private val prefs: AiPrefs) {
         dest.delete()
         if (!part.renameTo(dest)) return@withContext fail("Couldn't save the model file.")
         ok(s).writeText(sha ?: "size:${dest.length()}")
+        // the new model replaces any older one (frees ~2 GB)
+        ModelCatalog.all.filter { it.fileName != s.fileName }.forEach { o -> file(o).delete(); ok(o).delete(); part(o).delete() }
         _state.value = DlState.Installed
         onProgress(DlState.Installed)
         null
