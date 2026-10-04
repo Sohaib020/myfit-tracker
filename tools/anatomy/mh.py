@@ -171,11 +171,14 @@ def classify(o, arm):
         FACE_GROUP.append(max(votes, key=votes.get))
     me.materials.append(MAT['body'])
 
-def paint(groups, holdout_rest=False):
-    """Shade [groups] red with soft edges; holdout_rest → everything else transparent (overlay renders)."""
+def paint(groups, holdout_rest=False, secondary=()):
+    """Shade [groups] red (and [secondary] light red) with soft edges; holdout_rest → everything else transparent."""
     nt = MAT['body'].node_tree
     for k in range(4):
         nt.nodes['attr%d' % k].attribute_name = ('m_' + groups[k].replace(' ', '_')) if k < len(groups) else 'none'
+    sec = [x for x in secondary if x not in groups]
+    for k in range(3):
+        nt.nodes['sec%d' % k].attribute_name = ('m_' + sec[k].replace(' ', '_')) if k < len(sec) else 'none'
     nt.nodes['mode'].outputs[0].default_value = 1.0 if holdout_rest else 0.0
 
 def lights_camera():
@@ -215,7 +218,17 @@ def body_material():
             mm = n.new('ShaderNodeMath'); mm.operation = 'MAXIMUM'; l.new(mx, mm.inputs[0]); l.new(at.outputs['Fac'], mm.inputs[1]); mx = mm.outputs[0]
     sharp = n.new('ShaderNodeMapRange'); sharp.inputs['From Min'].default_value = 0.30; sharp.inputs['From Max'].default_value = 0.62
     l.new(mx, sharp.inputs['Value'])
-    mix = n.new('ShaderNodeMixShader'); l.new(sharp.outputs['Result'], mix.inputs['Fac']); l.new(skin.outputs[0], mix.inputs[1]); l.new(red.outputs[0], mix.inputs[2])
+    # secondary muscles: lighter red, 3 attribute slots
+    mx2 = None
+    for k in range(3):
+        at = n.new('ShaderNodeAttribute'); at.name = 'sec%d' % k; at.attribute_name = 'none'
+        if mx2 is None: mx2 = at.outputs['Fac']
+        else:
+            mm = n.new('ShaderNodeMath'); mm.operation = 'MAXIMUM'; l.new(mx2, mm.inputs[0]); l.new(at.outputs['Fac'], mm.inputs[1]); mx2 = mm.outputs[0]
+    sharp2 = n.new('ShaderNodeMapRange'); sharp2.inputs['From Min'].default_value = 0.30; sharp2.inputs['From Max'].default_value = 0.62; l.new(mx2, sharp2.inputs['Value'])
+    pink = n.new('ShaderNodeBsdfPrincipled'); pink.inputs['Base Color'].default_value = srgb('#EE9A8A'); pink.inputs['Roughness'].default_value = 0.45
+    base2 = n.new('ShaderNodeMixShader'); l.new(sharp2.outputs['Result'], base2.inputs['Fac']); l.new(skin.outputs[0], base2.inputs[1]); l.new(pink.outputs[0], base2.inputs[2])
+    mix = n.new('ShaderNodeMixShader'); l.new(sharp.outputs['Result'], mix.inputs['Fac']); l.new(base2.outputs[0], mix.inputs[1]); l.new(red.outputs[0], mix.inputs[2])
     # overlay mode: everything that isn't red becomes holdout (transparent)
     hold = n.new('ShaderNodeHoldout'); mode = n.new('ShaderNodeValue'); mode.name = 'mode'; mode.outputs[0].default_value = 0.0
     inv = n.new('ShaderNodeMath'); inv.operation = 'SUBTRACT'; inv.inputs[0].default_value = 1.0; l.new(sharp.outputs['Result'], inv.inputs[1])

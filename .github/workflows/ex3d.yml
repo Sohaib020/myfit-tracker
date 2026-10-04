@@ -1,0 +1,48 @@
+name: Exercise 3D loops
+# Renders looping 3D how-to animations (MakeHuman CC0 mannequin, muscles in red) for the exercises in
+# tools/anatomy/moves.py and saves them to the ex3d-assets branch (ex3d/<key>.webp + preview sheets).
+on:
+  push:
+    branches: [ ex3d-render ]
+  workflow_dispatch:
+permissions: { contents: write }
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix: { shard: [0, 1, 2, 3] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install bpy==4.2.0 pillow && sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 >/dev/null
+      - run: sh tools/anatomy/fetch_mh.sh
+      - run: cd tools/anatomy && OUT=$GITHUB_WORKSPACE/out SHARD=${{ matrix.shard }} SHARDS=4 RES=360 SAMPLES=14 FRAMES=24 python loops.py | grep -E "^P|ALLDONE"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: 'ex-${{ matrix.shard }}', path: out, if-no-files-found: ignore }
+  publish:
+    needs: render
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'ex-*', path: pub/ex3d, merge-multiple: true }
+      - run: |
+          pip install pillow
+          python3 - <<'PY'
+          import os
+          from PIL import Image, ImageDraw
+          fs = sorted(f for f in os.listdir('pub/ex3d') if f.endswith('.webp'))
+          for p in range(0, len(fs), 48):
+              sub = fs[p:p + 48]; s = Image.new('RGB', (150 * 8, 165 * 6), 'white'); d = ImageDraw.Draw(s)
+              for i, f in enumerate(sub):
+                  im = Image.open('pub/ex3d/' + f); im.seek(im.n_frames // 2); x, y = (i % 8) * 150, (i // 8) * 165
+                  s.paste(im.convert('RGB').resize((150, 150)), (x, y + 14)); d.text((x + 2, y), f[:26], fill='black')
+              s.save('pub/sheet_%d.png' % (p // 48))
+          print(len(fs), 'loops')
+          PY
+          cd pub && git init -q && git checkout -q -b ex3d-assets && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "ex3d loops" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ex3d-assets
