@@ -38,6 +38,7 @@ sealed interface Overlay {
     data object History : Overlay
     data object Deen : Overlay
     /** Pick exercises to append to a template (templateId) or to a running workout (workoutId). */
+    data class ProgramDetail(val id: String) : Overlay
     data class PickExercises(val templateId: Long? = null, val workoutId: Long? = null) : Overlay
     data class Food(val date: String? = null) : Overlay
     data class FoodAdd(val mealType: String, val date: String, val tab: Int) : Overlay

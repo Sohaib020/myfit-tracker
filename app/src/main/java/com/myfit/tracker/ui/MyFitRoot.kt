@@ -357,6 +357,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.DevSettings -> com.myfit.tracker.ui.settings.DevSettingsScreen(container)
                         Overlay.HealthHub -> com.myfit.tracker.ui.dashboard.HealthHubScreen(container)
                         is Overlay.PickExercises -> com.myfit.tracker.ui.train.PickExercisesScreen(container, o.templateId, o.workoutId)
+                        is Overlay.ProgramDetail -> com.myfit.tracker.ui.programs.ProgramDetailScreen(container, o.id)
                         Overlay.Deen -> com.myfit.tracker.ui.deen.DeenScreen(container)
                         Overlay.History -> TimelineScreen(container, { sheet = it }, 40, onBack = { nav.pop() })
                         is Overlay.DayLog -> com.myfit.tracker.ui.timeline.DayLogScreen(container, o.date) { sheet = it }

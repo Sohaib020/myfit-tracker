@@ -296,6 +296,11 @@ class WorkoutRepository(private val db: AppDatabase) {
         return saveTemplate(null, "${t.name} (copy)", t.notes, tdao.getItems(id))
     }
 
+    /** Built-in exercises by catalog key (programs reference exercises this way). */
+    suspend fun exercisesByKeys(keys: Collection<String>): Map<String, Exercise> =
+        edao.byUuids(keys.distinct().map { "fedb:$it" }).associateBy { it.uuid.removePrefix("fedb:") }
+    suspend fun templateAlive(id: Long): Boolean = tdao.getTemplate(id)?.archivedAt == null && tdao.getTemplate(id) != null
+
     suspend fun archiveTemplate(id: Long) = tdao.archive(id, Clock.now())
     suspend fun unarchiveTemplate(id: Long) = tdao.unarchive(id, Clock.now())
     val archivedTemplates: Flow<List<WorkoutTemplate>> = tdao.observeArchivedTemplates()

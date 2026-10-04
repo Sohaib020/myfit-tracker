@@ -22,6 +22,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,8 +54,14 @@ fun WorkoutCard(w: WorkoutToday, container: AppContainer) {
     val nav = LocalNav.current
     val scope = rememberCoroutineScope()
     val now by produceState(Clock.now()) { while (true) { value = Clock.now(); delay(1000) } }
+    // a followed program decides what "today's workout" is
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val programFollow by com.myfit.tracker.ui.programs.ProgramEngine.follow.collectAsState()
+    val program = remember(programFollow) { com.myfit.tracker.ui.programs.ProgramLib.byId(ctx, programFollow?.id) }
+    val programDone by remember(programFollow) { com.myfit.tracker.ui.programs.ProgramEngine.sessionsDone(container, programFollow) }.collectAsState(0)
+    val programNext = program?.let { p -> com.myfit.tracker.ui.programs.ProgramEngine.position(p, programDone).takeIf { !it.finished }?.let { p to it } }
 
-    GlassCard(onClick = { w.active?.let { nav.push(Overlay.Gym(it.workout.id)) } }) {
+    GlassCard(onClick = { w.active?.let { nav.push(Overlay.Gym(it.workout.id)) } ?: program?.let { nav.push(Overlay.ProgramDetail(it.id)) } }) {
         CardHeader(Duo.FitnessCenter, "Today's workout", th.accentBright) {
             w.weeklyTarget?.let { Caption("${w.weeklyDone}/${Fmt.int(it)} this week") }
         }
@@ -87,6 +95,18 @@ fun WorkoutCard(w: WorkoutToday, container: AppContainer) {
                         d.exercises.take(6).forEachIndexed { i, e -> ExerciseImage(e.exercise, Modifier.offset(x = (i * 28).dp).size(40.dp).clip(CircleShape)) }
                     } }
                 }
+            }
+            programNext != null -> {
+                val (p, pos) = programNext
+                val day = p.days[pos.day]
+                Text("${p.name.uppercase()} · WEEK ${pos.week}", style = FitType.overline, color = th.accentBright)
+                Text(day.name, style = FitType.title, color = th.text)
+                Caption("${day.focus} · ${day.items.size} exercises · ${p.phase(pos.week).label} phase")
+                Spacer(Modifier.height(12.dp))
+                AccentButton("Start ${day.name}", {
+                    val f = programFollow ?: return@AccentButton
+                    scope.launch { nav.push(Overlay.Gym(com.myfit.tracker.ui.programs.ProgramEngine.startSession(container, p, f, pos))) }
+                }, icon = Duo.PlayArrow, height = 48.dp)
             }
             else -> {
                 Text(if (w.plannedDay) "Workout day" else "Rest day on your schedule", style = FitType.title, color = th.text)
