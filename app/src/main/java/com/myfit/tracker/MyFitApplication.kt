@@ -54,6 +54,7 @@ class MyFitApplication : Application() {
         container.write { container.exerciseRepo.seedIfNeeded() }
         container.write { container.nutritionRepo.seedIfNeeded() }
         HealthSyncWorker.schedule(this)
+        com.myfit.tracker.reminders.ReminderScheduler.reschedule(this)   // re-arm alarms (incl. smart nudges) with the latest profile
         runCatching { container.social.start() }
         container.write { runCatching { container.social.uploadNow() } }
         if (!java.io.File(filesDir, "voice/" + com.myfit.tracker.ai.voice.VoicePack.MODEL + "/.complete").exists())

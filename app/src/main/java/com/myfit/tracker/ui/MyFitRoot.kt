@@ -349,6 +349,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         is Overlay.WorkoutDetail -> WorkoutDetailScreen(container, o.workoutId)
                         Overlay.Activity -> com.myfit.tracker.ui.activity.ActivityScreen(container)
                         Overlay.Today -> com.myfit.tracker.ui.activity.TodayScreen(container)
+                        Overlay.Stopwatch -> com.myfit.tracker.ui.activity.StopwatchScreen(container)
                         Overlay.PipChat -> com.myfit.tracker.ui.pip.PipChatScreen(container)
                         Overlay.Archive -> com.myfit.tracker.ui.exercises.ArchiveScreen(container)
                         Overlay.Me -> MeScreen(container) { sheet = it }

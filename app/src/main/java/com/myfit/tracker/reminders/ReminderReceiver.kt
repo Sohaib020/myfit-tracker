@@ -132,6 +132,7 @@ class ReminderReceiver : BroadcastReceiver() {
                     discreet = ReminderScheduler.medDiscreet(app),
                 )
             }
+            Nudges.KIND -> Nudges.fire(app, intent.getLongExtra(ReminderScheduler.EXTRA_ID, -1L).toInt())
             ReminderScheduler.KIND_FAST -> {
                 ReminderScheduler.clearFastAlarm(app)
                 ReminderNotifier.post(app, nid, title, text)

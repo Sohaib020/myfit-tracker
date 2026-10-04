@@ -108,7 +108,10 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
                     Column(Modifier.weight(1f)) {
                         Text("Ready when you are", style = FitType.section, color = th.text)
                         Spacer(Modifier.height(10.dp))
-                        AccentButton("Empty workout", { start { container.workoutRepo.startEmpty() } }, icon = Duo.PlayArrow, height = 46.dp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AccentButton("Gym workout", { start { container.workoutRepo.startEmpty() } }, Modifier.weight(1f), icon = Duo.PlayArrow, height = 46.dp)
+                            GlassButton("Activity", { nav.push(Overlay.Stopwatch) }, Modifier.weight(1f), icon = Duo.Timer, height = 46.dp)
+                        }
                     }
                 }
             }

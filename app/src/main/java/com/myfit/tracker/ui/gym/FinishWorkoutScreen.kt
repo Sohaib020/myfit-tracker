@@ -84,6 +84,25 @@ fun FinishWorkoutScreen(container: AppContainer, workoutId: Long) {
                 }
             }
             SummaryGrid(t, durSec, u)
+            val bodyKg by container.logRepo.latestWeight().collectAsState(null)
+            if (t.sets > 0) {
+                val kcal = com.myfit.tracker.domain.Burn.kcal(com.myfit.tracker.domain.Burn.GYM_MET, bodyKg?.weightKg ?: 70.0, durSec)
+                GlassCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("~${kcal.toInt()} ${com.myfit.tracker.domain.EnergyUnit.label}", style = FitType.title, color = th.accentBright)
+                        Spacer(Modifier.width(10.dp))
+                        Caption("estimated burn · ${durSec / 60} min of weight training")
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    com.myfit.tracker.domain.Burn.effects(com.myfit.tracker.domain.Burn.byId("weights"), com.myfit.tracker.domain.Burn.GYM_MET, durSec, kcal).take(4).forEach { e ->
+                        Row(Modifier.padding(vertical = 3.dp)) {
+                            Text("•", style = FitType.body, color = th.accentBright)
+                            Spacer(Modifier.width(8.dp))
+                            Text(e, style = FitType.body, color = th.text)
+                        }
+                    }
+                }
+            }
             val setKey = w.exercises.sumOf { it.sets.size }
             val prs by androidx.compose.runtime.produceState(emptyList<Pair<String, com.myfit.tracker.domain.Records.Pr>>(), setKey) {
                 value = w.exercises.filter { it.sets.isNotEmpty() }.flatMap { e ->

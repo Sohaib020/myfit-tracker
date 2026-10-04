@@ -56,6 +56,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -174,7 +175,13 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
                 Column(Modifier.weight(1f)) {
                     Text(v.workout.name, style = FitType.title, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val t = v.totals
-                    Caption("${mmss((now - v.workout.startedAt) / 1000)} · ${t.sets} sets" + (t.volumeKg?.let { " · ${Fmt.weight(it, u.weight, 0)}" } ?: ""))
+                    val secs = (now - v.workout.startedAt) / 1000
+                    val bodyKg by container.logRepo.latestWeight().collectAsState(null)
+                    val burn = com.myfit.tracker.domain.Burn.kcal(com.myfit.tracker.domain.Burn.GYM_MET, bodyKg?.weightKg ?: 70.0, secs)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(mmss(secs), style = FitType.label, color = th.accentBright)
+                        Text("  ·  ~${burn.toInt()} ${com.myfit.tracker.domain.EnergyUnit.label} · ${t.sets} sets" + (t.volumeKg?.let { " · ${Fmt.weight(it, u.weight, 0)}" } ?: ""), style = FitType.caption, color = th.textDim, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
                 AccentButton("Finish", { nav.replace(Overlay.FinishWorkout(workoutId)) }, height = 44.dp, icon = Duo.Check)
             }

@@ -382,6 +382,9 @@ object ReminderScheduler {
 
         // ---- health features: medicines, blood-sugar checks, Ramadan, HbA1c, pregnancy appointments
         runCatching { com.myfit.tracker.health.HealthReminders.arm(app) }
+
+        // ---- smart gentle nudges (water / move / workout days / wind-down / Monday weigh-in)
+        runCatching { Nudges.arm(app) }
     }
 
     internal fun clearFastAlarm(ctx: Context) { prefs(ctx).edit().putLong(K_FAST_AT, 0L).apply() }

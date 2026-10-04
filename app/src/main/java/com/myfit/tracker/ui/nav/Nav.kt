@@ -14,6 +14,8 @@ sealed interface Overlay {
     data class FinishWorkout(val workoutId: Long) : Overlay
     data object Activity : Overlay
     data object Today : Overlay
+    /** Timed activity with MET calories (Start activity). */
+    data object Stopwatch : Overlay
     data object PipChat : Overlay
     data object Archive : Overlay
     data object Me : Overlay

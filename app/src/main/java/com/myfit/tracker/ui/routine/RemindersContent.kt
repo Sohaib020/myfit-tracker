@@ -159,6 +159,8 @@ internal fun RemindersContent(container: AppContainer) {
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 40.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                item(key = "nudges") { NudgesCard(ctx) }
+
                 if (!allowed) item {
                     GlassCard {
                         CardHeader(Duo.Bell, "Notifications are off", th.danger)
@@ -260,6 +262,43 @@ internal fun RemindersContent(container: AppContainer) {
                     toaster.show("Reminder deleted")
                 }) else null,
             )
+        }
+    }
+}
+
+@Composable
+private fun NudgesCard(ctx: Context) {
+    val th = LocalFitTheme.current
+    var on by remember { mutableStateOf(com.myfit.tracker.reminders.Nudges.enabled(ctx)) }
+    var types by remember { mutableStateOf(com.myfit.tracker.reminders.Nudges.Type.entries.associateWith { com.myfit.tracker.reminders.Nudges.typeOn(ctx, it) }) }
+    var max by remember { mutableIntStateOf(com.myfit.tracker.reminders.Nudges.maxPerDay(ctx)) }
+    var q by remember { mutableStateOf(com.myfit.tracker.reminders.Nudges.quiet(ctx)) }
+    GlassCard {
+        CardHeader(Duo.AutoAwesome, "Smart nudges", th.accentBright)
+        Spacer(Modifier.height(6.dp))
+        SwitchRow("Gentle nudges", "Only when you're behind, never more than $max a day", on, {
+            on = it; com.myfit.tracker.reminders.Nudges.setEnabled(ctx, it)
+        })
+        if (on) {
+            com.myfit.tracker.reminders.Nudges.Type.entries.forEach { t ->
+                SwitchRow(t.label, t.sub, types[t] == true, { v -> types = types + (t to v); com.myfit.tracker.reminders.Nudges.setTypeOn(ctx, t, v) })
+            }
+            Spacer(Modifier.height(8.dp))
+            Text("Max per day", style = FitType.label, color = th.textDim)
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(1, 2, 3, 4).forEach { n -> GlassChip("$n", max == n, { max = n; com.myfit.tracker.reminders.Nudges.setMaxPerDay(ctx, n) }) }
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Quiet", style = FitType.label, color = th.textDim)
+                Spacer(Modifier.width(8.dp))
+                MinuteOfDayChip(q.start) { q = q.copy(start = it); com.myfit.tracker.reminders.Nudges.setQuiet(ctx, q.start, q.end) }
+                Spacer(Modifier.width(10.dp))
+                Text("to", style = FitType.label, color = th.textDim)
+                Spacer(Modifier.width(8.dp))
+                MinuteOfDayChip(q.end) { q = q.copy(end = it); com.myfit.tracker.reminders.Nudges.setQuiet(ctx, q.start, q.end) }
+            }
         }
     }
 }
