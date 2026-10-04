@@ -176,7 +176,7 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
                     Text(v.workout.name, style = FitType.title, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val t = v.totals
                     val secs = (now - v.workout.startedAt) / 1000
-                    val bodyKg by container.logRepo.latestWeight().collectAsState(null)
+                    val bodyKg by remember { container.logRepo.latestWeight() }.collectAsState(null)
                     val burn = com.myfit.tracker.domain.Burn.kcal(com.myfit.tracker.domain.Burn.GYM_MET, bodyKg?.weightKg ?: 70.0, secs)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(mmss(secs), style = FitType.label, color = th.accentBright)

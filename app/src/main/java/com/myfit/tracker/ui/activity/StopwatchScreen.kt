@@ -79,7 +79,7 @@ fun StopwatchScreen(container: AppContainer) {
     val ctx = LocalContext.current
     val toaster = LocalToaster.current
     LaunchedEffect(Unit) { ActivityClock.load(ctx) }
-    val latest by container.logRepo.latestWeight().collectAsState(null)
+    val latest by remember { container.logRepo.latestWeight() }.collectAsState(null)
     val profile by container.profileRepo.profile.collectAsState(null)
     val kg = latest?.weightKg ?: profile?.startWeightKg ?: 70.0
     var pick by remember { mutableStateOf(ActivityClock.activity ?: "walk") }

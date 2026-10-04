@@ -84,7 +84,7 @@ fun FinishWorkoutScreen(container: AppContainer, workoutId: Long) {
                 }
             }
             SummaryGrid(t, durSec, u)
-            val bodyKg by container.logRepo.latestWeight().collectAsState(null)
+            val bodyKg by remember { container.logRepo.latestWeight() }.collectAsState(null)
             if (t.sets > 0) {
                 val kcal = com.myfit.tracker.domain.Burn.kcal(com.myfit.tracker.domain.Burn.GYM_MET, bodyKg?.weightKg ?: 70.0, durSec)
                 GlassCard {
