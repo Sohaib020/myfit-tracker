@@ -126,6 +126,7 @@ dependencies {
     implementation("org.apache.commons:commons-compress:1.27.1")
     // Google code scanner: barcode scanning UI without a camera permission
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+    implementation("com.google.zxing:core:3.5.3")
     // food camera: live preview, on-device food detection
     val camerax = "1.4.2"
     implementation("androidx.camera:camera-core:$camerax")

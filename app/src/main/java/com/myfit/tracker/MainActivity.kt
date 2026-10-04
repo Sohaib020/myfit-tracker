@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         val container = (application as MyFitApplication).container
+        com.myfit.tracker.social.Invite.handle(intent)
         if (BuildConfig.DEBUG && intent?.getBooleanExtra("smoke", false) == true) SmokeSetup.ensureProfile(container)
         val crash = CrashGuard.lastCrash(this)
         setContent {
@@ -51,6 +52,11 @@ class MainActivity : ComponentActivity() {
                 onNormal = { CrashGuard.setSafe(this, false); CrashGuard.clear(this); report = null },
             ) else MyFitRoot(container)
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        com.myfit.tracker.social.Invite.handle(intent)
     }
 }
 

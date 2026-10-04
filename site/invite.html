@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>You're invited to MyFit</title>
+<meta property="og:title" content="You're invited to MyFit Tracker">
+<meta property="og:description" content="Join me in the Arena — let's race our steps!">
+<meta property="og:image" content="img/pip.webp">
+<link rel="icon" href="img/pip.webp">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header><img src="img/pip.webp" alt=""><b>MyFit Tracker</b></header>
+  <div class="hero">
+    <div>
+      <h1><span id="who">A friend</span> invited you to race in the Arena</h1>
+      <p class="lead">Add each other as friends, then compete in weekly challenges, duels and team battles. Only device-recorded activity counts — no cheating!</p>
+      <p class="ver">Friend code</p>
+      <div class="code" id="code">······</div>
+      <div class="cta">
+        <a class="btn primary" id="open" href="#">Open in MyFit</a>
+        <a class="btn ghost" href="https://github.com/Sohaib020/myfit-tracker/releases/latest/download/MyFitTracker.apk">⬇ Get the app</a>
+      </div>
+      <p class="ver" id="ver"></p>
+    </div>
+    <div>
+      <div class="stage"><img class="pip" src="img/pip_wave.webp" alt="Pip waving"></div>
+      <div class="cast"><img src="img/zara.webp" alt=""><img src="img/shaheen.webp" alt=""><img src="img/motu.webp" alt=""></div>
+    </div>
+  </div>
+  <section>
+    <h2>Don't have MyFit yet?</h2>
+    <div class="steps">
+      <div class="card"><div><h3>Get the app</h3><p>Tap "Get the app", open the file and allow installing if Android asks (one time).</p></div></div>
+      <div class="card"><div><h3>Sign in</h3><p>Open MyFit, sign in with Google or email and finish the quick setup.</p></div></div>
+      <div class="card"><div><h3>Come back and tap "Open in MyFit"</h3><p>You'll be friends instantly. Or go to Arena → Friends and type the code above.</p></div></div>
+    </div>
+  </section>
+  <section>
+    <h2>On a computer? Scan with your phone</h2>
+    <div class="qrbox"><div id="qr"></div></div>
+  </section>
+  <footer>MyFit Tracker · Android 8.0+</footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  const q = new URLSearchParams(location.search);
+  const code = (q.get('c') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  const name = (q.get('n') || '').slice(0, 24);
+  if (name) document.getElementById('who').textContent = name;
+  if (code) document.getElementById('code').textContent = code;
+  document.getElementById('open').href = 'myfit://invite?c=' + encodeURIComponent(code);
+  try { new QRCode(document.getElementById('qr'), { text: location.href, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M }); } catch (e) {}
+  fetch('https://api.github.com/repos/Sohaib020/myfit-tracker/releases/latest').then(r => r.json()).then(j => {
+    document.getElementById('ver').textContent = 'Latest version: build ' + (j.tag_name || '').replace('build-', '');
+  }).catch(() => {});
+</script>
+</body>
+</html>

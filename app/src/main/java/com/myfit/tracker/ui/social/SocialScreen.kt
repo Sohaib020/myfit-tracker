@@ -1,6 +1,7 @@
 package com.myfit.tracker.ui.social
 
 import android.content.Intent
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -325,19 +326,7 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
                 }
             }
             2 -> {
-                item {
-                    GlassCard {
-                        CardHeader(Duo.Link, "Your friend code", th.accentBright)
-                        Spacer(Modifier.height(8.dp))
-                        Text(profile?.code ?: "······", style = FitType.display, color = th.text)
-                        Spacer(Modifier.height(8.dp))
-                        GlassButton("Share code", {
-                            val code = profile?.code ?: return@GlassButton
-                            ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
-                                .putExtra(Intent.EXTRA_TEXT, "Compete with me on MyFit Tracker! Add my friend code: $code"), "Share code"))
-                        }, icon = Duo.Send, height = 44.dp)
-                    }
-                }
+                item { InviteCard(profile) }
                 item {
                     var code by remember { mutableStateOf("") }
                     GlassCard {
@@ -345,13 +334,26 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
                         Spacer(Modifier.height(8.dp))
                         Field(code, { code = it.uppercase().filter { ch -> ch.isLetterOrDigit() }.take(6) }, "Their 6-letter code")
                         Spacer(Modifier.height(8.dp))
-                        GlassButton("Add friend", {
-                            scope.launch {
-                                runCatching { social.addFriendByCode(code) }
-                                    .onSuccess { toaster.show("Added ${it.name}"); code = ""; refresh++ }
-                                    .onFailure { toaster.show(it.message ?: "Couldn't add") }
-                            }
-                        }, icon = Duo.Add, height = 44.dp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            GlassButton("Add friend", {
+                                scope.launch {
+                                    runCatching { social.addFriendByCode(code) }
+                                        .onSuccess { toaster.show("Added ${it.name}"); code = ""; refresh++ }
+                                        .onFailure { toaster.show(it.message ?: "Couldn't add") }
+                                }
+                            }, Modifier.weight(1f), icon = Duo.Add, height = 44.dp)
+                            GlassButton("Scan QR", {
+                                com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(ctx).startScan()
+                                    .addOnSuccessListener { bc ->
+                                        val c = com.myfit.tracker.social.Invite.parse(bc.rawValue)
+                                        if (c == null) toaster.show("That QR isn't a MyFit invite") else scope.launch {
+                                            runCatching { social.addFriendByCode(c) }
+                                                .onSuccess { toaster.show("Added ${it.name}"); refresh++ }
+                                                .onFailure { toaster.show(it.message ?: "Couldn't add") }
+                                        }
+                                    }
+                            }, Modifier.weight(1f), icon = Duo.Scan, height = 44.dp)
+                        }
                     }
                 }
                 val fs = friends
@@ -512,5 +514,48 @@ fun SignInGate(container: AppContainer) {
             Caption("Sign in to get started — it takes one tap with Google.")
         }
         SignIn(container, 40, gate = true)
+    }
+}
+
+
+/** Your invite: QR code + link that works even for people who don't have the app (download page + "Open in MyFit"). */
+@Composable
+private fun InviteCard(profile: Profile?) {
+    val th = LocalFitTheme.current
+    val ctx = LocalContext.current
+    val toaster = LocalToaster.current
+    val code = profile?.code
+    val link = code?.let { com.myfit.tracker.social.Invite.link(it, profile.name) }
+    val qr = remember(link) { link?.let { runCatching { com.myfit.tracker.social.Invite.qr(it).asImageBitmap() }.getOrNull() } }
+    GlassCard {
+        CardHeader(Duo.Link, "Invite friends", th.accentBright)
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(132.dp).clip(RoundedCornerShape(18.dp)).background(Color.White).padding(8.dp), contentAlignment = Alignment.Center) {
+                if (qr != null) androidx.compose.foundation.Image(qr, "Invite QR code", Modifier.fillMaxSize()) else Caption("…")
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Caption("YOUR CODE")
+                Text(code ?: "······", style = FitType.display, color = th.text)
+                Caption("Friends scan this QR or open your link. If they don't have MyFit yet, the page gives them the latest download.")
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AccentButton("Share invite", { if (code != null) com.myfit.tracker.social.Invite.share(ctx, code, profile.name) }, Modifier.weight(1f), icon = Duo.Send, height = 44.dp)
+            GlassButton("Copy link", {
+                if (link != null) {
+                    (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+                        .setPrimaryClip(android.content.ClipData.newPlainText("MyFit invite", link))
+                    toaster.show("Invite link copied")
+                }
+            }, Modifier.weight(1f), icon = Duo.ContentCopy, height = 44.dp)
+        }
+        Spacer(Modifier.height(6.dp))
+        Text("Share just the app download link", style = FitType.label, color = th.accentBright, modifier = Modifier.clickableNoRipple {
+            ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
+                .putExtra(Intent.EXTRA_TEXT, "Get MyFit Tracker (always the latest version): ${com.myfit.tracker.update.AppUpdater.SITE}"), "Share download link"))
+        }.padding(vertical = 6.dp))
     }
 }

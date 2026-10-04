@@ -72,6 +72,7 @@ jobs:
         run: |
           mkdir -p out
           cp app/build/outputs/apk/release/app-release.apk "out/MyFitTracker-v0.1.${{ github.run_number }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk out/MyFitTracker.apk   # stable name → releases/latest/download/MyFitTracker.apk
           (cd app && zip -qr ../out/schemas.zip schemas) || true
 
       - uses: actions/upload-artifact@v4
@@ -85,7 +86,7 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: MyFit Tracker build ${{ github.run_number }}
-          body: "Automated build from ${{ github.sha }}"
+          body: ${{ toJSON(github.event.head_commit.message) }}
           files: |
             out/*.apk
             out/schemas.zip

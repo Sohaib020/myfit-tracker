@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MyFit Tracker — Download</title>
+<meta name="description" content="MyFit Tracker: private, offline-first fitness for Android with Pip, Arena challenges and more. Download the latest build.">
+<meta property="og:title" content="MyFit Tracker">
+<meta property="og:description" content="Train, track food, race friends in the Arena — with Pip.">
+<meta property="og:image" content="img/pip.webp">
+<link rel="icon" href="img/pip.webp">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header><img src="img/pip.webp" alt=""><b>MyFit Tracker</b></header>
+
+  <div class="hero">
+    <div>
+      <h1>Your private fitness buddy, <span>with friends to race.</span></h1>
+      <p class="lead">Workouts, food, sleep, water and mindfulness — all on your phone. Pip coaches you, and the Arena turns your steps into stars, levels and races with friends.</p>
+      <div class="cta">
+        <a class="btn primary" id="dl" href="https://github.com/Sohaib020/myfit-tracker/releases/latest/download/MyFitTracker.apk">⬇ Download for Android</a>
+        <a class="btn ghost" href="#install">How to install</a>
+      </div>
+      <p class="ver" id="ver">Always the latest build.</p>
+    </div>
+    <div>
+      <div class="stage"><img class="pip" src="img/pip_wave.webp" alt="Pip waving"></div>
+      <div class="cast">
+        <img src="img/zara.webp" alt="Zara the snow leopard"><img src="img/taj.webp" alt="Taj the markhor"><img src="img/kami.webp" alt="Kami the camel"><img src="img/shaheen.webp" alt="Shaheen the falcon"><img src="img/motu.webp" alt="Motu the panda">
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <h2>What's inside</h2>
+    <div class="grid">
+      <div class="card"><div class="emoji">🏆</div><h3>Arena</h3><p>Weekly &amp; monthly challenges set to your level, scenic tracks with checkpoints, stars, 30 levels and friendly duels.</p></div>
+      <div class="card"><div class="emoji">🍛</div><h3>Pakistani food</h3><p>560+ dishes with 3D icons — from nihari to chapshoro — plus snap-a-meal.</p></div>
+      <div class="card"><div class="emoji">🏋️</div><h3>Train</h3><p>Templates, a huge exercise library and gym mode with rest timers.</p></div>
+      <div class="card"><div class="emoji">🕌</div><h3>Shariah &amp; Health</h3><p>Prayer times, Qibla, fasting hub and dhikr — for those who opt in.</p></div>
+      <div class="card"><div class="emoji">🔒</div><h3>Private</h3><p>Your logs stay on your phone. Friends only see your name and weekly totals.</p></div>
+      <div class="card"><div class="emoji">🔄</div><h3>Self-updating</h3><p>The app finds new builds by itself and asks you to tap Install.</p></div>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2>Install in 3 steps</h2>
+    <div class="steps">
+      <div class="card"><div><h3>Download the APK</h3><p>Tap the green button on your Android phone. Your browser may say the file "can be harmful" — that's normal for apps outside the Play Store. Tap Download anyway.</p></div></div>
+      <div class="card"><div><h3>Allow installing</h3><p>Open the file. If Android asks, allow your browser to "Install unknown apps" (one time only).</p></div></div>
+      <div class="card"><div><h3>Open MyFit &amp; meet Pip</h3><p>Sign in, set your goals and you're in. Future updates arrive inside the app.</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>On a computer? Scan to get it on your phone</h2>
+    <div class="qrbox"><div id="qr"></div><p class="notes" id="notes"></p></div>
+  </section>
+
+  <footer>MyFit Tracker · Android 8.0+ · Pip and the Arena cast are original characters.</footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  try { new QRCode(document.getElementById('qr'), { text: location.origin + location.pathname, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M }); } catch (e) {}
+  fetch('https://api.github.com/repos/Sohaib020/myfit-tracker/releases/latest').then(r => r.json()).then(j => {
+    const build = (j.tag_name || '').replace('build-', '');
+    const a = (j.assets || []).find(x => x.name === 'MyFitTracker.apk') || (j.assets || []).find(x => x.name.endsWith('.apk'));
+    const mb = a ? ' · ' + Math.round(a.size / 1048576) + ' MB' : '';
+    const d = (j.published_at || '').slice(0, 10);
+    document.getElementById('ver').innerHTML = 'Latest: <b>build ' + build + '</b>' + mb + (d ? ' · ' + d : '');
+    const notes = (j.body || '').split('\n').filter(l => l && !/^(Co-Authored-By|Claude-Session)/.test(l)).slice(0, 6).join('\n');
+    if (notes) document.getElementById('notes').textContent = "What's new:\n" + notes;
+  }).catch(() => {});
+</script>
+</body>
+</html>

@@ -62,12 +62,15 @@ import kotlin.random.Random
 
 private val GOLD = Color(0xFFFFC83D)
 
+/** One-shot: which Arena tab to open next time (e.g. Friends after accepting an invite). */
+object ArenaLaunch { var tab: Int? = null }
+
 /** Arena: levels & stars, scenic challenge tracks with checkpoints, journeys, battles & leaderboards, games, rewards, friends. */
 @Composable
 fun ArenaScreen(container: AppContainer, bottomPad: Int) {
     val th = LocalFitTheme.current
     val ctx = LocalContext.current
-    var tab by remember { mutableIntStateOf(0) }
+    var tab by remember { mutableIntStateOf(ArenaLaunch.tab?.also { ArenaLaunch.tab = null } ?: 0) }
     val today = remember { Clock.today() }
     var ver by remember { mutableIntStateOf(0) }
     val days by produceState<List<Day>?>(null) { value = loadDays(container, today.minusDays(60), today) }
@@ -397,6 +400,7 @@ private fun DuelsPane(container: AppContainer, award: (String, Int, String) -> U
 }
 
 private fun castFor(uid: String) = Mascot.entries[(uid.hashCode() and 0x7fffffff) % Mascot.entries.size]
+private fun castOf(r: com.myfit.tracker.social.BoardRow) = Mascot.entries.firstOrNull { it.id == r.mascot } ?: castFor(r.uid)
 
 @Composable
 private fun RaceTrack(ch: com.myfit.tracker.social.Challenge, rows: List<com.myfit.tracker.social.ChallengeRow>) {
@@ -471,8 +475,9 @@ private fun Leaderboard(container: AppContainer, me: Level, partner: Mascot) {
                         val hgt = listOf(92.dp, 70.dp, 56.dp)[i]
                         val medal = listOf(GOLD, Color(0xFFC9D1DB), Color(0xFFD99A5B))[i]
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(96.dp)) {
-                            CastImage(if (row.me) partner else castFor(row.uid), if (i == 0) 78.dp else 64.dp)
+                            CastImage(if (row.me) partner else castOf(row), if (i == 0) 78.dp else 64.dp)
                             Text(if (row.me) "You" else row.name, style = FitType.label, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            (if (row.me) me.n else row.level)?.let { Caption("Lv $it") }
                             Caption(Fmt.int(row.value))
                             Spacer(Modifier.height(4.dp))
                             Box(Modifier.fillMaxWidth().height(hgt).clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)).background(Brush.verticalGradient(listOf(medal, medal.copy(alpha = 0.55f)))), contentAlignment = Alignment.TopCenter) {
@@ -485,9 +490,9 @@ private fun Leaderboard(container: AppContainer, me: Level, partner: Mascot) {
                 r.drop(3).forEachIndexed { k, row ->
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (row.me) th.accent.copy(alpha = 0.16f) else Color.Transparent).padding(horizontal = 6.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("${k + 4}", style = FitType.label, color = th.textDim, modifier = Modifier.width(24.dp))
-                        CastImage(if (row.me) partner else castFor(row.uid), 36.dp)
+                        CastImage(if (row.me) partner else castOf(row), 36.dp)
                         Spacer(Modifier.width(6.dp))
-                        Text(if (row.me) "You · Lv ${me.n}" else row.name, style = FitType.label, color = th.text, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(if (row.me) "You · Lv ${me.n}" else row.name + (row.level?.let { " · Lv $it" } ?: ""), style = FitType.label, color = th.text, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(Fmt.int(row.value), style = FitType.label, color = th.text)
                     }
                 }

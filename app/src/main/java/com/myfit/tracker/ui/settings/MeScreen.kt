@@ -267,6 +267,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
             }
         }
 
+        item { com.myfit.tracker.update.AppUpdatesSection() }
         item {
             GlassCard {
                 CardHeader(Duo.Lock, "Privacy", th.textDim)

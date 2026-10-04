@@ -34,7 +34,7 @@ enum class Metric(val key: String, val label: String, val unit: String) {
 }
 
 data class Profile(val uid: String, val name: String, val code: String, val isPublic: Boolean, val color: Long)
-data class BoardRow(val uid: String, val name: String, val color: Long, val value: Double, val me: Boolean)
+data class BoardRow(val uid: String, val name: String, val color: Long, val value: Double, val me: Boolean, val level: Int? = null, val mascot: String? = null)
 data class Challenge(
     val id: String, val title: String, val metric: Metric, val start: String, val end: String,
     val creator: String, val members: List<String>,
@@ -207,8 +207,8 @@ class Social(private val c: AppContainer) {
         val people = listOfNotNull(profile(me)) + friends()
         val col = db.collection("weekly").document(weekKey()).collection("entries")
         return people.map { p ->
-            val v = runCatching { col.document(p.uid).get().await().data?.let { rowValue(it, metric) } }.getOrNull() ?: 0.0
-            BoardRow(p.uid, p.name, p.color, v, p.uid == me)
+            val m = runCatching { col.document(p.uid).get().await().data }.getOrNull()
+            BoardRow(p.uid, p.name, p.color, m?.let { rowValue(it, metric) } ?: 0.0, p.uid == me, (m?.get("level") as? Number)?.toInt(), m?.get("mascot") as? String)
         }.sortedByDescending { it.value }
     }
 
@@ -217,7 +217,7 @@ class Social(private val c: AppContainer) {
         val me = auth.currentUser?.uid
         return db.collection("weeklyPublic").document(weekKey()).collection("entries")
             .orderBy(metric.key, Query.Direction.DESCENDING).limit(50).get().await().documents.map { d ->
-                BoardRow(d.id, d.getString("name") ?: "Athlete", d.getLong("color") ?: 0xFF4C8DFFL, rowValue(d.data ?: emptyMap(), metric), d.id == me)
+                BoardRow(d.id, d.getString("name") ?: "Athlete", d.getLong("color") ?: 0xFF4C8DFFL, rowValue(d.data ?: emptyMap(), metric), d.id == me, d.getLong("level")?.toInt(), d.getString("mascot"))
             }
     }
 
@@ -286,6 +286,11 @@ class Social(private val c: AppContainer) {
         db.collection("weekly").document(weekKey()).collection("entries").document(u.uid).set(entry).await()
         val pub = db.collection("weeklyPublic").document(weekKey()).collection("entries").document(u.uid)
         if (p.isPublic) pub.set(entry).await() else runCatching { pub.delete().await() }
+        // Arena level + partner (separate write: harmless if the server rules haven't been updated yet)
+        val arena = mapOf("level" to com.myfit.tracker.ui.arena.ArenaProgress.level(com.myfit.tracker.ui.arena.ArenaProgress.total(ctx)).n,
+            "mascot" to com.myfit.tracker.ui.arena.ArenaPrefs.partner(ctx).id)
+        runCatching { db.collection("weekly").document(weekKey()).collection("entries").document(u.uid).set(arena, com.google.firebase.firestore.SetOptions.merge()).await() }
+        if (p.isPublic) runCatching { pub.set(arena, com.google.firebase.firestore.SetOptions.merge()).await() }
         challenges.forEach { ch ->
             val r = sum(LocalDate.parse(ch.start), minOf(LocalDate.parse(ch.end), today))
             val v: Number = when (ch.metric) { Metric.STEPS -> r.sumOf { it.steps }; Metric.ACTIVE -> r.sumOf { it.activeMin }; Metric.DISTANCE -> Math.round(r.sumOf { it.distanceM }).toDouble() }
