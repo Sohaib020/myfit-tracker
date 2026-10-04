@@ -2,6 +2,7 @@ package com.myfit.tracker.ui.exercises
 
 import com.myfit.tracker.ui.theme.Duo
 
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -135,14 +136,13 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
     var notes by remember(e.id) { mutableStateOf(e.personalNotes) }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding()) {
-        Box {
-            ExerciseImage(e, Modifier.fillMaxWidth().height(300.dp), animate = true)
-            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp)) {
-                GlassIconButton(Duo.ArrowBack, { nav.pop() })
-                Spacer(Modifier.weight(1f))
-                GlassIconButton(Duo.Edit, { nav.push(Overlay.ExerciseEditor(e.id)) })
-            }
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp)) {
+            GlassIconButton(Duo.ArrowBack, { nav.pop() })
+            Spacer(Modifier.weight(1f))
+            GlassIconButton(Duo.Edit, { nav.push(Overlay.ExerciseEditor(e.id)) })
         }
+        // how-to loop (3D animation when available, otherwise the photos crossfading) — like a short looping video
+        ExerciseMedia(e, Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(1f))
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(e.name, style = FitType.display.copy(fontSize = FitType.title.fontSize * 1.35f), color = th.text)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -151,7 +151,13 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
                 if (e.level.isNotBlank()) GlassChip(e.level.replaceFirstChar { it.uppercase() }, false, {})
                 GlassChip(measurementLabel(e.measurementType), false, {})
             }
-            if (e.secondaryMuscles.isNotBlank()) Caption("Muscles worked: ${e.secondaryMuscles.replace(",", ", ")}")
+            val ctxM = androidx.compose.ui.platform.LocalContext.current
+            val (prim, sec) = remember(e.id) { MuscleData.of(ctxM, e) }
+            if (prim.isNotEmpty() || sec.isNotEmpty()) GlassCard {
+                Text("Muscles worked", style = FitType.section, color = th.text)
+                Spacer(Modifier.height(10.dp))
+                MuscleMap(prim, sec, Modifier.fillMaxWidth())
+            }
 
             // ---- your history
             GlassCard {

@@ -1,0 +1,2 @@
+MakeHuman base mesh, targets, skeleton and weights © Data Collection AB / MakeHuman team, released under CC0 1.0.
+https://github.com/makehumancommunity/makehuman

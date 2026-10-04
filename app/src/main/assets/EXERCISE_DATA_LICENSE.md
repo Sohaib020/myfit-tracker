@@ -22,3 +22,6 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <https://unlicense.org>
+
+## Anatomy art
+Muscle maps and 3D exercise loops are rendered by MyFit from MakeHuman assets (base mesh, targets, skeleton, weights) released under CC0 1.0 — https://github.com/makehumancommunity/makehuman
