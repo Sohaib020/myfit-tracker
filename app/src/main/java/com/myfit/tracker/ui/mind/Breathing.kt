@@ -286,7 +286,7 @@ internal fun SessionDone(what: String, sec: Long, saved: Boolean?, color: Color,
             Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("How do you feel now?", style = FitType.section, color = th.text)
                 Spacer(Modifier.height(10.dp))
-                AccentButton("Log my mood", { onClose(true) }, Modifier.fillMaxWidth(), icon = Duo.Mood, height = 48.dp)
+                AccentButton("Mood", { onClose(true) }, Modifier.fillMaxWidth(), icon = Duo.Mood, height = 48.dp)
             }
         }
         Spacer(Modifier.height(10.dp))
