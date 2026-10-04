@@ -4,6 +4,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -48,12 +52,15 @@ class ProgressCardShotTest {
 
     @Test fun progressCardAtWidths() {
         val problems = mutableListOf<String>()
-        for (w in listOf(320, 360, 412, 480)) for ((name, st) in cases) {
-            rule.setContent {
-                MyFitTheme(Themes.Kinetic, AppSettings()) {
-                    Box(Modifier.width(w.dp).padding(16.dp)) { RingsCard(st) {} }
-                }
+        var width by mutableIntStateOf(360)
+        var state by mutableStateOf(cases[0].second)
+        rule.setContent {   // once per test; the loop below swaps width/data via state
+            MyFitTheme(Themes.Kinetic, AppSettings()) {
+                Box(Modifier.width(width.dp).padding(16.dp)) { RingsCard(state) {} }
             }
+        }
+        for (w in listOf(320, 360, 412, 480)) for ((name, st) in cases) {
+            width = w; state = st
             rule.waitForIdle()
             rule.onRoot().captureRoboImage("build/shots/progress_${w}_$name.png")
             val root = rule.onRoot(useUnmergedTree = true).fetchSemanticsNode()
