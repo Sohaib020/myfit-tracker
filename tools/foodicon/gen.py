@@ -2,7 +2,7 @@
 usage: gen.py <shard> <nshards> <sd-binary> <models-dir>"""
 import json, os, subprocess, sys, time, zlib
 shard, nshards, sd, models = int(sys.argv[1]), int(sys.argv[2]), sys.argv[3], sys.argv[4]
-H = os.path.dirname(os.path.abspath(__file__))
+H = os.environ.get("ICON_DIR") or os.path.dirname(os.path.abspath(__file__))
 def load(n, default):
     p = os.path.join(H, n)
     return json.load(open(p)) if os.path.exists(p) else default
@@ -27,11 +27,11 @@ for n, i in enumerate(ids):
     prompt = STYLE["prefix"] + d + STYLE["suffix"]
     seed = seeds.get(i, zlib.crc32(i.encode()) % 100000)
     t = time.time()
-    size = str(STYLE.get("size", 512))
+    size = str(STYLE.get("size", 512)); wd = str(STYLE.get("w", size)); ht = str(STYLE.get("h", size))
     cmd = [sd, "--diffusion-model", f"{models}/flux.gguf", "--vae", f"{models}/ae.safetensors",
            "--clip_l", f"{models}/clip_l.safetensors", "--t5xxl", f"{models}/t5xxl.gguf",
            "-p", prompt, "--cfg-scale", "1.0", "--sampling-method", "euler", "--steps", str(STYLE.get("steps", 4)),
-           "-W", size, "-H", size, "--vae-tiling", "--seed", str(seed), "-t", str(max(1, (os.cpu_count() or 4) - 1)), "-o", f"raw/{i}.png"]
+           "-W", wd, "-H", ht, "--vae-tiling", "--seed", str(seed), "-t", str(max(1, (os.cpu_count() or 4) - 1)), "-o", f"raw/{i}.png"]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0 or not os.path.exists(f"raw/{i}.png"):
         print("FAIL", i, r.stdout[-2000:], r.stderr[-2000:], flush=True)

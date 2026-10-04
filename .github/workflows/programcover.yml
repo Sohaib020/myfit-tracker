@@ -1,0 +1,62 @@
+name: Program covers
+# FLUX.1-schnell covers for Train → Programs (prompts in tools/programcover). Push to branch programcover-run to start.
+# Results land on branch programcover-assets (programs/<id>.webp + sheet.jpg).
+on:
+  push:
+    branches: [ programcover-run ]
+  workflow_dispatch:
+permissions:
+  contents: write
+env:
+  NSH: 9
+  BUDGET_MIN: '200'
+  ICON_DIR: ${{ github.workspace }}/tools/programcover
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Build stable-diffusion.cpp (CPU, AVX2)
+        run: |
+          git clone --depth 1 --recursive https://github.com/leejet/stable-diffusion.cpp sdcpp
+          cd sdcpp
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON -DSD_BUILD_SHARED_LIBS=OFF -DBUILD_SHARED_LIBS=OFF
+          cmake --build build --config Release -j 4
+          mkdir -p ../sdbin; B=$(ls build/bin/sd-cli build/bin/sd 2>/dev/null | head -1); cp "$B" ../sdbin/sd
+      - uses: actions/upload-artifact@v4
+        with: { name: sdbin, path: sdbin/sd }
+  gen:
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: sdbin, path: sdbin }
+      - name: Free disk + swap
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo swapoff -a || true; sudo fallocate -l 12G /mnt/swapfile && sudo chmod 600 /mnt/swapfile && sudo mkswap /mnt/swapfile && sudo swapon /mnt/swapfile
+      - run: python3 tools/foodicon/fetch_models.py models
+      - run: chmod +x sdbin/sd && mkdir -p raw && python3 tools/foodicon/gen.py ${{ matrix.shard }} $NSH $PWD/sdbin/sd $PWD/models && ls raw | wc -l
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: 'raw-${{ matrix.shard }}', path: raw/, if-no-files-found: ignore }
+  pack:
+    needs: gen
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'raw-*', path: raw, merge-multiple: true }
+      - run: pip install pillow && python3 tools/programcover/post.py
+      - name: Save to branch programcover-assets
+        run: |
+          mkdir -p pub && cp -r out/programs pub/ && cp out/sheet.jpg pub/
+          cd pub && git init -q && git checkout -q -b programcover-assets && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "Program covers run ${{ github.run_number }}" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" programcover-assets
