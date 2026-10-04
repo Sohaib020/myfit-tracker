@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
+    id("io.github.takahirom.roborazzi")
 }
 
 // Online features (accounts, friends, leaderboards) need app/google-services.json, written by CI from a secret.
@@ -55,6 +56,8 @@ android {
         }
     }
 
+    // UI screenshot tests (Robolectric + Roborazzi): app/src/test, run by .github/workflows/ui-shots.yml
+    testOptions { unitTests { isIncludeAndroidResources = true } }
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -145,4 +148,10 @@ dependencies {
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.40.1")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.40.1")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

@@ -12,6 +12,11 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -100,6 +105,15 @@ import kotlin.math.roundToInt
 private class SetupState(units: UnitPrefs) {
     var name by mutableStateOf("")
     var age by mutableIntStateOf(28)
+    var dobDay by mutableIntStateOf(1)
+    var dobMonth by mutableIntStateOf(1)
+    var dobYear by mutableIntStateOf(java.time.LocalDate.now().year - 28)
+    var trainDays by mutableIntStateOf(4)
+    val dob: java.time.LocalDate get() {
+        val ym = java.time.YearMonth.of(dobYear, dobMonth)
+        return ym.atDay(dobDay.coerceAtMost(ym.lengthOfMonth()))
+    }
+    fun syncAge() { age = java.time.Period.between(dob, java.time.LocalDate.now()).years.coerceIn(13, 100) }
     var sex by mutableStateOf<String?>(null)
     var lengthUnit by mutableStateOf(if (units.length == LengthUnit.CM) LengthUnit.CM else LengthUnit.IN)
     var heightCm by mutableDoubleStateOf(175.0)
@@ -131,7 +145,7 @@ private class SetupState(units: UnitPrefs) {
     val targetKg get() = if (hasTarget) Units.toKg(targetDisplay, weightUnit) else null
 }
 
-private const val STEPS = 12
+private const val STEPS = 14
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -149,12 +163,13 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
 
     val canNext = when (step) {
         1 -> s.name.isNotBlank()
-        2 -> s.sex != null
-        3 -> s.diabetes != null && (s.diabetes == "none" || (s.treatment.isNotEmpty() && s.cgm != null &&
+        2 -> s.age in 13..100
+        3 -> s.sex != null
+        4 -> s.diabetes != null && (s.diabetes == "none" || (s.treatment.isNotEmpty() && s.cgm != null &&
             (s.low.toIntOrNull() ?: 0) in 50..120 && (s.high.toIntOrNull() ?: 0) in 120..300 && (s.low.toIntOrNull() ?: 0) < (s.high.toIntOrNull() ?: 0)))
-        4 -> s.muslim != null
-        8 -> s.goals.isNotEmpty()
-        11 -> listOf(s.waterL, s.steps, s.calories, s.protein, s.sleepH).all { it.toDoubleOrNull() != null && it.toDouble() > 0 }
+        5 -> s.muslim != null
+        9 -> s.goals.isNotEmpty()
+        13 -> listOf(s.waterL, s.steps, s.calories, s.protein, s.sleepH).all { it.toDoubleOrNull() != null && it.toDouble() > 0 }
         else -> true
     }
 
@@ -179,7 +194,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                 when (st) {
                     0 -> Welcome()
                     1 -> {
-                        Header("What should I call you?", "Your name and age personalise your targets.")
+                        Header("What should I call you?", "Pip will greet you by name.")
                         Glass(Modifier.fillMaxWidth().height(64.dp), shape = RoundedCornerShape(22.dp)) {
                             BasicTextField(
                                 s.name, { s.name = it.take(40) }, singleLine = true,
@@ -190,17 +205,42 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                                 decorationBox = { inner -> Box { if (s.name.isEmpty()) Text("Your name", style = FitType.title, color = th.textFaint); inner() } },
                             )
                         }
-                        Spacer(Modifier.height(24.dp))
-                        Text("Age", style = FitType.label, color = th.textDim)
-                        WheelPicker(count = 78, selected = s.age - 13, onSelected = { s.age = it + 13 }, label = { "${it + 13}" }, modifier = Modifier.fillMaxWidth())
                     }
                     2 -> {
+                        Header("When were you born?", "Scroll the wheels to set your date of birth. Used for your targets — never shown to friends.")
+                        val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+                        val nowY = java.time.LocalDate.now().year
+                        Row(Modifier.fillMaxWidth()) {
+                            listOf("DAY", "MONTH", "YEAR").forEach { Text(it, style = FitType.overline, color = th.textDim, textAlign = TextAlign.Center, modifier = Modifier.weight(1f)) }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Row(Modifier.fillMaxWidth()) {
+                            WheelPicker(31, s.dobDay - 1, { s.dobDay = it + 1; s.syncAge() }, { "${it + 1}" }, Modifier.weight(1f))
+                            WheelPicker(12, s.dobMonth - 1, { s.dobMonth = it + 1; s.syncAge() }, { months[it] }, Modifier.weight(1f))
+                            WheelPicker(88, (s.dobYear - (nowY - 100)).coerceIn(0, 87), { s.dobYear = nowY - 100 + it; s.syncAge() }, { "${nowY - 100 + it}" }, Modifier.weight(1f))
+                        }
+                        Spacer(Modifier.height(22.dp))
+                        LaunchedEffect(Unit) { s.syncAge() }
+                        Glass(shape = RoundedCornerShape(50)) {
+                            Row(Modifier.padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(18.dp).clip(androidx.compose.foundation.shape.CircleShape).background(th.success), contentAlignment = Alignment.Center) { Text("✓", color = Color.White, style = FitType.caption) }
+                                Spacer(Modifier.width(8.dp))
+                                Text("You're ", style = FitType.section, color = th.text)
+                                AnimatedContent(s.age, transitionSpec = {
+                                    val up = targetState > initialState
+                                    (slideInVertically(spring(0.7f, 400f)) { if (up) it else -it } + fadeIn()).togetherWith(slideOutVertically(tween(150)) { if (up) -it else it } + fadeOut(tween(120)))
+                                }, label = "age") { a -> Text("$a", style = FitType.section, color = th.accentBright) }
+                                Text(" years old", style = FitType.section, color = th.text)
+                            }
+                        }
+                    }
+                    3 -> {
                         Header("What's your sex?", "Used for energy estimates and body-composition context.")
                         SexCard("Male", Duo.Male, s.sex == Sex.MALE) { s.sex = Sex.MALE }
                         Spacer(Modifier.height(16.dp))
                         SexCard("Female", Duo.Female, s.sex == Sex.FEMALE) { s.sex = Sex.FEMALE }
                     }
-                    3 -> {
+                    4 -> {
                         Header("Do you have diabetes?", "Only people who manage diabetes see the blood-sugar tools. You can change this any time in Me.")
                         val opts = buildList {
                             add("none" to "No"); add("type1" to "Type 1"); add("type2" to "Type 2"); add("prediabetes" to "Prediabetes")
@@ -231,11 +271,11 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                             Caption("Most adults use 70–180 (ADA). Ask your doctor for your own range. MyFit records readings only — it never calculates doses.")
                         }
                     }
-                    4 -> {
+                    5 -> {
                         Header("Are you Muslim?", "If yes, you'll get Shariah & Health: prayer times, Qibla, fasting hub, dhikr and halal checks. Asked only to show the right features.")
                         listOf("yes" to "Yes", "no" to "No", "skip" to "Prefer not to say").forEach { (k, v) -> OptionRow(v, s.muslim == k) { s.muslim = k }; Spacer(Modifier.height(8.dp)) }
                     }
-                    5 -> {
+                    6 -> {
                         Header("What's your height?", "Used for better progress tracking.")
                         if (s.lengthUnit == LengthUnit.CM) {
                             WheelPicker(101, (s.heightCm.roundToInt() - 120).coerceIn(0, 100), { s.heightCm = (it + 120).toDouble() }, { "${it + 120} cm" }, Modifier.fillMaxWidth())
@@ -246,13 +286,13 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         Spacer(Modifier.height(16.dp))
                         GlassSegmented(listOf(LengthUnit.CM, LengthUnit.IN), s.lengthUnit, { it.label }, { s.lengthUnit = it }, Modifier.width(180.dp))
                     }
-                    6 -> {
+                    7 -> {
                         Header("What's your current weight?", "This becomes your first weigh-in. You can log more any time.")
                         WeightPicker(s.weightDisplay, s.weightUnit, { s.weightDisplay = it }) { u ->
                             s.weightDisplay = round1(Units.kgTo(s.weightKg, u)); s.targetDisplay = round1(Units.kgTo(Units.toKg(s.targetDisplay, s.weightUnit), u)); s.weightUnit = u
                         }
                     }
-                    7 -> {
+                    8 -> {
                         Header("Target weight", "Optional. Used only to show distance to goal — never to judge a single weigh-in.")
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             GlassChip("Set a target", s.hasTarget, { s.hasTarget = true })
@@ -265,7 +305,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                             Caption("${Fmt.signed(diff)} ${s.weightUnit.label} from today's weight")
                         }
                     }
-                    8 -> {
+                    9 -> {
                         Header("Your fitness goal", "Choose what best matches your training journey.")
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             FitnessGoal.all.forEach { g ->
@@ -273,7 +313,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                             }
                         }
                     }
-                    9 -> {
+                    10 -> {
                         Header("Activity & experience", "Outside the gym, how active is a normal day?")
                         listOf(
                             ActivityLevel.SEDENTARY to "Mostly sitting", ActivityLevel.LIGHT to "Light — some walking",
@@ -289,7 +329,26 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                             }
                         }
                     }
-                    10 -> {
+                    11 -> {
+                        Header("How many days can you train each week?", "Pick a number you can realistically hit. Consistency beats ambition.")
+                        listOf(2 to "Light, recovery-focused.", 3 to "Balanced full body or upper/lower.", 4 to "Upper/lower or push/pull split.", 5 to "Targeted muscle splits.", 6 to "Athlete-level high volume.").forEach { (n, d) ->
+                            Glass(Modifier.fillMaxWidth().padding(vertical = 5.dp), shape = RoundedCornerShape(20.dp), onClick = {
+                                s.trainDays = n
+                                // pre-fill the week with a sensible spread (editable on the next page)
+                                s.workoutDays = when (n) { 2 -> 0b0001001; 3 -> 0b0010101; 4 -> 0b0011011; 5 -> 0b0011111; else -> 0b0111111 }
+                            }) {
+                                Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text("$n days / week", style = FitType.section, color = th.text)
+                                        Caption(d)
+                                    }
+                                    if (s.trainDays == n) Box(Modifier.size(22.dp).clip(androidx.compose.foundation.shape.CircleShape).background(th.accent), contentAlignment = Alignment.Center) { Text("✓", color = th.onAccent, style = FitType.caption) }
+                                }
+                                if (s.trainDays == n) Box(Modifier.matchParentSize().border(1.5.dp, th.accent, RoundedCornerShape(20.dp)))
+                            }
+                        }
+                    }
+                    12 -> {
                         Header("Your week", "Planned workout days and your daily rhythm. Reminders respect your sleep hours.")
                         val days = listOf("M", "T", "W", "T", "F", "S", "S")
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -303,7 +362,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         TimeRow("Wake-up time") { MinuteOfDayChip(s.wake) { s.wake = it } }
                         TimeRow("Sleep time") { MinuteOfDayChip(s.sleep) { s.sleep = it } }
                     }
-                    11 -> {
+                    13 -> {
                         Header("Daily targets", "Set them yourself, or let me suggest a starting point you can edit.")
                         GlassButton("Suggest from my profile", {
                             val male = s.sex == Sex.MALE
@@ -333,7 +392,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         TargetField("Protein", s.protein, "g", decimal = false) { s.protein = it }
                         TargetField("Sleep", s.sleepH, "hours") { s.sleepH = it }
                     }
-                    12 -> {
+                    14 -> {
                         Spacer(Modifier.height(40.dp))
                         Pip(PipMood.EXCITED, size = 150.dp)
                         Spacer(Modifier.height(16.dp))

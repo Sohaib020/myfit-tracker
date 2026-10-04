@@ -187,15 +187,23 @@ private fun QuickAddContent(container: AppContainer, open: (Sheet?) -> Unit) {
     // one-tap water
     Text("Water — one tap", style = FitType.label, color = th.textDim)
     Gap(8)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    // four equal buttons that always fill the row (no chip spilling off the edge)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(250.0, 500.0, 750.0, 1000.0).forEach { ml ->
-            GlassChip(Fmt.volume(ml, if (units.volume == VolumeUnit.L && ml < 1000) VolumeUnit.ML else units.volume), false, {
+            val label = if (units.volume == VolumeUnit.L || ml >= 1000) Fmt.volume(ml, if (ml < 1000) VolumeUnit.ML else units.volume) else Fmt.volume(ml, units.volume)
+            Glass(Modifier.weight(1f).height(44.dp), shape = RoundedCornerShape(22.dp), onClick = {
                 container.write {
                     val id = container.logRepo.addWater(ml)
                     toaster.show("Added ${Fmt.volume(ml, units.volume)} of water", "Undo") { container.write { container.logRepo.deleteWater(id) } }
                 }
                 open(null)
-            }, icon = Duo.WaterDrop)
+            }, pressScale = 0.93f) {
+                Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Icon(Duo.WaterDrop, null, tint = th.water, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(label, style = FitType.label, color = th.text, maxLines = 1, softWrap = false)
+                }
+            }
         }
     }
     Gap(20)
@@ -208,19 +216,24 @@ private fun QuickAddContent(container: AppContainer, open: (Sheet?) -> Unit) {
         QuickItem("Check-in", Duo.Mood, th.warning, Sheet.CheckIn()),
         QuickItem("Note", Duo.EditNote, th.textDim, Sheet.Note()),
     )
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp), maxItemsInEachRow = 4) {
-        items.forEach { q ->
-            Glass(Modifier.width(76.dp).height(92.dp), shape = RoundedCornerShape(24.dp), onClick = { open(q.sheet) }, pressScale = 0.9f) {
-                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    IconBubble(q.icon, q.color, 40.dp)
-                    Spacer(Modifier.height(8.dp))
-                    Text(q.label, style = FitType.caption, color = th.text)
+    // 4-column grid that stretches to the sheet width (empty cells keep the columns aligned)
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        items.chunked(4).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { q ->
+                    Glass(Modifier.weight(1f).height(92.dp), shape = RoundedCornerShape(24.dp), onClick = { open(q.sheet) }, pressScale = 0.9f) {
+                        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                            IconBubble(q.icon, q.color, 40.dp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(q.label, style = FitType.caption, color = th.text, maxLines = 1)
+                        }
+                    }
                 }
+                repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
     Gap()
-    Caption("Supplements and progress photos arrive in the next builds.")
 }
 
 // ------------------------------------------------------------------ Weight

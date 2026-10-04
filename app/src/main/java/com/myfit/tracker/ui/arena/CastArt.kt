@@ -37,8 +37,9 @@ private object PortraitCache {
 fun CastImage(m: Mascot, size: Dp, modifier: Modifier = Modifier, dim: Boolean = false) {
     val ctx = LocalContext.current
     val path = portraitPath(m)
+    // keyed on the path: switching character swaps the image immediately (cached ones need no reload)
     val bmp by produceState(PortraitCache.lru.get(path), path) {
-        if (value == null) value = withContext(Dispatchers.IO) {
+        value = PortraitCache.lru.get(path) ?: withContext(Dispatchers.IO) {
             runCatching { ctx.assets.open(path).use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
         }?.also { PortraitCache.lru.put(path, it) }
     }

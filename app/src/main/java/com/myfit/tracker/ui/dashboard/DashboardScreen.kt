@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -618,18 +620,18 @@ private fun TripleRings(s: DashState, outer: Dp) {
 }
 
 @Composable
-private fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
+internal fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
     val th = LocalFitTheme.current
     val units = LocalSettings.current.units
     GlassCard {
         Text("TODAY'S PROGRESS", style = FitType.overline, color = th.textDim)
         Spacer(Modifier.height(14.dp))
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            // rings take ~40% of the card so the legend always has room (checked down to 360dp screens)
-            val ring = (maxWidth * 0.42f).coerceIn(104.dp, 144.dp)
+            // fixed split: rings get 38% (capped), stats get the rest with a clear 18dp gutter — nothing overlaps
+            val ring = (maxWidth * 0.38f).coerceIn(92.dp, 132.dp)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                TripleRings(s, ring)
-                Spacer(Modifier.width(16.dp))
+                Box(Modifier.size(ring).testTag("rings"), contentAlignment = Alignment.Center) { TripleRings(s, ring) }
+                Spacer(Modifier.width(18.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     RingLegend(th.water, "Water", s.waterMl?.let { Fmt.volume(it, units.volume) } ?: "—",
                         s.waterTarget?.let { "of ${Fmt.volume(it, units.volume)}" }, { open(Sheet.Water()) }, frac(s.waterMl, s.waterTarget))
@@ -645,19 +647,31 @@ private fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
     }
 }
 
-/** Legend row: dot + label + %, then a big value that shrinks to fit (never clips), target underneath. */
+/**
+ * One stat: dot + LABEL with % on the right, a big value that shrinks to fit, then a slim bar with the target.
+ * No clipping on this column (rounded clips used to shave the first letters).
+ */
 @Composable
-private fun RingLegend(color: Color, label: String, value: String, of: String?, onClick: () -> Unit, pct: Float? = null) {
+internal fun RingLegend(color: Color, label: String, value: String, of: String?, onClick: () -> Unit, pct: Float? = null) {
     val th = LocalFitTheme.current
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickableNoRipple(onClick)) {
+    Column(Modifier.fillMaxWidth().clickableNoRipple(onClick)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(9.dp).clip(CircleShape)) { Canvas(Modifier.fillMaxSize()) { drawCircle(color) } }
-            Spacer(Modifier.width(7.dp))
-            Text(label.uppercase(), style = FitType.overline, color = th.textDim, modifier = Modifier.weight(1f), maxLines = 1)
-            if (pct != null) Text("${(pct * 100).toInt().coerceAtMost(999)}%", style = FitType.label, color = color, maxLines = 1)
+            Box(Modifier.size(8.dp).background(color, CircleShape))
+            Spacer(Modifier.width(6.dp))
+            Text(label.uppercase(), style = FitType.overline, color = th.textDim, maxLines = 1, modifier = Modifier.weight(1f))
+            if (pct != null) Text("${(pct * 100).toInt().coerceAtMost(999)}%", style = FitType.label, color = color, maxLines = 1, softWrap = false)
         }
-        ShrinkText(value, FitType.metric, th.text)
-        if (of != null) Text(of, style = FitType.caption, color = th.textDim, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Spacer(Modifier.height(2.dp))
+        ShrinkText(value, FitType.metric.copy(fontSize = 26.sp, lineHeight = 28.sp), th.text)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f).height(5.dp).background(th.textFaint.copy(alpha = 0.18f), CircleShape)) {
+                if (pct != null && pct > 0f) Box(Modifier.fillMaxHeight().fillMaxWidth(pct.coerceIn(0.03f, 1f)).background(color, CircleShape))
+            }
+            if (of != null) {
+                Spacer(Modifier.width(8.dp))
+                Text(of, style = FitType.caption, color = th.textDim, maxLines = 1, softWrap = false)
+            }
+        }
     }
 }
 
