@@ -60,6 +60,10 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         com.myfit.tracker.social.Invite.handle(intent)
     }
+    override fun onStop() {
+        super.onStop()
+        if (!isChangingConfigurations) com.myfit.tracker.update.AppUpdater.installIfReady(this)
+    }
 }
 
 @androidx.compose.runtime.Composable
@@ -78,4 +82,5 @@ private fun CrashScreen(text: String, onSafe: () -> Unit, onNormal: () -> Unit) 
         Text(text, color = Color(0xFFE0E0E0), fontFamily = FontFamily.Monospace, fontSize = 11.sp,
             modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()))
     }
+
 }

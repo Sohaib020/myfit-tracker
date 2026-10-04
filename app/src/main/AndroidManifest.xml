@@ -126,6 +126,10 @@
             </intent-filter>
         </activity-alias>
         <!-- Reminder alarms + re-arming after reboot / clock change -->
+        <receiver android:name=".update.InstallResultReceiver" android:exported="false" />
+        <receiver android:name=".update.UpdatedReceiver" android:exported="false">
+            <intent-filter><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /></intent-filter>
+        </receiver>
         <receiver
             android:name=".reminders.ReminderReceiver"
             android:exported="true">

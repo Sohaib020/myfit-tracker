@@ -72,6 +72,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.myfit.tracker.ui.theme.Glass
 import com.myfit.tracker.ui.theme.LocalFitTheme
@@ -311,7 +313,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(top = 10.dp, start = 16.dp),
                 enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
             ) {
-                Box(Modifier.tourTarget("me")) { MePill(dash.profile?.name ?: "", com.myfit.tracker.ui.social.rememberAccountPhoto(container)) { nav.push(Overlay.Me) } }
+                Box(Modifier.tourTarget("me")) { MePill(dash.profile?.name ?: "", com.myfit.tracker.ui.social.rememberAccountPhoto(container), com.myfit.tracker.update.rememberUpdateProgress()) { nav.push(Overlay.Me) } }
             }
 
             // full-screen overlays (Gym Mode, details, editors) — each sits on its own copy of the backdrop
@@ -393,7 +395,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             LaunchedEffect(Unit) { com.myfit.tracker.domain.BadgeEngine.refresh(container, force = true) }
             // self-update from GitHub releases (checks on launch; downloads on Wi-Fi; user taps Install)
             LaunchedEffect(Unit) { runCatching { com.myfit.tracker.update.AppUpdater.autoRun(container.app) } }
-            if (top == null) com.myfit.tracker.update.UpdateBanner(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 70.dp, start = 12.dp, end = 12.dp))
+            if (top == null) com.myfit.tracker.update.UpdateIsland(androidx.compose.foundation.layout.WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
             // friend invite links (myfit://invite?c=CODE): add the friend once signed in, then show Arena → Friends
             val inviteToaster = LocalToaster.current
             val inviteCode by com.myfit.tracker.social.Invite.pending.collectAsState()
@@ -459,7 +461,7 @@ private fun QuickAddOrb(onClick: () -> Unit) {
 
 /** Top-left "Me" button: your initial in an accent circle + label, on a glass capsule. */
 @Composable
-private fun MePill(name: String, photo: androidx.compose.ui.graphics.ImageBitmap?, onClick: () -> Unit) {
+private fun MePill(name: String, photo: androidx.compose.ui.graphics.ImageBitmap?, update: Float? = null, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     val tick = com.myfit.tracker.ui.theme.rememberTick()
     com.myfit.tracker.ui.theme.Glass(
@@ -480,6 +482,18 @@ private fun MePill(name: String, photo: androidx.compose.ui.graphics.ImageBitmap
             }
             androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
             androidx.compose.material3.Text("Me", style = com.myfit.tracker.ui.theme.FitType.section, color = th.text)
+            // an update tucked into the pill: progress ring + arrow (green check ring when ready)
+            androidx.compose.animation.AnimatedVisibility(update != null, enter = androidx.compose.animation.expandHorizontally() + fadeIn(), exit = androidx.compose.animation.shrinkHorizontally() + fadeOut()) {
+                val u = update ?: 1f
+                val anim by androidx.compose.animation.core.animateFloatAsState(u, label = "upd")
+                Box(Modifier.padding(start = 10.dp).size(26.dp), contentAlignment = Alignment.Center) {
+                    androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                        drawCircle(th.text.copy(alpha = 0.15f), style = androidx.compose.ui.graphics.drawscope.Stroke(2.5.dp.toPx()))
+                        drawArc(Color(0xFF3DDC84), -90f, 360f * anim, false, style = androidx.compose.ui.graphics.drawscope.Stroke(2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                    }
+                    Icon(if (u >= 1f) Duo.Check else Duo.ArrowDownward, "Update", tint = th.text, modifier = Modifier.size(13.dp))
+                }
+            }
         }
     }
 }

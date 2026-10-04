@@ -125,8 +125,22 @@ object AppUpdater {
         c.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${c.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
-    /** Hands the downloaded APK to Android's installer (shows the system "Update" confirmation). */
+    fun autoInstall(c: Context) = prefs(c).getBoolean("autoInstall", true)
+    fun setAutoInstall(c: Context, on: Boolean) = prefs(c).edit().putBoolean("autoInstall", on).apply()
+
+    /** Installs a downloaded update: session install (silent after the first time on Android 12+), else the classic installer screen. */
     fun install(c: Context, f: File) {
+        if (canInstall(c) && runCatching { SelfInstaller.install(c.applicationContext, f) }.isSuccess) return
+        installLegacy(c, f)
+    }
+
+    /** Called when the app goes to the background: a ready update installs then, so it never interrupts you. */
+    fun installIfReady(c: Context) {
+        val s = state.value
+        if (s is State.Ready && autoInstall(c) && canInstall(c) && s.file.exists()) runCatching { SelfInstaller.install(c.applicationContext, s.file) }
+    }
+
+    private fun installLegacy(c: Context, f: File) {
         val uri = FileProvider.getUriForFile(c, "${c.packageName}.files", f)
         c.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
