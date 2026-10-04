@@ -2,53 +2,57 @@ package com.myfit.tracker.ui.pip
 
 import android.content.Context
 import android.graphics.ImageDecoder
-import android.os.Build
 import androidx.annotation.RequiresApi
 import com.myfit.tracker.ui.arena.Mascot
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.io.File
 import java.io.InputStream
-import java.net.HttpURLConnection
-import java.net.URL
-import java.util.zip.ZipInputStream
 
 /**
- * Home buddy: Pip by default, or any unlocked Arena character. Pip's art ships in the APK; other characters'
- * full animation packs (~10 MB each) are downloaded on demand from the "charpacks" release and unzipped to
- * app storage. Everything that draws the buddy goes through [open]/[source] so it doesn't care which one it is.
+ * Home buddy: Pip by default, or any unlocked Arena character. Every character ships in the APK:
+ * Pip has his full set (assets/pip), the others a sharp "lite" pack (assets/buddy/<id>: 9 key moves, talk
+ * frames, portrait — no head-follow grid). Moves a character doesn't have play their closest kept move.
+ * Everything that draws the buddy goes through [open]/[source] so it doesn't care which one it is.
  */
 object Buddy {
-    private const val BASE = "https://github.com/Sohaib020/myfit-tracker/releases/download/charpacks/"
-
-    /** The buddy currently shown (falls back to Pip if its pack isn't installed). */
+    /** The buddy currently shown. */
     val active = MutableStateFlow(Mascot.PIP)
-    /** Download progress per character id (0..1), or -1 on failure. */
-    val progress = MutableStateFlow<Map<String, Float>>(emptyMap())
     @Volatile var lookN = 13; private set
-    @Volatile private var dir: File? = null
+    /** Only Pip has the look-at-your-finger head grid. */
+    val hasLook: Boolean get() = active.value == Mascot.PIP
+
+    /** Moves in every lite pack. */
+    val LITE = setOf("idle", "wave", "celebrate", "thinking", "love", "sleepy", "letsgo", "train")
+    private val FALLBACK = mapOf(
+        "excited" to "celebrate", "dance" to "celebrate", "spin" to "celebrate", "cheer" to "celebrate", "clap" to "celebrate",
+        "highfive" to "celebrate", "laugh" to "celebrate", "jumpingjacks" to "train", "squat" to "train", "stretch" to "train",
+        "jog" to "train", "flex" to "letsgo", "salute" to "letsgo", "thumbsup" to "letsgo", "yes" to "letsgo", "point" to "letsgo",
+        "hydrate" to "letsgo", "fuel" to "letsgo", "hearteyes" to "love", "blowkiss" to "love", "shy" to "love", "wink" to "love",
+        "curious" to "thinking", "shrug" to "thinking", "surprised" to "thinking", "facepalm" to "thinking", "concerned" to "thinking",
+        "sad" to "thinking", "grumpy" to "thinking", "pout" to "thinking", "dizzy" to "thinking", "no" to "thinking",
+        "yawn" to "sleepy", "meditate" to "sleepy", "sneeze" to "sleepy", "bow" to "wave", "peekaboo" to "wave",
+    )
 
     private fun prefs(c: Context) = c.applicationContext.getSharedPreferences("buddy", Context.MODE_PRIVATE)
-    private fun root(c: Context) = File(c.applicationContext.filesDir, "buddy")
-    fun packDir(c: Context, m: Mascot) = File(root(c), m.id)
-    fun installed(c: Context, m: Mascot) = m == Mascot.PIP || File(packDir(c, m), "pack.json").exists()
+    /** All characters are bundled — nothing to download. */
+    @Suppress("UNUSED_PARAMETER") fun installed(c: Context, m: Mascot) = true
     val name: String get() = active.value.label.substringBefore(' ')
 
-    /** Call once at start-up (and after changes). */
-    fun init(c: Context) {
-        val id = prefs(c).getString("buddy", "pip")
-        val m = Mascot.entries.firstOrNull { it.id == id } ?: Mascot.PIP
-        apply(c, if (installed(c, m)) m else Mascot.PIP)
+    /** How the AI should introduce itself. */
+    fun persona(): String = active.value.let { m ->
+        if (m == Mascot.PIP) "You are Pip, the cheerful little buddy inside \"MyFit Tracker\", a private fitness logbook app. You look like a soft mint plush with a navy striped sweatband, a curly antenna and little sneakers."
+        else "You are ${m.label.substringBefore(' ')} (${m.label}), the user's chosen buddy inside \"MyFit Tracker\", a private fitness logbook app — a friendly 3D plush character from Pakistan's wildlife. Your motto: \"${m.tagline}\". Always call yourself ${m.label.substringBefore(' ')}, never Pip."
     }
 
-    private fun apply(c: Context, m: Mascot) {
-        if (m == Mascot.PIP) { dir = null; lookN = 13 }
-        else {
-            val d = packDir(c, m); dir = d
-            lookN = runCatching { JSONObject(File(d, "pack.json").readText()).optInt("lookN", 7) }.getOrDefault(7)
-        }
+    /** Call once at start-up. */
+    fun init(c: Context) {
+        // packs used to be downloaded (~15 MB each); they're bundled now, so free that space once
+        java.io.File(c.applicationContext.filesDir, "buddy").takeIf { it.exists() }?.let { d -> Thread { d.deleteRecursively() }.start() }
+        val id = prefs(c).getString("buddy", "pip")
+        apply(Mascot.entries.firstOrNull { it.id == id } ?: Mascot.PIP)
+    }
+
+    private fun apply(m: Mascot) {
+        lookN = if (m == Mascot.PIP) 13 else 1
         active.value = m
         onChange.forEach { it() }
     }
@@ -57,56 +61,25 @@ object Buddy {
 
     fun choose(c: Context, m: Mascot) {
         prefs(c).edit().putString("buddy", m.id).apply()
-        if (installed(c, m)) apply(c, m)
+        apply(m)
     }
 
-    /** Opens a buddy file by its Pip-relative path ("idle.webp", "talk/0.webp", "look/look_03_03.webp"). */
-    fun open(c: Context, rel: String): InputStream = dir?.let { File(it, rel).inputStream() } ?: c.assets.open("pip/$rel")
+    /** Asset path for a Pip-relative file ("idle.webp", "talk/0.webp", "look/look_06_06.webp") of the active buddy. */
+    fun path(rel: String, m: Mascot = active.value): String {
+        if (m == Mascot.PIP) return "pip/$rel"
+        val base = "buddy/${m.id}/"
+        return when {
+            rel.startsWith("talk/") -> base + rel
+            rel.startsWith("look/") -> base + "portrait.webp"
+            else -> {
+                val clip = rel.removeSuffix(".webp")
+                base + (if (clip in LITE) clip else FALLBACK[clip] ?: "idle") + ".webp"
+            }
+        }
+    }
+
+    fun open(c: Context, rel: String): InputStream = c.assets.open(path(rel))
 
     @RequiresApi(28)
-    fun source(c: Context, rel: String): ImageDecoder.Source = dir?.let { ImageDecoder.createSource(File(it, rel)) } ?: ImageDecoder.createSource(c.assets, "pip/$rel")
-
-    /** Downloads + unzips a character's pack, then makes it the buddy. Returns true on success. */
-    suspend fun download(c: Context, m: Mascot): Boolean = withContext(Dispatchers.IO) {
-        if (installed(c, m)) { withContext(Dispatchers.Main) { choose(c, m) }; return@withContext true }
-        fun set(v: Float) { progress.value = progress.value + (m.id to v) }
-        val tmp = File(root(c), m.id + ".part").apply { parentFile?.mkdirs(); deleteRecursively() }
-        val ok = runCatching {
-            var conn = URL(BASE + m.id + ".zip").openConnection() as HttpURLConnection
-            conn.connectTimeout = 20_000; conn.readTimeout = 30_000; conn.instanceFollowRedirects = true
-            var hops = 0
-            while (conn.responseCode in 300..399 && hops++ < 5) { conn = URL(conn.getHeaderField("Location")).openConnection() as HttpURLConnection }
-            if (conn.responseCode != 200) error("HTTP ${conn.responseCode}")
-            val total = conn.contentLengthLong.coerceAtLeast(1)
-            var read = 0L
-            set(0f)
-            ZipInputStream(object : java.io.FilterInputStream(conn.inputStream) {
-                override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also { if (it > 0) { read += it; set((read.toFloat() / total).coerceAtMost(0.99f)) } }
-            }).use { z ->
-                var e = z.nextEntry
-                while (e != null) {
-                    val f = File(tmp, e.name)
-                    require(f.canonicalPath.startsWith(tmp.canonicalPath)) { "bad entry" }
-                    if (e.isDirectory) f.mkdirs() else { f.parentFile?.mkdirs(); f.outputStream().use { z.copyTo(it) } }
-                    e = z.nextEntry
-                }
-            }
-            require(File(tmp, "pack.json").exists())
-            val dst = packDir(c, m); dst.deleteRecursively(); tmp.renameTo(dst)
-        }.isSuccess
-        if (!ok) tmp.deleteRecursively()
-        set(if (ok) 1f else -1f)
-        if (ok) withContext(Dispatchers.Main) { choose(c, m) }
-        ok
-    }
-
-    fun remove(c: Context, m: Mascot) {
-        if (m == Mascot.PIP) return
-        if (active.value == m) choose(c, Mascot.PIP).also { apply(c, Mascot.PIP) }
-        packDir(c, m).deleteRecursively()
-    }
-
-    fun sizeOnDisk(c: Context, m: Mascot): Long = packDir(c, m).walkTopDown().filter { it.isFile }.sumOf { it.length() }
-
-    @Suppress("unused") private val sdk = Build.VERSION.SDK_INT
+    fun source(c: Context, rel: String): ImageDecoder.Source = ImageDecoder.createSource(c.assets, path(rel))
 }

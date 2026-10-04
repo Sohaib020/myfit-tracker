@@ -25,11 +25,18 @@ import kotlinx.coroutines.withContext
 /** Clips each cast member has (Pip reuses his own animation set). */
 enum class CastClip(val file: String, val pip: String) { CHEER("cheer", "cheer"), RUN("run", "jog"), SAD("sad", "sad"), WAVE("wave", "wave") }
 
-private fun portraitPath(m: Mascot) = if (m == Mascot.PIP) "pip/look/look_06_06.webp" else "arena/${m.id}.webp"
-private fun clipPath(m: Mascot, c: CastClip) = if (m == Mascot.PIP) "pip/${c.pip}.webp" else "arena/${m.id}_${c.file}.webp"
+private fun portraitPath(m: Mascot) = if (m == Mascot.PIP) "pip/look/look_06_06.webp" else "buddy/${m.id}/portrait.webp"
+// the sharp 448 px buddy packs cover cheer and wave; the small running loop stays in assets/arena
+private fun clipPath(m: Mascot, c: CastClip) = when {
+    m == Mascot.PIP -> "pip/${c.pip}.webp"
+    c == CastClip.CHEER -> "buddy/${m.id}/celebrate.webp"
+    c == CastClip.WAVE -> "buddy/${m.id}/wave.webp"
+    c == CastClip.SAD -> "buddy/${m.id}/thinking.webp"
+    else -> "arena/${m.id}_${c.file}.webp"
+}
 
 private object PortraitCache {
-    val lru = android.util.LruCache<String, ImageBitmap>(8 * 1024 * 1024).apply { }
+    val lru = android.util.LruCache<String, ImageBitmap>(24)
 }
 
 /** Still 3D portrait of a cast member (falls back to the drawn face if the art isn't bundled). */

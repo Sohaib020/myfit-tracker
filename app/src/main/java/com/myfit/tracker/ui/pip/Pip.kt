@@ -327,6 +327,7 @@ private fun PipBody(
     }
     LaunchedEffect(pointer != null) {
         if (pointer == null && !lookOn) return@LaunchedEffect
+        if (!Buddy.hasLook) return@LaunchedEffect          // head-follow is Pip's alone; other buddies keep playing their move
         LookFrames.setSample(boxPx.width)
         val sp = lookSpring
         if (!lookOn) { sp.r = LookFrames.MID; sp.c = LookFrames.MID; sp.vr = 0f; sp.vc = 0f; lookR = sp.r; lookC = sp.c }

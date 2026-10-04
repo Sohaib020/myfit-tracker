@@ -24,29 +24,23 @@ import com.myfit.tracker.ui.components.clickableNoRipple
 import com.myfit.tracker.ui.theme.FitType
 import com.myfit.tracker.ui.theme.LocalFitTheme
 import com.myfit.tracker.ui.theme.rememberTick
-import kotlinx.coroutines.launch
 
-/** Pick who lives on your Home screen and chats with you. Unlocked characters download their full pack (~10 MB) once. */
+/** Pick who lives on your Home screen and chats with you. Every character is built in — no downloads. */
 @Composable
 fun BuddyChooser(modifier: Modifier = Modifier) {
     val th = LocalFitTheme.current
     val ctx = LocalContext.current
     val tick = rememberTick()
     val toaster = LocalToaster.current
-    val scope = rememberCoroutineScope()
     val active by Buddy.active.collectAsState()
-    val prog by Buddy.progress.collectAsState()
     val level = remember { ArenaProgress.level(ArenaProgress.total(ctx)).n }
     Column(modifier) {
         Text("Home buddy", style = FitType.section, color = th.text)
-        Caption("Who lives on your Home screen and answers in chat. They do every move Pip does.")
+        Caption("Who lives on your Home screen and answers in chat.")
         Spacer(Modifier.height(8.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(Mascot.entries.toList()) { m ->
                 val open = level >= m.unlock
-                val have = Buddy.installed(ctx, m)
-                val p = prog[m.id]
-                val busy = p != null && p in 0f..0.999f
                 val sel = m == active
                 Column(
                     Modifier.width(88.dp).clip(RoundedCornerShape(18.dp))
@@ -55,10 +49,7 @@ fun BuddyChooser(modifier: Modifier = Modifier) {
                         .clickableNoRipple {
                             when {
                                 !open -> toaster.show("${m.label} unlocks at Arena level ${m.unlock}")
-                                busy -> Unit
-                                have -> { tick(); Buddy.choose(ctx, m); toaster.show("${m.label.substringBefore(' ')} is your Home buddy now") }
-                                else -> { tick(); toaster.show("Downloading ${m.label.substringBefore(' ')}…")
-                                    scope.launch { if (!Buddy.download(ctx, m)) toaster.show("Couldn't download ${m.label.substringBefore(' ')} — check your connection") } }
+                                else -> { tick(); Buddy.choose(ctx, m); toaster.show("${m.label.substringBefore(' ')} is your Home buddy now") }
                             }
                         }.padding(6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -67,12 +58,8 @@ fun BuddyChooser(modifier: Modifier = Modifier) {
                     Text(m.label.substringBefore(' '), style = FitType.label, color = th.text)
                     when {
                         !open -> Caption("🔒 Lv ${m.unlock}")
-                        busy -> Box(Modifier.fillMaxWidth().padding(top = 4.dp).height(5.dp).clip(CircleShape).background(th.textFaint.copy(alpha = 0.2f))) {
-                            Box(Modifier.fillMaxHeight().fillMaxWidth(p!!.coerceAtLeast(0.04f)).background(m.accent))
-                        }
                         sel -> Caption("Active")
-                        have -> Caption("Tap to use")
-                        else -> Caption("⬇ ~10 MB")
+                        else -> Caption("Tap to use")
                     }
                 }
             }

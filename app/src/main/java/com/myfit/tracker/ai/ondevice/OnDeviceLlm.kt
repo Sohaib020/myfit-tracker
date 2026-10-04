@@ -109,8 +109,8 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
     suspend fun chat(system: String, turns: List<Pair<String, String>>): String = run(90_000) { e ->
         val prompt = buildString {
             append(system.trim()).append("\n\n")
-            turns.forEach { (role, text) -> append(if (role == "user") "User: " else "Pip: ").append(text.trim()).append("\n\n") }
-            append("Pip:")
+            turns.forEach { (role, text) -> append(if (role == "user") "User: " else com.myfit.tracker.ui.pip.Buddy.name + ": ").append(text.trim()).append("\n\n") }
+            append(com.myfit.tracker.ui.pip.Buddy.name + ":")
         }
         e.createConversation().use { conv -> conv.sendMessage(prompt).toString().trim() }
     }

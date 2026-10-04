@@ -231,52 +231,54 @@ private fun ChallengeCard(ch: ArenaChallenge, days: List<Day>, today: LocalDate,
     val done = v >= ch.goal
     val got = CHECKPOINTS.filter { frac >= it.first - 1e-6 }.sumOf { it.second } + if (done && ArenaProgress.completedOn(ch, days)?.isBefore(ch.to) == true) EARLY_BONUS else 0
     val maxStars = CHECKPOINTS.sumOf { it.second } + EARLY_BONUS
-    GlassCard(padding = 12.dp, onClick = onOpen) {
+    val pm = remember(ch, days, today) { paceModel(ch, days, today) }
+    GlassCard(padding = 14.dp, onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            CastImage(ch.mascot, 60.dp)
-            Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(ch.title, style = FitType.section, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Caption(ch.blurb, color = th.textDim)
             }
-            Column(horizontalAlignment = Alignment.End) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Canvas(Modifier.size(14.dp)) { star(center, size.minDimension / 2, got > 0) }
-                    Spacer(Modifier.width(3.dp))
-                    Text("$got/$maxStars", style = FitType.label, color = th.text)
-                }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Canvas(Modifier.size(14.dp)) { star(center, size.minDimension / 2, got > 0) }
+                Spacer(Modifier.width(3.dp))
+                Text("$got/$maxStars", style = FitType.label, color = th.text)
             }
         }
-        Spacer(Modifier.height(10.dp))
-        key(ver) { ScenicTrack(ch.scene, frac, CHECKPOINTS.map { Checkpoint(it.first.toFloat(), it.second) }, partner, pace = if (done) null else pace, accent = ch.mascot.accent) }
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(fmtVal(v, ch.metric), style = FitType.title, color = th.text)
-            Text("  / ${fmtVal(ch.goal, ch.metric)}", style = FitType.label, color = th.textDim, modifier = Modifier.padding(bottom = 2.dp).weight(1f))
-            Text("${(frac * 100).toInt()}%", style = FitType.section, color = if (done) th.success else ch.mascot.accent)
+        Spacer(Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ProgressRing(frac, if (done) null else pace, if (done) th.success else ch.mascot.accent, 76.dp, 8.dp) {
+                Text("${(frac * 100).toInt()}%", style = FitType.section, color = th.text)
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(fmtVal(v, ch.metric), style = FitType.title, color = th.text, maxLines = 1)
+                    Text("  / ${fmtVal(ch.goal, ch.metric)}", style = FitType.label, color = th.textDim, modifier = Modifier.padding(bottom = 2.dp), maxLines = 1)
+                }
+                Spacer(Modifier.height(6.dp))
+                PaceBadge(pm, ch.metric)
+                Spacer(Modifier.height(4.dp))
+                Caption(when {
+                    done -> "Goal reached — stars collected"
+                    else -> "${fmtMetric(pm.perDayNeeded, ch.metric)}/day to finish" + (pm.projectedFinish?.let { " · on track for ${shortDate(it)}" } ?: "")
+                }, color = th.textDim)
+            }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(12.dp))
+        key(ver) { PaceChart(pm, ch, partner, 84.dp, labels = false) }
+        Spacer(Modifier.height(10.dp))
         // checkpoint chips
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             CHECKPOINTS.forEach { (f, s) ->
                 val ok = frac >= f - 1e-6
-                Row(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (ok) GOLD.copy(alpha = 0.22f) else th.textFaint.copy(alpha = 0.12f)).padding(vertical = 5.dp),
+                Row(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (ok) GOLD.copy(alpha = 0.20f) else th.text.copy(alpha = 0.06f)).padding(vertical = 5.dp),
                     horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (f >= 1.0) "Finish" else "${(f * 100).toInt()}%", style = FitType.caption, color = if (ok) th.text else th.textDim)
+                    Text(if (f >= 1.0) "Goal" else "${(f * 100).toInt()}%", style = FitType.caption, color = if (ok) th.text else th.textDim)
                     Spacer(Modifier.width(4.dp))
-                    repeat(s) { Canvas(Modifier.size(10.dp)) { star(center, size.minDimension / 2, ok) } }
+                    repeat(s) { Canvas(Modifier.size(9.dp)) { star(center, size.minDimension / 2, ok) } }
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
-        MiniBars(days.filter { !it.date.isBefore(ch.from) && !it.date.isAfter(minOf(ch.to, today)) }, ch.metric, ch.mascot.accent)
-        Spacer(Modifier.height(4.dp))
-        val name = ch.mascot.label.substringBefore(' ')
-        Caption(when {
-            done -> "$name: We did it! Stars collected 🎉"
-            frac >= pace -> "$name: You're ahead of the pace marker — keep it up!"
-            else -> "$name: Just behind pace — ${fmtVal(((pace - frac) * ch.goal).coerceAtLeast(0.0), ch.metric)} catches you up."
-        }, color = th.textDim)
     }
 }
 

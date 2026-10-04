@@ -21,6 +21,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.myfit.tracker.AppContainer
@@ -54,7 +56,7 @@ fun status(ch: ArenaChallenge, days: List<Day>, today: LocalDate): ChallengeStat
     return ChallengeStatus(acc, (acc / ch.goal).toFloat().coerceIn(0f, 1f), reached[CHECKPOINTS.lastIndex], reached)
 }
 
-/** Full-screen challenge: host character, big track, numbers, daily chart, checkpoints, rewards and the friends race. */
+/** Full-screen challenge dashboard: progress ring, pace chart, key numbers, daily breakdown, friends and rewards. */
 @Composable
 fun ChallengeDetail(
     container: AppContainer, ch: ArenaChallenge, days: List<Day>, today: LocalDate, partner: Mascot, level: Int,
@@ -65,122 +67,147 @@ fun ChallengeDetail(
     // hide the floating dock while this full-screen view is open
     DisposableEffect(Unit) { com.myfit.tracker.ui.components.SheetsOpen.count.intValue++; onDispose { com.myfit.tracker.ui.components.SheetsOpen.count.intValue = (com.myfit.tracker.ui.components.SheetsOpen.count.intValue - 1).coerceAtLeast(0) } }
     val st = remember(ch, days) { status(ch, days, today) }
-    val total = (ch.to.toEpochDay() - ch.from.toEpochDay() + 1).toInt()
-    val elapsed = (today.toEpochDay() - ch.from.toEpochDay() + 1).toInt().coerceIn(1, total)
-    val left = (ch.to.toEpochDay() - today.toEpochDay()).toInt().coerceAtLeast(0)
-    val pace = elapsed.toFloat() / total
-    val done = st.doneOn != null
-    val inRange = days.filter { !it.date.isBefore(ch.from) && !it.date.isAfter(minOf(ch.to, today)) }
-    val perDay = if (left + 1 > 0) ((ch.goal - st.value).coerceAtLeast(0.0) / (left + 1)) else 0.0
-    val best = inRange.maxOfOrNull { dayValue(it, ch.metric) } ?: 0.0
-    val avg = if (inRange.isEmpty()) 0.0 else inRange.sumOf { dayValue(it, ch.metric) } / inRange.size
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(ch.mascot.accent.copy(alpha = 0.35f), th.bgBottom.copy(alpha = 0.96f), th.bgBottom)))) {
+    val m = remember(ch, days, today) { paceModel(ch, days, today) }
+    val done = m.doneOn != null
+    val accent = ch.mascot.accent
+    // opaque screen: nothing behind shows through, and taps don't fall through to the list underneath
+    Box(Modifier.fillMaxSize().background(th.bgBottom.copy(alpha = 1f)).pointerInput(Unit) { detectTapGestures { } }) {
+        Box(Modifier.fillMaxWidth().height(260.dp).background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.22f), Color.Transparent))))
         Column(Modifier.fillMaxSize()) {
             OverlayTopBar(ch.title, onClose, subtitle = (if (ch.period == Period.WEEK) "Weekly" else "Monthly") + " · ${dm(ch.from)} – ${dm(ch.to)}")
             LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 40.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // ---- headline: ring + status
                 item {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CastAnim(ch.mascot, if (done) CastClip.CHEER else CastClip.WAVE, 130.dp)
-                        Box(Modifier.weight(1f).clip(RoundedCornerShape(20.dp, 20.dp, 20.dp, 4.dp)).background(Color.White.copy(alpha = if (th.isLight) 0.9f else 0.12f)).padding(14.dp)) {
-                            Column {
-                                Text(ch.mascot.label, style = FitType.label, color = ch.mascot.accent)
-                                Text(when {
-                                    done -> "We did it on ${dm(st.doneOn!!)}! Every star is yours."
-                                    st.frac >= pace -> "You're ahead of pace! ${fmt(perDay, ch.metric)} a day keeps us on track."
-                                    else -> "Let's catch up: ${fmt(perDay, ch.metric)} a day gets us there by ${dm(ch.to)}."
-                                }, style = FitType.body, color = th.text)
+                    GlassCard(padding = 16.dp) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ProgressRing(m.frac, if (done) null else m.pace, if (done) th.success else accent, 128.dp, 12.dp) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("${(m.frac * 100).toInt()}%", style = FitType.metric, color = th.text)
+                                    Caption(if (done) "complete" else "of goal")
+                                }
+                            }
+                            Spacer(Modifier.width(16.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(fmt(m.value, ch.metric), style = FitType.title, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Caption("of ${fmt(m.goal, ch.metric)}")
+                                Spacer(Modifier.height(8.dp))
+                                PaceBadge(m, ch.metric)
+                                Spacer(Modifier.height(8.dp))
+                                Caption(when {
+                                    done -> "Finished with ${m.daysLeft} day${if (m.daysLeft == 1) "" else "s"} to spare."
+                                    m.daysLeft == 0 -> "Last day — ${fmt((m.goal - m.value).coerceAtLeast(0.0), ch.metric)} to go."
+                                    else -> "${m.daysLeft} day${if (m.daysLeft == 1) "" else "s"} left · tick on the ring = even pace"
+                                })
                             }
                         }
                     }
                 }
-                item { ScenicTrack(ch.scene, st.frac, CHECKPOINTS.map { Checkpoint(it.first.toFloat(), it.second) }, partner, height = 250.dp, pace = if (done) null else pace, accent = ch.mascot.accent) }
+                // ---- key numbers
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Kpi("Daily pace needed", if (done) "Done" else fmt(m.perDayNeeded, ch.metric), if (done) "goal reached" else "every day until ${dm(ch.to)}", Modifier.weight(1f))
+                        Kpi("Projected finish", when { done -> dm(m.doneOn!!); m.projectedFinish != null -> dm(m.projectedFinish); else -> "Not on pace" },
+                            when { done -> "completed"; m.projectedFinish != null -> "at your ${fmt(m.avg, ch.metric)}/day average"; else -> "${fmt(m.perDayNeeded, ch.metric)}/day catches up" },
+                            Modifier.weight(1f), warn = !done && m.projectedFinish == null)
+                    }
+                }
+                // ---- pace chart
                 item {
                     GlassCard(padding = 14.dp) {
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text(fmt(st.value, ch.metric), style = FitType.metric, color = th.text)
-                            Text("  / ${fmt(ch.goal, ch.metric)}", style = FitType.label, color = th.textDim, modifier = Modifier.padding(bottom = 4.dp).weight(1f))
-                            Text("${(st.frac * 100).toInt()}%", style = FitType.title, color = if (done) th.success else ch.mascot.accent)
+                        Text("Progress vs. pace", style = FitType.section, color = th.text)
+                        Spacer(Modifier.height(4.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Legend(accent, "You", false); Legend(th.text.copy(alpha = 0.5f), "Even pace", true)
+                            if (!done && m.avg > 0) Legend(accent.copy(alpha = 0.6f), "Projection", true)
                         }
                         Spacer(Modifier.height(10.dp))
-                        Row(Modifier.fillMaxWidth()) {
-                            Stat(if (done) "Done" else "$left", if (done) "finished" else "days left", Modifier.weight(1f))
-                            Stat(if (done) "—" else fmt(perDay, ch.metric).substringBefore(' '), "needed / day", Modifier.weight(1f))
-                            Stat(fmt(avg, ch.metric).substringBefore(' '), "daily avg", Modifier.weight(1f))
-                            Stat(fmt(best, ch.metric).substringBefore(' '), "best day", Modifier.weight(1f))
-                        }
+                        PaceChart(m, ch, partner, 190.dp)
                     }
                 }
-                item { DailyChart(ch, inRange, today, total) }
+                // ---- daily breakdown
                 item {
                     GlassCard(padding = 14.dp) {
-                        Text("Checkpoints & rewards", style = FitType.section, color = th.text)
-                        Spacer(Modifier.height(8.dp))
-                        CHECKPOINTS.forEachIndexed { i, (f, s) ->
-                            val on = st.reached[i]
-                            Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(30.dp).clip(CircleShape).background(if (on != null) GOLD else th.textFaint.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
-                                    Text(if (f >= 1.0) "🏁" else "${(f * 100).toInt()}", style = FitType.caption, color = if (on != null) Color(0xFF3A2A00) else th.textDim)
-                                }
-                                Spacer(Modifier.width(10.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(if (f >= 1.0) "Finish line" else "${(f * 100).toInt()}% checkpoint", style = FitType.label, color = th.text)
-                                    Caption(if (on != null) "Reached ${dm(on)}" else "${fmt((ch.goal * f - st.value).coerceAtLeast(0.0), ch.metric)} to go")
-                                }
-                                repeat(s) { Canvas(Modifier.size(14.dp)) { star(center, size.minDimension / 2, on != null) } }
-                            }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Daily breakdown", style = FitType.section, color = th.text, modifier = Modifier.weight(1f))
+                            Caption("target ${fmt(m.goal / m.total, ch.metric)}/day")
                         }
-                        Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(30.dp).clip(CircleShape).background(if (done && st.doneOn!!.isBefore(ch.to)) GOLD else th.textFaint.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) { Text("⚡", style = FitType.caption) }
-                            Spacer(Modifier.width(10.dp))
-                            Column(Modifier.weight(1f)) { Text("Finish early bonus", style = FitType.label, color = th.text); Caption("Complete before the last day") }
-                            repeat(EARLY_BONUS) { Canvas(Modifier.size(14.dp)) { star(center, size.minDimension / 2, done && st.doneOn!!.isBefore(ch.to)) } }
-                        }
-                        Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(30.dp).clip(CircleShape).background(th.textFaint.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) { Text("📸", style = FitType.caption) }
-                            Spacer(Modifier.width(10.dp))
-                            Column(Modifier.weight(1f)) { Text("First among friends", style = FitType.label, color = th.text); Caption("Join the race below and finish first · badge progress") }
-                            repeat(3) { Canvas(Modifier.size(14.dp)) { star(center, size.minDimension / 2, false) } }
+                        Spacer(Modifier.height(10.dp))
+                        DailyBars(m, ch, 110.dp)
+                        Spacer(Modifier.height(10.dp))
+                        Row(Modifier.fillMaxWidth()) {
+                            MiniStat(fmt(m.avg, ch.metric), "daily average", Modifier.weight(1f))
+                            MiniStat(fmt(m.best, ch.metric), "best day" + (m.bestDate?.let { " · ${dm(it)}" } ?: ""), Modifier.weight(1f), GOLD)
+                            MiniStat("${m.daily.count { it != null && it >= m.goal / m.total }}/${m.elapsed}", "days on target", Modifier.weight(1f))
                         }
                     }
                 }
                 item { FriendsRace(container, ch, st, partner, level, award) }
+                // ---- rewards
+                item {
+                    GlassCard(padding = 14.dp) {
+                        Text("Checkpoints & rewards", style = FitType.section, color = th.text)
+                        Spacer(Modifier.height(6.dp))
+                        CHECKPOINTS.forEachIndexed { i, (f, s) ->
+                            val on = st.reached[i]
+                            RewardRow(if (f >= 1.0) "Goal reached" else "${(f * 100).toInt()}% checkpoint",
+                                if (on != null) "Reached ${dm(on)}" else "${fmt((ch.goal * f - st.value).coerceAtLeast(0.0), ch.metric)} to go", s, on != null, if (f >= 1.0) "100" else "${(f * 100).toInt()}")
+                        }
+                        val early = done && st.doneOn!!.isBefore(ch.to)
+                        RewardRow("Finish early", "Complete before the last day", EARLY_BONUS, early, "⏱")
+                        RewardRow("First among friends", "Win the race below · badge progress", 3, false, "1st")
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun Stat(v: String, l: String, modifier: Modifier) {
+private fun Kpi(label: String, value: String, sub: String, modifier: Modifier, warn: Boolean = false) {
     val th = LocalFitTheme.current
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(v, style = FitType.section, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    GlassCard(modifier, padding = 14.dp) {
+        Text(label.uppercase(), style = FitType.overline, color = th.textDim, maxLines = 1)
+        Spacer(Modifier.height(6.dp))
+        Text(value, style = FitType.title, color = if (warn) th.warning else th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Caption(sub, color = th.textDim)
+    }
+}
+
+@Composable
+private fun Legend(c: Color, label: String, dashed: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Canvas(Modifier.size(width = 18.dp, height = 8.dp)) {
+            drawLine(c, Offset(0f, size.height / 2), Offset(size.width, size.height / 2), 2.dp.toPx(),
+                pathEffect = if (dashed) PathEffect.dashPathEffect(floatArrayOf(6f, 4f)) else null)
+        }
+        Spacer(Modifier.width(5.dp)); Caption(label)
+    }
+}
+
+@Composable
+private fun MiniStat(v: String, l: String, modifier: Modifier, dot: Color? = null) {
+    val th = LocalFitTheme.current
+    Column(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (dot != null) { Box(Modifier.size(8.dp).clip(CircleShape).background(dot)); Spacer(Modifier.width(5.dp)) }
+            Text(v, style = FitType.label, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
         Caption(l)
     }
 }
 
 @Composable
-private fun DailyChart(ch: ArenaChallenge, inRange: List<Day>, today: LocalDate, total: Int) {
+private fun RewardRow(title: String, sub: String, stars: Int, on: Boolean, badge: String) {
     val th = LocalFitTheme.current
-    val byDate = inRange.associateBy { it.date }
-    val vals = (0 until total).map { k -> ch.from.plusDays(k.toLong()).let { d -> if (d.isAfter(today)) null else byDate[d]?.let { dayValue(it, ch.metric) } ?: 0.0 } }
-    val target = ch.goal / total
-    val max = ((vals.filterNotNull().maxOrNull() ?: 0.0).coerceAtLeast(target * 1.2)).coerceAtLeast(1e-6)
-    val grow by animateFloatAsState(1f, tween(900), label = "dc")
-    GlassCard(padding = 14.dp) {
-        Text("Day by day", style = FitType.section, color = th.text)
-        Caption("Dashed line = even pace (${fmt(target, ch.metric)} a day)")
-        Spacer(Modifier.height(10.dp))
-        Canvas(Modifier.fillMaxWidth().height(120.dp)) {
-            val n = vals.size; val gap = (if (n > 14) 2 else 4).dp.toPx(); val bw = ((size.width - gap * (n - 1)) / n).coerceAtLeast(2f)
-            vals.forEachIndexed { i, v ->
-                val x = i * (bw + gap)
-                if (v == null) { drawRoundRect(th.textFaint.copy(alpha = 0.10f), Offset(x, size.height - 4f), Size(bw, 4f), CornerRadius(2f)); return@forEachIndexed }
-                val h = ((v / max).toFloat() * size.height * grow).coerceAtLeast(3f)
-                drawRoundRect(Brush.verticalGradient(listOf(ch.mascot.accent, ch.mascot.accent.copy(alpha = 0.5f))), Offset(x, size.height - h), Size(bw, h), CornerRadius(bw / 3))
-            }
-            val y = size.height * (1 - (target / max).toFloat())
-            drawLine(th.text.copy(alpha = 0.6f), Offset(0f, y), Offset(size.width, y), 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
+    Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(34.dp).clip(CircleShape).background(if (on) GOLD.copy(alpha = 0.9f) else th.text.copy(alpha = 0.07f)), contentAlignment = Alignment.Center) {
+            Text(badge, style = FitType.caption, color = if (on) Color(0xFF3A2A00) else th.textDim)
         }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) { Text(title, style = FitType.label, color = th.text); Caption(sub) }
+        Text("+$stars", style = FitType.label, color = if (on) GOLD else th.textDim)
+        Spacer(Modifier.width(3.dp))
+        Canvas(Modifier.size(13.dp)) { star(center, size.minDimension / 2, on) }
     }
 }
 
@@ -204,12 +231,8 @@ private fun FriendsRace(container: AppContainer, ch: ArenaChallenge, st: Challen
         if (joined && r.size >= 2 && r.first().me && r.first().doneAt != null) award("race:${ch.id}", 3, "First among friends · ${ch.title}")
     }
     GlassCard(padding = 14.dp) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Race your friends", style = FitType.section, color = th.text)
-                Caption("Everyone's goal is personal, so the race is on % — first to finish wins 3 ⭐.")
-            }
-        }
+        Text("Friends race", style = FitType.section, color = th.text)
+        Caption("Ranked by % of each person's own goal — first to 100% wins 3 ⭐.")
         Spacer(Modifier.height(10.dp))
         when {
             user == null || !social.available -> Caption("Sign in (Me → Account) to race friends.")
@@ -220,22 +243,35 @@ private fun FriendsRace(container: AppContainer, ch: ArenaChallenge, st: Challen
                 val r = rows
                 if (r == null) Caption("Loading…")
                 else {
-                    if (r.size <= 1) Caption("No friends in this race yet — invite them!")
+                    val myIdx = r.indexOfFirst { it.me }
+                    if (r.size <= 1) Caption("No friends in this race yet — invite them below.")
+                    else if (myIdx >= 0) {
+                        val me = r[myIdx]
+                        val lead = r.first()
+                        val behind = r.getOrNull(myIdx + 1)
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(th.text.copy(alpha = 0.05f)).padding(12.dp)) {
+                            MiniStat("${myIdx + 1} of ${r.size}", "your rank", Modifier.weight(1f))
+                            MiniStat(if (myIdx == 0) "Leading" else "${((lead.pct - me.pct) * 100).toInt().coerceAtLeast(0)}%", if (myIdx == 0) "you're in front" else "behind ${lead.name}", Modifier.weight(1f))
+                            MiniStat(behind?.let { "${((me.pct - it.pct) * 100).toInt().coerceAtLeast(0)}%" } ?: "—", behind?.let { "ahead of ${it.name}" } ?: "no one behind", Modifier.weight(1f))
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
                     r.forEachIndexed { i, row ->
-                        val m = if (row.me) partner else Mascot.entries.firstOrNull { it.id == row.mascot } ?: Mascot.entries[(row.uid.hashCode() and 0x7fffffff) % Mascot.entries.size]
+                        val mm = if (row.me) partner else Mascot.entries.firstOrNull { it.id == row.mascot } ?: Mascot.entries[(row.uid.hashCode() and 0x7fffffff) % Mascot.entries.size]
                         val f by animateFloatAsState(row.pct.toFloat().coerceIn(0f, 1f), tween(1100), label = "race")
-                        Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(if (row.doneAt != null) listOf("🥇", "🥈", "🥉").getOrElse(i) { "🏁" } else "${i + 1}", style = FitType.label, color = th.text, modifier = Modifier.width(26.dp))
-                            BoxWithConstraints(Modifier.weight(1f).height(46.dp)) {
-                                val lane = maxWidth - 46.dp
-                                Box(Modifier.fillMaxWidth().height(12.dp).align(Alignment.CenterStart).clip(CircleShape).background(th.textFaint.copy(alpha = 0.18f)))
-                                Box(Modifier.width(lane * f + 23.dp).height(12.dp).align(Alignment.CenterStart).clip(CircleShape).background(m.accent))
-                                Box(Modifier.offset(x = lane * f).align(Alignment.CenterStart)) { CastImage(m, 46.dp) }
-                            }
-                            Spacer(Modifier.width(6.dp))
-                            Column(Modifier.width(74.dp), horizontalAlignment = Alignment.End) {
-                                Text(if (row.me) "You" else row.name, style = FitType.label, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Caption(row.doneAt?.let { "done ${dm(LocalDate.parse(it))}" } ?: "${(row.pct * 100).toInt()}%" + (row.level?.let { " · Lv $it" } ?: ""))
+                        Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("${i + 1}", style = FitType.label, color = if (i == 0) GOLD else th.textDim, modifier = Modifier.width(20.dp))
+                            Box(Modifier.size(30.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) { CastImage(mm, 28.dp) }
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(if (row.me) "You" else row.name, style = FitType.label, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                    Text(row.doneAt?.let { "Done ${dm(LocalDate.parse(it))}" } ?: "${(row.pct * 100).toInt()}%", style = FitType.caption, color = if (row.doneAt != null) th.success else th.textDim)
+                                }
+                                Spacer(Modifier.height(5.dp))
+                                Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(th.text.copy(alpha = 0.08f))) {
+                                    Box(Modifier.fillMaxHeight().fillMaxWidth(f.coerceAtLeast(0.02f)).clip(CircleShape).background(if (row.me) ch.mascot.accent else th.text.copy(alpha = 0.45f)))
+                                }
                             }
                         }
                     }
