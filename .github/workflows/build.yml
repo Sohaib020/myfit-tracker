@@ -86,7 +86,7 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: MyFit Tracker build ${{ github.run_number }}
-          body: ${{ toJSON(github.event.head_commit.message) }}
+          body: ${{ github.event.head_commit.message }}
           files: |
             out/*.apk
             out/schemas.zip
