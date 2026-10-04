@@ -40,6 +40,8 @@ data class Challenge(
     val creator: String, val members: List<String>,
 )
 data class ChallengeRow(val uid: String, val name: String, val value: Double, val me: Boolean)
+/** A friend's progress in an Arena challenge (goals are personal, so the race is on % and finish time). */
+data class RaceRow(val uid: String, val name: String, val pct: Double, val value: Double, val doneAt: String?, val mascot: String?, val level: Int?, val me: Boolean)
 
 /**
  * Accounts (Google / email), friends, weekly leaderboards and challenges on Firebase.
@@ -260,6 +262,34 @@ class Social(private val c: AppContainer) {
     suspend fun leaveChallenge(id: String) {
         val me = auth.currentUser?.uid ?: return
         db.collection("challenges").document(id).update("members", FieldValue.arrayRemove(me)).await()
+    }
+
+    // ------------------------------------------------------------------ Arena races (friends in the same weekly/monthly challenge)
+
+    private fun race(cid: String) = db.collection("arena").document(cid).collection("members")
+
+    /** Join (or update) your entry in an Arena challenge race. */
+    suspend fun raceUpdate(cid: String, pct: Double, value: Double, doneAt: String?, mascot: String, level: Int) {
+        val u = auth.currentUser ?: throw IllegalStateException("Sign in first")
+        val name = runCatching { profile(u.uid)?.name }.getOrNull() ?: (u.displayName ?: "Friend").take(24)
+        race(cid).document(u.uid).set(mapOf(
+            "name" to name.take(24), "pct" to pct.coerceIn(0.0, 10.0), "value" to value, "doneAt" to (doneAt ?: ""),
+            "mascot" to mascot.take(12), "level" to level.coerceIn(1, 60), "updatedAt" to FieldValue.serverTimestamp(),
+        )).await()
+    }
+
+    suspend fun raceLeave(cid: String) { val u = auth.currentUser ?: return; race(cid).document(u.uid).delete().await() }
+
+    /** You + friends who joined this challenge, first finisher first, then by progress. */
+    suspend fun raceStandings(cid: String): List<RaceRow> {
+        val me = auth.currentUser?.uid ?: return emptyList()
+        val ids = listOf(me) + runCatching { friends().map { it.uid } }.getOrDefault(emptyList())
+        val col = race(cid)
+        return ids.mapNotNull { id ->
+            val m = runCatching { col.document(id).get().await().data }.getOrNull() ?: return@mapNotNull null
+            RaceRow(id, m["name"] as? String ?: "Friend", (m["pct"] as? Number)?.toDouble() ?: 0.0, (m["value"] as? Number)?.toDouble() ?: 0.0,
+                (m["doneAt"] as? String)?.takeIf { it.isNotBlank() }, m["mascot"] as? String, (m["level"] as? Number)?.toInt(), id == me)
+        }.sortedWith(compareBy<RaceRow> { it.doneAt ?: "9999" }.thenByDescending { it.pct })
     }
 
     // ------------------------------------------------------------------ upload (only auto-recorded data)

@@ -6,8 +6,10 @@ import java.time.LocalDate
 
 /** Arena tiers (every few levels), each fronted by a cast member. */
 enum class Tier(val label: String, val from: Int, val mascot: Mascot) {
-    ROOKIE("Rookie", 1, Mascot.MOTU), WALKER("Walker", 4, Mascot.PIP), EXPLORER("Explorer", 7, Mascot.KAMI),
-    CLIMBER("Climber", 11, Mascot.TAJ), SPRINTER("Sprinter", 16, Mascot.ZARA), FALCON("Falcon", 22, Mascot.SHAHEEN), LEGEND("Legend", 28, Mascot.PIP),
+    ROOKIE("Rookie", 1, Mascot.MOTU), WALKER("Walker", 4, Mascot.CHAKOR), JOGGER("Jogger", 8, Mascot.KHARGOSH),
+    EXPLORER("Explorer", 12, Mascot.KAMI), TREKKER("Trekker", 16, Mascot.TAJ), CLIMBER("Climber", 20, Mascot.SAKEEN),
+    RUNNER("Runner", 25, Mascot.LOMRI), SPRINTER("Sprinter", 30, Mascot.ZARA), CHAMPION("Champion", 36, Mascot.BHOORI),
+    FALCON("Falcon", 42, Mascot.SHAHEEN), HERO("Hero", 48, Mascot.MOR), LEGEND("Legend", 55, Mascot.YAKU),
 }
 
 data class Level(val n: Int, val tier: Tier, val into: Int, val span: Int, val total: Int) {
@@ -18,7 +20,7 @@ data class Award(val id: String, val stars: Int, val title: String, val date: Lo
 
 data class Badge(val id: String, val title: String, val desc: String, val emoji: String, val earned: Boolean)
 
-const val MAX_LEVEL = 30
+const val MAX_LEVEL = 60
 
 /**
  * Stars → levels. Each star event is written once to a ledger (id-keyed), so stars are never double-counted
@@ -27,8 +29,8 @@ const val MAX_LEVEL = 30
 object ArenaProgress {
     private fun p(c: Context) = c.applicationContext.getSharedPreferences("arena_progress", Context.MODE_PRIVATE)
 
-    /** Stars needed to go from level n to n+1 (gentle curve: 10, 13, 16 …). */
-    fun stepFor(n: Int) = 10 + 3 * (n - 1)
+    /** Stars needed to go from level n to n+1 (gentle curve: 10, 12, 14 …; level 60 ≈ 4,000 stars). */
+    fun stepFor(n: Int) = 10 + 2 * (n - 1)
     fun startOf(n: Int): Int = (1 until n).sumOf { stepFor(it) }
 
     fun level(total: Int): Level {
@@ -156,7 +158,20 @@ object ArenaProgress {
             Badge("lv5", "Rising Star", "Reach level 5", "🌟", lv >= 5),
             Badge("lv10", "Elite", "Reach level 10", "💎", lv >= 10),
             Badge("lv20", "Falcon Class", "Reach level 20", "🦅", lv >= 20),
-            Badge("lv30", "Legend", "Reach level 30", "👑", lv >= 30),
+            Badge("lv30", "Tier Master", "Reach level 30", "👑", lv >= 30),
+            Badge("lv45", "Elite Falcon", "Reach level 45", "🦚", lv >= 45),
+            Badge("lv60", "Living Legend", "Reach level 60", "🏔️", lv >= 60),
+            Badge("ch30", "Unbreakable", "Complete 30 challenges", "💪", completed >= 30),
+            Badge("early5", "Speed Demon", "Finish 5 challenges early", "⚡", early >= 5),
+            Badge("alljourneys", "Pakistan Explorer", "Finish all 6 journeys", "🇵🇰", journeys.size >= Journeys.size),
+            Badge("streak100", "Centurion", "5,000+ steps 100 days in a row", "💯", best >= 100),
+            Badge("twentyk", "20K Day", "Walk 20,000 steps in a day", "🚀", days.any { it.steps >= 20_000 }),
+            Badge("stars1k", "Star Collector", "Collect 1,000 stars", "🌠", l.sumOf { it.stars } >= 1000),
+            Badge("cast10", "Zookeeper", "Unlock 10 characters", "🐾", Mascot.entries.count { lv >= it.unlock } >= 10),
+            Badge("castall", "Full Cast", "Unlock every character", "🦁", Mascot.entries.all { lv >= it.unlock }),
+            Badge("race1", "Photo Finish", "Be first among friends to finish a challenge", "📸", ids.any { it.startsWith("race:") }),
+            Badge("race5", "Pack Leader", "Win 5 friend races", "🐺", ids.count { it.startsWith("race:") } >= 5),
+            Badge("duel5", "Undefeated", "Win 5 duels or battles", "🥇", ids.count { it.startsWith("duel:") } >= 5),
         )
     }
 }

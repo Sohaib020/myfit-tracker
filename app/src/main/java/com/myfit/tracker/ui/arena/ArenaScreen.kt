@@ -77,6 +77,7 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
     var challenges by remember { mutableStateOf<List<ArenaChallenge>>(emptyList()) }
     var celebrate by remember { mutableStateOf<Pair<List<Award>, Int>?>(null) }   // awards + level before
     var partner by remember { mutableStateOf(ArenaPrefs.partner(ctx)) }
+    var openCh by remember { mutableStateOf<ArenaChallenge?>(null) }
     LaunchedEffect(days) {
         val d = days ?: return@LaunchedEffect
         val b = baseline(d, today)
@@ -85,6 +86,12 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
         val fresh = ArenaProgress.sync(ctx, d, today, challenges, b)
         if (fresh.isNotEmpty()) celebrate = fresh to before
         ver++
+        // keep my entry fresh in every race I've joined (friends see live progress)
+        val raced = ArenaPrefs.raced(ctx)
+        if (raced.isNotEmpty() && container.social.user.value != null) challenges.filter { it.id in raced }.forEach { ch ->
+            val st = status(ch, d, today)
+            runCatching { container.social.raceUpdate(ch.id, st.frac.toDouble(), st.value, st.doneOn?.toString(), partner.id, ArenaProgress.level(ArenaProgress.total(ctx)).n) }
+        }
     }
     val total = remember(ver) { ArenaProgress.total(ctx) }
     val lvl = remember(total) { ArenaProgress.level(total) }
@@ -123,9 +130,9 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                             if (d.isEmpty()) item { Caption("Connect Health Connect (Settings → Health) so your watch or phone activity counts here.", color = th.warning) }
                             val wk = challenges.filter { it.period == Period.WEEK }; val mo = challenges.filter { it.period == Period.MONTH }
                             item { PeriodHeader("THIS WEEK", wk.firstOrNull()?.to, today) }
-                            items(wk, key = { it.id }) { ChallengeCard(it, d, today, partner, ver) }
+                            items(wk, key = { it.id }) { ChallengeCard(it, d, today, partner, ver) { openCh = it } }
                             item { PeriodHeader("THIS MONTH", mo.firstOrNull()?.to, today) }
-                            items(mo, key = { it.id }) { ChallengeCard(it, d, today, partner, ver) }
+                            items(mo, key = { it.id }) { ChallengeCard(it, d, today, partner, ver) { openCh = it } }
                             item { Caption("Goals are set from your last 4 weeks, about 10% above what you already do. Each checkpoint earns stars; finishing early earns a bonus.", color = th.textFaint) }
                         }
                         1 -> item { JourneyHub(d, partner) { ver++ } }
@@ -136,6 +143,8 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                 }
             }
         }
+        val oc = openCh; val dd = days
+        if (oc != null && dd != null) ChallengeDetail(container, oc, dd, today, partner, lvl.n, award) { openCh = null }
         celebrate?.let { (aw, before) -> Celebration(aw, before, ArenaProgress.level(total), partner) { celebrate = null } }
     }
 }
@@ -212,7 +221,7 @@ private fun fmtVal(v: Double, m: ArenaMetric): String = when (m) {
 // ------------------------------------------------------------------ challenges
 
 @Composable
-private fun ChallengeCard(ch: ArenaChallenge, days: List<Day>, today: LocalDate, partner: Mascot, ver: Int) {
+private fun ChallengeCard(ch: ArenaChallenge, days: List<Day>, today: LocalDate, partner: Mascot, ver: Int, onOpen: () -> Unit) {
     val th = LocalFitTheme.current
     val v = value(days, ch.metric, ch.from, minOf(ch.to, today))
     val frac = (v / ch.goal).toFloat().coerceIn(0f, 1f)
@@ -222,7 +231,7 @@ private fun ChallengeCard(ch: ArenaChallenge, days: List<Day>, today: LocalDate,
     val done = v >= ch.goal
     val got = CHECKPOINTS.filter { frac >= it.first - 1e-6 }.sumOf { it.second } + if (done && ArenaProgress.completedOn(ch, days)?.isBefore(ch.to) == true) EARLY_BONUS else 0
     val maxStars = CHECKPOINTS.sumOf { it.second } + EARLY_BONUS
-    GlassCard(padding = 12.dp) {
+    GlassCard(padding = 12.dp, onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             CastImage(ch.mascot, 60.dp)
             Spacer(Modifier.width(8.dp))

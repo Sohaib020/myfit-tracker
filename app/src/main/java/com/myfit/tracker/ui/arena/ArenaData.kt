@@ -17,9 +17,24 @@ enum class Mascot(val id: String, val label: String, val tagline: String, val co
     PIP("pip", "Pip", "Your buddy — never misses a day", Color(0xFFA9E9CF), Color(0xFF1C4157), 1),
     MOTU("motu", "Motu the Panda", "Slow and steady wins", Color(0xFFF4F4F4), Color(0xFFE2445C), 1),
     KAMI("kami", "Kami the Camel", "Endurance for the long haul", Color(0xFFE8C07D), Color(0xFFE0662B), 3),
+    CHAKOR("chakor", "Chakor the Partridge", "Pakistan's national bird — loyal to the end", Color(0xFFC9B7A0), Color(0xFFC8102E), 4),
     TAJ("taj", "Taj the Markhor", "King of the mountains", Color(0xFFC9A27A), Color(0xFF0E8F4A), 6),
+    KHARGOSH("khargosh", "Khargosh the Hare", "Quick feet, desert heart", Color(0xFFD6B98C), Color(0xFFE84393), 8),
     ZARA("zara", "Zara the Snow Leopard", "Sprints, climbs, never gives up", Color(0xFFE6E8EC), Color(0xFF2E6FD8), 10),
+    BHALU("bhalu", "Bhalu the Brown Bear", "Big strength, bigger hugs", Color(0xFF8A5A3C), Color(0xFFF28C28), 12),
+    LOMRI("lomri", "Lomri the Red Fox", "Clever pacing wins races", Color(0xFFE2752C), Color(0xFF2C7BE5), 14),
     SHAHEEN("shaheen", "Shaheen the Falcon", "Fast and focused", Color(0xFF8FA3B8), Color(0xFFF2B42E), 15),
+    NEVLA("nevla", "Nevla the Mongoose", "Fearless and quick", Color(0xFFA89B85), Color(0xFFC0392B), 18),
+    BULHAN("bulhan", "Bulhan the Indus Dolphin", "Swims the Indus, rare and mighty", Color(0xFFA7B4C2), Color(0xFF00A3A3), 20),
+    KALA("kala", "Kala the Blackbuck", "Leaps over every limit", Color(0xFF4A3226), Color(0xFFF2B42E), 22),
+    ULLU("ullu", "Ullu the Owl", "Wise rest, wise training", Color(0xFF9C7A55), Color(0xFF34495E), 25),
+    SAKEEN("sakeen", "Sakeen the Ibex", "Born on the cliffs of Karakoram", Color(0xFFB59870), Color(0xFF6A4BC4), 28),
+    BHOORI("bhoori", "Bhoori the Buffalo", "Power of the Punjab plains", Color(0xFF4A4E57), Color(0xFFE94B3C), 32),
+    SEHI("sehi", "Sehi the Porcupine", "Sharp focus, soft heart", Color(0xFF7A6250), Color(0xFF16A085), 36),
+    GOGI("gogi", "Gogi the Gharial", "Patient hunter of the river", Color(0xFF6B8F4E), Color(0xFFD35400), 40),
+    MONAL("monal", "Monal the Pheasant", "Shines brightest at altitude", Color(0xFF2E8B7A), Color(0xFF8E44AD), 45),
+    MOR("mor", "Mor the Peacock", "Shows off every PR", Color(0xFF1F6FD1), Color(0xFF2DBE60), 50),
+    YAKU("yaku", "Yaku the Yak", "Thrives where others stop", Color(0xFF4E3B30), Color(0xFF1ABC9C), 55),
 }
 
 enum class ArenaMetric(val label: String, val unit: String) { STEPS("Steps", "steps"), ACTIVE("Active minutes", "min"), DISTANCE("Distance", "km"), WORKOUTS("Workouts", "workouts"), ACTIVE_DAYS("Active days", "days") }
@@ -144,6 +159,8 @@ object ArenaPrefs {
     fun setGardenBest(c: Context, v: Int) = p(c).edit().putInt("garden_best", v).apply()
     fun partner(c: Context): Mascot = Mascot.entries.firstOrNull { it.id == p(c).getString("partner", "pip") } ?: Mascot.PIP
     fun setPartner(c: Context, m: Mascot) = p(c).edit().putString("partner", m.id).apply()
+    fun raced(c: Context): Set<String> = p(c).getStringSet("raced", emptySet())!!
+    fun setRaced(c: Context, cid: String, on: Boolean) = p(c).edit().putStringSet("raced", if (on) raced(c) + cid else raced(c) - cid).apply()
     fun seenLevel(c: Context) = p(c).getInt("seen_level", 1)
     fun setSeenLevel(c: Context, v: Int) = p(c).edit().putInt("seen_level", v).apply()
     fun seenStars(c: Context) = p(c).getInt("seen_stars", -1)
