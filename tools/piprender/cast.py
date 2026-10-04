@@ -245,9 +245,7 @@ def skin(name):
         _ears('small', M['mint'])
         for s in (1, -1):
             _on_head('Nostril%d' % s, s * 0.085, -0.22, 0.27, (0.045, 0.02, 0.022), P.mat_gloss('nos', '#6B4426', rough=0.4), roll=s * 0.5)
-            # long lashes above each eye
-            pts = [P.head_point(s * 0.36 + d, 0.215 + abs(d) * -0.3, 0.05)[0] for d in (-0.12, 0.0, 0.12)]
-            P.curve('Lash%d' % s, [tuple(p) for p in pts], 0.026, M['brow'], parent=P.OBJ['HeadRig'])
+            # (no extra lash curves: they read as a second pair of eyebrows above the real brows)
         tuft = P.mat_plush('tuft', '#C99A5A', bump=0.6)
         for k, (az, el) in enumerate(((0.0, 1.22), (0.22, 1.12), (-0.22, 1.12))):
             _on_head('Tuft%d' % k, az, el, -0.02, (0.13, 0.13, 0.15), tuft)

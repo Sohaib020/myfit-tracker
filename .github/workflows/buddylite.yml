@@ -1,0 +1,56 @@
+name: Buddy lite packs
+# Sharp 448 px buddy packs (9 key moves, talk, portrait, no look grid) for every Arena character except Pip.
+# Push to branch buddylite-render. Results land on branch buddylite-assets (<id>/*.webp + sheet.png), ready to bundle.
+on:
+  push:
+    branches: [ buddylite-render ]
+  workflow_dispatch:
+permissions: { contents: write }
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix: { shard: [0,1,2,3,4,5,6,7,8,9,10,11] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install bpy==4.2.0 pillow && sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 >/dev/null
+      - run: OUT=$PWD/out SHARD=${{ matrix.shard }} SHARDS=12 python tools/piprender/buddylite.py | grep -E "^P|ALLDONE"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: 'bl-${{ matrix.shard }}', path: out, if-no-files-found: ignore }
+  publish:
+    needs: render
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'bl-*', path: pub, merge-multiple: true }
+      - run: |
+          pip install pillow
+          python3 - <<'PY'
+          import os
+          from PIL import Image, ImageDraw
+          ids = sorted(d for d in os.listdir('pub') if os.path.isdir('pub/' + d))
+          clips = ['portrait', 'idle', 'wave', 'celebrate', 'thinking', 'love', 'sleepy', 'letsgo', 'train']
+          S = 120; sheet = Image.new('RGB', (S * len(clips), S * len(ids)), 'white'); d = ImageDraw.Draw(sheet)
+          rep = []
+          for r, i in enumerate(ids):
+              tot = sum(os.path.getsize(os.path.join(dp, f)) for dp, _, fs in os.walk('pub/' + i) for f in fs)
+              have = [c for c in clips if os.path.exists('pub/%s/%s.webp' % (i, c))]
+              rep.append('%s: %d/%d files, %d talk, %.2f MB' % (i, len(have), len(clips), len(os.listdir('pub/%s/talk' % i)) if os.path.isdir('pub/%s/talk' % i) else 0, tot / 1e6))
+              for c, clip in enumerate(clips):
+                  p = 'pub/%s/%s.webp' % (i, clip)
+                  if not os.path.exists(p): continue
+                  im = Image.open(p)
+                  if getattr(im, 'n_frames', 1) > 1: im.seek(im.n_frames // 2)
+                  im = im.convert('RGBA'); bg = Image.new('RGBA', im.size, 'white'); bg.alpha_composite(im)
+                  sheet.paste(bg.convert('RGB').resize((S, S)), (c * S, r * S))
+              d.text((2, r * S + 2), i, fill='black')
+          sheet.save('pub/sheet.png'); open('pub/report.txt', 'w').write('\n'.join(rep) + '\n'); print('\n'.join(rep))
+          PY
+          cd pub && git init -q && git checkout -q -b buddylite-assets && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "buddy lite packs" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" buddylite-assets
