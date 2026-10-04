@@ -1,0 +1,4 @@
+P Barbell_Curl 6 10
+P Bodyweight_Squat 6 19
+P Air_Bike 6 27
+ALLDONE
