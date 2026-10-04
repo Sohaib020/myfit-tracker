@@ -265,7 +265,7 @@ fun GlassChip(text: String, selected: Boolean, onClick: () -> Unit, modifier: Mo
                 Icon(icon, null, tint = if (selected) th.onAccent else th.textDim, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
             }
-            Text(text, style = FitType.label, color = if (selected) th.onAccent else th.text)
+            Text(text, style = FitType.label, color = if (selected) th.onAccent else th.text, maxLines = 1, softWrap = false)
         }
     }
 }

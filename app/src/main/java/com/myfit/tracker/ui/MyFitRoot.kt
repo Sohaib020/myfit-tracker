@@ -274,7 +274,9 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             }
           }
             // bottom gradient scrim behind the dock (content fades out instead of colliding with it)
-            AnimatedVisibility(top == null, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn(), exit = fadeOut()) {
+            // chrome (scrim, dock, Me, calendar, +) hides while a sheet or full-screen panel is open
+            val chrome = top == null && com.myfit.tracker.ui.components.SheetsOpen.count.intValue == 0
+            AnimatedVisibility(chrome, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn(), exit = fadeOut()) {
                 val th = LocalFitTheme.current
                 val base = if (th.isLight) Color.White else Color.Black
                 Box(
@@ -283,7 +285,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                     },
                 )
             }
-            AnimatedVisibility(top == null && com.myfit.tracker.ui.components.SheetsOpen.count.intValue == 0, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
+            AnimatedVisibility(chrome, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
                 LiquidTabBar(
                     items = tabs, selected = tab, onSelect = { tab = it },
                     modifier = Modifier.navigationBarsPadding().padding(bottom = 8.dp).tourTarget("dock"),
@@ -291,7 +293,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             }
             // quick add: floating glass orb, top-right on every tab
             AnimatedVisibility(
-                top == null,
+                chrome,
                 modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 10.dp, end = 16.dp),
                 enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
             ) {
@@ -303,7 +305,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             }
             // Me: profile, body & targets — top-left on every tab
             AnimatedVisibility(
-                top == null,
+                chrome,
                 modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(top = 10.dp, start = 16.dp),
                 enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
             ) {

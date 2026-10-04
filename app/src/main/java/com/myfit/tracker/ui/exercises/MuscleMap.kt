@@ -2,10 +2,6 @@ package com.myfit.tracker.ui.exercises
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.graphics.ImageDecoder
-import android.graphics.drawable.AnimatedImageDrawable
-import android.os.Build
-import android.widget.ImageView
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -25,7 +21,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.myfit.tracker.data.db.Exercise
 import com.myfit.tracker.data.db.MuscleGroup
 import com.myfit.tracker.ui.components.clickableNoRipple
@@ -115,27 +110,12 @@ private fun MuscleChip(name: String, c: Color, primary: Boolean) {
     }
 }
 
-/**
- * How-to media, like a looping video: our own 3D animation when we have one for this exercise, otherwise the
- * photos crossfading smoothly. White card with a play/pause button.
- */
+/** How-to media: the exercise photos crossfading smoothly, on a white card with play/pause. */
 @Composable
 fun ExerciseMedia(ex: Exercise, modifier: Modifier = Modifier) {
-    val ctx = LocalContext.current
     var playing by remember { mutableStateOf(true) }
-    val anim3d = remember(ex.imageKey) { ex.imageKey?.let { k -> runCatching { ctx.assets.open("ex3d/$k.webp").close(); "ex3d/$k.webp" }.getOrNull() } }
     Box(modifier.clip(RoundedCornerShape(26.dp)).background(Color.White)) {
-        if (anim3d != null && Build.VERSION.SDK_INT >= 28) {
-            val d by produceState<android.graphics.drawable.Drawable?>(null, anim3d) {
-                value = withContext(Dispatchers.IO) { runCatching { ImageDecoder.decodeDrawable(ImageDecoder.createSource(ctx.assets, anim3d)) }.getOrNull() }
-            }
-            val dr = d
-            if (dr is AnimatedImageDrawable) {
-                LaunchedEffect(dr, playing) { dr.repeatCount = AnimatedImageDrawable.REPEAT_INFINITE; if (playing) dr.start() else dr.stop() }
-                DisposableEffect(dr) { onDispose { dr.stop() } }
-                AndroidView({ c -> ImageView(c).apply { scaleType = ImageView.ScaleType.FIT_CENTER } }, Modifier.fillMaxSize().padding(8.dp), update = { it.setImageDrawable(dr) })
-            }
-        } else PhotoLoop(ex, playing, Modifier.fillMaxSize())
+        PhotoLoop(ex, playing, Modifier.fillMaxSize())
         Box(Modifier.align(Alignment.BottomEnd).padding(14.dp).size(46.dp).clip(CircleShape).background(Color(0xFF6E6E73)).clickableNoRipple { playing = !playing }, contentAlignment = Alignment.Center) {
             if (playing) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { repeat(2) { Box(Modifier.width(4.dp).height(16.dp).background(Color.White)) } }
             else Icon(Duo.PlayArrow, "Play", tint = Color.White, modifier = Modifier.size(24.dp))

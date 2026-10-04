@@ -71,7 +71,7 @@ fun GlassSearchField(value: String, onChange: (String) -> Unit, hint: String, mo
             Icon(Duo.Search, null, tint = th.textDim, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(10.dp))
             Box(Modifier.weight(1f)) {
-                if (value.isEmpty()) Text(hint, style = FitType.body, color = th.textFaint)
+                if (value.isEmpty()) Text(hint, style = FitType.body, color = th.textFaint, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 BasicTextField(value, onChange, singleLine = true, textStyle = FitType.body.copy(color = th.text), cursorBrush = SolidColor(th.accent), modifier = Modifier.fillMaxWidth())
             }
             if (value.isNotEmpty()) Icon(Duo.Close, "Clear", tint = th.textDim, modifier = Modifier.size(20.dp).clickableNoRipple { onChange("") })

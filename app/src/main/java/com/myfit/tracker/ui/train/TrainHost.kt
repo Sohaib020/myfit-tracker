@@ -45,11 +45,11 @@ fun TrainHost(container: AppContainer, bottomPad: Int) {
         Column(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = TopBarSpace, bottom = 6.dp)) {
             Text("Train", style = FitType.display, color = th.text)
             androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp))
-            Segmented(listOf("Workouts", "Programs", "Exercises"), seg) { seg = it }
+            Segmented(listOf("Programs", "Workouts", "Exercises"), seg) { seg = it }
         }
         Box(Modifier.fillMaxWidth().weight(1f).fadeTopEdge()) {
-            if (seg == 0) TrainScreen(container, bottomPad, embedded = true)
-            else if (seg == 1) com.myfit.tracker.ui.programs.ProgramsScreen(container, bottomPad)
+            if (seg == 0) com.myfit.tracker.ui.programs.ProgramsScreen(container, bottomPad)
+            else if (seg == 1) TrainScreen(container, bottomPad, embedded = true)
             else Box(Modifier.padding(horizontal = 0.dp)) { ExercisesScreen(container, bottomPad, embedded = true) }
         }
     }

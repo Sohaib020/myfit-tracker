@@ -2,6 +2,7 @@ package com.myfit.tracker.ui.arena
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -162,40 +163,58 @@ private fun StarPill(total: Int) {
     }
 }
 
+private val GRAIN = List(260) { Triple(Random.nextFloat(), Random.nextFloat(), Random.nextFloat()) }
+
+private fun mix(a: Color, b: Color, t: Float) = Color(a.red + (b.red - a.red) * t, a.green + (b.green - a.green) * t, a.blue + (b.blue - a.blue) * t, 1f)
+
+/** Tier card: slowly flowing aurora light in the partner's colours, fine grain and a periodic glass sheen. */
 @Composable
 private fun LevelHero(l: Level, partner: Mascot, onClick: () -> Unit) {
     val inf = rememberInfiniteTransition(label = "hero")
-    val bob by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(1800), RepeatMode.Reverse), label = "bob")
+    val t by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(22_000, easing = LinearEasing)), label = "aurora")
+    val sheen by inf.animateFloat(-0.6f, 1.6f, infiniteRepeatable(tween(7_000, easing = LinearEasing)), label = "sheen")
     val frac by animateFloatAsState(l.frac, tween(1400), label = "xp")
     val next = Mascot.entries.firstOrNull { it.unlock > l.n }
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
-        .background(Brush.linearGradient(listOf(partner.accent.copy(alpha = 0.92f), partner.accent.copy(alpha = 0.55f), partner.color.copy(alpha = 0.55f))))
-        .clickableNoRipple(onClick)) {
-        // soft rays behind the character
+    val a1 = partner.accent; val a2 = partner.color
+    val deep = mix(a1, Color(0xFF07080C), 0.78f)
+    val hueB = mix(a1, Color(0xFF6A5CFF), 0.45f)
+    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(deep)
+        .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(28.dp)).clickableNoRipple(onClick)) {
         Canvas(Modifier.matchParentSize()) {
-            val c = Offset(size.width * 0.18f, size.height * 0.55f)
-            for (k in 0 until 10) {
-                val a = Math.toRadians(k * 36.0 + bob * 8)
-                drawLine(Color.White.copy(alpha = 0.08f), c, Offset(c.x + (cos(a) * size.width).toFloat(), c.y + (sin(a) * size.width).toFloat()), 26.dp.toPx())
-            }
-            drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.35f), Color.Transparent), c, size.height * 0.6f), size.height * 0.6f, c)
+            val w = size.width; val h = size.height; val tau = (2 * Math.PI).toFloat()
+            fun blob(cx: Float, cy: Float, r: Float, c: Color, alpha: Float) =
+                drawCircle(Brush.radialGradient(listOf(c.copy(alpha = alpha), c.copy(alpha = alpha * 0.35f), Color.Transparent), Offset(cx, cy), r), r, Offset(cx, cy))
+            blob(w * (0.25f + 0.18f * sin(t * tau)), h * (0.35f + 0.25f * cos(t * tau * 2)), h * 1.25f, a1, 0.85f)
+            blob(w * (0.75f + 0.15f * cos(t * tau)), h * (0.70f + 0.20f * sin(t * tau * 3)), h * 1.1f, hueB, 0.70f)
+            blob(w * (0.55f + 0.25f * sin(t * tau * 2 + 1f)), h * (0.10f + 0.20f * cos(t * tau + 2f)), h * 0.9f, a2, 0.55f)
+            // legibility: darken the text side slightly
+            drawRect(Brush.horizontalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.28f)), w * 0.3f, w))
+            // fine grain
+            GRAIN.forEach { (x, y, k) -> drawCircle(Color.White.copy(alpha = 0.035f + 0.04f * k), 0.6.dp.toPx(), Offset(x * w, y * h)) }
+            // diagonal glass sheen sweeping across
+            val sx = sheen * w
+            drawRect(Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.10f), Color.Transparent), Offset(sx - w * 0.25f, 0f), Offset(sx + w * 0.05f, h)))
         }
-        Row(Modifier.padding(start = 6.dp, end = 16.dp, top = 6.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            CastImage(partner, 108.dp, Modifier.graphicsLayer { translationY = -bob * 6.dp.toPx() })
-            Spacer(Modifier.width(6.dp))
+        Row(Modifier.padding(start = 12.dp, end = 18.dp, top = 14.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(96.dp).clip(CircleShape).background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent))), contentAlignment = Alignment.Center) {
+                CastImage(partner, 92.dp)
+            }
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(l.tier.label.uppercase() + " TIER", style = FitType.overline, color = Color.White.copy(alpha = 0.85f))
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text("Level ", style = FitType.title, color = Color.White)
-                    Text("${l.n}", style = FitType.hero.copy(fontSize = 40.sp, lineHeight = 42.sp), color = Color.White)
+                Text(l.tier.label.uppercase() + " TIER", style = FitType.overline, color = Color.White.copy(alpha = 0.8f), maxLines = 1)
+                Spacer(Modifier.height(2.dp))
+                Text(androidx.compose.ui.text.buildAnnotatedString {
+                    append("Level ")
+                    pushStyle(androidx.compose.ui.text.SpanStyle(fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold))
+                    append("${l.n}"); pop()
+                }, style = FitType.metric.copy(fontSize = 30.sp, lineHeight = 34.sp), color = Color.White, maxLines = 1)
+                Spacer(Modifier.height(10.dp))
+                Box(Modifier.fillMaxWidth().height(8.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.16f))) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(frac.coerceIn(0.03f, 1f)).clip(CircleShape).background(Brush.horizontalGradient(listOf(Color(0xFFFFE9A3), GOLD))))
                 }
-                Spacer(Modifier.height(6.dp))
-                Box(Modifier.fillMaxWidth().height(12.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.22f))) {
-                    Box(Modifier.fillMaxHeight().fillMaxWidth(frac.coerceIn(0.02f, 1f)).clip(CircleShape).background(Brush.horizontalGradient(listOf(Color(0xFFFFE27A), GOLD))))
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(if (l.n >= MAX_LEVEL) "Max level — you're a Legend!" else "${l.into} / ${l.span} ⭐ to level ${l.n + 1}", style = FitType.label, color = Color.White)
-                if (next != null) Text("${next.label.substringBefore(' ')} unlocks at level ${next.unlock}", style = FitType.caption, color = Color.White.copy(alpha = 0.85f))
+                Spacer(Modifier.height(8.dp))
+                Text(if (l.n >= MAX_LEVEL) "Max level — you're a Legend!" else "${l.into} / ${l.span} ⭐ to level ${l.n + 1}", style = FitType.label, color = Color.White, maxLines = 1)
+                if (next != null) Text("${next.label.substringBefore(' ')} unlocks at level ${next.unlock}", style = FitType.caption, color = Color.White.copy(alpha = 0.78f), maxLines = 1)
             }
         }
     }
