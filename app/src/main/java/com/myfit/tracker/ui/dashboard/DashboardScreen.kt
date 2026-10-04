@@ -381,7 +381,7 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
         DashCard.PIP -> if (small) PipSmall(state) else PipCard(state)
         DashCard.SNAP -> if (small) SnapSmall() else SnapHeroCard()
         DashCard.WORKOUT -> if (small) WorkoutSmall(state.workout, container) { goTab(Tabs.TRAIN) } else WorkoutCard(state.workout, container)
-        DashCard.RINGS -> if (small) RingsSmall(state) { nav.push(Overlay.Activity) } else RingsCard(state, open)
+        DashCard.RINGS -> if (small) RingsSmall(state) { nav.push(Overlay.Today) } else RingsCard(state, open)
         DashCard.NUTRITION -> if (small) NutritionSmall(container) { goTab(Tabs.FOOD) } else FoodHydrationCard(state, container, open) { goTab(Tabs.FOOD) }
         DashCard.SOCIAL -> if (small) CompeteSmall(container) { goTab(Tabs.ARENA) } else com.myfit.tracker.ui.social.FriendsHero(container) { goTab(Tabs.ARENA) }
         DashCard.HYDRATION -> HydrationTile(state, container, open, wide = !small)
@@ -606,7 +606,10 @@ private fun PipSmall(s: DashState) {
 
 private fun frac(v: Double?, t: Double?): Float? = if (v == null || t == null || t <= 0) null else (v / t).toFloat()
 
-/** Three concentric rings (water · steps · sleep), sized to [outer]. */
+internal val CaloriesColor = Color(0xFFB66DFF)
+internal const val ACTIVE_KCAL_TARGET = 500.0
+
+/** Three concentric rings (water · steps · active calories), sized to [outer]. */
 @Composable
 private fun TripleRings(s: DashState, outer: Dp) {
     val th = LocalFitTheme.current
@@ -615,7 +618,7 @@ private fun TripleRings(s: DashState, outer: Dp) {
     Box(Modifier.size(outer), contentAlignment = Alignment.Center) {
         ProgressRing(frac(s.waterMl, s.waterTarget), th.water, size = outer, stroke = stroke)
         ProgressRing(frac(s.steps?.toDouble(), s.stepTarget), th.steps, size = outer - step, stroke = stroke)
-        ProgressRing(frac(s.sleepMin?.toDouble(), s.sleepTarget), th.sleep, size = outer - step * 2, stroke = stroke)
+        ProgressRing(frac(s.health.daily?.activeKcal, ACTIVE_KCAL_TARGET), CaloriesColor, size = outer - step * 2, stroke = stroke)
     }
 }
 
@@ -623,7 +626,8 @@ private fun TripleRings(s: DashState, outer: Dp) {
 internal fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
     val th = LocalFitTheme.current
     val units = LocalSettings.current.units
-    GlassCard {
+    val nav = LocalNav.current
+    GlassCard(onClick = { nav.push(Overlay.Today) }) {
         Text("TODAY'S PROGRESS", style = FitType.overline, color = th.textDim)
         Spacer(Modifier.height(14.dp))
         BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -636,14 +640,14 @@ internal fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
                     RingLegend(th.water, "Water", s.waterMl?.let { Fmt.volume(it, units.volume) } ?: "—",
                         s.waterTarget?.let { "of ${Fmt.volume(it, units.volume)}" }, { open(Sheet.Water()) }, frac(s.waterMl, s.waterTarget))
                     RingLegend(th.steps, "Steps", s.steps?.let { Fmt.int(it) } ?: "—", s.stepTarget?.let { "of ${Fmt.int(it)}" }, { open(Sheet.Steps()) }, frac(s.steps?.toDouble(), s.stepTarget))
-                    RingLegend(th.sleep, "Sleep", s.sleepMin?.let { Fmt.duration(it) } ?: "—", s.sleepTarget?.let { "of ${Fmt.duration(it.toLong())}" }, { open(Sheet.Sleep()) }, frac(s.sleepMin?.toDouble(), s.sleepTarget))
+                    RingLegend(CaloriesColor, "Calories", s.health.daily?.activeKcal?.let { Fmt.int(it.toLong()) + " kcal" } ?: "—", "of ${Fmt.int(ACTIVE_KCAL_TARGET.toLong())} active", { nav.push(Overlay.Today) }, frac(s.health.daily?.activeKcal, ACTIVE_KCAL_TARGET))
                 }
             }
         }
         Spacer(Modifier.height(12.dp))
         CheckInStrip(s, open)
         Spacer(Modifier.height(8.dp))
-        Caption("Dashed ring = nothing logged yet (not zero).")
+        Caption("Tap for hourly activity · dashed ring = nothing logged yet")
     }
 }
 
@@ -694,7 +698,7 @@ private fun RingsSmall(s: DashState, onClick: () -> Unit) {
             TripleRings(s, minOf(maxWidth, maxHeight).coerceAtMost(112.dp))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            listOf(th.water to "Water", th.steps to "Steps", th.sleep to "Sleep").forEach { (c, l) ->
+            listOf(th.water to "Water", th.steps to "Steps", CaloriesColor to "Kcal").forEach { (c, l) ->
                 Box(Modifier.padding(top = 4.dp).size(6.dp).clip(CircleShape).background(c))
                 Spacer(Modifier.width(3.dp))
                 Text(l, style = FitType.overline.copy(letterSpacing = FitType.caption.letterSpacing), color = th.textDim, maxLines = 1)

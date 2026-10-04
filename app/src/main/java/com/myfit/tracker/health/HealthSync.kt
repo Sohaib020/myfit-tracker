@@ -275,6 +275,58 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
      * double-counted), MINUS anything typed in by hand; workout minutes only from sessions a watch or
      * phone actually recorded. Manual entries never count, so nobody can type their way up a leaderboard.
      */
+    /** One day split by hour, for the Today screen: steps, active minutes (steps at walking pace + workouts) and active kcal. */
+    data class Hourly(val steps: LongArray, val activeMin: IntArray, val kcal: DoubleArray, val exerciseMin: Int, val exerciseKcal: Double, val floors: Double?)
+
+    suspend fun hourly(day: LocalDate): Hourly? {
+        if (!isAvailable) return null
+        val g = granted()
+        if (g.none { it in dataPermissions }) return null
+        val zone = Clock.zone()
+        val steps = LongArray(24); val act = IntArray(24); val kcal = DoubleArray(24)
+        val metrics = buildSet<AggregateMetric<*>> {
+            if (p(StepsRecord::class) in g) add(StepsRecord.COUNT_TOTAL)
+            if (p(ActiveCaloriesBurnedRecord::class) in g) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+        }
+        if (metrics.isNotEmpty()) runCatching {
+            client.aggregateGroupByDuration(androidx.health.connect.client.request.AggregateGroupByDurationRequest(
+                metrics = metrics, timeRangeFilter = TimeRangeFilter.between(day.atStartOfDay(zone).toInstant(), day.plusDays(1).atStartOfDay(zone).toInstant()),
+                timeRangeSlicer = java.time.Duration.ofHours(1),
+            )).forEach { grp ->
+                val h = grp.startTime.atZone(zone).hour
+                grp.result[StepsRecord.COUNT_TOTAL]?.let { steps[h] += it }
+                grp.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.let { kcal[h] += it.inKilocalories }
+            }
+        }
+        val start = day.atStartOfDay(zone).toInstant(); val end = day.plusDays(1).atStartOfDay(zone).toInstant()
+        // active minutes: step records at ≥ 60 steps/min count as active time, spread over the hours they cover
+        if (p(StepsRecord::class) in g) runCatching {
+            readAll(StepsRecord::class, start, end).forEach { r ->
+                val mins = java.time.Duration.between(r.startTime, r.endTime).toMinutes().coerceAtLeast(1)
+                if (r.count / mins.toDouble() >= 60.0) {
+                    var t = r.startTime
+                    while (t.isBefore(r.endTime)) { val h = t.atZone(zone).hour; act[h] = (act[h] + 1).coerceAtMost(60); t = t.plusSeconds(60) }
+                }
+            }
+        }
+        var exMin = 0; var exKcal = 0.0
+        if (p(ExerciseSessionRecord::class) in g) runCatching {
+            readAll(ExerciseSessionRecord::class, start, end).forEach { sx ->
+                exMin += java.time.Duration.between(sx.startTime, sx.endTime).toMinutes().toInt()
+                var t = sx.startTime
+                while (t.isBefore(sx.endTime)) { val h = t.atZone(zone).hour; act[h] = (act[h] + 1).coerceAtMost(60); t = t.plusSeconds(60) }
+                if (p(ActiveCaloriesBurnedRecord::class) in g) runCatching {
+                    client.aggregate(androidx.health.connect.client.request.AggregateRequest(setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL), TimeRangeFilter.between(sx.startTime, sx.endTime)))[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.let { exKcal += it.inKilocalories }
+                }
+            }
+        }
+        var floors: Double? = null
+        if (p(FloorsClimbedRecord::class) in g) runCatching {
+            floors = client.aggregate(androidx.health.connect.client.request.AggregateRequest(setOf(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL), TimeRangeFilter.between(start, end)))[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]
+        }
+        return Hourly(steps, act, kcal, exMin, exKcal, floors)
+    }
+
     suspend fun autoDays(from: LocalDate, to: LocalDate): List<AutoDay> {
         if (!isAvailable) return emptyList()
         val g = granted()
