@@ -41,6 +41,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val container = (application as MyFitApplication).container
         com.myfit.tracker.social.Invite.handle(intent)
+        com.myfit.tracker.ui.pip.Buddy.init(this)
         if (BuildConfig.DEBUG && intent?.getBooleanExtra("smoke", false) == true) SmokeSetup.ensureProfile(container)
         val crash = CrashGuard.lastCrash(this)
         setContent {

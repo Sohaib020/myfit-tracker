@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -126,8 +127,10 @@ private val confettiColors = listOf(Color(0xFFFF5C8A), Color(0xFFFFD34D), Color(
  * through) into a byte-capped LRU shared by every Pip, and dropped when no Pip is on screen.
  */
 private object LookFrames {
-    const val N = 13
-    const val MID = 6f
+    /** Grid size comes from the active buddy (Pip 13×13, character packs 7×7). */
+    val N: Int get() = Buddy.lookN
+    val MID: Float get() = (N - 1) / 2f
+    init { Buddy.onChange += { cache.evictAll() } }
     private const val MAX_BYTES = 14 * 1024 * 1024   // ≈17 full-res or ≈70 half-res frames (only the ones near the gaze are kept)
     private val cache = object : android.util.LruCache<Int, ImageBitmap>(MAX_BYTES) {
         override fun sizeOf(key: Int, value: ImageBitmap) = value.width * value.height * 4
@@ -154,7 +157,7 @@ private object LookFrames {
                 val bmp = withContext(Dispatchers.IO) {
                     runCatching {
                         val opts = BitmapFactory.Options().apply { inSampleSize = s }
-                        ctx.assets.open("pip/look/look_%02d_%02d.webp".format(idx / N, idx % N)).use { BitmapFactory.decodeStream(it, null, opts) }?.asImageBitmap()
+                        Buddy.open(ctx, "look/look_%02d_%02d.webp".format(idx / N, idx % N)).use { BitmapFactory.decodeStream(it, null, opts) }?.asImageBitmap()
                     }.getOrNull()
                 }
                 if (bmp != null && s == sample) { cache.put(key, bmp); onLoaded() }
@@ -182,9 +185,10 @@ private fun critStep(x: Float, v: Float, target: Float, dt: Float, w: Float = 40
 /** Talking mouth frames (idle pose, mouth closed → wide open), decoded once and shared. */
 private object TalkFrames {
     @Volatile var frames: List<ImageBitmap>? = null
+    init { Buddy.onChange += { frames = null } }
     suspend fun load(ctx: android.content.Context): List<ImageBitmap> = frames ?: withContext(Dispatchers.IO) {
         (0..5).mapNotNull { i ->
-            runCatching { ctx.assets.open("pip/talk/$i.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
+            runCatching { Buddy.open(ctx, "talk/$i.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
         }
     }.also { if (it.isNotEmpty()) frames = it }
 }
@@ -199,6 +203,22 @@ fun Pip(
     interactive: Boolean = true,
     idleActions: Boolean = true,
     level: Float = 0.5f,
+) {
+    // the Home buddy can be any unlocked character: restart all clip/frame state when it changes
+    val buddy by Buddy.active.collectAsState()
+    androidx.compose.runtime.key(buddy) { PipBody(mood, modifier, size, onTap, talking, interactive, idleActions, level) }
+}
+
+@Composable
+private fun PipBody(
+    mood: PipMood,
+    modifier: Modifier,
+    size: Dp,
+    onTap: (() -> Unit)?,
+    talking: Boolean,
+    interactive: Boolean,
+    idleActions: Boolean,
+    level: Float,
 ) {
     val th = LocalFitTheme.current
     val ctx = LocalContext.current
@@ -278,7 +298,7 @@ fun Pip(
                 drawable = d
             } else {
                 still = withContext(Dispatchers.IO) {
-                    runCatching { ctx.assets.open("pip/$clip.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
+                    runCatching { Buddy.open(ctx, "$clip.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
                 }
                 if (reaction == clip) { delay(1500); reaction = null }
             }
@@ -521,7 +541,7 @@ private fun stopClip(d: Drawable?) {
 
 @RequiresApi(28)
 private fun decode(ctx: android.content.Context, name: String): Drawable =
-    ImageDecoder.decodeDrawable(ImageDecoder.createSource(ctx.assets, "pip/$name.webp"))
+    ImageDecoder.decodeDrawable(Buddy.source(ctx, "$name.webp"))
 
 @RequiresApi(28)
 private fun start(d: Drawable, loop: Boolean, onEnd: () -> Unit, invalidate: () -> Unit) {

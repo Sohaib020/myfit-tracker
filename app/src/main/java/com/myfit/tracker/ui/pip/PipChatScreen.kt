@@ -134,7 +134,7 @@ fun PipChatScreen(container: AppContainer) {
     LaunchedEffect(imeOpen) { if (imeOpen && messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex) }
     Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().imePadding()) {
-        OverlayTopBar("Pip", { nav.pop() }, if (online) "Your data offline · general questions online" else "Answers from your data (offline)") {
+        OverlayTopBar(Buddy.active.collectAsState().value.label.substringBefore(' '), { nav.pop() }, if (online) "Your data offline · general questions online" else "Answers from your data (offline)") {
             GlassIconButton(
                 if (settings.pipVoice) Duo.VolumeUp else Duo.VolumeOff,
                 {
@@ -257,7 +257,7 @@ private fun Bubble(m: ChatMessage, animate: Boolean, onShowShared: (() -> Unit)?
                             "online" -> Triple("Online · Gemini", th.water, Duo.Cloud)
                             "on-device" -> Triple("Offline brain · on this phone", th.accentBright, Duo.Lock)
                             "error" -> Triple("Couldn't reach Gemini", th.warning, Duo.Cloud)
-                            else -> Triple("Pip", th.textFaint, Duo.Insights)
+                            else -> Triple(Buddy.name, th.textFaint, Duo.Insights)
                         }
                         Icon(icon, null, tint = color, modifier = Modifier.size(12.dp))
                         Spacer(Modifier.size(4.dp))

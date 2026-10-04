@@ -600,6 +600,7 @@ private fun PipSettingsCard(container: AppContainer, dev: Boolean) {
     var testing by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
     GlassCard {
+        if (!dev) { com.myfit.tracker.ui.pip.BuddyChooser(); Spacer(Modifier.height(12.dp)) }
         CardHeader(Duo.AutoAwesome, "Pip · AI buddy", th.accentBright)
         Spacer(Modifier.height(10.dp))
         Caption("Questions about your logs are answered offline from your own data. General health & fitness questions go to an online AI with only a short, question-specific summary — never your full history or notes. Online answers are tagged.")

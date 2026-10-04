@@ -575,11 +575,11 @@ private fun PipCard(s: DashState) {
             Pip(mood, size = 128.dp, onTap = { variant++ })
             Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f)) {
-                Text("PIP", style = FitType.overline, color = th.accentBright)
+                Text(com.myfit.tracker.ui.pip.Buddy.active.collectAsState().value.label.substringBefore(' ').uppercase(), style = FitType.overline, color = th.accentBright)
                 Spacer(Modifier.height(4.dp))
                 Text(line, style = FitType.body, color = th.text)
                 Spacer(Modifier.height(10.dp))
-                CompactPill("Chat with Pip", Duo.ChatBubble, { nav.push(Overlay.PipChat) }, height = 34.dp)
+                CompactPill("Chat with " + com.myfit.tracker.ui.pip.Buddy.active.collectAsState().value.label.substringBefore(' '), Duo.ChatBubble, { nav.push(Overlay.PipChat) }, height = 34.dp)
             }
         }
     }
@@ -592,12 +592,12 @@ private fun PipSmall(s: DashState) {
     val (mood, line) = pipLine(s, 0)
     GlassCard(Modifier.height(TileHeight), onClick = { nav.push(Overlay.PipChat) }, padding = 12.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("PIP", style = FitType.overline, color = th.accentBright, modifier = Modifier.weight(1f))
+            Text(com.myfit.tracker.ui.pip.Buddy.active.collectAsState().value.label.substringBefore(' ').uppercase(), style = FitType.overline, color = th.accentBright, modifier = Modifier.weight(1f))
             Icon(Duo.ChatBubble, "Chat", tint = th.textDim, modifier = Modifier.size(15.dp))
         }
         Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { Pip(mood, size = 70.dp, interactive = false) }
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            CompactPill("Chat with Pip", Duo.ChatBubble, { nav.push(Overlay.PipChat) }, height = 34.dp)
+            CompactPill("Chat with " + com.myfit.tracker.ui.pip.Buddy.active.collectAsState().value.label.substringBefore(' '), Duo.ChatBubble, { nav.push(Overlay.PipChat) }, height = 34.dp)
         }
     }
 }
