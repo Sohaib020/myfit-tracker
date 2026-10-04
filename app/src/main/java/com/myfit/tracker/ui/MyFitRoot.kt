@@ -389,14 +389,15 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             LaunchedEffect(Unit) { runCatching { com.myfit.tracker.update.AppUpdater.autoRun(container.app) } }
             if (top == null) com.myfit.tracker.update.UpdateBanner(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 70.dp, start = 12.dp, end = 12.dp))
             // friend invite links (myfit://invite?c=CODE): add the friend once signed in, then show Arena → Friends
+            val inviteToaster = LocalToaster.current
             val inviteCode by com.myfit.tracker.social.Invite.pending.collectAsState()
             val socialUser by container.social.user.collectAsState()
             LaunchedEffect(inviteCode, socialUser) {
                 val code = inviteCode ?: return@LaunchedEffect
-                if (socialUser == null || !container.social.available) { toaster.show("Sign in (Me → Account) to accept the invite · code $code"); return@LaunchedEffect }
+                if (socialUser == null || !container.social.available) { inviteToaster.show("Sign in (Me → Account) to accept the invite · code $code"); return@LaunchedEffect }
                 runCatching { container.social.addFriendByCode(code) }
-                    .onSuccess { toaster.show("You and ${it.name} are now friends! 🎉"); com.myfit.tracker.ui.arena.ArenaLaunch.tab = 5; tab = 3 }
-                    .onFailure { toaster.show(it.message ?: "Couldn't add that friend") }
+                    .onSuccess { inviteToaster.show("You and ${it.name} are now friends! 🎉"); com.myfit.tracker.ui.arena.ArenaLaunch.tab = 5; tab = 3 }
+                    .onFailure { inviteToaster.show(it.message ?: "Couldn't add that friend") }
                 com.myfit.tracker.social.Invite.pending.value = null
             }
             // queue Pip's offline brain once after install: Wi-Fi only, resumable, in the background
