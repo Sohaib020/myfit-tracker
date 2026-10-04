@@ -80,6 +80,7 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
     var celebrate by remember { mutableStateOf<Pair<List<Award>, Int>?>(null) }   // awards + level before
     var partner by remember { mutableStateOf(ArenaPrefs.partner(ctx)) }
     var openCh by remember { mutableStateOf<ArenaChallenge?>(null) }
+    var openJourney by remember { mutableStateOf<Journey?>(null) }
     LaunchedEffect(days) {
         val d = days ?: return@LaunchedEffect
         val b = baseline(d, today)
@@ -139,7 +140,7 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                             item { PeriodHeader("THIS MONTH", mo.firstOrNull()?.to, today) }
                             items(mo, key = { it.id }) { ChallengeCard(it, d, today, partner, ver) { openCh = it } }
                         }
-                        1 -> item { JourneyHub(d, partner) { ver++ } }
+                        1 -> item(key = "journeys") { JourneyHub(container, d, partner, ver, { ver++ }) { openJourney = it } }
                         2 -> { item { DuelsPane(container, award) { nav.push(com.myfit.tracker.ui.nav.Overlay.Social) } }; item { Leaderboard(container, lvl, partner) } }
                         3 -> { item { GardenGame(d, award) }; item { GhostRace(d, partner, award) } }
                         else -> item { RewardsPane(lvl, d, partner, ver) { partner = it; ArenaPrefs.setPartner(ctx, it) } }
@@ -149,6 +150,9 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
         }
         val oc = openCh; val dd = days
         if (oc != null && dd != null) ChallengeDetail(container, oc, dd, today, partner, lvl.n, award) { openCh = null }
+        JourneySheet(openJourney, days.orEmpty(), { openJourney = null }) { j ->
+            ArenaPrefs.startJourney(ctx, j.id); openJourney = null; ver++
+        }
         celebrate?.let { (aw, before) -> Celebration(aw, before, ArenaProgress.level(total), partner) { celebrate = null } }
     }
 }
@@ -318,71 +322,6 @@ private fun MiniBars(days: List<Day>, m: ArenaMetric, color: Color) {
             drawRoundRect(if (v > 0) Brush.verticalGradient(listOf(color, color.copy(alpha = 0.55f))) else Brush.verticalGradient(listOf(th.textFaint.copy(alpha = 0.25f), th.textFaint.copy(alpha = 0.25f))),
                 Offset(i * (bw + gap), size.height - h), Size(bw, h), CornerRadius(bw / 3))
         }
-    }
-}
-
-// ------------------------------------------------------------------ journeys
-
-@Composable
-private fun JourneyHub(days: List<Day>, partner: Mascot, changed: () -> Unit) {
-    val th = LocalFitTheme.current
-    val ctx = LocalContext.current
-    val tick = rememberTick()
-    val toaster = LocalToaster.current
-    var t by remember { mutableIntStateOf(0) }
-    val active = remember(t) { ArenaPrefs.journey(ctx) }
-    val finished = remember(t) { ArenaPrefs.finished(ctx) }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (active != null) {
-            val j = Journeys.firstOrNull { it.id == active.first }
-            if (j != null) {
-                val km = days.filter { !it.date.isBefore(active.second) }.sumOf { it.distanceM } / 1000.0
-                LaunchedEffect(km >= j.km) { if (km >= j.km && j.id !in finished) { ArenaPrefs.markFinished(ctx, j.id); toaster.show("Journey complete: ${j.title} 🎉"); t++; changed() } }
-                GlassCard(padding = 12.dp) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CastImage(j.mascot, 56.dp)
-                        Spacer(Modifier.width(8.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(j.title, style = FitType.section, color = th.text)
-                            Caption("${j.place} · with ${j.mascot.label.substringBefore(' ')} · started ${active.second.dayOfMonth} ${active.second.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }}")
-                        }
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    ScenicTrack(j.scene, (km / j.km).toFloat(), j.stops.mapIndexed { i, (n, at) -> Checkpoint((at / j.km).toFloat(), if (i == j.stops.lastIndex) 6 else 2, n.take(14)) }, partner, height = 230.dp, accent = j.mascot.accent)
-                    Spacer(Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(Fmt.trim(km.coerceAtMost(j.km), 1), style = FitType.title, color = th.text)
-                        Text("  of ${Fmt.trim(j.km, 0)} km", style = FitType.label, color = th.textDim, modifier = Modifier.padding(bottom = 2.dp))
-                    }
-                    val next = j.stops.firstOrNull { it.second > km }
-                    Caption(if (next == null) "You made it! 🎉" else "Next stop: ${next.first} in ${Fmt.trim(next.second - km, 1)} km · 2 ⭐ waiting")
-                    Spacer(Modifier.height(8.dp))
-                    GlassButton("Leave journey", { ArenaPrefs.stopJourney(ctx); t++ }, Modifier.fillMaxWidth(), height = 40.dp)
-                }
-            }
-        }
-        Text("PICK A JOURNEY", style = FitType.overline, color = th.textDim)
-        Journeys.forEach { j ->
-            GlassCard(padding = 0.dp, onClick = { tick(); ArenaPrefs.startJourney(ctx, j.id); t++; toaster.show("${j.mascot.label} joins you on ${j.title}!") }) {
-                Box(Modifier.fillMaxWidth().height(86.dp).background(Brush.horizontalGradient(listOf(j.scene.sky.first(), j.scene.hills.last())))) {
-                    Canvas(Modifier.matchParentSize()) {
-                        val road = j.scene.road
-                        drawLine(road, Offset(size.width * 0.32f, size.height * 0.95f), Offset(size.width * 0.98f, size.height * 0.6f), 10.dp.toPx(), StrokeCap.Round)
-                        drawLine(Color.White.copy(alpha = 0.7f), Offset(size.width * 0.32f, size.height * 0.95f), Offset(size.width * 0.98f, size.height * 0.6f), 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f)))
-                    }
-                    Row(Modifier.fillMaxSize().padding(end = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        CastImage(j.mascot, 84.dp)
-                        Column(Modifier.weight(1f)) {
-                            Text(j.title + if (j.id in finished) "  ✓" else "", style = FitType.section, color = Color(0xFF1A1D22), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${j.place} · ${Fmt.trim(j.km, 0)} km · ${j.stops.size - 1} stops · ${(j.stops.size - 2) * 2 + 6} ⭐", style = FitType.caption, color = Color(0xFF2A2F36))
-                        }
-                        Text(if (active?.first == j.id) "Active" else "Start", style = FitType.label, color = Color.White,
-                            modifier = Modifier.clip(CircleShape).background(j.mascot.accent).padding(horizontal = 12.dp, vertical = 6.dp))
-                    }
-                }
-            }
-        }
-        Caption("Distance comes from your watch or phone (walking, running and cycling all count).", color = th.textFaint)
     }
 }
 

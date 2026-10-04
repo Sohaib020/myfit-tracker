@@ -131,23 +131,6 @@ enum class Scene(val sky: List<Color>, val hills: List<Color>, val ground: Color
     CITY(listOf(Color(0xFF9AB6FF), Color(0xFFF0E6FF)), listOf(Color(0xFF8E9BC7), Color(0xFF6A78A8)), Color(0xFF8FC48E), Color(0xFF5C6270)),
 }
 
-data class Journey(val id: String, val title: String, val place: String, val km: Double, val mascot: Mascot, val scene: Scene, val stops: List<Pair<String, Double>>)
-
-val Journeys = listOf(
-    Journey("shalimar", "Shalimar Gardens Loop", "Lahore", 5.0, Mascot.PIP, Scene.SHALIMAR,
-        listOf("Main gate" to 0.0, "Upper terrace" to 1.5, "Fountains" to 3.0, "Back to gate" to 5.0)),
-    Journey("margalla", "Margalla Trail 3", "Islamabad", 9.0, Mascot.ZARA, Scene.MARGALLA,
-        listOf("Trailhead" to 0.0, "Viewpoint" to 3.0, "Pir Sohawa" to 6.5, "Summit café" to 9.0)),
-    Journey("seaview", "Clifton to Sea View", "Karachi", 12.0, Mascot.SHAHEEN, Scene.CLIFTON,
-        listOf("Teen Talwar" to 0.0, "Bilawal House" to 3.0, "Do Darya" to 8.0, "Sea View" to 12.0)),
-    Journey("arafat", "Mina → Arafat → Muzdalifah", "Makkah", 25.0, Mascot.KAMI, Scene.DESERT,
-        listOf("Mina" to 0.0, "Masjid Namirah, Arafat" to 14.0, "Muzdalifah" to 21.0, "Back to Mina" to 25.0)),
-    Journey("k2", "K2 Base Camp Trek", "Gilgit-Baltistan", 90.0, Mascot.TAJ, Scene.K2,
-        listOf("Askole" to 0.0, "Paiju" to 22.0, "Urdukas" to 45.0, "Concordia" to 70.0, "K2 Base Camp" to 90.0)),
-    Journey("motorway", "Lahore → Islamabad (M-2)", "Punjab", 375.0, Mascot.MOTU, Scene.CITY,
-        listOf("Lahore" to 0.0, "Sheikhupura" to 35.0, "Bhera" to 160.0, "Kallar Kahar" to 260.0, "Islamabad" to 375.0)),
-)
-
 object ArenaPrefs {
     private fun p(c: Context) = c.applicationContext.getSharedPreferences("arena_prefs", Context.MODE_PRIVATE)
     fun journey(c: Context): Pair<String, LocalDate>? = p(c).getString("journey", null)?.let { id -> p(c).getString("journey_start", null)?.let { id to LocalDate.parse(it) } }

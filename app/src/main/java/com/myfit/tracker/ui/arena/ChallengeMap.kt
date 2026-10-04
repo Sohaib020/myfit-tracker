@@ -39,13 +39,14 @@ import kotlinx.coroutines.withContext
 private val TRACK_DONE = Color(0xFFFFC83D)
 private val PIN = Color(0xFF4CC38A)
 
-private object MapArt {
-    private val cache = HashMap<String, ImageBitmap?>()
-    suspend fun get(c: android.content.Context, scene: Scene): ImageBitmap? {
-        val k = scene.name.lowercase()
-        if (cache.containsKey(k)) return cache[k]
-        val b = withContext(Dispatchers.IO) { runCatching { c.assets.open("challenge/$k.webp").use { android.graphics.BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull() }
-        cache[k] = b; return b
+/** Decoded map/cover art, kept small: at most a few bitmaps stay in memory. */
+internal object MapArt {
+    private val cache = android.util.LruCache<String, ImageBitmap>(6)
+    suspend fun get(c: android.content.Context, path: String): ImageBitmap? {
+        cache.get(path)?.let { return it }
+        val b = withContext(Dispatchers.IO) { runCatching { c.assets.open(path).use { android.graphics.BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull() }
+        if (b != null) cache.put(path, b)
+        return b
     }
 }
 
@@ -69,6 +70,9 @@ private fun route(w: Float, h: Float): Path {
     }
 }
 
+/** A pin on a [RouteMap]: where it sits on the route (0..1), whether you've reached it, and its label. */
+data class RoutePin(val frac: Float, val label: String, val reached: Boolean, val final: Boolean = false)
+
 /**
  * Samsung-Health-style challenge map: illustrated Pakistani scene, a winding route, star checkpoints with goal
  * values, your photo (or buddy) marking progress, and the time left.
@@ -76,12 +80,23 @@ private fun route(w: Float, h: Float): Path {
 @Composable
 fun ChallengeMap(ch: ArenaChallenge, frac: Float, reached: Set<Int>, daysLeft: Int, photo: ImageBitmap?, partner: Mascot, height: Dp = 420.dp) {
     val ctx = LocalContext.current
-    val art by produceState<ImageBitmap?>(null, ch.scene) { value = MapArt.get(ctx, ch.scene) }
+    val art by produceState<ImageBitmap?>(null, ch.scene) { value = MapArt.get(ctx, "challenge/${ch.scene.name.lowercase()}.webp") }
+    val pins = CHECKPOINTS.mapIndexed { i, (cf, _) -> RoutePin(cf.toFloat(), fmtMetric(ch.goal * cf, ch.metric, unit = false), i in reached, cf >= 1.0) }
+    RouteMap(art, ch.scene.sky + ch.scene.hills, frac, pins,
+        if (frac >= 1f) "Completed" else if (daysLeft <= 0) "Last day" else "$daysLeft day${if (daysLeft == 1) "" else "s"} left",
+        photo, partner, height, scrim = false)
+}
+
+/** Generic illustrated route: winding track over [art], pins, and you. [scrim] darkens busy artwork so the route reads. */
+@Composable
+fun RouteMap(art: ImageBitmap?, fallback: List<Color>, frac: Float, pins: List<RoutePin>, footer: String?, photo: ImageBitmap?, partner: Mascot,
+             height: Dp = 420.dp, scrim: Boolean = true, header: (@Composable BoxScope.() -> Unit)? = null) {
     val f by animateFloatAsState(frac.coerceIn(0f, 1f), tween(1400), label = "map")
     val density = LocalDensity.current
     Box(Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(28.dp))
-        .background(Brush.verticalGradient(ch.scene.sky + ch.scene.hills))) {
+        .background(Brush.verticalGradient(fallback))) {
         art?.let { Image(it, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop) }
+        if (scrim) Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.45f), Color.Black.copy(alpha = 0.15f), Color.Black.copy(alpha = 0.55f)))))
         BoxWithConstraints(Modifier.matchParentSize()) {
             val wPx = with(density) { maxWidth.toPx() }; val hPx = with(density) { maxHeight.toPx() }
             val path = remember(wPx, hPx) { route(wPx, hPx) }
@@ -91,7 +106,7 @@ fun ChallengeMap(ch: ArenaChallenge, frac: Float, reached: Set<Int>, daysLeft: I
             Canvas(Modifier.matchParentSize()) {
                 val sw = 14.dp.toPx()
                 drawPath(path, Color.Black.copy(alpha = 0.18f), style = Stroke(sw + 6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-                drawPath(path, Color.White, style = Stroke(sw, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                drawPath(path, Color.White.copy(alpha = if (scrim) 0.85f else 1f), style = Stroke(sw, cap = StrokeCap.Round, join = StrokeJoin.Round))
                 if (f > 0.001f) {
                     val done = Path(); pm.getSegment(0f, f * len, done, true)
                     drawPath(done, TRACK_DONE, style = Stroke(sw * 0.62f, cap = StrokeCap.Round, join = StrokeJoin.Round))
@@ -103,15 +118,15 @@ fun ChallengeMap(ch: ArenaChallenge, frac: Float, reached: Set<Int>, daysLeft: I
                 }
                 flag(at(0f)); flag(at(1f))
             }
-            // checkpoint pins + goal values
-            CHECKPOINTS.forEachIndexed { i, (cf, _) ->
-                val o = at(cf.toFloat()); val on = i in reached
+            // pins + labels
+            pins.forEach { pn ->
+                val o = at(pn.frac)
                 val pin = 30.dp
                 Box(Modifier.offset(x = with(density) { o.x.toDp() } - pin / 2, y = with(density) { o.y.toDp() } - pin / 2).size(pin)
-                    .shadow(4.dp, CircleShape).clip(CircleShape).background(if (on) TRACK_DONE else PIN).border(2.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(if (cf >= 1.0) Duo.Flag else Duo.Star, null, tint = Color.White, modifier = Modifier.size(15.dp))
+                    .shadow(4.dp, CircleShape).clip(CircleShape).background(if (pn.reached) TRACK_DONE else PIN).border(2.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(if (pn.final) Duo.Flag else Duo.Star, null, tint = Color.White, modifier = Modifier.size(15.dp))
                 }
-                Text(fmtMetric(ch.goal * cf, ch.metric, unit = false), style = FitType.label, color = Color.White,
+                if (pn.label.isNotEmpty()) Text(pn.label, style = FitType.label, color = Color.White, maxLines = 1,
                     modifier = Modifier.offset(x = with(density) { o.x.toDp() } - 34.dp, y = with(density) { o.y.toDp() } + 17.dp)
                         .clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)).padding(horizontal = 8.dp, vertical = 3.dp))
             }
@@ -126,8 +141,8 @@ fun ChallengeMap(ch: ArenaChallenge, frac: Float, reached: Set<Int>, daysLeft: I
                 }
             }
         }
-        Text(if (frac >= 1f) "Completed" else if (daysLeft <= 0) "Last day" else "$daysLeft day${if (daysLeft == 1) "" else "s"} left",
-            style = FitType.label, color = Color.White,
+        header?.invoke(this)
+        if (footer != null) Text(footer, style = FitType.label, color = Color.White,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)).padding(horizontal = 14.dp, vertical = 6.dp))
     }
 }
