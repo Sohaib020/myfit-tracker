@@ -1,6 +1,7 @@
 package com.myfit.tracker.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
@@ -25,7 +26,7 @@ import java.time.LocalDate
 /** Renders the challenge dashboard pieces (ring, pace chart, daily bars) so the design can be reviewed from CI. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [34], qualifiers = "w412dp-h900dp-xxhdpi", application = android.app.Application::class)
+@Config(sdk = [34], qualifiers = "w412dp-h1400dp-xxhdpi", application = android.app.Application::class)
 class ChallengeShotTest {
     @get:Rule val rule = createComposeRule()
 
@@ -39,7 +40,7 @@ class ChallengeShotTest {
         rule.setContent {
             MyFitTheme(Themes.Kinetic, AppSettings()) {
                 val th = LocalFitTheme.current
-                Column(Modifier.width(412.dp).background(th.bgBottom).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.width(412.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()).background(th.bgBottom).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Row {
                         ProgressRing(m.frac, m.pace, ch.mascot.accent, 128.dp, 12.dp) { Text("${(m.frac * 100).toInt()}%", style = FitType.metric, color = th.text) }
                         Spacer(Modifier.width(16.dp))
@@ -49,6 +50,7 @@ class ChallengeShotTest {
                     PaceChart(m, ch, Mascot.TAJ, 190.dp)
                     DailyBars(m, ch, 110.dp)
                     PaceChart(m, ch, Mascot.TAJ, 84.dp, labels = false)
+                    ChallengeMap(ch.copy(scene = Scene.K2), m.frac, setOf(0, 1), m.daysLeft, null, Mascot.TAJ)
                 }
             }
         }
