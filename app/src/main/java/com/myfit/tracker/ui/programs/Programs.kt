@@ -125,7 +125,7 @@ object ProgramEngine {
             val e = ex[it.k] ?: return@mapNotNull null
             val t = it.target(ph)
             WorkoutTemplateExercise(templateId = 0, exerciseId = e.id, position = 0, targetSets = t.sets, targetRepsMin = t.lo,
-                targetRepsMax = t.hi, targetWeightKg = null, targetDurationSec = t.durSec, restSeconds = t.rest)
+                targetRepsMax = t.hi, targetWeightKg = null, targetDurationSec = t.durSec?.toLong(), restSeconds = t.rest)
         }
     }
 
