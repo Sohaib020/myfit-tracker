@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -329,8 +330,41 @@ class Social(private val c: AppContainer) {
                     .set(mapOf(ch.metric.key to v, "updatedAt" to FieldValue.serverTimestamp())).await()
             }
         }
+        // activity feed: a few milestones friends can see (idempotent ids — re-syncing never duplicates)
+        runCatching {
+            val todaySteps = days.firstOrNull { it.date == today }?.steps ?: 0L
+            if (todaySteps >= 10_000) postEvent("steps-$today", "steps", "walked ${java.text.NumberFormat.getIntegerInstance().format(todaySteps)} steps today")
+            c.workoutRepo.completedRange(today.toString(), today.toString()).first().forEach { w ->
+                postEvent("workout-${w.uuid}", "workout", "finished a workout: ${w.name.take(40)}")
+            }
+            val lvl = com.myfit.tracker.ui.arena.ArenaProgress.level(com.myfit.tracker.ui.arena.ArenaProgress.total(ctx)).n
+            if (lvl > 1) postEvent("level-$lvl", "level", "reached Arena level $lvl")
+        }
         lastSync.value = "Synced ${java.time.LocalTime.now().withNano(0).withSecond(0)}"
         return lastSync.value
+    }
+
+    // ---------------------------------------------------------------- activity feed
+    data class FeedItem(val uid: String, val name: String, val kind: String, val text: String, val at: Long, val me: Boolean)
+
+    suspend fun postEvent(id: String, kind: String, text: String) {
+        val u = auth.currentUser ?: return
+        val name = profile(u.uid)?.name ?: "Athlete"
+        val ref = db.collection("feed").document(u.uid).collection("items").document(id.replace('/', '_').take(80))
+        if (ref.get().await().exists()) return
+        ref.set(mapOf("kind" to kind, "text" to text.take(120), "name" to name.take(24), "at" to FieldValue.serverTimestamp())).await()
+    }
+
+    /** Recent milestones from me and my friends, newest first. */
+    suspend fun feed(limit: Int = 40): List<FeedItem> {
+        val me = auth.currentUser?.uid ?: return emptyList()
+        val people = listOf(me) + friends().map { it.uid }
+        return people.flatMap { uid ->
+            runCatching {
+                db.collection("feed").document(uid).collection("items").orderBy("at", com.google.firebase.firestore.Query.Direction.DESCENDING).limit(10).get().await()
+                    .documents.map { d -> FeedItem(uid, d.getString("name") ?: "Friend", d.getString("kind") ?: "", d.getString("text") ?: "", d.getTimestamp("at")?.toDate()?.time ?: 0L, uid == me) }
+            }.getOrDefault(emptyList())
+        }.sortedByDescending { it.at }.take(limit)
     }
 }
 

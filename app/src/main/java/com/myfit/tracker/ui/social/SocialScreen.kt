@@ -34,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -99,7 +100,7 @@ fun SocialScreen(container: AppContainer, asTab: Boolean = false, bottomPad: Int
         else if (asTab) Column(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = com.myfit.tracker.ui.components.TopBarSpace, bottom = 6.dp)) {
             Text("Arena", style = com.myfit.tracker.ui.theme.FitType.display, color = LocalFitTheme.current.text)
             Caption(sub)
-        } else OverlayTopBar("Arena", { nav.pop() }, sub)
+        } else OverlayTopBar("Friends", { nav.pop() }, if (user != null) "Compete, add friends and see what they're up to" else "Sign in to compete with friends")
         when {
             !social.available -> NotConfigured()
             user == null -> SignIn(container, bottomPad)
@@ -275,13 +276,12 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = bottomPad.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Leaderboard", "Challenges", "Friends", "My code").forEachIndexed { i, l -> GlassChip(l, tab == i, { tab = i }) }
+                listOf(0 to "Leaderboard", 2 to "Friends", 1 to "Challenges", 4 to "Activity", 3 to "Account").forEach { (i, l) -> GlassChip(l, tab == i, { tab = i }) }
             }
         }
         error?.let { e -> item { Caption(e, color = th.warning) } }
         when (tab) {
             0 -> {
-                item { FriendsHero(container) }
                 item {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Metric.entries.forEach { m -> GlassChip(m.label, metric == m, { metric = m }) }
@@ -377,6 +377,9 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
                         }
                     }
                 }
+            }
+            4 -> {
+                item { ActivityFeed(container, refresh) }
             }
             else -> {
                 val p = profile
@@ -561,4 +564,44 @@ private fun InviteCard(profile: Profile?) {
                 .putExtra(Intent.EXTRA_TEXT, "Get MyFit Tracker (always the latest version): ${com.myfit.tracker.update.AppUpdater.SITE}"), "Share download link"))
         }.padding(vertical = 6.dp))
     }
+}
+
+
+/** What friends have been up to: step milestones, finished workouts, level-ups. */
+@Composable
+private fun ActivityFeed(container: AppContainer, refresh: Int) {
+    val th = LocalFitTheme.current
+    val items by produceState<List<com.myfit.tracker.social.Social.FeedItem>?>(null, refresh) {
+        value = runCatching { container.social.feed() }.getOrDefault(emptyList())
+    }
+    val list = items
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        when {
+            list == null -> Caption("Loading…")
+            list.isEmpty() -> GlassCard {
+                Text("Nothing yet", style = FitType.section, color = th.text)
+                Caption("Milestones show up here — 10,000-step days, finished workouts and Arena level-ups from you and your friends.")
+            }
+            else -> list.forEach { f ->
+                Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Avatar(f.name, 0xFF4C8DFFL, 38)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text((if (f.me) "You " else f.name + " ") + f.text, style = FitType.body, color = th.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Caption(feedAgo(f.at))
+                        }
+                        androidx.compose.material3.Icon(when (f.kind) { "workout" -> Duo.FitnessCenter; "level" -> Duo.EmojiEvents; else -> Duo.DirectionsWalk }, null,
+                            tint = th.accentBright, modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun feedAgo(t: Long): String {
+    if (t <= 0) return "just now"
+    val m = (System.currentTimeMillis() - t) / 60_000
+    return when { m < 1 -> "just now"; m < 60 -> "${m}m ago"; m < 1440 -> "${m / 60}h ago"; else -> "${m / 1440}d ago" }
 }

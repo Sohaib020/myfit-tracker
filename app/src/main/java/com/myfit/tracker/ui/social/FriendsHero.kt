@@ -121,3 +121,42 @@ fun FriendsHero(container: AppContainer, modifier: Modifier = Modifier, onOpenFr
     }
 }
 
+
+/** Compact friends strip for the Arena: avatars, your rank, Add friend and See all (opens the Friends page). */
+@Composable
+fun FriendsGlimpse(container: AppContainer, modifier: Modifier = Modifier) {
+    val th = LocalFitTheme.current
+    val ctx = LocalContext.current
+    val nav = LocalNav.current
+    val toaster = LocalToaster.current
+    val scope = rememberCoroutineScope()
+    val social = container.social
+    val user by social.user.collectAsState()
+    val board by produceState<List<BoardRow>?>(null, user) {
+        value = if (user != null && social.available) runCatching { social.friendsBoard(Metric.STEPS) }.getOrNull() else null
+    }
+    com.myfit.tracker.ui.components.GlassCard(modifier, padding = 14.dp, onClick = { nav.push(Overlay.Social) }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val b = board.orEmpty().filter { !it.me }
+            Box(Modifier.width((28 + 20 * (b.take(4).size - 1).coerceAtLeast(0)).dp).height(32.dp)) {
+                if (b.isEmpty()) Box(Modifier.size(32.dp).clip(CircleShape).background(th.accentBright.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
+                    Icon(Duo.Person, null, tint = th.accentBright, modifier = Modifier.size(18.dp))
+                } else b.take(4).forEachIndexed { i, r -> Box(Modifier.offset(x = (i * 20).dp)) { Avatar(r.name, r.color, 30) } }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Friends", style = FitType.section, color = th.text)
+                val all = board
+                Caption(when {
+                    user == null -> "Sign in to compete"
+                    all == null -> "Loading…"
+                    all.size <= 1 -> "No friends yet"
+                    else -> "${all.size - 1} friend${if (all.size == 2) "" else "s"} · you're #${all.indexOfFirst { it.me } + 1} this week"
+                })
+            }
+            com.myfit.tracker.ui.dashboard.CompactPill("Add friend", Duo.Add, {
+                if (user == null) nav.push(Overlay.Social) else FriendActions.invite(container, ctx, scope) { toaster.show(it) }
+            }, height = 36.dp)
+        }
+    }
+}

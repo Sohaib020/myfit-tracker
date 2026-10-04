@@ -298,6 +298,8 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
             ) {
                 androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.myfit.tracker.ui.theme.GlassIconButton(Duo.Person, { nav.push(Overlay.Social) }, size = 50.dp)
+                    androidx.compose.foundation.layout.Spacer(Modifier.size(10.dp))
                     com.myfit.tracker.ui.theme.GlassIconButton(Duo.CalendarMonth, { nav.push(Overlay.History) }, Modifier.tourTarget("cal"), size = 50.dp)
                     androidx.compose.foundation.layout.Spacer(Modifier.size(10.dp))
                     Box(Modifier.tourTarget("add")) { QuickAddOrb { sheet = Sheet.QuickAdd } }
@@ -400,7 +402,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 val code = inviteCode ?: return@LaunchedEffect
                 if (socialUser == null || !container.social.available) { inviteToaster.show("Sign in (Me → Account) to accept the invite · code $code"); return@LaunchedEffect }
                 runCatching { container.social.addFriendByCode(code) }
-                    .onSuccess { inviteToaster.show("You and ${it.name} are now friends! 🎉"); com.myfit.tracker.ui.arena.ArenaLaunch.tab = 5; tab = 3 }
+                    .onSuccess { inviteToaster.show("You and ${it.name} are now friends! 🎉"); nav.push(Overlay.Social) }
                     .onFailure { inviteToaster.show(it.message ?: "Couldn't add that friend") }
                 com.myfit.tracker.social.Invite.pending.value = null
             }

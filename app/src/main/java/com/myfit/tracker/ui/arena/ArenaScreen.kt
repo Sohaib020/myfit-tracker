@@ -70,8 +70,9 @@ object ArenaLaunch { var tab: Int? = null }
 @Composable
 fun ArenaScreen(container: AppContainer, bottomPad: Int) {
     val th = LocalFitTheme.current
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
     val ctx = LocalContext.current
-    var tab by remember { mutableIntStateOf(ArenaLaunch.tab?.also { ArenaLaunch.tab = null } ?: 5) }   // Friends first
+    var tab by remember { mutableIntStateOf(ArenaLaunch.tab?.also { ArenaLaunch.tab = null } ?: 0) }
     val today = remember { Clock.today() }
     var ver by remember { mutableIntStateOf(0) }
     val days by produceState<List<Day>?>(null) { value = loadDays(container, today.minusDays(60), today) }
@@ -113,19 +114,17 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                 Spacer(Modifier.height(10.dp))
             }
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val tabs = listOf("Challenges", "Journeys", "Battles", "Games", "Rewards", "Friends")
-                val order = listOf(5, 0, 1, 2, 3, 4)
-                items(order.size) { k -> val i = order[k]; GlassChip(tabs[i], tab == i, { tab = i }, icon = if (i == 5) com.myfit.tracker.ui.theme.Duo.Person else null) }
+                val tabs = listOf("Challenges", "Journeys", "Battles", "Games", "Rewards")
+                items(tabs.size) { i -> GlassChip(tabs[i], tab == i, { tab = i }) }
             }
             Spacer(Modifier.height(8.dp))
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                if (tab == 5) com.myfit.tracker.ui.social.SocialScreen(container, asTab = true, bottomPad = bottomPad, embedded = true)
-                else LazyColumn(
+                LazyColumn(
                     Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = bottomPad.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    if (tab == 0) item(key = "friendsHero") { com.myfit.tracker.ui.social.FriendsHero(container) { tab = 5 } }
+                    if (tab == 0) item(key = "friends") { com.myfit.tracker.ui.social.FriendsGlimpse(container) }
                     val d = days
                     if (d == null) item { Caption("Loading your activity…") }
                     else when (tab) {
@@ -139,7 +138,7 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                             item { Caption("Goals are set from your last 4 weeks, about 10% above what you already do. Each checkpoint earns stars; finishing early earns a bonus.", color = th.textFaint) }
                         }
                         1 -> item { JourneyHub(d, partner) { ver++ } }
-                        2 -> { item { DuelsPane(container, award) { tab = 5 } }; item { Leaderboard(container, lvl, partner) } }
+                        2 -> { item { DuelsPane(container, award) { nav.push(com.myfit.tracker.ui.nav.Overlay.Social) } }; item { Leaderboard(container, lvl, partner) } }
                         3 -> { item { GardenGame(d, award) }; item { GhostRace(d, partner, award) } }
                         else -> item { RewardsPane(lvl, d, partner, ver) { partner = it; ArenaPrefs.setPartner(ctx, it) } }
                     }

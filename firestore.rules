@@ -67,6 +67,17 @@ service cloud.firestore {
       allow delete: if isMe(uid);
     }
 
+    // activity feed: my milestones, readable by me and my friends
+    match /feed/{uid}/items/{id} {
+      allow read: if isMe(uid) || isFriend(uid);
+      allow create: if isMe(uid)
+        && request.resource.data.keys().hasOnly(['kind', 'text', 'name', 'at'])
+        && request.resource.data.text is string && request.resource.data.text.size() <= 120
+        && request.resource.data.name is string && request.resource.data.name.size() <= 24
+        && request.resource.data.kind is string && request.resource.data.kind.size() <= 12;
+      allow delete: if isMe(uid);
+    }
+
     match /challenges/{cid} {
       allow read: if signedIn() && request.auth.uid in resource.data.members;
       allow create: if signedIn() && request.resource.data.creator == request.auth.uid
