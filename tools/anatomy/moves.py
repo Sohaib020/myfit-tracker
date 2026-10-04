@@ -101,7 +101,7 @@ def shrug(bar='barbell'):
     return M(j(h), j(h, shrug=12), [bar])
 
 def upright_row(bar='barbell'):
-    return M(dict(armL=(8, 6), armR=(8, 6), foreL=(6, 6), foreR=(6, 6)), dict(armL=(72, 26), armR=(72, 26), foreL=(-10, 168), foreR=(-10, 168)), [bar])
+    return M(dict(armL=(8, 6), armR=(8, 6), foreL=(6, 6), foreR=(6, 6)), dict(armL=(72, 10), armR=(72, 10), foreL=(-80, 45), foreR=(-80, 45)), [bar])
 
 def pulldown(kind='wide'):
     ab = {'wide': 30, 'close': 14, 'under': 18}[kind]
