@@ -1,0 +1,52 @@
+name: Buddy packs
+# Renders full Pip-replacement packs (all animations + talk + 7x7 look grid) for every Arena character and publishes
+# them as assets on the "charpacks" pre-release (the app downloads one when you pick that buddy).
+on:
+  push:
+    branches: [ charpacks-render ]
+  workflow_dispatch:
+permissions: { contents: write }
+env:
+  WHO: zara,taj,kami,shaheen,motu,chakor,bulhan,bhalu,sakeen,mor,lomri,monal,bhoori,kala,sehi,ullu,gogi,nevla,khargosh,yaku
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix: { shard: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install bpy==4.2.0 pillow && sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 >/dev/null
+      - run: OUT=$PWD/out SHARD=${{ matrix.shard }} SHARDS=20 BUDGET_MIN=330 python tools/piprender/packrender.py | grep -E "^P|ALLDONE|warning"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: 'pk-${{ matrix.shard }}', path: out, if-no-files-found: ignore }
+  publish:
+    needs: render
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'pk-*', path: out, merge-multiple: true }
+      - name: Zip packs + preview
+        run: |
+          pip install pillow
+          mkdir -p dist prev
+          python3 tools/piprender/packzip.py out dist prev
+          ls -la dist | head -40
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: charpacks
+          name: Buddy packs
+          body: "Character packs for MyFit's Home buddy (downloaded in-app on demand)."
+          prerelease: true
+          make_latest: false
+          files: dist/*.zip
+      - name: Preview sheet to branch charpack-preview
+        run: |
+          cd prev && git init -q && git checkout -q -b charpack-preview && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "preview" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" charpack-preview
