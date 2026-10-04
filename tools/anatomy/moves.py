@@ -222,6 +222,11 @@ def climber():
     p = j(PRONE, pitch=68, armL=(18, 92), armR=(18, 92), foreL=(18, 92), foreR=(18, 92))
     return M(j(p, legL=(8, 88), shinL=(8, -30)), j(p, legR=(8, 88), shinR=(8, -30)), [], view=dict(az=-70, el=10, cz=-0.4))
 
+def bicycle():
+    s = j(SUP_FLOOR, torso=30, armL=(60, 150), armR=(60, 150), foreL=(75, 210), foreR=(75, 210))
+    return M(j(s, twist=28, legL=(10, 85), shinL=(10, -85), legR=(10, 20), shinR=(10, 0)),
+             j(s, twist=-28, legR=(10, 85), shinR=(10, -85), legL=(10, 20), shinL=(10, 0)), [], view=dict(az=-80, el=14, cz=-0.5))
+
 def jacks():
     return M(dict(armL=(10, 0), armR=(10, 0), legL=(4, 0), legR=(4, 0)), dict(armL=(165, 0), armR=(165, 0), foreL=(170, 0), foreR=(170, 0), legL=(26, 0), legR=(26, 0), shinL=(26, 0), shinR=(26, 0), ground=True, lift=0.08), view=dict(cz=0.15, scale=2.45))
 
@@ -298,6 +303,6 @@ MOVES = {
     'Crunches': crunch(), 'Sit-Up': crunch(True), 'Tuck_Crunch': crunch(), 'Oblique_Crunches': crunch(), 'Reverse_Crunch': leg_raise(), 'Decline_Crunch': crunch(),
     'Cable_Crunch': crunch(cable=True), 'Hanging_Leg_Raise': leg_raise(True), 'Flat_Bench_Lying_Leg_Raise': leg_raise(), 'Leg_Lift': leg_raise(),
     'Plank': plank(), 'Side_Bridge': plank(), 'Push_Up_to_Side_Plank': pushup(), 'Russian_Twist': twist(), 'Cable_Russian_Twists': twist(True),
-    'Dumbbell_Side_Bend': side_bend(), 'Mountain_Climbers': climber(), 'Star_Jump': jacks(), 'Air_Bike': climber(),
+    'Dumbbell_Side_Bend': side_bend(), 'Mountain_Climbers': climber(), 'Star_Jump': jacks(), 'Air_Bike': bicycle(),
     'One-Arm_Kettlebell_Swings': swing(), 'Kettlebell_Sumo_High_Pull': upright_row('kb'),
 }

@@ -23,7 +23,7 @@ def init():
 def reset():
     arm = M.OBJ['Rig']
     for pb in arm.pose.bones:
-        pb.rotation_mode = 'QUATERNION'; pb.rotation_quaternion = (1, 0, 0, 0); pb.location = (0, 0, 0)
+        pb.rotation_mode = 'QUATERNION'; pb.rotation_quaternion = (1, 0, 0, 0); pb.location = (0, 0, 0); pb.scale = (1, 1, 1)
     bpy.context.view_layer.update()
 
 def aim(name, d):

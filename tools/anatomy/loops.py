@@ -12,6 +12,15 @@ RES = int(os.environ.get('RES', '360')); FR = int(os.environ.get('FRAMES', '24')
 NUM = ('pitch', 'roll', 'yaw', 'lift', 'torso', 'twist', 'neck', 'side', 'shrug', 'tiptoe', 'x', 'y')
 PAIR = ('armL', 'armR', 'foreL', 'foreR', 'legL', 'legR', 'shinL', 'shinR', 'handL', 'handR')
 
+def default(p, k):
+    """The value pose.apply uses when a limb key is missing (so A→B really moves to the default)."""
+    s = k[-1]
+    if k.startswith('arm'): return (12, 4)
+    if k.startswith('leg'): return (3, 0)
+    if k.startswith('fore'): ab, fl = p.get('arm' + s, (12, 4)); return (ab * 0.6, fl + 18)
+    if k.startswith('shin'): ab, fl = p.get('leg' + s, (3, 0)); return (ab, min(fl, 0))
+    return None
+
 def lerp_pose(a, b, t):
     out = dict(a)
     for k in set(a) | set(b):
@@ -19,7 +28,7 @@ def lerp_pose(a, b, t):
         if k in NUM:
             out[k] = (va or 0.0) + ((vb or 0.0) - (va or 0.0)) * t
         elif k in PAIR:
-            da = va or vb; db = vb or va
+            da = va or default(a, k) or vb; db = vb or default(b, k) or va
             out[k] = (da[0] + (db[0] - da[0]) * t, da[1] + (db[1] - da[1]) * t)
         else:
             out[k] = (vb if t >= 0.5 else va) if (va is not None and vb is not None) else (va if va is not None else vb)
