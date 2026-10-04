@@ -71,7 +71,7 @@ object ArenaLaunch { var tab: Int? = null }
 fun ArenaScreen(container: AppContainer, bottomPad: Int) {
     val th = LocalFitTheme.current
     val ctx = LocalContext.current
-    var tab by remember { mutableIntStateOf(ArenaLaunch.tab?.also { ArenaLaunch.tab = null } ?: 0) }
+    var tab by remember { mutableIntStateOf(ArenaLaunch.tab?.also { ArenaLaunch.tab = null } ?: 5) }   // Friends first
     val today = remember { Clock.today() }
     var ver by remember { mutableIntStateOf(0) }
     val days by produceState<List<Day>?>(null) { value = loadDays(container, today.minusDays(60), today) }
@@ -114,7 +114,8 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
             }
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val tabs = listOf("Challenges", "Journeys", "Battles", "Games", "Rewards", "Friends")
-                items(tabs.size) { i -> GlassChip(tabs[i], tab == i, { tab = i }) }
+                val order = listOf(5, 0, 1, 2, 3, 4)
+                items(order.size) { k -> val i = order[k]; GlassChip(tabs[i], tab == i, { tab = i }, icon = if (i == 5) com.myfit.tracker.ui.theme.Duo.Person else null) }
             }
             Spacer(Modifier.height(8.dp))
             Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -124,6 +125,7 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = bottomPad.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
+                    if (tab == 0) item(key = "friendsHero") { com.myfit.tracker.ui.social.FriendsHero(container) { tab = 5 } }
                     val d = days
                     if (d == null) item { Caption("Loading your activity…") }
                     else when (tab) {

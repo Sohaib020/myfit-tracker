@@ -281,6 +281,7 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
         error?.let { e -> item { Caption(e, color = th.warning) } }
         when (tab) {
             0 -> {
+                item { FriendsHero(container) }
                 item {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Metric.entries.forEach { m -> GlassChip(m.label, metric == m, { metric = m }) }

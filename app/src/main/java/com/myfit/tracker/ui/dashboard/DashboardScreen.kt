@@ -383,7 +383,7 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
         DashCard.WORKOUT -> if (small) WorkoutSmall(state.workout, container) { goTab(Tabs.TRAIN) } else WorkoutCard(state.workout, container)
         DashCard.RINGS -> if (small) RingsSmall(state) { nav.push(Overlay.Activity) } else RingsCard(state, open)
         DashCard.NUTRITION -> if (small) NutritionSmall(container) { goTab(Tabs.FOOD) } else FoodHydrationCard(state, container, open) { goTab(Tabs.FOOD) }
-        DashCard.SOCIAL -> if (small) CompeteSmall(container) { goTab(Tabs.ARENA) } else CompeteCard(container) { goTab(Tabs.ARENA) }
+        DashCard.SOCIAL -> if (small) CompeteSmall(container) { goTab(Tabs.ARENA) } else com.myfit.tracker.ui.social.FriendsHero(container) { goTab(Tabs.ARENA) }
         DashCard.HYDRATION -> HydrationTile(state, container, open, wide = !small)
         DashCard.STEPS -> StepsTile(state) { nav.push(Overlay.Activity) }
         DashCard.RECOVERY -> SleepTile(state) { open(Sheet.Sleep()) }

@@ -25,7 +25,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 enum class DashCard(val label: String) {
     // declaration order = default Home order
     RINGS("Today's progress"), SNAP("Snap a meal"), PIP("Pip"), VITALS("Vitals"), NUTRITION("Food & hydration"), MIND("Mindfulness"),
-    CYCLE("Menstrual cycle"), DEEN("Shariah & Health"), GLUCOSE("Blood sugar"), WORKOUT("Today's workout"), SOCIAL("Compete with friends"), STEPS("Steps & activity"),
+    CYCLE("Menstrual cycle"), DEEN("Shariah & Health"), GLUCOSE("Blood sugar"), WORKOUT("Today's workout"), SOCIAL("Friends this week"), STEPS("Steps & activity"),
     RECOVERY("Sleep & recovery"), BODY("Body weight"), GOALS("Today's goals"), STREAKS("Streaks & badges"),
     // merged into RINGS / NUTRITION (kept so saved settings still parse)
     CHECKIN("Daily check-in"), HYDRATION("Hydration")
@@ -38,7 +38,7 @@ val DefaultSmallCards: Set<DashCard> = setOf(
 )
 
 /** Cards that are folded into another card on Home. */
-val MergedCards: Set<DashCard> = setOf(DashCard.CHECKIN, DashCard.HYDRATION, DashCard.SOCIAL)   // SOCIAL: Arena has its own tab
+val MergedCards: Set<DashCard> = setOf(DashCard.CHECKIN, DashCard.HYDRATION)
 private const val DASH_LAYOUT = 3
 
 /** Values for [AppSettings.diabetesType]. */
