@@ -76,6 +76,8 @@ fun ChallengeDetail(
         Column(Modifier.fillMaxSize()) {
             OverlayTopBar(ch.title, onClose, subtitle = (if (ch.period == Period.WEEK) "Weekly" else "Monthly") + " · ${dm(ch.from)} – ${dm(ch.to)}")
             LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 40.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // ---- the route map
+                item { ChallengeMap(ch, m.frac, st.reached.keys, m.daysLeft, com.myfit.tracker.ui.social.rememberAccountPhoto(container), partner) }
                 // ---- headline: ring + status
                 item {
                     GlassCard(padding = 16.dp) {
