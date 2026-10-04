@@ -57,7 +57,11 @@ android {
     }
 
     // UI screenshot tests (Robolectric + Roborazzi): app/src/test, run by .github/workflows/ui-shots.yml
-    testOptions { unitTests { isIncludeAndroidResources = true } }
+    testOptions { unitTests { isIncludeAndroidResources = true; all { t ->
+        t.testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL; showStandardStreams = false }
+        // the screenshot test runs in its own workflow (ui-shots.yml), not in every APK build
+        if (!project.hasProperty("shots")) t.exclude("**/*ShotTest*")
+    } } }
     buildTypes {
         release {
             isMinifyEnabled = false

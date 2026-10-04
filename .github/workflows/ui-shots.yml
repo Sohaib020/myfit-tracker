@@ -22,7 +22,7 @@ jobs:
       - name: Run screenshot tests
         run: |
           set -o pipefail
-          gradle :app:testDebugUnitTest --tests '*ShotTest*' -Proborazzi.test.record=true 2>&1 | tee t.log || { grep -E "^e: |AssertionError|spills|overlaps|FAILED|What went wrong" t.log | head -60 | sed 's/^/::error::/'; exit 1; }
+          gradle :app:testDebugUnitTest --tests '*ShotTest*' -Pshots -Proborazzi.test.record=true 2>&1 | tee t.log || { grep -E -A3 "^e: |Error|Exception|spills|overlaps|FAILED|What went wrong" t.log | grep -v '^\s*at org\.\|^\s*at java\.\|^\s*at kotlin' | head -80 | sed 's/^/::error::/'; exit 1; }
       - name: Save shots to ui-shots branch
         if: always()
         run: |
