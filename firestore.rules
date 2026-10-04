@@ -13,7 +13,7 @@ service cloud.firestore {
         && d.activeMin is int && d.activeMin >= 0 && d.activeMin <= 10080
         && d.distanceM is number && d.distanceM >= 0 && d.distanceM <= 1050000
         && d.name is string && d.name.size() <= 24
-        && (!('level' in d) || (d.level is int && d.level >= 1 && d.level <= 30))
+        && (!('level' in d) || (d.level is int && d.level >= 1 && d.level <= 60))
         && (!('mascot' in d) || (d.mascot is string && d.mascot.size() <= 12))
         && d.keys().hasOnly(['name', 'color', 'steps', 'activeMin', 'distanceM', 'days', 'updatedAt', 'level', 'mascot']);
     }
