@@ -1,5 +1,5 @@
 name: Stock covers
-# Finds openly licensed real photos (Openverse: CC0 / public domain / CC BY) for each program. Push to stockcovers-run.
+# Real photo covers per program from Pixabay (PIXABAY_API_KEY secret) or Pexels (PEXELS_API_KEY); Openverse fallback. Run from Actions or push stockcovers-run.
 on:
   push:
     branches: [ stockcovers-run ]
@@ -12,7 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: pip install pillow && python3 tools/stockcovers/fetch.py
+        env:
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       - run: |
-          mkdir -p pub && cp -r cand pub/
+          mkdir -p pub && cp -r cand out/* pub/
           cd pub && git init -q && git checkout -q -b stockcovers-cands && git add -A
           git -c user.name=ci -c user.email=ci@x commit -qm "stock cover candidates" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" stockcovers-cands
