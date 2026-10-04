@@ -1,0 +1,18 @@
+name: Stock covers
+# Finds openly licensed real photos (Openverse: CC0 / public domain / CC BY) for each program. Push to stockcovers-run.
+on:
+  push:
+    branches: [ stockcovers-run ]
+  workflow_dispatch:
+permissions: { contents: write }
+jobs:
+  find:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pillow && python3 tools/stockcovers/fetch.py
+      - run: |
+          mkdir -p pub && cp -r cand pub/
+          cd pub && git init -q && git checkout -q -b stockcovers-cands && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "stock cover candidates" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" stockcovers-cands
