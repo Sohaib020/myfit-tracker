@@ -13,7 +13,10 @@ jobs:
         with: { python-version: '3.11' }
       - run: pip install bpy==4.2.0 pillow && sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 >/dev/null && pip list | grep -iE "numpy|bpy"
       - run: sh tools/anatomy/fetch_mh.sh && md5sum tools/anatomy/mh/*
-      - run: cd tools/anatomy && OUT=$GITHUB_WORKSPACE/diag python diag.py 2>&1 | tail -40; md5sum mh/* >> $GITHUB_WORKSPACE/diag/diag.txt
+      - run: |
+          mkdir -p diag; cd tools/anatomy
+          OUT=$GITHUB_WORKSPACE/diag/seq ONLY=Air_Bike,Barbell_Curl,Bodyweight_Squat RES=360 SAMPLES=14 FRAMES=6 python loops.py 2>&1 | grep -E "^P|Error|ALLDONE" | tee -a $GITHUB_WORKSPACE/diag/diag.txt
+          mkdir -p $GITHUB_WORKSPACE/diag/frames && cp /tmp/lp/Bodyweight_Squat/*.png $GITHUB_WORKSPACE/diag/frames/ || true
       - if: always()
         run: |
           cd diag && git init -q && git checkout -q -b ex3d-diag && git add -A
