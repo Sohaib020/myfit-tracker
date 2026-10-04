@@ -121,6 +121,7 @@ internal fun MindCard(container: AppContainer) {
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CardAction("Breathe", Duo.Drop, th.water, Modifier.weight(1f)) { Launch.mind = "breath"; nav.push(Overlay.Mind) }
+            CardAction("Calm", Duo.SelfImprovement, th.sleep, Modifier.weight(1f)) { Launch.calm = true; nav.push(Overlay.Mind) }
             CardAction(if (mood == null) "Log mood" else "Mood again", Duo.Mood, th.warning, Modifier.weight(1f)) { moodOpen = true }
         }
     }

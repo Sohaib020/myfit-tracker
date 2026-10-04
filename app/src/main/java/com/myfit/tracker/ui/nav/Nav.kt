@@ -63,4 +63,6 @@ object Launch {
     @Volatile var cycle: String? = null
     fun takeMind(): String? = mind.also { mind = null }
     fun takeCycle(): String? = cycle.also { cycle = null }
+    @Volatile var calm: Boolean = false
+    fun takeCalm(): Boolean = calm.also { calm = false }
 }

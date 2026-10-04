@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -68,6 +69,9 @@ fun saveMindSession(container: AppContainer, type: String, title: String, durati
         //  requires an opt-in annotation (or the exact Metadata factory), so the write is skipped for now.
     }
 }
+
+/** Remembers the Mind tab across breathing/meditation sessions (they replace the hub while running). */
+private var lastMindTab = 0
 
 private sealed interface MindView {
     data object Hub : MindView
@@ -125,8 +129,15 @@ private fun MindHub(
     val patterns by produceState<MoodPatterns?>(null, moods.size) { value = runCatching { computeMoodPatterns(container) }.getOrNull() ?: MoodPatterns(0, emptyList()) }
     val stress by produceState<StressEstimate?>(null) { value = runCatching { computeStress(container) }.getOrNull() }
 
+    var mtab by remember { mutableIntStateOf(if (com.myfit.tracker.ui.nav.Launch.takeCalm()) 1 else lastMindTab) }
+    androidx.compose.runtime.SideEffect { lastMindTab = mtab }
     Column(Modifier.fillMaxSize()) {
-        OverlayTopBar("Mindfulness", onBack, subtitle = "Breathe · meditate · check in")
+        OverlayTopBar("Mind", onBack, subtitle = if (mtab == 0) "Breathe · meditate · check in" else "Calm anxiety · lift low mood")
+        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            com.myfit.tracker.ui.theme.GlassChip("Mindfulness", mtab == 0, { mtab = 0 })
+            com.myfit.tracker.ui.theme.GlassChip("Anxiety & Depression", mtab == 1, { mtab = 1 })
+        }
+        if (mtab == 1) { CalmTab(container, onBreath); return@Column }
         LazyColumn(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
