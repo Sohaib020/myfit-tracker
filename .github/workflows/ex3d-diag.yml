@@ -1,0 +1,20 @@
+name: Exercise 3D diag
+on:
+  push:
+    branches: [ ex3d-debug ]
+permissions: { contents: write }
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install bpy==4.2.0 pillow && sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 >/dev/null && pip list | grep -iE "numpy|bpy"
+      - run: sh tools/anatomy/fetch_mh.sh && md5sum tools/anatomy/mh/*
+      - run: cd tools/anatomy && OUT=$GITHUB_WORKSPACE/diag python diag.py 2>&1 | tail -40; md5sum mh/* >> $GITHUB_WORKSPACE/diag/diag.txt
+      - if: always()
+        run: |
+          cd diag && git init -q && git checkout -q -b ex3d-diag && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm diag && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ex3d-diag
