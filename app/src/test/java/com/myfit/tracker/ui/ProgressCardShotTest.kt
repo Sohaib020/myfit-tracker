@@ -30,7 +30,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [34], qualifiers = "w480dp-h900dp-xxhdpi")
+@Config(sdk = [34], qualifiers = "w480dp-h900dp-xxhdpi", application = android.app.Application::class)
 class ProgressCardShotTest {
     @get:Rule val rule = createComposeRule()
 
