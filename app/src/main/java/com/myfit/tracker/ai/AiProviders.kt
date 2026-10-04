@@ -214,7 +214,10 @@ class AiRouter(private val c: AppContainer) {
                 errors += "${p.label}: ${shortMsg(e)}"
             }
         }
-        throw IllegalStateException("All AI services failed (${errors.joinToString("; ")}). Try again in a moment.")
+        android.util.Log.w("AiRouter", "vision failed: " + errors.joinToString("; "))
+        val noNet = errors.isNotEmpty() && errors.all { it.contains("resolve host", true) || it.contains("Unable to resolve", true) || it.contains("failed to connect", true) }
+        throw IllegalStateException(if (noNet) "No internet connection right now. Check Wi-Fi or mobile data and try again — or search foods instead."
+            else "The online AI is busy right now. Try again in a moment, or search foods instead.")
     }
 
     private suspend fun geminiVision(key: String, saved: String, prompt: String, jpeg: ByteArray, fast: Boolean): String {

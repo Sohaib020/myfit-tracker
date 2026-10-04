@@ -92,6 +92,13 @@ fun OfflineBrainCard() {
                     Spacer(Modifier.height(8.dp))
                     ToggleRow("Use the offline brain", "Off = always use the online AI (counts toward today's allowance)", cfg.useOnDevice) { v -> scope.launch { ai.prefs.setUseOnDevice(v) } }
                     Spacer(Modifier.height(8.dp))
+                    var testing by remember { mutableStateOf(false) }
+                    var testResult by remember { mutableStateOf<String?>(null) }
+                    GlassButton(if (testing) "Testing… (first load can take a minute)" else "Test offline brain", {
+                        if (!testing) { testing = true; testResult = null; scope.launch { testResult = ai.llm.selfTest(); testing = false } }
+                    }, Modifier.fillMaxWidth(), icon = Duo.PlayArrow, height = 44.dp)
+                    testResult?.let { r -> Spacer(Modifier.height(6.dp)); Caption(r, color = if (r.startsWith("Works")) th.success else th.warning) }
+                    Spacer(Modifier.height(8.dp))
                     GlassButton("Delete download", { scope.launch { ai.models.deleteAll() } }, Modifier.fillMaxWidth(), icon = Duo.DeleteOutline, height = 44.dp)
                 }
                 is ModelStore.DlState.Downloading -> {

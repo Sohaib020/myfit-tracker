@@ -49,19 +49,38 @@ class PipBrain(private val c: AppContainer) {
         val s = c.settings.settings.first()
         val ai = com.myfit.tracker.ai.ondevice.OnDeviceAi.get(c.app)
         // offline brain first: free, unlimited, nothing leaves the phone
+        val online = Net.online(c.app)
+        var offlineError: String? = null
+        val installed = ai.models.installedFile() != null
         if (ai.llm.available()) {
-            runCatching {
-                val summary = data.summaryFor(q)
-                val system = Gemini.systemPrompt("Use the user's units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}. Keep answers short (under 120 words). Do not add [[ur]] or [[hi]] lines.")
-                val history = c.healthRepo.lastChat(7).dropLast(1).filter { it.source != "local" && it.source != "error" }
-                    .takeLast(4).map { (if (it.role == "user") "user" else "model") to it.text }
+            try {
+                val summary = data.summaryFor(q).take(1800)
+                val system = "${com.myfit.tracker.ui.pip.Buddy.persona()} Be warm, practical and brief (under 100 words, at most 2 emoji). " +
+                    "For the user's own numbers use ONLY the User data block; if it lacks something, say so. No medical diagnoses. " +
+                    "Units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}."
+                val history = c.healthRepo.lastChat(5).dropLast(1).filter { it.source != "local" && it.source != "error" }
+                    .takeLast(2).map { (if (it.role == "user") "user" else "model") to it.text.take(400) }
                 val out = ai.llm.chat(system, history + ("user" to "User data (only what's relevant; may be incomplete):\n$summary\n\nQuestion: $q"))
                 if (out.isNotBlank()) {
                     router.lastProvider = "Offline brain"
                     val (display, _, _) = splitSpeech(out)
                     return Reply(display, "on-device", com.myfit.tracker.ui.pip.moodForReply(display, q))
                 }
-            }.onFailure { if (it is kotlinx.coroutines.CancellationException && it !is kotlinx.coroutines.TimeoutCancellationException) throw it }
+                offlineError = "it returned an empty answer"
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                if (e !is kotlinx.coroutines.TimeoutCancellationException) throw e
+                offlineError = ai.llm.lastError ?: "it took too long"
+            } catch (e: Exception) {
+                offlineError = ai.llm.lastError ?: e.message ?: e.javaClass.simpleName
+            }
+        }
+        // no internet: never try the cloud — explain what the offline brain can or can't do right now
+        if (!online) {
+            return Reply(when {
+                offlineError != null -> "I'm offline and my on-phone brain hit a problem ($offlineError). Open Settings → Pip → Offline brain → Test to check it. I can still answer questions about your own logs, like \"average sleep last week\"."
+                !installed -> "You're offline and my offline brain isn't downloaded yet. Download it once in Settings → Pip → Offline brain (about 2 GB, on Wi-Fi) and I'll answer anything without internet."
+                else -> "You're offline and the offline brain is switched off in Settings → Pip. Turn it on and I'll answer without internet."
+            }, "local", PipMood.CONCERNED)
         }
         val chain = router.chain(s)
         if (chain.isNotEmpty() && s.onlineAi) {
@@ -71,7 +90,8 @@ class PipBrain(private val c: AppContainer) {
         if (chain.isEmpty() || !s.onlineAi) {
             return Reply(
                 if (chain.isEmpty()) "That one needs my online brain, which isn't set up yet 🌱 Add an AI key in Settings → AI. Offline I can answer things like \"How many times did I train legs this month?\", \"Average sleep last week\" or \"How much did my bench improve?\""
-                else "Online answers are switched off, and that's not something I can work out from your logs alone. You can turn online answers on in Settings → Pip.",
+                else if (offlineError != null) "My offline brain hit a problem ($offlineError) and online answers are switched off. Try Settings → Pip → Offline brain → Test, or turn online answers on."
+                else "Online answers are switched off, and that's not something I can work out from your logs alone. Download the offline brain or turn online answers on in Settings → Pip.",
                 "local", PipMood.CURIOUS,
             )
         }

@@ -48,10 +48,15 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
         return hub.models.installedFile() != null
     }
 
-    private fun backendsToTry(pref: String, working: String): List<String> = when (pref) {
-        "gpu" -> listOf("gpu")
-        "cpu" -> listOf("cpu")
-        else -> if (working.isNotBlank()) listOf(working) + listOf("gpu", "cpu").filter { it != working } else listOf("gpu", "cpu")
+    /** (text backend, vision backend) pairs to try, best first. The vision encoder can fail on GPU where text works. */
+    private fun backendsToTry(pref: String, working: String): List<Pair<String, String>> {
+        val all = when (pref) {
+            "gpu" -> listOf("gpu" to "gpu", "gpu" to "cpu")
+            "cpu" -> listOf("cpu" to "cpu")
+            else -> listOf("gpu" to "gpu", "gpu" to "cpu", "cpu" to "cpu")
+        }
+        val w = all.firstOrNull { "${it.first}/${it.second}" == working }
+        return if (w != null) listOf(w) + (all - w) else all
     }
 
     private fun backend(id: String): Backend = if (id == "gpu") Backend.GPU() else Backend.CPU()
@@ -64,22 +69,24 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
         _status.value = Status.LOADING
         val c = hub.prefs.cfg()
         var last: Throwable? = null
-        for (b in backendsToTry(c.backendPref, c.workingBackend)) {
+        val errors = mutableListOf<String>()
+        for ((b, v) in backendsToTry(c.backendPref, c.workingBackend)) {
             try {
-                val e = Engine(EngineConfig(modelPath = file.absolutePath, backend = backend(b), visionBackend = backend(b), cacheDir = app.cacheDir.path))
+                val e = Engine(EngineConfig(modelPath = file.absolutePath, backend = backend(b), visionBackend = backend(v),
+                    maxNumTokens = 4096, maxNumImages = 1, cacheDir = app.cacheDir.path))
                 e.initialize()
-                engine = e; enginePath = file.absolutePath; backendInUse = b
-                if (c.workingBackend != b) hub.prefs.setWorkingBackend(b)
+                engine = e; enginePath = file.absolutePath; backendInUse = "$b/$v"
+                if (c.workingBackend != "$b/$v") hub.prefs.setWorkingBackend("$b/$v")
                 _status.value = Status.READY
                 lastError = null
                 return e
             } catch (t: Throwable) {
                 if (t is kotlinx.coroutines.CancellationException) throw t
-                last = t
+                last = t; errors += "$b/$v: ${t.message?.take(120) ?: t.javaClass.simpleName}"
             }
         }
         _status.value = Status.FAILED
-        lastError = last?.message ?: "couldn't start"
+        lastError = errors.joinToString(" · ").ifBlank { last?.message ?: "couldn't start" }
         throw IllegalStateException("The offline brain couldn't start on this phone (${lastError}).")
     }
 
@@ -91,6 +98,19 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
         }
     }
 
+    /** Quick check from Settings: loads the model and answers one short prompt. Returns a human summary. */
+    suspend fun selfTest(): String {
+        val t0 = System.currentTimeMillis()
+        return try {
+            val out = chat("You are a helpful assistant. Answer in one short sentence.", listOf("user" to "Say hello and name one healthy breakfast."))
+            "Works offline ✓ (${backendInUse}, ${(System.currentTimeMillis() - t0) / 1000}s): \"${out.take(80)}\""
+        } catch (t: Throwable) {
+            if (t is kotlinx.coroutines.CancellationException && t !is kotlinx.coroutines.TimeoutCancellationException) throw t
+            lastError = lastError ?: t.message
+            "Failed: ${t.message ?: t.javaClass.simpleName}"
+        }
+    }
+
     private suspend fun <T> run(timeoutMs: Long, block: (Engine) -> T): T = withContext(Dispatchers.IO) {
         lock.withLock {
             idleJob?.cancel()
@@ -98,6 +118,9 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
             _status.value = Status.BUSY
             try {
                 withTimeout(timeoutMs) { block(e) }
+            } catch (t: Throwable) {
+                lastError = if (t is kotlinx.coroutines.TimeoutCancellationException) "took longer than ${timeoutMs / 1000}s" else (t.message ?: t.javaClass.simpleName)
+                throw t
             } finally {
                 _status.value = Status.READY
                 scheduleIdleRelease()

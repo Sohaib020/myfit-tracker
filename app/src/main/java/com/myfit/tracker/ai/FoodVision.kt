@@ -25,12 +25,16 @@ class FoodVision(private val c: AppContainer) {
     data class Result(val items: List<Item>, val note: String?)
 
     class NotFood(msg: String) : Exception(msg)
+    /** No internet and no working offline brain — message is ready to show. */
+    class Offline(msg: String) : Exception(msg)
 
     suspend fun analyze(photo: Bitmap, hint: String = ""): Result {
         val jpeg = withContext(Dispatchers.Default) { compress(photo, 1024f, 82) }
         val prompt = PROMPT + (if (hint.isNotBlank()) "\nUser note about this meal: $hint" else "")
         val ai = OnDeviceAi.get(c.app)
         // 1) offline brain on the phone: free and unlimited
+        val online = Net.online(c.app)
+        var offlineError: String? = null
         if (ai.llm.available()) {
             try {
                 val r = parse(ai.llm.vision(prompt, jpeg))
@@ -38,8 +42,14 @@ class FoodVision(private val c: AppContainer) {
                 return r
             } catch (e: NotFood) { throw e } catch (e: kotlinx.coroutines.CancellationException) {
                 if (e !is kotlinx.coroutines.TimeoutCancellationException) throw e
-            } catch (_: Exception) { /* fall back to the cloud below */ }
+                offlineError = ai.llm.lastError ?: "it took too long"
+            } catch (e: Exception) { offlineError = ai.llm.lastError ?: e.message ?: "couldn't read the photo" }
         }
+        if (!online) throw Offline(when {
+            offlineError != null -> "You're offline and the offline brain couldn't read this photo ($offlineError). Try again, or search foods instead."
+            ai.models.installedFile() == null -> "You're offline. Download the offline brain once (Settings → Pip → Offline brain, about 2 GB) to recognise meals without internet — or search foods instead."
+            else -> "You're offline and the offline brain is switched off (Settings → Pip). Turn it on, or search foods instead."
+        })
         // 2) cloud, within today's free allowance
         onDevice = false
         ai.quota.require(AiQuota.Kind.PHOTO)
