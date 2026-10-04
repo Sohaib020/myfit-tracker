@@ -646,6 +646,8 @@ private fun RewardsPane(l: Level, days: List<Day>, partner: Mascot, ver: Int, pi
     val toaster = LocalToaster.current
     val badges = remember(ver) { ArenaProgress.badges(ctx, days) }
     val recent = remember(ver) { ArenaProgress.ledger(ctx).take(12) }
+    var preview by remember { mutableStateOf<Mascot?>(null) }
+    preview?.let { pm -> CharacterPreview(pm, l.n, { preview = null }, onUse = { tick(); pick(pm) }) }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         GlassCard(padding = 14.dp) {
             Text("Your partner", style = FitType.section, color = th.text)
@@ -659,13 +661,13 @@ private fun RewardsPane(l: Level, days: List<Day>, partner: Mascot, ver: Int, pi
                         Modifier.width(92.dp).clip(RoundedCornerShape(18.dp))
                             .background(if (sel) m.accent.copy(alpha = 0.28f) else th.textFaint.copy(alpha = 0.10f))
                             .border(if (sel) 2.dp else 0.dp, if (sel) m.accent else Color.Transparent, RoundedCornerShape(18.dp))
-                            .clickableNoRipple { if (open) { tick(); pick(m) } else toaster.show("${m.label} unlocks at level ${m.unlock}") }
+                            .clickableNoRipple { if (open) { tick(); pick(m) } else preview = m }
                             .padding(6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        CastImage(m, 76.dp, dim = !open)
+                        if (open) CastImage(m, 76.dp) else CastLocked(m, 76.dp)
                         Text(m.label.substringBefore(' '), style = FitType.label, color = th.text)
-                        Caption(if (open) (if (sel) "Partner" else "Tap to pick") else "🔒 Lv ${m.unlock}")
+                        Caption(if (open) (if (sel) "Partner" else "Tap to pick") else "Lv ${m.unlock} · preview")
                     }
                 }
             }
@@ -680,7 +682,7 @@ private fun RewardsPane(l: Level, days: List<Day>, partner: Mascot, ver: Int, pi
                 val last = Tier.entries.getOrNull(t.ordinal + 1)?.from?.minus(1) ?: MAX_LEVEL
                 val reached = l.n >= t.from
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-                    CastImage(t.mascot, 52.dp, dim = !reached)
+                    if (reached) CastImage(t.mascot, 52.dp) else CastLocked(t.mascot, 52.dp)
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
                         Text("${t.label} · Lv ${t.from}–$last", style = FitType.label, color = if (reached) th.text else th.textDim)

@@ -6,6 +6,11 @@ import android.graphics.drawable.AnimatedImageDrawable
 import android.os.Build
 import android.widget.ImageView
 import androidx.compose.foundation.Image
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -76,4 +81,43 @@ fun CastAnim(m: Mascot, clip: CastClip, size: Dp, modifier: Modifier = Modifier,
         onDispose { (d as? AnimatedImageDrawable)?.stop() }
     }
     AndroidView({ c -> ImageView(c).apply { scaleType = ImageView.ScaleType.FIT_CENTER } }, modifier.size(size), update = { it.setImageDrawable(d) })
+}
+
+/** A locked character shown in full colour (to build curiosity) with a small lock badge. */
+@Composable
+fun CastLocked(m: Mascot, size: Dp, modifier: Modifier = Modifier) {
+    Box(modifier.size(size)) {
+        CastImage(m, size)
+        Box(Modifier.align(androidx.compose.ui.Alignment.BottomEnd).size(size * 0.30f).clip(androidx.compose.foundation.shape.CircleShape)
+            .background(androidx.compose.ui.graphics.Color(0xE6101218)), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            androidx.compose.material3.Icon(com.myfit.tracker.ui.theme.Duo.Lock, "Locked", tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(size * 0.17f))
+        }
+    }
+}
+
+/** Preview a character (locked or not): animation, motto and how to unlock it. */
+@Composable
+fun CharacterPreview(m: Mascot, level: Int, onDismiss: () -> Unit, onUse: (() -> Unit)? = null) {
+    val th = com.myfit.tracker.ui.theme.LocalFitTheme.current
+    val locked = level < m.unlock
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.foundation.layout.Column(
+            Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(30.dp))
+                .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(m.accent.copy(alpha = 0.9f), androidx.compose.ui.graphics.Color(0xFF15171F))))
+                .padding(20.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+        ) {
+            CastAnim(m, CastClip.WAVE, 190.dp)
+            androidx.compose.material3.Text(m.label, style = com.myfit.tracker.ui.theme.FitType.title, color = androidx.compose.ui.graphics.Color.White)
+            androidx.compose.material3.Text("“${m.tagline}”", style = com.myfit.tracker.ui.theme.FitType.body, color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.85f))
+            androidx.compose.foundation.layout.Spacer(Modifier.size(12.dp))
+            if (locked) {
+                androidx.compose.material3.Text("Unlocks at Arena level ${m.unlock}", style = com.myfit.tracker.ui.theme.FitType.section, color = androidx.compose.ui.graphics.Color(0xFFFFC83D))
+                androidx.compose.material3.Text("You're level $level — ${m.unlock - level} to go. Finish challenges, journeys and races to earn stars.",
+                    style = com.myfit.tracker.ui.theme.FitType.caption, color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            } else if (onUse != null) com.myfit.tracker.ui.theme.AccentButton("Use ${m.label.substringBefore(' ')}", { onUse(); onDismiss() }, Modifier.fillMaxWidth(), height = 46.dp)
+            androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+            com.myfit.tracker.ui.theme.GlassButton("Close", onDismiss, Modifier.fillMaxWidth(), height = 42.dp)
+        }
+    }
 }
