@@ -5,7 +5,8 @@ O = os.environ.get('OUT', 'out') + '/'
 VIEW = math.radians(float(os.environ.get('VIEW', '-24')))
 CLIPS = {'cheer': ('cheer', 2), 'run': ('jog', 2), 'sad': ('sad', 3), 'wave': ('wave', 2)}   # clip -> (anim, frame step)
 jobs = []
-for who in C.CAST:
+WHO = [w for w in os.environ.get('WHO', '').split(',') if w] or list(C.CAST)
+for who in WHO:
     jobs.append((who, 'portrait', 0, C.portrait_pose()))
     for clip, (an, st) in CLIPS.items():
         fn, fr = A.ANIMS[an]
