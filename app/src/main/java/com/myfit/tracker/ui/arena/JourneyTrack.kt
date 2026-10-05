@@ -118,7 +118,10 @@ fun JourneyTrack(j: Journey, doneKm: Double, photo: ImageBitmap?, initial: Char)
             Box(Modifier.offset { IntOffset((c.x - with(density) { 11.dp.toPx() }).roundToInt(), (c.y - with(density) { 11.dp.toPx() }).roundToInt()) }.size(22.dp), contentAlignment = Alignment.Center) {
                 when {
                     i == n - 1 -> Icon(Duo.Flag, null, tint = if (reached) Color.White else accent, modifier = Modifier.size(12.dp))
-                    reached -> Icon(Duo.Check, null, tint = Color.White, modifier = Modifier.size(13.dp))
+                    reached -> Canvas(Modifier.size(11.dp)) {
+                        val tick = Path().apply { moveTo(size.width * 0.1f, size.height * 0.55f); lineTo(size.width * 0.4f, size.height * 0.82f); lineTo(size.width * 0.92f, size.height * 0.2f) }
+                        drawPath(tick, Color.White, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+                    }
                     else -> Text("${i + 1}", style = FitType.caption, color = accent)
                 }
             }

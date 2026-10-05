@@ -138,3 +138,13 @@ R11 notes: ALL round-11 work is on branch agent/r11 (builds there never publish 
 - Guava must stay (CameraX/WorkManager ListenableFuture) — audit was wrong about it.
 - Owner TODO before release: Cloudflare setup (server/ai-proxy/README.md) → AI_PROXY_URL secret; run "Mirror offline AI model" workflow once (after merge); add support email to site/privacy.html.
 - Play AAB: gradle bundlePlayRelease (workflow to add in phase 10).
+
+
+## Round 12 (6 Oct 01:31 PKT) — branch agent/r12 (single release at the end via PR)
+Answers: top bar scrolls away + returns on scroll-up · 8 journeys, flat vector · blood sugar: traffic-light + family sharing · doctor report: sugar, BP/HR, weight/activity/sleep, medicines.
+STANDING RULE: the doctor report (ui/report/DoctorReport.kt) must stay current every build — app details come from AppInfo/BuildConfig (name, version, site, support email); when features/data change, update its sections without being asked.
+1 ✅ ChromeState (components/Chrome.kt) nestedScroll at MainShell; Me/Friends/Daily log/+ translate; Train header overlays content (LocalTopInset); Food header moved into list
+2 ✅ Me redesign (account first, identity hero, goal tiles, watch & health data, progress grid)
+3 ✅ Journeys: 8 (lahore, kkh, k2, arafat, inca, greatwall, paris, london), JourneyArt.kt vector scenes, JourneyTrack.kt trail, no categories, assets/journey deleted
+4 ✅ DoctorReport PDF (logo, patient card, tiles, sugar chart/tables, BP/HR, weekly table, meds adherence, About + QR); used by Blood sugar screen
+5 ✅ GlucoseSimple.kt (StatusHero, MeaningStrip, MeaningPill, BigKeypad, FamilyCard), social/GlucoseFamily.kt + GlucoseAlertWorker (15 min), firestore.rules glucoseShares/glucose — OWNER must re-publish rules; privacy.html updated

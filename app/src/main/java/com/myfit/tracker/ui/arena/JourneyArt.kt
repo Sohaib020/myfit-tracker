@@ -71,8 +71,14 @@ fun DrawScope.journeyScene(id: String) {
 }
 
 private fun DrawScope.cloud(c: Offset, r: Float, col: Color) {
-    drawCircle(col, r, c); drawCircle(col, r * 1.3f, Offset(c.x + r * 1.2f, c.y - r * 0.3f)); drawCircle(col, r, Offset(c.x + r * 2.4f, c.y))
-    drawRoundRect(col, Offset(c.x - r * 0.2f, c.y), Size(r * 2.8f, r), CornerRadius(r / 2))
+    // one path (union of shapes) so overlapping parts don't show seams
+    val p = Path().apply {
+        addOval(androidx.compose.ui.geometry.Rect(c.x - r, c.y - r, c.x + r, c.y + r))
+        addOval(androidx.compose.ui.geometry.Rect(c.x + r * 1.2f - r * 1.3f, c.y - r * 0.3f - r * 1.3f, c.x + r * 1.2f + r * 1.3f, c.y - r * 0.3f + r * 1.3f))
+        addOval(androidx.compose.ui.geometry.Rect(c.x + r * 1.4f, c.y - r, c.x + r * 3.4f, c.y + r))
+        addRoundRect(androidx.compose.ui.geometry.RoundRect(c.x - r * 0.2f, c.y - r * 0.1f, c.x + r * 2.8f, c.y + r, r / 2, r / 2))
+    }
+    drawPath(p, col)
 }
 
 /** A smooth band of hills whose top sits around [baseY]. */
