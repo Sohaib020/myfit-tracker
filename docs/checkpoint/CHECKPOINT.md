@@ -148,3 +148,17 @@ STANDING RULE: the doctor report (ui/report/DoctorReport.kt) must stay current e
 3 ✅ Journeys: 8 (lahore, kkh, k2, arafat, inca, greatwall, paris, london), JourneyArt.kt vector scenes, JourneyTrack.kt trail, no categories, assets/journey deleted
 4 ✅ DoctorReport PDF (logo, patient card, tiles, sugar chart/tables, BP/HR, weekly table, meds adherence, About + QR); used by Blood sugar screen
 5 ✅ GlucoseSimple.kt (StatusHero, MeaningStrip, MeaningPill, BigKeypad, FamilyCard), social/GlucoseFamily.kt + GlucoseAlertWorker (15 min), firestore.rules glucoseShares/glucose — OWNER must re-publish rules; privacy.html updated
+
+## Round 13 (6 Oct) — same branch agent/r12, same PR #5
+Answers: friend card = level & stars, rewards, this week, journeys · food button = save to favourites · buddy draggable inside chat, remembers spot · icons = 6 crafted vector + 6 flat + 6 rich 3D.
+1 ✅ Overlays block taps below (GrowFrom → blockTouchesBelow) — fixes fall-through on every page
+2 ✅ Chrome returns only when the list is back at the top (onPostScroll/onPostFling leftover)
+3 ✅ Theme-coloured status-bar fade (top) + bottom fade, tabs only (not overlays)
+4 ✅ Friend profiles: arenaProfile/{uid} (rules: friends read, owner writes, whitelisted keys) · level chips in Friends list + hero top-3 · Compete card is real Glass
+5 ✅ Draggable Pip in chat (prefs pip_float) · 12dp between clear/speaker
+6 ✅ You tiles equal height (IntrinsicSize.Min) · edge fades on Arena/Friends/Food chip rows
+7 ✅ Add food: whole header scrolls · star on every food → Favourites tab (prefs food_favs)
+8 ✅ Check-in strip redesigned (prompt + emoji row / summary with mood·energy·stress bars)
+9 ✅ 12-hour clock by default everywhere (domain/ClockFmt), You → Units → Clock 12/24; doctor report times follow it
+10 ⏳ Icons: tools/appicon/r13/make.py → out/sheet_A/B/C.png (A1–A6, B1–B6, C1–C6). Waiting for owner's pick; then swap drawable-nodpi/ic_launcher_bg/fg (+ monochrome) and wear icon.
+OWNER after merge: re-publish firestore.rules (arenaProfile + glucose blocks).
