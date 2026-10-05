@@ -34,7 +34,10 @@ enum class Metric(val key: String, val label: String, val unit: String) {
     DISTANCE("distanceM", "Distance", "km"),
 }
 
-data class Profile(val uid: String, val name: String, val code: String, val isPublic: Boolean, val color: Long)
+data class Profile(val uid: String, val name: String, val code: String, val isPublic: Boolean, val color: Long, val username: String = "")
+/** A search hit: [viaId] = matched by their MyFit ID (instant add), else by username (sends a friend request). */
+data class Found(val profile: Profile, val viaId: Boolean, val isFriend: Boolean)
+data class FriendRequest(val uid: String, val name: String, val username: String)
 data class BoardRow(val uid: String, val name: String, val color: Long, val value: Double, val me: Boolean, val level: Int? = null, val mascot: String? = null)
 data class Challenge(
     val id: String, val title: String, val metric: Metric, val start: String, val end: String,
@@ -121,6 +124,8 @@ class Social(private val c: AppContainer) {
         runCatching { db.collection("weekly").document(weekKey()).collection("entries").document(u.uid).delete().await() }
         runCatching { friends().forEach { removeFriend(it.uid) } }
         p?.code?.takeIf { it.isNotBlank() }?.let { runCatching { db.collection("codes").document(it).delete().await() } }
+        p?.username?.takeIf { it.isNotBlank() }?.let { runCatching { db.collection("usernames").document(it).delete().await() } }
+        runCatching { db.collection("users").document(u.uid).collection("requests").get().await().documents.forEach { runCatching { it.reference.delete().await() } } }
         runCatching { db.collection("users").document(u.uid).collection("private").document("me").delete().await() }
         runCatching { db.collection("users").document(u.uid).delete().await() }
     }
@@ -152,6 +157,7 @@ class Social(private val c: AppContainer) {
 
     private fun toProfile(uid: String, m: Map<String, Any?>, code: String = "") = Profile(
         uid, (m["name"] as? String) ?: "Athlete", code, (m["public"] as? Boolean) ?: true, (m["color"] as? Number)?.toLong() ?: 0xFFFF7A1AL,
+        (m["username"] as? String).orEmpty(),
     )
 
     /** Your own friend code (kept in a private document only you can read). */
@@ -193,6 +199,96 @@ class Social(private val c: AppContainer) {
         db.collection("users").document(u.uid).collection("friends").document(owner).set(mapOf("since" to now)).await()
         db.collection("users").document(owner).collection("friends").document(u.uid).set(mapOf("since" to now, "code" to c2)).await()
         return profile(owner) ?: Profile(owner, "Friend", c2, false, 0xFF4C8DFFL)
+    }
+
+    // ------------------------------------------------------------------ username + MyFit ID
+
+    val USERNAME = Regex("^[a-z0-9_.]{3,20}$")
+    private val ID_RE = Regex("^[A-HJ-NP-Z2-9]{6}$")
+
+    fun cleanUsername(s: String) = s.trim().removePrefix("@").lowercase().filter { it.isLetterOrDigit() || it == '_' || it == '.' }.take(20)
+
+    /** Null when free (or already yours), else why it can't be used. */
+    suspend fun usernameProblem(handle: String): String? {
+        val h = cleanUsername(handle)
+        if (!USERNAME.matches(h)) return "3–20 letters, numbers, _ or ."
+        if (h.startsWith('.') || h.endsWith('.') || ".." in h) return "Can't start or end with a dot"
+        if (h in RESERVED) return "That name is reserved"
+        val owner = db.collection("usernames").document(h).get().await().getString("uid")
+        return if (owner == null || owner == auth.currentUser?.uid) null else "@$h is taken"
+    }
+    private val RESERVED = setOf("admin", "myfit", "myfittracker", "support", "official", "pip", "help", "moderator", "staff", "root")
+
+    /** Claims a unique @username (atomically) and releases your old one. */
+    suspend fun setUsername(handle: String): String {
+        val u = auth.currentUser ?: throw IllegalStateException("Sign in first")
+        val h = cleanUsername(handle)
+        usernameProblem(h)?.let { throw IllegalArgumentException(it) }
+        val me = db.collection("users").document(u.uid)
+        val old = me.get().await().getString("username").orEmpty()
+        if (old == h) return h
+        db.runTransaction { tx ->
+            val ref = db.collection("usernames").document(h)
+            val cur = tx.get(ref)
+            if (cur.exists() && cur.getString("uid") != u.uid) throw IllegalArgumentException("@$h was just taken")
+            if (!cur.exists()) tx.set(ref, mapOf("uid" to u.uid))
+            tx.set(me, mapOf("username" to h), SetOptions.merge())
+            if (old.isNotBlank() && old != h) tx.delete(db.collection("usernames").document(old))
+            h
+        }.await()
+        return h
+    }
+
+    /**
+     * Search by @username (prefix) or by MyFit ID (the 6-character code). An ID match can be added straight away;
+     * a username match gets a friend request they must accept.
+     */
+    suspend fun search(query: String): List<Found> {
+        val u = auth.currentUser ?: throw IllegalStateException("Sign in first")
+        val raw = query.trim()
+        if (raw.length < 2) return emptyList()
+        val friendIds = runCatching { db.collection("users").document(u.uid).collection("friends").get().await().documents.map { it.id }.toSet() }.getOrDefault(emptySet())
+        val out = LinkedHashMap<String, Found>()
+        val asId = raw.uppercase().removePrefix("#")
+        if (ID_RE.matches(asId)) {
+            db.collection("codes").document(asId).get().await().getString("uid")?.takeIf { it != u.uid }?.let { owner ->
+                profile(owner)?.let { out[owner] = Found(it.copy(code = asId), true, owner in friendIds) }
+            }
+        }
+        val h = cleanUsername(raw)
+        if (h.length >= 2) {
+            val snap = db.collection("users").orderBy("username").startAt(h).endAt(h + "\uf8ff").limit(10).get().await()
+            snap.documents.filter { it.id != u.uid && it.id !in out }.forEach { d -> out[d.id] = Found(toProfile(d.id, d.data ?: emptyMap()), false, d.id in friendIds) }
+        }
+        return out.values.toList()
+    }
+
+    /** Asks [uid] to be friends (they see it under Friends → Requests). */
+    suspend fun sendRequest(uid: String) {
+        val u = auth.currentUser ?: throw IllegalStateException("Sign in first")
+        val me = profile() ?: throw IllegalStateException("Profile not ready")
+        db.collection("users").document(uid).collection("requests").document(u.uid)
+            .set(mapOf("name" to me.name.take(24), "username" to me.username, "at" to FieldValue.serverTimestamp())).await()
+    }
+
+    suspend fun requests(): List<FriendRequest> {
+        val u = auth.currentUser ?: return emptyList()
+        return db.collection("users").document(u.uid).collection("requests").get().await().documents.map {
+            FriendRequest(it.id, it.getString("name") ?: "Someone", it.getString("username").orEmpty())
+        }
+    }
+
+    suspend fun acceptRequest(from: String) {
+        val u = auth.currentUser ?: return
+        val now = FieldValue.serverTimestamp()
+        db.collection("users").document(u.uid).collection("friends").document(from).set(mapOf("since" to now)).await()
+        db.collection("users").document(from).collection("friends").document(u.uid).set(mapOf("since" to now)).await()
+        runCatching { db.collection("users").document(u.uid).collection("requests").document(from).delete().await() }
+    }
+
+    suspend fun declineRequest(from: String) {
+        val u = auth.currentUser ?: return
+        db.collection("users").document(u.uid).collection("requests").document(from).delete().await()
     }
 
     suspend fun removeFriend(uid: String) {

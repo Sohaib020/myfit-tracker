@@ -329,13 +329,15 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
                 }
             }
             2 -> {
+                item { UsernameCard(social, profile) { refresh++ } }
+                item { FindFriendsCard(social, refresh) { refresh++ } }
                 item { InviteCard(profile) }
                 item {
                     var code by remember { mutableStateOf("") }
                     GlassCard {
-                        Text("Add a friend", style = FitType.section, color = th.text)
+                        Text("Add by code or QR", style = FitType.section, color = th.text)
                         Spacer(Modifier.height(8.dp))
-                        Field(code, { code = it.uppercase().filter { ch -> ch.isLetterOrDigit() }.take(6) }, "Their 6-letter code")
+                        Field(code, { code = it.uppercase().filter { ch -> ch.isLetterOrDigit() }.take(6) }, "Their MyFit ID (6 characters)")
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             GlassButton("Add friend", {
@@ -542,7 +544,7 @@ private fun InviteCard(profile: Profile?) {
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Caption("YOUR CODE")
+                Caption("YOUR MYFIT ID")
                 Text(code ?: "······", style = FitType.display, color = th.text)
                 Caption("Friends scan this QR or open your link. If they don't have MyFit yet, the page gives them the latest download.")
             }
