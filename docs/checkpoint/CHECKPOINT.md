@@ -123,8 +123,8 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 Decisions: compile-check per phase · workout AI = hybrid (rules planner + optional LLM tweak) · AI keys → Cloudflare Worker proxy (Firebase ID-token check, per-user rate limit) · Now Bar live notifs: gym workout, rest timer, stopwatch, fasting + downloads · set fields: weight+reps, set type, RPE, per-exercise notes · progress = honest metrics (e1RM trend, volume/muscle, PRs, muscle map, calories; week/month/6mo) · backup = file + Google Drive · user HAS a Galaxy Watch → build Wear OS tile.
 Screenshot bugs: Train "Gym workout" wraps per letter; Settings "Download page" wraps; Home Pip card clips "Chat with Pip"; Arena leaderboard header squeezed by chips; onboarding activity row text under radio; DOB wheel highlight misaligned/overflow; Settings Privacy text wrong.
 Phases:
-1 ☐ Audit fixes (doc table #1–23 except #16; #11 R8 → phase 10)
-2 ☐ Launch risks (Play flavor w/o updater, targetSdk 36, CF worker proxy, HC minimal perms + privacy policy page, Firestore throttle, model mirror, AdMob placement + UMP, encrypted keys + delete-all, HR wellness label, exact alarms)
+1 ✅ (branch agent/r11, CI run 139) Audit fixes (doc table #1–23 except #16; #11 R8 → phase 10)
+2 ✅ (run 140) Launch risks (Play flavor w/o updater, targetSdk 36, CF worker proxy, HC minimal perms + privacy policy page, Firestore throttle, model mirror, AdMob placement + UMP, encrypted keys + delete-all, HR wellness label, exact alarms)
 3 ☐ Design: Mint default (dark), opaque mode API≤32 (dock glass anims kept, dock bg opaque, remove glass/blur settings there), responsive system (tall/wide/foldable/large fold) + fix screenshot glitches
 4 ☐ Onboarding: calorie target wording, DOB wheel redesign, Health Connect page (ref Hevy) then separate permission pages; OnboardingVersion bump
 5 ☐ Cleanups: remove Games tab; buddies (non-Pip) as download; Today = single calorie detail; offline AI RAM gate (<6 GB blocked + clear message)
@@ -133,3 +133,8 @@ Phases:
 8 ☐ Live notifications (Android 16 Live Updates / Samsung Now Bar)
 9 ☐ First-week checklist, widgets (water/steps), Sunday report + share card, backup file+Drive, Pakistani meal plans (household units), Wear OS tile
 10 ☐ R8/minify + regression + single release
+
+R11 notes: ALL round-11 work is on branch agent/r11 (builds there never publish a release). Merge to main only at phase 10.
+- Guava must stay (CameraX/WorkManager ListenableFuture) — audit was wrong about it.
+- Owner TODO before release: Cloudflare setup (server/ai-proxy/README.md) → AI_PROXY_URL secret; run "Mirror offline AI model" workflow once (after merge); add support email to site/privacy.html.
+- Play AAB: gradle bundlePlayRelease (workflow to add in phase 10).
