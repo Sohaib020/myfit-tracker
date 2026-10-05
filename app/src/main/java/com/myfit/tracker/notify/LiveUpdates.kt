@@ -141,6 +141,13 @@ object LiveUpdates {
             }
         }
 
+        // ---- home-screen widgets follow today's water and steps while the app is alive
+        scope.launch {
+            val today = com.myfit.tracker.domain.Clock.today()
+            combine(container.logRepo.day(today), container.healthRepo.day(today)) { d, h -> d.water.sumOf { it.amountMl } to (h.daily?.steps ?: h.phoneSteps) }
+                .distinctUntilChanged().collectLatest { delay(800); com.myfit.tracker.widget.Widgets.refresh(app) }
+        }
+
         // ---- fasting
         scope.launch {
             container.db.fastingDao().observeAll().map { l -> l.firstOrNull { it.endAt == null } }.distinctUntilChanged().collect { f ->

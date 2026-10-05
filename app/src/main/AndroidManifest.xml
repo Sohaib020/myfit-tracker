@@ -125,6 +125,15 @@
             </intent-filter>
         </activity-alias>
         <!-- Reminder alarms + re-arming after reboot / clock change -->
+        <!-- home-screen widgets -->
+        <receiver android:name=".widget.WaterWidgetReceiver" android:exported="true" android:label="MyFit · Water">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/water_widget" />
+        </receiver>
+        <receiver android:name=".widget.StepsWidgetReceiver" android:exported="true" android:label="MyFit · Steps">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/steps_widget" />
+        </receiver>
         <receiver android:name=".update.InstallResultReceiver" android:exported="false" />
         <receiver android:name=".update.UpdatedReceiver" android:exported="false">
             <intent-filter><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /></intent-filter>

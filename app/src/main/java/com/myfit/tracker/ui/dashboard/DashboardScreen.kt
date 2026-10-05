@@ -297,6 +297,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item(key = "greeting", span = full) { Box(Modifier.statusBarsPadding()) { Greeting(state) } }
+            item(key = "firstweek", span = full) { Box(Modifier.animateItem()) { FirstWeekCard(container, goTab) } }
             if (settings.diabetesType == "unset" && !settings.diabetesAsked && !settings.glucoseEnabled) {
                 item(key = "personalise", span = full) { Box(Modifier.animateItem()) { PersonaliseCard(container) } }
             }

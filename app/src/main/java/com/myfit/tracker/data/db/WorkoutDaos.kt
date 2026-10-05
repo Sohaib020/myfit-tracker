@@ -83,6 +83,7 @@ interface ExerciseDao {
 
 @Dao
 interface WorkoutDao {
+    @Query("SELECT COUNT(*) FROM workout WHERE status = 'COMPLETED' AND deletedAt IS NULL") suspend fun completedCount(): Int
     // ---- workouts
     @Insert suspend fun insertWorkout(w: Workout): Long
     @Update suspend fun updateWorkout(w: Workout)
