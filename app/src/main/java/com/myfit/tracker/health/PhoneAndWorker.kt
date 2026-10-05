@@ -12,6 +12,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -116,7 +117,7 @@ class HealthPrivacyActivity : ComponentActivity() {
                 Spacer(Modifier.height(16.dp))
                 listOf(
                     "MyFit reads activity, heart, sleep, body and vitals data from Health Connect (steps, distance, calories, floors, workouts, heart rate, resting heart rate, HRV, blood oxygen, sleep, weight, body fat, hydration, respiratory rate, temperature, VO2 max, blood pressure and blood glucose) to show your dashboards, goals and trends.",
-                    "If you choose to sync cycle tracking or log blood pressure / glucose, MyFit writes those entries to Health Connect, and removes only the entries it wrote itself when you edit or delete them. It never changes data written by other apps.",
+                    "If you choose to sync cycle tracking or blood glucose, MyFit writes those entries to Health Connect, and removes only the entries it wrote itself when you edit or delete them. It never changes data written by other apps.",
                     "Your health records are stored on this phone. They are not uploaded, sold or used for advertising.",
                     "If you sign in to compete with friends, only your display name and weekly totals (steps, active minutes, distance, Arena level) are shared with the friends and leaderboards you choose. Cycle, glucose, mood and medicine data are never uploaded.",
                     "MyFit shows optional rewarded ads in a few places; ads never appear on health, cycle, glucose or mental-health screens and are never targeted using your health data.",
@@ -127,7 +128,14 @@ class HealthPrivacyActivity : ComponentActivity() {
                     Text("•  $it", color = Color(0xCCFFFFFF), fontSize = 15.sp, lineHeight = 22.sp)
                     Spacer(Modifier.height(12.dp))
                 }
+                Spacer(Modifier.height(8.dp))
+                Text("Read the full privacy policy", color = Color(0xFF7FE0C2), fontSize = 16.sp,
+                    modifier = Modifier.clickable {
+                        runCatching { startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(PRIVACY_URL))) }
+                    }.padding(vertical = 8.dp))
             }
         }
     }
 }
+
+const val PRIVACY_URL = "https://sohaib020.github.io/myfit-tracker/privacy.html"

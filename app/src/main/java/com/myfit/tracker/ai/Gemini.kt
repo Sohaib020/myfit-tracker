@@ -34,11 +34,11 @@ class Gemini(private val context: Context) {
     }
 
     private fun open(url: String, key: String, method: String): HttpURLConnection =
-        (URL(url).openConnection() as HttpURLConnection).apply {
+        (URL(if (AiProxy.isProxy(key)) AiProxy.url("gemini", url.removePrefix("https://generativelanguage.googleapis.com")) else url).openConnection() as HttpURLConnection).apply {
             requestMethod = method
             connectTimeout = 15_000
             readTimeout = 45_000
-            setRequestProperty("x-goog-api-key", key)
+            if (AiProxy.isProxy(key)) AiProxy.authorize(this) else setRequestProperty("x-goog-api-key", key)
             setRequestProperty("X-Android-Package", context.packageName)
             if (certSha1.isNotEmpty()) setRequestProperty("X-Android-Cert", certSha1)
             setRequestProperty("Content-Type", "application/json; charset=utf-8")

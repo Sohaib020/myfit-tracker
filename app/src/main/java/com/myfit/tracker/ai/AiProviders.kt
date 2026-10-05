@@ -26,11 +26,11 @@ class OpenAiCompat(val id: String, val label: String, private val base: String, 
     @Volatile var workingChat: String? = null
 
     private fun open(path: String, key: String, method: String, timeout: Int): HttpURLConnection =
-        (URL(base + path).openConnection() as HttpURLConnection).apply {
+        (URL(if (AiProxy.isProxy(key)) AiProxy.url(id, java.net.URL(base).path + path) else base + path).openConnection() as HttpURLConnection).apply {
             requestMethod = method
             connectTimeout = minOf(10_000, timeout)
             readTimeout = timeout
-            setRequestProperty("Authorization", "Bearer $key")
+            if (AiProxy.isProxy(key)) AiProxy.authorize(this) else setRequestProperty("Authorization", "Bearer $key")
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
             headers.forEach { (k, v) -> setRequestProperty(k, v) }
         }

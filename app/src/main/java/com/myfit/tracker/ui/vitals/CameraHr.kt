@@ -223,7 +223,7 @@ internal fun CameraHrContent(container: AppContainer) {
     val hostView = androidx.compose.ui.platform.LocalView.current
     DisposableEffect(Unit) { hostView.keepScreenOn = true; onDispose { hostView.keepScreenOn = false } }
     Column(Modifier.fillMaxSize()) {
-        OverlayTopBar("Camera heart rate", { nav.pop() }, "Beta · estimate, not for medical use")
+        OverlayTopBar("Camera heart rate", { nav.pop() }, "Wellness estimate · not a medical device")
         LazyColumn(
             Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 40.dp),
@@ -257,7 +257,7 @@ internal fun CameraHrContent(container: AppContainer) {
                                     Spacer(Modifier.width(6.dp))
                                     Text("bpm", style = FitType.section, color = th.textDim, modifier = Modifier.padding(bottom = 6.dp))
                                 }
-                                Caption("Estimate · beta · not for medical use")
+                                Caption("Wellness estimate · not a medical device")
                                 Spacer(Modifier.height(6.dp))
                                 Caption("Signal quality: " + when { quality >= 0.8 -> "good"; quality >= 0.6 -> "fair"; else -> "just enough" })
                                 if (bpm >= 120) {

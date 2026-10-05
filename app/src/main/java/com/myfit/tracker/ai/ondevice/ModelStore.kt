@@ -38,10 +38,15 @@ data class ModelSpec(
     val license: String,
     val source: String,
     val vision: Boolean = true,
+    /** Fallback copy on MyFit's GitHub release, split into [ModelCatalog.SPLIT]-byte parts (GitHub caps files at 2 GB). */
+    val mirrorParts: List<String> = emptyList(),
 )
 
 object ModelCatalog {
     private const val HF = "https://huggingface.co/litert-community"
+    private const val MIRROR = "https://github.com/Sohaib020/myfit-tracker/releases/download/models-v1"
+    /** Size of each mirror part (the last part is the remainder). Must match .github/workflows/model-mirror.yml. */
+    const val SPLIT = 1_500_000_000L
 
     /** Gemma 4 E2B instruction-tuned, full LiteRT-LM build (2.6 GB): text + image input (reads meal photos), runs on GPU or CPU. Apache 2.0. */
     val DEFAULT = ModelSpec(
@@ -51,6 +56,7 @@ object ModelCatalog {
         sizeBytes = 2_588_147_712L,
         sha256 = "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
         minRamBytes = 5_300_000_000L, license = "Apache 2.0", source = "Hugging Face · litert-community",
+        mirrorParts = listOf("$MIRROR/gemma-4-E2B-it.litertlm.part00", "$MIRROR/gemma-4-E2B-it.litertlm.part01"),
     )
 
     /** The GPU-only build (2.0 GB) has no image encoder: chat only. Kept so phones that downloaded it still chat offline. */
@@ -236,6 +242,11 @@ class ModelStore(private val ctx: Context, private val prefs: AiPrefs) {
                 val code = c.responseCode
                 when {
                     code == 416 -> { if (expectSize <= 0) break else { part.delete(); continue } }
+                    (code == 401 || code == 403 || code == 404 || code >= 500) && s.mirrorParts.isNotEmpty() && expectSize > 0 -> {
+                        c.disconnect()
+                        mirror(s, part, expectSize, onProgress)?.let { return@withContext it }
+                        break
+                    }
                     code == 401 || code == 403 -> return@withContext fail("The model server refused the download (HTTP $code). If you set a custom URL in developer options, it may need a login.")
                     code == 404 -> return@withContext fail("Model file not found (HTTP 404). Check the model URL in developer options.")
                     code !in 200..299 -> throw java.io.IOException("HTTP $code")
@@ -271,7 +282,11 @@ class ModelStore(private val ctx: Context, private val prefs: AiPrefs) {
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (++attempt >= 4) return@withContext fail("Download interrupted (${e.message ?: "network error"}). It will resume from where it stopped.", keepPartial = true)
+                if (++attempt >= 4) {
+                    // the main server keeps failing → try MyFit's mirror before giving up
+                    if (s.mirrorParts.isNotEmpty() && expectSize > 0) { mirror(s, part, expectSize, onProgress)?.let { return@withContext it }; break }
+                    return@withContext fail("Download interrupted (${e.message ?: "network error"}). It will resume from where it stopped.", keepPartial = true)
+                }
                 kotlinx.coroutines.delay(2_000L * attempt)
             } finally {
                 c.disconnect()
@@ -297,6 +312,55 @@ class ModelStore(private val ctx: Context, private val prefs: AiPrefs) {
         _state.value = DlState.Installed
         onProgress(DlState.Installed)
         null
+    }
+
+    /** Downloads the rest of [part] from the split mirror (resumable). Returns null on success, else an error. */
+    private suspend fun mirror(s: ModelSpec, part: File, size: Long, onProgress: suspend (DlState) -> Unit): String? {
+        s.mirrorParts.forEachIndexed { i, url ->
+            val start = i * ModelCatalog.SPLIT
+            val end = minOf((i + 1) * ModelCatalog.SPLIT, size)
+            var tries = 0
+            while (part.length() < end) {
+                currentCoroutineContext().ensureActive()
+                if (part.length() < start) return fail("Download got out of step — tap Download again.", keepPartial = false).also { part.delete() }
+                val c = (URL(url).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 20_000; readTimeout = 30_000; instanceFollowRedirects = true
+                    setRequestProperty("User-Agent", UA); setRequestProperty("Accept-Encoding", "identity")
+                    val off = part.length() - start
+                    if (off > 0) setRequestProperty("Range", "bytes=$off-")
+                }
+                try {
+                    val code = c.responseCode
+                    if (code !in 200..299) throw java.io.IOException("mirror HTTP $code")
+                    if (code == 200 && part.length() > start) RandomAccessFile(part, "rw").use { it.setLength(start) }  // no Range support → redo this part
+                    RandomAccessFile(part, "rw").use { raf ->
+                        raf.seek(part.length())
+                        c.inputStream.use { inp ->
+                            val buf = ByteArray(256 * 1024)
+                            var done = part.length(); var lastT = System.currentTimeMillis(); var lastB = done; var bps = 0L
+                            while (true) {
+                                currentCoroutineContext().ensureActive()
+                                val n = inp.read(buf); if (n < 0) break
+                                raf.write(buf, 0, n); done += n
+                                val now = System.currentTimeMillis()
+                                if (now - lastT >= 700) {
+                                    bps = ((done - lastB) * 1000 / (now - lastT)).let { if (bps == 0L) it else (bps * 2 + it) / 3 }
+                                    lastT = now; lastB = done
+                                    val st = DlState.Downloading(done, size, bps); _state.value = st; onProgress(st)
+                                }
+                            }
+                        }
+                    }
+                    tries = 0
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (++tries >= 4) return fail("Download interrupted (${e.message ?: "network error"}). It will resume from where it stopped.", keepPartial = true)
+                    kotlinx.coroutines.delay(2_000L * tries)
+                } finally { c.disconnect() }
+            }
+        }
+        return null
     }
 
     private fun fail(msg: String, keepPartial: Boolean = true): String {

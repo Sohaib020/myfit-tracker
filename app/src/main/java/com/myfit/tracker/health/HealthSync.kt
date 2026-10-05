@@ -73,7 +73,6 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
         readPerm(androidx.health.connect.client.records.Vo2MaxRecord::class),
         readPerm(androidx.health.connect.client.records.SkinTemperatureRecord::class),
         readPerm(androidx.health.connect.client.records.BloodPressureRecord::class),
-        writePerm(androidx.health.connect.client.records.BloodPressureRecord::class),
     )
     /** Only requested when the user turns on blood-sugar tracking. */
     val glucosePermissions: Set<String> get() = setOf(
@@ -83,7 +82,7 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
     /** Only requested when the user turns on cycle tracking. */
     val cyclePermissions: Set<String> get() = setOf(
         readPerm(androidx.health.connect.client.records.MenstruationFlowRecord::class), writePerm(androidx.health.connect.client.records.MenstruationFlowRecord::class),
-        readPerm(androidx.health.connect.client.records.MenstruationPeriodRecord::class), writePerm(androidx.health.connect.client.records.MenstruationPeriodRecord::class),
+        readPerm(androidx.health.connect.client.records.MenstruationPeriodRecord::class),
         readPerm(androidx.health.connect.client.records.OvulationTestRecord::class), writePerm(androidx.health.connect.client.records.OvulationTestRecord::class),
         readPerm(androidx.health.connect.client.records.CervicalMucusRecord::class), writePerm(androidx.health.connect.client.records.CervicalMucusRecord::class),
         readPerm(androidx.health.connect.client.records.BasalBodyTemperatureRecord::class), writePerm(androidx.health.connect.client.records.BasalBodyTemperatureRecord::class),

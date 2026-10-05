@@ -18,19 +18,14 @@ android {
     defaultConfig {
         applicationId = "com.myfit.tracker"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
         versionName = "0.1." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
         vectorDrawables { useSupportLibrary = true }
-        // API keys come from CI secrets (never committed); empty if not configured
-        buildConfigField("String", "GEMINI_KEY", "\"" + (System.getenv("GEMINI_API_KEY") ?: "").trim() + "\"")
-        buildConfigField("String", "ELEVEN_KEY", "\"" + (System.getenv("ELEVENLABS_API_KEY") ?: "").trim() + "\"")
-        buildConfigField("String", "GROQ_KEY", "\"" + (System.getenv("GROQ_API_KEY") ?: "").trim() + "\"")
-        buildConfigField("String", "OPENROUTER_KEY", "\"" + (System.getenv("OPENROUTER_API_KEY") ?: "").trim() + "\"")
-        buildConfigField("String", "MISTRAL_KEY", "\"" + (System.getenv("MISTRAL_API_KEY") ?: "").trim() + "\"")
-        buildConfigField("String", "AZURE_SPEECH_KEY", "\"" + (System.getenv("AZURE_SPEECH_KEY") ?: "").trim() + "\"")
+        // No AI provider keys are compiled in (they could be extracted from the APK). Online AI goes through
+        // MyFit's proxy (server/ai-proxy) which holds the keys as server secrets; users may also add their own key.
+        buildConfigField("String", "AI_PROXY_URL", "\"" + (System.getenv("AI_PROXY_URL") ?: "").trim() + "\"")
         buildConfigField("boolean", "SOCIAL", socialEnabled.toString())
-        buildConfigField("String", "AZURE_SPEECH_REGION", "\"" + (System.getenv("AZURE_SPEECH_REGION") ?: "").trim() + "\"")
         // Rewarded ads: Google's public TEST ids unless the ADMOB_* secrets are set in CI
         val admobApp = (System.getenv("ADMOB_APP_ID") ?: "").trim().ifEmpty { "ca-app-pub-3940256099942544~3347511713" }
         val admobRewarded = (System.getenv("ADMOB_REWARDED_ID") ?: "").trim().ifEmpty { "ca-app-pub-3940256099942544/5224354917" }
@@ -62,6 +57,19 @@ android {
         // the screenshot test runs in its own workflow (ui-shots.yml), not in every APK build
         if (!project.hasProperty("shots")) t.exclude("**/*ShotTest*")
     } } }
+    // Two stores: "github" (sideloaded, self-updating — what CI publishes) and "play" (no self-updater, no
+    // REQUEST_INSTALL_PACKAGES — Google Play forbids apps that update themselves outside Play).
+    flavorDimensions += "store"
+    productFlavors {
+        create("github") {
+            dimension = "store"
+            buildConfigField("boolean", "SELF_UPDATE", "true")
+        }
+        create("play") {
+            dimension = "store"
+            buildConfigField("boolean", "SELF_UPDATE", "false")
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -121,6 +129,7 @@ dependencies {
     implementation("com.google.ai.edge.litertlm:litertlm-android:0.17.1")
     // rewarded ads (only after the free daily AI allowance; SDK started on first tap)
     implementation("com.google.android.gms:play-services-ads:23.6.0")
+    implementation("com.google.android.ump:user-messaging-platform:3.1.0")   // GDPR/US-state consent before ads
     implementation("androidx.health.connect:connect-client:1.1.0")
 
     val room = "2.6.1"

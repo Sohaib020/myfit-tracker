@@ -39,7 +39,7 @@ jobs:
       - name: Unit tests (calculations)
         run: |
           set -o pipefail
-          gradle testDebugUnitTest --stacktrace 2>&1 | tee build.log || { grep -E "^e: |What went wrong|error:|Execution failed|Could not resolve|Could not find|Dependency|depends on|requires|compileSdk|AGP|minCompileSdk|> [A-Z]|\.kt:[0-9]+" build.log | grep -v "^w: " | head -120 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' | sed 's/^/::error title=Build errors::/'; exit 1; }
+          gradle testGithubDebugUnitTest --stacktrace 2>&1 | tee build.log || { grep -E "^e: |What went wrong|error:|Execution failed|Could not resolve|Could not find|Dependency|depends on|requires|compileSdk|AGP|minCompileSdk|> [A-Z]|\.kt:[0-9]+" build.log | grep -v "^w: " | head -120 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' | sed 's/^/::error title=Build errors::/'; exit 1; }
 
       - name: Restore signing key from secrets
         env:
@@ -55,24 +55,18 @@ jobs:
       - name: Build release APK
         env:
           MYFIT_KEYSTORE_PASSWORD: ${{ secrets.MYFIT_KEYSTORE_PASSWORD }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-          AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
-          AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
+          AI_PROXY_URL: ${{ secrets.AI_PROXY_URL }}
           ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
           ADMOB_REWARDED_ID: ${{ secrets.ADMOB_REWARDED_ID }}
         run: |
           set -o pipefail
-          gradle assembleRelease --stacktrace 2>&1 | tee build.log || { grep -E "^e: |What went wrong|error:|Execution failed|Could not resolve|Could not find|Dependency|depends on|requires|compileSdk|AGP|minCompileSdk|> [A-Z]|\.kt:[0-9]+" build.log | grep -v "^w: " | head -120 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' | sed 's/^/::error title=Build errors::/'; exit 1; }
+          gradle assembleGithubRelease --stacktrace 2>&1 | tee build.log || { grep -E "^e: |What went wrong|error:|Execution failed|Could not resolve|Could not find|Dependency|depends on|requires|compileSdk|AGP|minCompileSdk|> [A-Z]|\.kt:[0-9]+" build.log | grep -v "^w: " | head -120 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' | sed 's/^/::error title=Build errors::/'; exit 1; }
 
       - name: Rename APK
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/release/app-release.apk "out/MyFitTracker-v0.1.${{ github.run_number }}.apk"
-          cp app/build/outputs/apk/release/app-release.apk out/MyFitTracker.apk   # stable name → releases/latest/download/MyFitTracker.apk
+          cp app/build/outputs/apk/github/release/app-github-release.apk "out/MyFitTracker-v0.1.${{ github.run_number }}.apk"
+          cp app/build/outputs/apk/github/release/app-github-release.apk out/MyFitTracker.apk   # stable name → releases/latest/download/MyFitTracker.apk
           (cd app && zip -qr ../out/schemas.zip schemas) || true
 
       - uses: actions/upload-artifact@v4

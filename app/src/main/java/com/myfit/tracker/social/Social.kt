@@ -105,14 +105,24 @@ class Social(private val c: AppContainer) {
         val u = auth.currentUser ?: return
         val last = u.metadata?.lastSignInTimestamp ?: 0L
         if (System.currentTimeMillis() - last > 5 * 60_000L) throw IllegalStateException("For safety, sign out and sign in again, then delete within 5 minutes.")
+        deleteCloudData()
+        u.delete().await()
+    }
+
+    /** Removes everything MyFit stored about you on the server (profile, totals, friends, feed). Keeps you signed in. */
+    suspend fun deleteCloudData() {
+        val u = auth.currentUser ?: return
         val p = profile()
+        runCatching {
+            val items = db.collection("feed").document(u.uid).collection("items").get().await()
+            items.documents.forEach { runCatching { it.reference.delete().await() } }
+        }
         runCatching { db.collection("weeklyPublic").document(weekKey()).collection("entries").document(u.uid).delete().await() }
         runCatching { db.collection("weekly").document(weekKey()).collection("entries").document(u.uid).delete().await() }
         runCatching { friends().forEach { removeFriend(it.uid) } }
         p?.code?.takeIf { it.isNotBlank() }?.let { runCatching { db.collection("codes").document(it).delete().await() } }
         runCatching { db.collection("users").document(u.uid).collection("private").document("me").delete().await() }
         runCatching { db.collection("users").document(u.uid).delete().await() }
-        u.delete().await()
     }
 
     // ------------------------------------------------------------------ profile

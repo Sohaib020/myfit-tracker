@@ -17,6 +17,7 @@ class ElevenLabs {
     class Failure(val code: Int, msg: String, val permanent: Boolean, val quota: Boolean) : Exception(msg)
 
     private val base = "https://api.elevenlabs.io/v1"
+    private fun eUrl(key: String, u: String) = if (com.myfit.tracker.ai.AiProxy.isProxy(key)) com.myfit.tracker.ai.AiProxy.url("eleven", u.removePrefix("https://api.elevenlabs.io")) else u
     private var urduModel: String? = null
 
     /** Streams speech for [text]; calls [onChunk] with PCM s16le bytes at [RATE] Hz. */
@@ -27,12 +28,12 @@ class ElevenLabs {
             .put("model_id", model)
             .put("voice_settings", JSONObject().put("stability", 0.5).put("similarity_boost", 0.75).put("use_speaker_boost", true))
         if (urdu) body.put("language_code", "ur")
-        val c = (URL("$base/text-to-speech/$VOICE_ID/stream?output_format=pcm_$RATE").openConnection() as HttpURLConnection).apply {
+        val c = (URL(eUrl(key, "$base/text-to-speech/$VOICE_ID/stream?output_format=pcm_$RATE")).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 8_000
             readTimeout = 20_000
             doOutput = true
-            setRequestProperty("xi-api-key", key)
+            if (com.myfit.tracker.ai.AiProxy.isProxy(key)) com.myfit.tracker.ai.AiProxy.authorize(this) else setRequestProperty("xi-api-key", key)
             setRequestProperty("Content-Type", "application/json")
             setRequestProperty("Accept", "audio/pcm")
         }
@@ -55,9 +56,9 @@ class ElevenLabs {
 
     /** Checks the key and returns remaining characters this month (null if unknown). */
     suspend fun check(key: String): Pair<Int, Int>? = withContext(Dispatchers.IO) {
-        val c = (URL("$base/user/subscription").openConnection() as HttpURLConnection).apply {
+        val c = (URL(eUrl(key, "$base/user/subscription")).openConnection() as HttpURLConnection).apply {
             connectTimeout = 8_000; readTimeout = 10_000
-            setRequestProperty("xi-api-key", key)
+            if (com.myfit.tracker.ai.AiProxy.isProxy(key)) com.myfit.tracker.ai.AiProxy.authorize(this) else setRequestProperty("xi-api-key", key)
         }
         val code = c.responseCode
         if (code !in 200..299) throw failure(code, c.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty())
@@ -68,9 +69,9 @@ class ElevenLabs {
 
     /** The fastest model this account can use that speaks Urdu. */
     private fun pickUrduModel(key: String): String = runCatching {
-        val c = (URL("$base/models").openConnection() as HttpURLConnection).apply {
+        val c = (URL(eUrl(key, "$base/models")).openConnection() as HttpURLConnection).apply {
             connectTimeout = 8_000; readTimeout = 10_000
-            setRequestProperty("xi-api-key", key)
+            if (com.myfit.tracker.ai.AiProxy.isProxy(key)) com.myfit.tracker.ai.AiProxy.authorize(this) else setRequestProperty("xi-api-key", key)
         }
         if (c.responseCode !in 200..299) return@runCatching null
         val arr = JSONArray(c.inputStream.bufferedReader().use { it.readText() })

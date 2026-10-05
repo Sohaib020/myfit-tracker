@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import com.myfit.tracker.ui.components.clickableNoRipple
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.LinearProgressIndicator
@@ -252,6 +253,11 @@ fun AiCapSheetHost() {
             else Caption("You've reached today's ad limit too. See you tomorrow!", color = th.textDim)
             Spacer(Modifier.height(8.dp))
             GlassButton("Maybe later", { if (!busy) AiCapPrompt.dismiss() }, Modifier.fillMaxWidth(), height = 46.dp)
+            if (RewardedAds.privacyOptionsRequired(ctx)) {
+                Spacer(Modifier.height(6.dp))
+                Text("Ad privacy options", style = FitType.label, color = th.textDim,
+                    modifier = Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally).clickableNoRipple { ctx.activity()?.let { RewardedAds.privacyOptions(it) } }.padding(8.dp))
+            }
         }
     }
 }

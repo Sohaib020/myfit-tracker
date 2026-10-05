@@ -59,6 +59,7 @@ object AppUpdater {
 
     /** Queries GitHub for the newest release. */
     suspend fun check(c: Context, force: Boolean = false): State = withContext(Dispatchers.IO) {
+        if (!BuildConfig.SELF_UPDATE) return@withContext State.UpToDate    // Play build: no self-updating
         val p = prefs(c)
         if (!force && System.currentTimeMillis() - p.getLong("last", 0) < 6 * 3600_000L) {
             // at most one GitHub call per 6 h — even across cold starts (the last answer is cached)
@@ -152,6 +153,7 @@ object AppUpdater {
     /** Called when the app goes to the background: a ready update installs then, so it never interrupts you. */
     /** Called from onStop. The session copy of a 100+ MB APK runs on a background thread, never the main thread. */
     fun installIfReady(c: Context) {
+        if (!BuildConfig.SELF_UPDATE) return
         val s = state.value
         if (s is State.Ready && autoInstall(c) && canInstall(c) && s.file.exists()) {
             val app = c.applicationContext

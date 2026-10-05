@@ -74,6 +74,7 @@ private fun UpdateCard(s: AppUpdater.State, compact: Boolean, onLater: (() -> Un
 /** Settings section: current build, check now, auto-download on Wi-Fi, download page. */
 @Composable
 fun AppUpdatesSection() {
+    if (!com.myfit.tracker.BuildConfig.SELF_UPDATE) return     // Play build: Google Play handles updates
     val th = LocalFitTheme.current
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -113,6 +114,7 @@ fun rememberUpdateProgress(): Float? {
  */
 @Composable
 fun UpdateIsland(statusTop: androidx.compose.ui.unit.Dp) {
+    if (!com.myfit.tracker.BuildConfig.SELF_UPDATE) return
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val s by AppUpdater.state.collectAsState()
