@@ -1,5 +1,6 @@
 package com.myfit.tracker.ui.social
 
+import com.myfit.tracker.ui.components.fadeEdges
 import androidx.compose.foundation.horizontalScroll
 
 import android.content.Intent
@@ -279,7 +280,8 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = bottomPad.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val chipScroll = androidx.compose.foundation.rememberScrollState()
+            Row(Modifier.fadeEdges(chipScroll).horizontalScroll(chipScroll), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(0 to "Leaderboard", 2 to "Friends", 1 to "Challenges", 4 to "Activity", 3 to "Account").forEach { (i, l) -> GlassChip(l, tab == i, { tab = i }) }
             }
         }

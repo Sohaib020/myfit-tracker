@@ -10,6 +10,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -62,3 +64,29 @@ val LocalTopInset = compositionLocalOf<Dp> { 0.dp }
  */
 fun androidx.compose.ui.Modifier.blockTouchesBelow(): androidx.compose.ui.Modifier =
     this.pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
+
+/**
+ * Soft fade at the left / right edge of a horizontally scrolling row, only on the side that has more content —
+ * so cut-off chips read as "scroll for more" instead of a glitch.
+ */
+fun androidx.compose.ui.Modifier.horizontalFadeEdges(canBack: () -> Boolean, canForward: () -> Boolean, width: Dp = 28.dp): androidx.compose.ui.Modifier =
+    this.graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            val w = width.toPx().coerceAtMost(size.width / 3)
+            if (canBack()) drawRect(
+                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(androidx.compose.ui.graphics.Color.Black, androidx.compose.ui.graphics.Color.Transparent), 0f, w),
+                size = androidx.compose.ui.geometry.Size(w, size.height), blendMode = androidx.compose.ui.graphics.BlendMode.DstOut,
+            )
+            if (canForward()) drawRect(
+                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(androidx.compose.ui.graphics.Color.Transparent, androidx.compose.ui.graphics.Color.Black), size.width - w, size.width),
+                topLeft = androidx.compose.ui.geometry.Offset(size.width - w, 0f), size = androidx.compose.ui.geometry.Size(w, size.height),
+                blendMode = androidx.compose.ui.graphics.BlendMode.DstOut,
+            )
+        }
+
+fun androidx.compose.ui.Modifier.fadeEdges(state: androidx.compose.foundation.lazy.LazyListState): androidx.compose.ui.Modifier =
+    horizontalFadeEdges({ state.canScrollBackward }, { state.canScrollForward })
+
+fun androidx.compose.ui.Modifier.fadeEdges(state: androidx.compose.foundation.ScrollState): androidx.compose.ui.Modifier =
+    horizontalFadeEdges({ state.canScrollBackward }, { state.canScrollForward })

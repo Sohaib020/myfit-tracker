@@ -1,5 +1,8 @@
 package com.myfit.tracker.ui.pip
 
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import com.myfit.tracker.ui.theme.Duo
 
 import androidx.compose.animation.animateContentSize
@@ -144,7 +147,7 @@ fun PipChatScreen(container: AppContainer) {
                 },
                 tint = if (settings.pipVoice) th.accentBright else th.textDim,
             )
-            if (messages.isNotEmpty()) GlassIconButton(Duo.DeleteSweep, { confirmClear = true })
+            if (messages.isNotEmpty()) { Spacer(Modifier.size(12.dp)); GlassIconButton(Duo.DeleteSweep, { confirmClear = true }) }
         }
         // ---- welcome: big Pip. Once chatting, Pip floats in the corner so the chat gets the whole screen.
         if (messages.isEmpty()) Box(Modifier.fillMaxWidth().height(250.dp), contentAlignment = Alignment.Center) {
@@ -206,9 +209,37 @@ fun PipChatScreen(container: AppContainer) {
         val bob = androidx.compose.animation.core.rememberInfiniteTransition(label = "float")
         val fy by bob.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(2600), androidx.compose.animation.core.RepeatMode.Reverse), label = "fy")
         val pipSize by androidx.compose.animation.core.animateDpAsState(if (imeOpen) 72.dp else 104.dp, label = "pipSize")
+        // drag him anywhere on the chat; the spot is remembered
+        val ctxF = androidx.compose.ui.platform.LocalContext.current
+        val prefsF = remember { ctxF.getSharedPreferences("pip_float", android.content.Context.MODE_PRIVATE) }
+        var drag by remember { mutableStateOf(androidx.compose.ui.geometry.Offset(prefsF.getFloat("x", 0f), prefsF.getFloat("y", 0f))) }
+        val conf = androidx.compose.ui.platform.LocalConfiguration.current
+        val dens = androidx.compose.ui.platform.LocalDensity.current
+        val maxX = with(dens) { (conf.screenWidthDp.dp - 110.dp).toPx() }
+        val maxY = with(dens) { (conf.screenHeightDp.dp - 260.dp).toPx() }
         Box(
             Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 58.dp, end = 6.dp)
-                .graphicsLayer { translationY = (fy - 0.5f) * 10.dp.toPx(); rotationZ = (fy - 0.5f) * 4f }
+                .graphicsLayer { translationX = drag.x; translationY = drag.y + (fy - 0.5f) * 10.dp.toPx(); rotationZ = (fy - 0.5f) * 4f }
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        var dragging = false
+                        var total = androidx.compose.ui.geometry.Offset.Zero
+                        while (true) {
+                            val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                            val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!ch.pressed) break
+                            val d = ch.position - ch.previousPosition
+                            total += d
+                            if (!dragging && total.getDistance() > viewConfiguration.touchSlop) dragging = true
+                            if (dragging) {
+                                drag = androidx.compose.ui.geometry.Offset((drag.x + d.x).coerceIn(-maxX, 0f), (drag.y + d.y).coerceIn(-40f, maxY))
+                                ch.consume()
+                            }
+                        }
+                        if (dragging) prefsF.edit().putFloat("x", drag.x).putFloat("y", drag.y).apply()
+                    }
+                }
         ) {
             Pip(mood, size = pipSize, talking = speaking || typing, idleActions = !thinking, level = if (speaking) voiceLevel else -1f)
         }

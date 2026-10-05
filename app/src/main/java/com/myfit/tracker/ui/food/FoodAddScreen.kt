@@ -1,5 +1,12 @@
 package com.myfit.tracker.ui.food
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.shape.CircleShape
+import com.myfit.tracker.ui.components.fadeEdges
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -59,6 +66,19 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /** Add food: search the food list, scan a barcode, or log a saved meal. tab 0 = search, 1 = barcode, 2 = saved. */
+/** Foods you've starred for quick logging (kept on the phone; included in backups). */
+object FoodFavs {
+    private fun sp(c: android.content.Context) = c.applicationContext.getSharedPreferences("food_favs", android.content.Context.MODE_PRIVATE)
+    val version = kotlinx.coroutines.flow.MutableStateFlow(0)
+    fun ids(c: android.content.Context): Set<Long> = sp(c).getStringSet("ids", emptySet())!!.mapNotNull { it.toLongOrNull() }.toSet()
+    fun toggle(c: android.content.Context, id: Long): Boolean {
+        val cur = ids(c); val on = id !in cur
+        sp(c).edit().putStringSet("ids", (if (on) cur + id else cur - id).map { it.toString() }.toSet()).apply()
+        version.value++
+        return on
+    }
+}
+
 @Composable
 fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, tab0: Int) {
     val th = LocalFitTheme.current
@@ -79,6 +99,10 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
     var picked by remember { mutableStateOf<Food?>(null) }
     var custom by remember { mutableStateOf<String?>(null) }   // non-null = open custom form (value = barcode or "")
     var busy by remember { mutableStateOf<String?>(null) }
+    val favVer by FoodFavs.version.collectAsState()
+    val favIds = remember(favVer) { FoodFavs.ids(ctx) }
+    val favFoods by androidx.compose.runtime.produceState(emptyList<Food>(), favIds) { value = favIds.mapNotNull { container.nutritionRepo.food(it) }.sortedBy { it.name } }
+    fun toggleFav(f: Food) { val on = FoodFavs.toggle(ctx, f.id); toaster.show(if (on) "Saved ${f.name} to favourites" else "Removed from favourites") }
 
     fun scan() {
         val opts = GmsBarcodeScannerOptions.Builder()
@@ -108,45 +132,54 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
 
     Column(Modifier.fillMaxSize()) {
         OverlayTopBar("Add food", { nav.pop() }, "${mealLabel(mealType)} · ${if (date == Clock.today()) "today" else dateKey}")
-        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(MEAL_ORDER.dropLast(1)) { t -> GlassChip(mealLabel(t), t == mealType, { mealType = t }) }
-        }
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionTile("Snap photo", Duo.Camera, th.protein, Modifier.weight(1f)) { nav.replace(Overlay.FoodPhoto(mealType, dateKey)) }
-            ActionTile("Scan barcode", Duo.Barcode, th.carbs, Modifier.weight(1f)) { scan() }
-            ActionTile("Add your own", Duo.Add, th.fat, Modifier.weight(1f)) { custom = "" }
-        }
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GlassChip("Foods", tab == 0, { tab = 0 }, icon = Duo.ForkKnife)
-            GlassChip("Saved meals", tab == 2, { tab = 2 }, icon = Duo.Bookmark)
-        }
-        busy?.let { Caption(it, Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) }
-        if (tab == 0) {
-            Spacer(Modifier.height(10.dp))
-            GlassSearchField(query, { query = it }, "Search nihari, kadhi pakora, zinger, roti…", Modifier.padding(horizontal = 16.dp))
-            if (query.isBlank()) {
-                Spacer(Modifier.height(8.dp))
-                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item { GlassChip("Recent", cat == null, { cat = null }) }
-                    items(container.nutritionRepo.categories) { c -> GlassChip(c, cat == c, { cat = c }) }
-                }
-            }
-        }
         LazyColumn(
             Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 40.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // everything above the list scrolls away with it, so the foods get the whole screen
+            item {
+                val ms = androidx.compose.foundation.lazy.rememberLazyListState()
+                LazyRow(state = ms, modifier = Modifier.fadeEdges(ms), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(MEAL_ORDER.dropLast(1)) { t -> GlassChip(mealLabel(t), t == mealType, { mealType = t }) }
+                }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ActionTile("Snap photo", Duo.Camera, th.protein, Modifier.weight(1f)) { nav.replace(Overlay.FoodPhoto(mealType, dateKey)) }
+                    ActionTile("Scan barcode", Duo.Barcode, th.carbs, Modifier.weight(1f)) { scan() }
+                    ActionTile("Add your own", Duo.Add, th.fat, Modifier.weight(1f)) { custom = "" }
+                }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GlassChip("Foods", tab == 0, { tab = 0 }, icon = Duo.ForkKnife)
+                    GlassChip("Favourites", tab == 3, { tab = 3 }, icon = Duo.Star)
+                    GlassChip("Saved meals", tab == 2, { tab = 2 }, icon = Duo.Bookmark)
+                }
+            }
+            busy?.let { b -> item { Caption(b, Modifier.padding(horizontal = 4.dp)) } }
             if (tab == 0) {
+                item { GlassSearchField(query, { query = it }, "Search nihari, kadhi pakora, zinger, roti…") }
+                if (query.isBlank()) item {
+                    val cs = androidx.compose.foundation.lazy.rememberLazyListState()
+                    LazyRow(state = cs, modifier = Modifier.fadeEdges(cs), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item { GlassChip("Recent", cat == null, { cat = null }) }
+                        items(container.nutritionRepo.categories) { c -> GlassChip(c, cat == c, { cat = c }) }
+                    }
+                }
+            }
+            if (tab == 3) {
+                if (favFoods.isEmpty()) item { Caption("Tap the ☆ on any food to keep it here for one-tap logging.") }
+                items(favFoods, key = { "fav" + it.id }) { f -> FoodRow(f, container.nutritionRepo.meta(f)?.photo, f.id in favIds, { toggleFav(f) }) { picked = f } }
+            } else if (tab == 0) {
                 val list = when {
                     query.isNotBlank() -> results
                     cat != null -> catFoods
                     else -> recent.ifEmpty { results }
                 }
                 item { Text(when { query.isNotBlank() -> "RESULTS"; cat != null -> cat!!.uppercase() + " · ${list.size}"; recent.isNotEmpty() -> "RECENT"; else -> "FOODS" }, style = FitType.overline, color = th.textDim) }
-                items(list, key = { "f" + it.id }) { f -> FoodRow(f, container.nutritionRepo.meta(f)?.photo) { picked = f } }
+                items(list, key = { "f" + it.id }) { f -> FoodRow(f, container.nutritionRepo.meta(f)?.photo, f.id in favIds, { toggleFav(f) }) { picked = f } }
                 if (query.isNotBlank() && results.isEmpty()) item {
                     Caption("No match. Try another spelling, snap a photo, or add it as a custom food.")
                 }
@@ -256,18 +289,23 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
 }
 
 @Composable
-private fun FoodRow(f: Food, photo: String?, onClick: () -> Unit) {
+private fun FoodRow(f: Food, photo: String?, fav: Boolean, onFav: () -> Unit, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), onClick = onClick) {
-        Row(Modifier.padding(horizontal = 10.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             FoodThumb(photo, 48.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(f.name, style = FitType.body, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Caption(listOfNotNull(f.brand, "${Fmt.trim(f.servingSize, 1)} ${f.servingUnit}", "P ${Fmt.int(f.proteinG)} · C ${Fmt.int(f.carbsG)} · F ${Fmt.int(f.fatG)}").joinToString(" · "))
             }
-            Text(Fmt.int(f.calories), style = FitType.section, color = th.text)
-            Text(" ${com.myfit.tracker.domain.EnergyUnit.label}", style = FitType.caption, color = th.textDim)
+            Column(horizontalAlignment = Alignment.End) {
+                Text(Fmt.int(f.calories), style = FitType.section, color = th.text)
+                Text(com.myfit.tracker.domain.EnergyUnit.label, style = FitType.caption, color = th.textDim)
+            }
+            Box(Modifier.size(44.dp).clip(CircleShape).clickableNoRipple(onFav), contentAlignment = Alignment.Center) {
+                Icon(Duo.Star, if (fav) "Remove from favourites" else "Save to favourites", tint = if (fav) Color(0xFFFFC83D) else th.textFaint, modifier = Modifier.size(22.dp))
+            }
         }
     }
 }

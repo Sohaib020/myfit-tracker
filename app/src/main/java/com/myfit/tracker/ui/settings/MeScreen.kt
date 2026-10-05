@@ -1,5 +1,6 @@
 package com.myfit.tracker.ui.settings
 
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.background
 import com.myfit.tracker.ui.theme.Duo
 
@@ -461,9 +462,9 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit) {
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     tiles.chunked(2).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             row.forEach { q ->
-                                GlassCard(Modifier.weight(1f), onClick = q.onClick) {
+                                GlassCard(Modifier.weight(1f).fillMaxHeight(), onClick = q.onClick) {
                                     com.myfit.tracker.ui.components.IconBubble(q.icon, q.color, 38.dp)
                                     Spacer(Modifier.height(10.dp))
                                     com.myfit.tracker.ui.components.FitText(q.title, FitType.section, th.text)
