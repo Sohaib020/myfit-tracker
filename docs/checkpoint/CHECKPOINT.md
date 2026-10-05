@@ -128,7 +128,7 @@ Phases:
 3 ✅ (run 142) Design: Mint default (dark), opaque mode API≤32 (dock glass anims kept, dock bg opaque, remove glass/blur settings there), responsive system (tall/wide/foldable/large fold) + fix screenshot glitches
 4 ✅ (run 143) Onboarding: calorie target wording, DOB wheel redesign, Health Connect page (ref Hevy) then separate permission pages; OnboardingVersion bump
 5 ✅ (run 144) Cleanups: remove Games tab; buddies (non-Pip) as download; Today = single calorie detail; offline AI RAM gate (<6 GB blocked + clear message)
-6 ☐ Train rebuild: workouts-first UX, custom days (multi-muscle), AI day/week/month planner by goal, live session (per-exercise timer, rest timer, compare last time, calories/effects), progress charts, Create Exercise (Hevy ref) + equipment picker with 3D renders (FLUX)
+6 ✅ (runs 147–150) Train rebuild: domain/WorkoutPlanner (rules) + WorkoutAi (LLM tweak via AiRouter.text, catalog-key whitelist); ui/train/Builders.kt (Day Builder, Plan Builder → ProgramLib.saveCustom my_programs.json + ProgramEngine); Train home workouts-first (segments Workouts/Plans/Exercises, quick muscle chips, plan card, progress strip, My workout days); TrainProgress (week/month/6mo honest metrics); Gym Mode time-on-exercise, set timer, per-set deltas, sticky notes, equipment; Finish muscle map + vs last time; CreateExercise.kt (rows+sheets, equipment art at assets/equipment/<id>.webp — PENDING copy from branch equipment-assets when render run 37307267969 finishes)
 7 ☐ Social: unique username + UID, search/add by either
 8 ☐ Live notifications (Android 16 Live Updates / Samsung Now Bar)
 9 ☐ First-week checklist, widgets (water/steps), Sunday report + share card, backup file+Drive, Pakistani meal plans (household units), Wear OS tile
