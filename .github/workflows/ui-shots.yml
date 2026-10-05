@@ -3,7 +3,7 @@ name: UI screenshot tests
 # and saves the PNGs to the ui-shots branch for review.
 on:
   push:
-    branches: [ main ]
+    branches: [ main, shots-run ]
     paths: [ 'app/src/main/java/**', 'app/src/test/**', '.github/workflows/ui-shots.yml' ]
   workflow_dispatch:
 permissions: { contents: write }
