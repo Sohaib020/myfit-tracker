@@ -312,6 +312,8 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 Spacer(Modifier.height(8.dp))
                 val navB = com.myfit.tracker.ui.nav.LocalNav.current
                 com.myfit.tracker.ui.theme.AccentButton("Backup & restore", { navB.push(com.myfit.tracker.ui.nav.Overlay.Backup) }, Modifier.fillMaxWidth(), icon = com.myfit.tracker.ui.theme.Duo.Cloud, height = 44.dp)
+                Spacer(Modifier.height(14.dp))
+                LiveNotifRow()
             }
         }
         if (settings.devMode) item {
@@ -927,5 +929,28 @@ private fun AiProvidersCard(container: AppContainer) {
         }
         Spacer(Modifier.height(10.dp))
         router.lastProvider?.let { Caption("Last answer came from $it.", color = th.textFaint) }
+    }
+}
+
+
+/** Now Bar / live notifications: status, test and the settings shortcut (Samsung hides third-party ones by default). */
+@androidx.compose.runtime.Composable
+private fun LiveNotifRow() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val th = com.myfit.tracker.ui.theme.LocalFitTheme.current
+    val allowed = androidx.compose.runtime.remember { com.myfit.tracker.notify.LiveUpdates.promotionAllowed(ctx) }
+    val canPost = androidx.compose.runtime.remember { com.myfit.tracker.notify.LiveUpdates.canPost(ctx) }
+    androidx.compose.material3.Text("Now Bar · live notifications", style = com.myfit.tracker.ui.theme.FitType.label, color = th.text)
+    com.myfit.tracker.ui.components.Caption(when {
+        !canPost -> "Notifications are off for MyFit — turn them on to see workouts, rest and fasting live."
+        allowed == false -> "Live notifications are turned off for MyFit in Android settings."
+        android.os.Build.MANUFACTURER.equals("samsung", true) -> "Samsung shows other apps in the Now Bar only when Developer options → \"Live notifications for all apps\" is on."
+        allowed == null -> "Your Android version shows these as normal ongoing notifications."
+        else -> "Workouts, rest timer, stopwatch and fasting appear in the status bar chip while running."
+    })
+    Spacer(Modifier.height(8.dp))
+    androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+        com.myfit.tracker.ui.theme.GlassButton("Test now", { com.myfit.tracker.notify.LiveUpdates.test(ctx) }, Modifier.weight(1f), height = 42.dp)
+        com.myfit.tracker.ui.theme.GlassButton("Settings", { com.myfit.tracker.notify.LiveUpdates.openSettings(ctx) }, Modifier.weight(1f), height = 42.dp)
     }
 }
