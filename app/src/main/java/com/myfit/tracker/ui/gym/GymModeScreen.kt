@@ -98,6 +98,7 @@ import com.myfit.tracker.ui.pip.Pip
 import com.myfit.tracker.ui.pip.PipMood
 import com.myfit.tracker.ui.theme.AccentButton
 import com.myfit.tracker.ui.theme.FitType
+import com.myfit.tracker.ui.components.clickableNoRipple
 import com.myfit.tracker.ui.theme.Glass
 import com.myfit.tracker.ui.theme.GlassButton
 import com.myfit.tracker.ui.theme.GlassIconButton
@@ -196,10 +197,10 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
                 Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).animateContentSize(),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                ExerciseHeaderCard(cur, list, vm, container, onRemoved = { ok -> if (!ok) toaster.show("Delete its sets first — logged sets are never removed silently") })
+                ExerciseHeaderCard(cur, list, vm, container, now, onRemoved = { ok -> if (!ok) toaster.show("Delete its sets first — logged sets are never removed silently") })
                 PreviousCard(cur, vm, u)
-                TodaySets(cur, u) { row -> editSet = row to cur }
-                CurrentSetCard(cur, list, vm, container) { res ->
+                TodaySets(cur, u, vm.history[cur.exercise.id]) { row -> editSet = row to cur }
+                CurrentSetCard(cur, list, vm, container, now) { res ->
                     res.error?.let { toaster.show(it) }
                     res.beatBest?.let { celebrate = it }
                 }
@@ -285,12 +286,15 @@ private fun ExerciseStrip(list: List<WorkoutExerciseView>, current: Long?, vm: G
 }
 
 @Composable
-private fun ExerciseHeaderCard(cur: WorkoutExerciseView, list: List<WorkoutExerciseView>, vm: GymViewModel, container: AppContainer, onRemoved: (Boolean) -> Unit) {
+private fun ExerciseHeaderCard(cur: WorkoutExerciseView, list: List<WorkoutExerciseView>, vm: GymViewModel, container: AppContainer, now: Long, onRemoved: (Boolean) -> Unit) {
     val th = LocalFitTheme.current
     val nav = LocalNav.current
     val settings = LocalSettings.current
     var menu by remember { mutableStateOf(false) }
+    var editNote by remember(cur.exercise.id) { mutableStateOf(false) }
+    var note by remember(cur.exercise.id, cur.exercise.personalNotes) { mutableStateOf(cur.exercise.personalNotes) }
     Glass(Modifier.fillMaxWidth()) {
+      Column {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             ExerciseImage(cur.exercise, Modifier.size(96.dp).clip(RoundedCornerShape(22.dp)), animate = true)
             Spacer(Modifier.width(14.dp))
@@ -300,8 +304,15 @@ private fun ExerciseHeaderCard(cur: WorkoutExerciseView, list: List<WorkoutExerc
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(8.dp).clip(CircleShape).drawBehind { drawCircle(muscleColor(cur.exercise.primaryMuscle)) })
                     Spacer(Modifier.width(6.dp))
-                    Caption(cur.exercise.primaryMuscle)
+                    Caption(cur.exercise.primaryMuscle + (cur.exercise.equipment.takeIf { it.isNotBlank() && it != "other" }?.let { " · " + it.replaceFirstChar { c -> c.uppercase() } } ?: ""))
                     if (cur.we.supersetGroup != null) { Spacer(Modifier.width(8.dp)); Caption("Superset", color = th.accentBright) }
+                }
+                // time spent on this exercise: from when you opened it (or its first set) until now / its last set
+                val since = vm.exerciseStart(cur)
+                if (since != null) Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Duo.Timer, null, tint = th.accentBright, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Caption("${mmss(((now - since) / 1000).coerceAtLeast(0))} on this exercise", color = th.accentBright)
                 }
                 vm.targets[cur.exercise.id]?.let { t ->
                     val reps = listOfNotNull(t.targetRepsMin, t.targetRepsMax).distinct().joinToString("–")
@@ -324,6 +335,23 @@ private fun ExerciseHeaderCard(cur: WorkoutExerciseView, list: List<WorkoutExerc
                 }
             }
         }
+        // sticky note: stays with the exercise across every workout (seat height, grip, cues…)
+        if (editNote) Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+            com.myfit.tracker.ui.entries.NotesField(note, { note = it.take(300) }, "e.g. seat on 4, narrow grip, keep elbows in")
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GlassButton("Cancel", { note = cur.exercise.personalNotes; editNote = false }, Modifier.weight(1f), height = 40.dp)
+                AccentButton("Save note", { val n = note.trim(); container.write { container.exerciseRepo.setNotes(cur.exercise.id, n) }; editNote = false }, Modifier.weight(1f), height = 40.dp)
+            }
+        } else Row(
+            Modifier.fillMaxWidth().clickableNoRipple { editNote = true }.padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Duo.EditNote, null, tint = if (note.isBlank()) th.textFaint else th.warning, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(note.ifBlank { "Add a note for this exercise" }, style = FitType.caption, color = if (note.isBlank()) th.textFaint else th.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        }
+      }
     }
 }
 
@@ -365,7 +393,7 @@ private fun PreviousCard(cur: WorkoutExerciseView, vm: GymViewModel, u: com.myfi
 }
 
 @Composable
-private fun TodaySets(cur: WorkoutExerciseView, u: com.myfit.tracker.domain.UnitPrefs, onEdit: (SetRow) -> Unit) {
+private fun TodaySets(cur: WorkoutExerciseView, u: com.myfit.tracker.domain.UnitPrefs, h: ExerciseHistory?, onEdit: (SetRow) -> Unit) {
     val th = LocalFitTheme.current
     if (cur.sets.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -378,17 +406,21 @@ private fun TodaySets(cur: WorkoutExerciseView, u: com.myfit.tracker.domain.Unit
                     }
                     Spacer(Modifier.width(12.dp))
                     Text(formatSet(cur.exercise.measurementType, r, u), style = FitType.section, color = th.text, modifier = Modifier.weight(1f))
+                    setDelta(r, h?.lastSession?.firstOrNull { it.setNumber == r.setNumber }, u)?.let { (txt, up) ->
+                        Text(txt, style = FitType.label, color = when (up) { true -> th.success; false -> th.warning; null -> th.textDim })
+                        Spacer(Modifier.width(8.dp))
+                    }
                     r.rpe?.let { Caption("RPE ${Fmt.trim(it)}"); Spacer(Modifier.width(8.dp)) }
                     r.restSec?.let { Caption("rest ${mmss(it)}") }
                 }
             }
         }
-        Caption("Tap a set to correct or delete it. Totals recalculate automatically.")
+        Caption("Arrows compare each set with the same set last time. Tap a set to correct or delete it.")
     }
 }
 
 @Composable
-private fun CurrentSetCard(cur: WorkoutExerciseView, list: List<WorkoutExerciseView>, vm: GymViewModel, container: AppContainer, onResult: (GymViewModel.CompleteResult) -> Unit) {
+private fun CurrentSetCard(cur: WorkoutExerciseView, list: List<WorkoutExerciseView>, vm: GymViewModel, container: AppContainer, now: Long, onResult: (GymViewModel.CompleteResult) -> Unit) {
     val th = LocalFitTheme.current
     val s = LocalSettings.current
     val d = vm.drafts[cur.we.id] ?: Draft()
@@ -402,6 +434,16 @@ private fun CurrentSetCard(cur: WorkoutExerciseView, list: List<WorkoutExerciseV
             }
             SetTypeRow(d.setType) { t -> vm.update(cur.we.id) { it.copy(setType = t) } }
             SetInputs(cur.exercise.measurementType, d, { nd -> vm.update(cur.we.id) { nd } }, s.units, s.weightStepKg)
+            if (cur.exercise.measurementType in listOf(MeasurementType.DURATION, MeasurementType.DISTANCE_DURATION, MeasurementType.WEIGHT_DURATION)) {
+                // set timer: times a plank / hold / interval and fills the duration in for you
+                val started = vm.setTimerStart[cur.we.id]
+                if (started == null) GlassButton("Start set timer", { vm.setTimerStart[cur.we.id] = System.currentTimeMillis() }, Modifier.fillMaxWidth(), icon = Duo.Timer, height = 48.dp)
+                else AccentButton("Stop · ${mmss(((now - started) / 1000).coerceAtLeast(0))}", {
+                    val sec = ((System.currentTimeMillis() - started) / 1000).coerceAtLeast(1)
+                    vm.setTimerStart.remove(cur.we.id)
+                    vm.update(cur.we.id) { it.copy(durationSec = sec, source = "Timed") }
+                }, Modifier.fillMaxWidth(), icon = Duo.Stop, height = 48.dp)
+            }
             RpeRow(d.rpe) { r -> vm.update(cur.we.id) { it.copy(rpe = r) } }
             AccentButton(
                 if (vm.busy) "Saving…" else "COMPLETE SET",
@@ -463,4 +505,20 @@ private fun EditSetContent(row: SetRow, ev: WorkoutExerciseView, vm: GymViewMode
         confirmButton = { androidx.compose.material3.TextButton({ vm.deleteSet(row.setId); confirm = false; close() }) { Text("Delete", color = th.danger) } },
         dismissButton = { androidx.compose.material3.TextButton({ confirm = false }) { Text("Cancel") } },
     )
+}
+
+/** "▲2.5 kg", "+2 reps", "=" vs the same set number last session; null when there's nothing to compare. */
+private fun setDelta(r: SetRow, prev: SetRow?, u: com.myfit.tracker.domain.UnitPrefs): Pair<String, Boolean?>? {
+    if (prev == null || r.setType == SetType.WARMUP) return null
+    val dw = (r.weightKg ?: 0.0) - (prev.weightKg ?: 0.0)
+    val dr = (r.reps ?: 0) - (prev.reps ?: 0)
+    val dd = (r.durationSec ?: 0L) - (prev.durationSec ?: 0L)
+    return when {
+        r.weightKg != null && prev.weightKg != null && kotlin.math.abs(dw) >= 0.05 ->
+            (if (dw > 0) "▲" else "▼") + Fmt.weight(kotlin.math.abs(dw), u.weight, 1) to (dw > 0)
+        r.reps != null && prev.reps != null && dr != 0 -> (if (dr > 0) "+$dr" else "$dr") + " reps" to (dr > 0)
+        r.durationSec != null && prev.durationSec != null && dd != 0L -> (if (dd > 0) "+" else "−") + mmss(kotlin.math.abs(dd)) to (dd > 0)
+        r.reps != null || r.durationSec != null -> "=" to null
+        else -> null
+    }
 }

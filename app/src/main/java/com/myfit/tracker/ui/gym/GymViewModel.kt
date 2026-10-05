@@ -56,7 +56,19 @@ class GymViewModel(private val c: AppContainer, val workoutId: Long) : ViewModel
         }
     }
 
-    fun select(weId: Long) { currentWeId = weId }
+    fun select(weId: Long) { currentWeId = weId; opened.putIfAbsent(weId, System.currentTimeMillis()) }
+
+    /** When you opened each exercise this session (for its "time on this exercise" clock). */
+    private val opened = HashMap<Long, Long>()
+    /** Running set timers (timed exercises), keyed by workoutExerciseId. */
+    val setTimerStart = mutableStateMapOf<Long, Long>()
+
+    /** Start of the time spent on [ev]: its first logged set minus a typical set, or when it was first opened. */
+    fun exerciseStart(ev: WorkoutExerciseView): Long? {
+        val first = ev.sets.minOfOrNull { it.completedAt }?.let { it - 45_000 }
+        val o = opened[ev.we.id]
+        return listOfNotNull(first, o).minOrNull()
+    }
 
     /** Loads history once per exercise, then builds the draft if none exists yet. */
     fun ensureLoaded(ev: WorkoutExerciseView) {
