@@ -113,7 +113,7 @@ fun BackupScreen(container: AppContainer) {
                     Text("Google Drive", style = FitType.section, color = th.text)
                     Caption("Saved in a hidden MyFit folder in your own Drive — only this app can read it. Keeps your 3 newest backups.")
                     Spacer(Modifier.height(12.dp))
-                    AccentButton("Back up to Drive now", {
+                    AccentButton("Back up now", {
                         if (busy == null) withDrive("Backing up to Drive…") { t -> val b = DriveBackup.upload(ctx, t); mark(); toaster.show("Backed up to Drive · ${mb(b)}") }
                     }, Modifier.fillMaxWidth(), icon = Duo.Cloud, height = 48.dp)
                     Spacer(Modifier.height(8.dp))

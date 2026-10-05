@@ -51,7 +51,7 @@ class AdaptiveShotTest {
         (if (n.config.getOrNull(SemanticsProperties.Text) != null) listOf(n) else emptyList()) + n.children.flatMap { texts(it) }
 
     private val pairs = listOf(
-        "Build my day" to "Empty workout", "Start now" to "Save to My workout days", "Back up to Drive now" to "Restore from Drive",
+        "Build my day" to "Empty workout", "Start now" to "Save to My workout days", "Back up now" to "Restore from Drive",
         "Save backup file" to "Restore from file", "Accept" to "Decline", "Build a day" to "Start from scratch",
     )
 
