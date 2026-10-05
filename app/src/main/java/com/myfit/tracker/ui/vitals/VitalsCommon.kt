@@ -17,7 +17,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private val dayShort = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
-private val timeShort = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+private val timeShort get() = com.myfit.tracker.domain.ClockFmt.f()
 
 /** "Today 14:05", "Yesterday 22:10", "3 Oct 08:00". */
 internal fun fmtWhen(at: Instant): String {
