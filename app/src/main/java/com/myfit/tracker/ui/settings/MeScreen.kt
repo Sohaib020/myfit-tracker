@@ -187,18 +187,20 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 Spacer(Modifier.height(14.dp))
                 Spacer(Modifier.height(12.dp))
                 Text("Motion", style = FitType.section, color = th.text)
-                Caption("Pip and glass effects. Themes are always still images. Battery saver keeps everything still.")
+                Caption(if (com.myfit.tracker.ui.theme.lowFx) "Pip animations. Battery saver keeps everything still." else "Pip and glass effects. Battery saver keeps everything still.")
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Smooth", "Balanced", "Battery saver").forEachIndexed { i, label ->
                         GlassChip(label, settings.motion == i, { container.write { container.settings.setMotion(i) } })
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                GlassSlider("Glass tint", "How milky the cards are", settings.glassStrength, 0.4f..1.6f) { v -> container.write { container.settings.setGlassStrength(v) } }
-                GlassSlider("Blur amount", "0 = crystal clear, right = heavy frost", settings.blurAmount, 0f..2f) { v -> container.write { container.settings.setBlurAmount(v) } }
-                GlassSlider("Dock blur", "How frosted the bottom bar is", settings.dockBlur, 0f..2.5f) { v -> container.write { container.settings.setDockBlur(v) } }
-                if (!realBlurSupported) Caption("This phone runs Android 11 or older, so glass uses a frosted fallback instead of live blur.")
+                // Android 12 and older use solid cards (no glass/blur), so these controls would do nothing there
+                if (!com.myfit.tracker.ui.theme.lowFx) {
+                    Spacer(Modifier.height(12.dp))
+                    GlassSlider("Glass tint", "How milky the cards are", settings.glassStrength, 0.4f..1.6f) { v -> container.write { container.settings.setGlassStrength(v) } }
+                    GlassSlider("Blur amount", "0 = crystal clear, right = heavy frost", settings.blurAmount, 0f..2f) { v -> container.write { container.settings.setBlurAmount(v) } }
+                    GlassSlider("Dock blur", "How frosted the bottom bar is", settings.dockBlur, 0f..2.5f) { v -> container.write { container.settings.setDockBlur(v) } }
+                }
             }
         }
 
@@ -270,10 +272,26 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
 
         item { com.myfit.tracker.update.AppUpdatesSection() }
         item {
+            var eraseAsk by remember { mutableStateOf(false) }
+            var erasing by remember { mutableStateOf(false) }
+            val ctxE = androidx.compose.ui.platform.LocalContext.current
+            val scopeE = androidx.compose.runtime.rememberCoroutineScope()
+            if (eraseAsk) androidx.compose.material3.AlertDialog(
+                onDismissRequest = { if (!erasing) eraseAsk = false },
+                title = { Text("Delete all your data?") },
+                text = { Text("This permanently erases everything you've logged on this phone — workouts, food, weight, cycle, glucose, notes, photos and settings — plus your friends profile and weekly totals on the server. It can't be undone. Make a backup first if you might want it later.") },
+                confirmButton = {
+                    androidx.compose.material3.TextButton({
+                        erasing = true
+                        scopeE.launch { com.myfit.tracker.data.DataEraser.eraseAll(ctxE); com.myfit.tracker.data.DataEraser.restart(ctxE) }
+                    }, enabled = !erasing) { Text(if (erasing) "Deleting…" else "Delete everything", color = th.danger) }
+                },
+                dismissButton = { androidx.compose.material3.TextButton({ eraseAsk = false }, enabled = !erasing) { Text("Cancel") } },
+            )
             GlassCard {
                 CardHeader(Duo.Lock, "Privacy", th.textDim)
                 Spacer(Modifier.height(10.dp))
-                Caption("All data lives only on this phone. No account, no ads, no analytics. Backup & export arrive in a later build. Exercise photos & instructions: free-exercise-db (public domain).")
+                Caption("Your health records stay on this phone. Signing in shares only your name and weekly totals with friends you choose. Ads are optional and never use your health data. Exercise photos & instructions: free-exercise-db (public domain).")
                 Spacer(Modifier.height(6.dp))
                 var taps by remember { mutableIntStateOf(0) }
                 val toasterV = LocalToaster.current
@@ -283,6 +301,17 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                     if (taps >= 7) { container.write { container.settings.setDevMode(true) }; toasterV.show("Developer options unlocked") }
                     else if (taps >= 4) toasterV.show("${7 - taps} more taps to unlock developer options")
                 }.padding(vertical = 4.dp))
+                val ctxP = androidx.compose.ui.platform.LocalContext.current
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    com.myfit.tracker.ui.theme.GlassButton("Privacy policy", {
+                        runCatching { ctxP.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(com.myfit.tracker.health.PRIVACY_URL))) }
+                    }, Modifier.weight(1f), height = 44.dp)
+                    com.myfit.tracker.ui.theme.GlassButton("Delete my data", { eraseAsk = true }, Modifier.weight(1f), height = 44.dp)
+                }
+                Spacer(Modifier.height(8.dp))
+                val navB = com.myfit.tracker.ui.nav.LocalNav.current
+                com.myfit.tracker.ui.theme.AccentButton("Backup & restore", { navB.push(com.myfit.tracker.ui.nav.Overlay.Backup) }, Modifier.fillMaxWidth(), icon = com.myfit.tracker.ui.theme.Duo.Cloud, height = 44.dp)
             }
         }
         if (settings.devMode) item {
@@ -313,7 +342,7 @@ fun DevSettingsScreen(container: AppContainer) {
                 GlassCard {
                     CardHeader(Duo.Palette, "Advanced glass", th.fat)
                     Spacer(Modifier.height(8.dp))
-                    if (com.myfit.tracker.ui.theme.LiquidGlass.supported)
+                    if (com.myfit.tracker.ui.theme.LiquidGlass.supported && !com.myfit.tracker.ui.theme.lowFx)
                         GlassSlider("Refraction", "How strongly the glass edges bend what's behind", settings.refraction, 0f..2f) { v -> container.write { container.settings.setRefraction(v) } }
                 }
             }
@@ -608,7 +637,7 @@ private fun PipSettingsCard(container: AppContainer, dev: Boolean) {
         Spacer(Modifier.height(12.dp))
         if (dev) {
         Text("Gemini API key", style = FitType.label, color = th.textDim)
-        if (settings.geminiKey.isBlank() && com.myfit.tracker.BuildConfig.GEMINI_KEY.isNotBlank()) Caption("Built-in key active ✓ — you only need your own key if you want to use a different one.", color = th.success)
+        if (settings.geminiKey.isBlank() && com.myfit.tracker.ai.AiProxy.configured) Caption("MyFit AI service active ✓ (when signed in) — add your own key only if you want to use your own quota.", color = th.success)
         Spacer(Modifier.height(6.dp))
         Glass(Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(20.dp)) {
             Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -726,7 +755,7 @@ private fun VoiceSettingsCard(container: AppContainer, dev: Boolean) {
         Spacer(Modifier.height(14.dp))
         if (dev) {
         Text("ElevenLabs key (optional)", style = FitType.section, color = th.text)
-        if (settings.elevenKey.isBlank() && com.myfit.tracker.BuildConfig.ELEVEN_KEY.isNotBlank()) Caption("Built-in key active ✓", color = th.success)
+        if (settings.elevenKey.isBlank() && com.myfit.tracker.ai.AiProxy.configured) Caption("MyFit voice service active ✓ (when signed in)", color = th.success)
         Caption("Free plan ≈ 10,000 characters a month (roughly 100–150 replies). When it runs out Pip switches to the on-device voice by itself.")
         Spacer(Modifier.height(6.dp))
         Glass(Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(20.dp)) {
@@ -833,10 +862,10 @@ private fun AiProvidersCard(container: AppContainer) {
         Spacer(Modifier.height(4.dp))
         Caption("Groq is the fastest. Order after your pick: Gemini → Groq → OpenRouter → Mistral.", color = th.textFaint)
         listOf(
-            Triple("groq", "Groq", settings.groqKey to com.myfit.tracker.BuildConfig.GROQ_KEY),
-            Triple("openrouter", "OpenRouter", settings.openRouterKey to com.myfit.tracker.BuildConfig.OPENROUTER_KEY),
-            Triple("mistral", "Mistral", settings.mistralKey to com.myfit.tracker.BuildConfig.MISTRAL_KEY),
-            Triple("azure", "Azure Speech (voice)", settings.azureKey to com.myfit.tracker.BuildConfig.AZURE_SPEECH_KEY),
+            Triple("groq", "Groq", settings.groqKey to (if (com.myfit.tracker.ai.AiProxy.configured) "proxy" else "")),
+            Triple("openrouter", "OpenRouter", settings.openRouterKey to (if (com.myfit.tracker.ai.AiProxy.configured) "proxy" else "")),
+            Triple("mistral", "Mistral", settings.mistralKey to (if (com.myfit.tracker.ai.AiProxy.configured) "proxy" else "")),
+            Triple("azure", "Azure Speech (voice)", settings.azureKey to (if (com.myfit.tracker.ai.AiProxy.configured) "proxy" else "")),
         ).forEach { (id, label, keys) ->
             val (own, builtIn) = keys
             var key by remember(own) { mutableStateOf(own) }
@@ -845,7 +874,7 @@ private fun AiProvidersCard(container: AppContainer) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(label, style = FitType.section, color = th.text, modifier = Modifier.weight(1f))
                 val active = own.isNotBlank() || builtIn.isNotBlank()
-                Text(if (own.isNotBlank()) "Your key" else if (builtIn.isNotBlank()) "Built-in ✓" else "Not set", style = FitType.caption, color = if (active) th.success else th.textFaint)
+                Text(if (own.isNotBlank()) "Your key" else if (builtIn.isNotBlank()) "MyFit service ✓" else "Not set", style = FitType.caption, color = if (active) th.success else th.textFaint)
             }
             Spacer(Modifier.height(6.dp))
             Glass(Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(18.dp)) {
@@ -856,7 +885,7 @@ private fun AiProvidersCard(container: AppContainer) {
                         visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                         cursorBrush = androidx.compose.ui.graphics.SolidColor(th.accent),
                         modifier = Modifier.weight(1f),
-                        decorationBox = { inner -> Box { if (key.isEmpty()) Text(if (builtIn.isNotBlank()) "Using built-in key" else "Paste $label key", style = FitType.body, color = th.textFaint); inner() } },
+                        decorationBox = { inner -> Box { if (key.isEmpty()) Text(if (builtIn.isNotBlank()) "Using MyFit's service" else "Paste $label key", style = FitType.body, color = th.textFaint); inner() } },
                     )
                     if (key != own) Text("Save", style = FitType.label, color = th.accentBright, modifier = Modifier.clickableNoRipple {
                         container.write { container.settings.setAiKey(id, key) }
@@ -873,7 +902,7 @@ private fun AiProvidersCard(container: AppContainer) {
                         androidx.compose.foundation.text.BasicTextField(
                             region, { region = it.trim().lowercase() }, singleLine = true,
                             textStyle = FitType.body.copy(color = th.text), cursorBrush = androidx.compose.ui.graphics.SolidColor(th.accent), modifier = Modifier.weight(1f),
-                            decorationBox = { inner -> Box { if (region.isEmpty()) Text(com.myfit.tracker.BuildConfig.AZURE_SPEECH_REGION.ifBlank { "Region, e.g. centralindia" }, style = FitType.body, color = th.textFaint); inner() } },
+                            decorationBox = { inner -> Box { if (region.isEmpty()) Text("Region, e.g. centralindia", style = FitType.body, color = th.textFaint); inner() } },
                         )
                         if (region != settings.azureRegion) Text("Save", style = FitType.label, color = th.accentBright, modifier = Modifier.clickableNoRipple {
                             container.write { container.settings.setAiKey("azure_region", region) }; container.pipVoice.resetEleven(); toaster.show("Region saved")

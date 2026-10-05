@@ -45,11 +45,11 @@ fun TrainHost(container: AppContainer, bottomPad: Int) {
         Column(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = TopBarSpace, bottom = 6.dp)) {
             Text("Train", style = FitType.display, color = th.text)
             androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp))
-            Segmented(listOf("Programs", "Workouts", "Exercises"), seg) { seg = it }
+            Segmented(listOf("Workouts", "Plans", "Exercises"), seg) { seg = it }
         }
         Box(Modifier.fillMaxWidth().weight(1f).fadeTopEdge()) {
-            if (seg == 0) com.myfit.tracker.ui.programs.ProgramsScreen(container, bottomPad)
-            else if (seg == 1) TrainScreen(container, bottomPad, embedded = true)
+            if (seg == 0) TrainScreen(container, bottomPad, embedded = true, onBrowsePlans = { seg = 1 })
+            else if (seg == 1) com.myfit.tracker.ui.programs.ProgramsScreen(container, bottomPad)
             else Box(Modifier.padding(horizontal = 0.dp)) { ExercisesScreen(container, bottomPad, embedded = true) }
         }
     }
@@ -69,7 +69,7 @@ private fun Segmented(labels: List<String>, selected: Int, onSelect: (Int) -> Un
             Row(Modifier.fillMaxSize()) {
                 labels.forEachIndexed { i, l ->
                     Box(Modifier.weight(1f).fillMaxHeight().clip(CircleShape).clickableNoRipple { onSelect(i) }, contentAlignment = Alignment.Center) {
-                        Text(l, style = FitType.label, color = if (i == selected) th.onAccent else th.textDim)
+                        com.myfit.tracker.ui.components.FitText(l, FitType.label, if (i == selected) th.onAccent else th.textDim)
                     }
                 }
             }

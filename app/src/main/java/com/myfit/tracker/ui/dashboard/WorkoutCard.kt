@@ -53,7 +53,7 @@ fun WorkoutCard(w: WorkoutToday, container: AppContainer) {
     val u = LocalSettings.current.units
     val nav = LocalNav.current
     val scope = rememberCoroutineScope()
-    val now by produceState(Clock.now()) { while (true) { value = Clock.now(); delay(1000) } }
+    val now by produceState(Clock.now()) { while (true) { androidx.compose.runtime.withFrameMillis { }; value = Clock.now(); delay(1000) } }
     // a followed program decides what "today's workout" is
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val programFollow by com.myfit.tracker.ui.programs.ProgramEngine.follow.collectAsState()

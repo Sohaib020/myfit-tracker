@@ -127,10 +127,10 @@ internal fun SupplementsContent(container: AppContainer) {
     val today = Clock.today()
     val todayKey = Clock.dateKey(today)
     val since = remember(todayKey) { Clock.dateKey(today.minusDays(400)) }
-    val active by container.db.supplementDao().observeActive().collectAsState(initial = null)
-    val archived by container.db.supplementDao().observeArchived().collectAsState(initial = emptyList())
+    val active by remember { container.db.supplementDao().observeActive() }.collectAsState(initial = null)
+    val archived by remember { container.db.supplementDao().observeArchived() }.collectAsState(initial = emptyList())
     val logs by remember(since) { container.db.supplementLogDao().observeSince(since) }.collectAsState(initial = emptyList())
-    val reminders by container.db.reminderDao().observeAll().collectAsState(initial = emptyList())
+    val reminders by remember { container.db.reminderDao().observeAll() }.collectAsState(initial = emptyList())
     var sheet by remember { mutableStateOf<SuppSheet?>(null) }
 
     val prefs = remember { ReminderScheduler.prefs(ctx) }

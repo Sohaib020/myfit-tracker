@@ -96,7 +96,7 @@ internal fun FastingContent(container: AppContainer) {
     val ctx = LocalContext.current
     val toaster = LocalToaster.current
     val dao = container.db.fastingDao()
-    val sessions by dao.observeAll().collectAsState(initial = null)
+    val sessions by remember { dao.observeAll() }.collectAsState(initial = null)
     var preset by remember { mutableStateOf("16") }
     var customHours by remember { mutableIntStateOf(16) }
     var iftar by remember { mutableIntStateOf(18 * 60 + 30) }

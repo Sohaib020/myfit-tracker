@@ -1,0 +1,41 @@
+name: Play bundle (AAB)
+# Builds the Google Play version (no self-updater, no install-packages permission) as an .aab signed with the
+# upload key, plus the Wear OS module. Run manually when you're ready to upload to Play Console.
+on:
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch sherpa-onnx AAR
+        run: mkdir -p app/libs && curl -fsSL --retry 4 -o app/libs/sherpa-onnx.aar https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-static-link-onnxruntime-1.13.8.aar
+      - name: Firebase config
+        env: { GOOGLE_SERVICES_JSON: "${{ secrets.GOOGLE_SERVICES_JSON }}" }
+        run: if [ -n "$GOOGLE_SERVICES_JSON" ]; then printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json; fi
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.11.1' }
+      - name: Signing key
+        env: { KS_B64: "${{ secrets.MYFIT_KEYSTORE_B64 }}" }
+        run: |
+          [ -n "$KS_B64" ] || { echo "::error::MYFIT_KEYSTORE_B64 secret missing"; exit 1; }
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/myfit.jks"; echo "MYFIT_KEYSTORE_FILE=$RUNNER_TEMP/myfit.jks" >> "$GITHUB_ENV"
+      - name: Build AABs (phone all ABIs + watch)
+        env:
+          MYFIT_KEYSTORE_PASSWORD: ${{ secrets.MYFIT_KEYSTORE_PASSWORD }}
+          AI_PROXY_URL: ${{ secrets.AI_PROXY_URL }}
+          ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
+          ADMOB_REWARDED_ID: ${{ secrets.ADMOB_REWARDED_ID }}
+          MYFIT_ABIS: arm64-v8a,armeabi-v7a,x86_64
+        run: gradle :app:bundlePlayRelease :wear:bundleRelease --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: play-bundles
+          path: |
+            app/build/outputs/bundle/playRelease/*.aab
+            wear/build/outputs/bundle/release/*.aab
+            app/build/outputs/mapping/playRelease/mapping.txt

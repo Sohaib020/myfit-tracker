@@ -54,7 +54,10 @@ private val GOAL_COLORS = mapOf(
 private fun Program.colors() = GOAL_COLORS[goals.firstOrNull()] ?: (Color(0xFF555B66) to Color(0xFF22262D))
 
 private object CoverCache {
-    private val cache = android.util.LruCache<String, ImageBitmap>(24)
+    // byte-sized (~12 MB) — covers are 768×448, so ~9 full covers stay decoded
+    private val cache = object : android.util.LruCache<String, ImageBitmap>(12 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * 4
+    }
     private val missing = mutableSetOf<String>()
     suspend fun get(c: android.content.Context, id: String): ImageBitmap? {
         cache.get(id)?.let { return it }
@@ -108,13 +111,14 @@ fun ProgramsScreen(container: AppContainer, bottomPad: Int) {
     val th = LocalFitTheme.current
     val ctx = LocalContext.current
     val nav = LocalNav.current
-    val all = remember { ProgramLib.all(ctx) }
+    val ver by ProgramLib.version.collectAsState()
+    val all = remember(ver) { ProgramLib.all(ctx) }
     var query by rememberSaveable { mutableStateOf("") }
     var filter by remember { mutableStateOf(ProgramFilter()) }
     var sheet by remember { mutableStateOf(false) }
     val follow by ProgramEngine.follow.collectAsState()
-    val active = remember(follow) { ProgramLib.byId(ctx, follow?.id) }
-    val shown = remember(query, filter) { all.filter { filter.matches(it) && it.matchesQuery(query) } }
+    val active = remember(follow, ver) { ProgramLib.byId(ctx, follow?.id) }
+    val shown = remember(query, filter, all) { all.filter { filter.matches(it) && it.matchesQuery(query) } }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = bottomPad.dp),

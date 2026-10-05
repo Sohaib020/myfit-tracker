@@ -50,11 +50,20 @@ class MyFitApplication : Application() {
         CrashGuard.loadSafe(this)
         container = AppContainer(this)
         com.myfit.tracker.ui.theme.ThemeShaders.init(this)
-        // Bundled exercise catalogue — idempotent, runs off the main thread.
+        // Nothing heavy here: this runs for every alarm, receiver and worker wake-up too.
+        // UI-start work (seeding, sync, re-arming alarms) lives in onUiStart(), called by MainActivity.
+    }
+
+    private val started = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /** Once per process, when a screen opens: seed catalogues, schedule workers, re-arm alarms, sync. */
+    fun onUiStart() {
+        if (!started.compareAndSet(false, true)) return
         container.write { container.exerciseRepo.seedIfNeeded() }
         container.write { container.nutritionRepo.seedIfNeeded() }
         HealthSyncWorker.schedule(this)
-        com.myfit.tracker.reminders.ReminderScheduler.reschedule(this)   // re-arm alarms (incl. smart nudges) with the latest profile
+        com.myfit.tracker.reminders.SundayReportWorker.schedule(this)
+        com.myfit.tracker.reminders.ReminderScheduler.reschedule(this)
         runCatching { container.social.start() }
         container.write { runCatching { container.social.uploadNow() } }
         if (!java.io.File(filesDir, "voice/" + com.myfit.tracker.ai.voice.VoicePack.MODEL + "/.complete").exists())

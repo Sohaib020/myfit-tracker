@@ -40,8 +40,20 @@ data class FitTheme(
 )
 
 object Themes {
+    /** Default theme: the Kinetic design (dark graphite, energy glow, speed stripes) in Mint Fresh colours. */
     val Kinetic = FitTheme(
-        id = "kinetic", name = "Kinetic", isLight = false, art = BackdropArt.KINETIC,
+        id = "kinetic", name = "Kinetic Mint", isLight = false, art = BackdropArt.KINETIC,
+        bgTop = Color(0xFF0C1414), bgBottom = Color(0xFF040808),
+        blobs = listOf(Color(0xFF2CC9A7), Color(0xFF5CC8E8), Color(0xFF0C1414), Color(0xFF7FE7CF)),
+        accent = Color(0xFF2CC9A7), accentBright = Color(0xFF7FE7CF), onAccent = Color(0xFF032019),
+        text = Color(0xFFFFFFFF), textDim = Color(0xBFFFFFFF), textFaint = Color(0x73FFFFFF),
+        glassTint = Color(0x1F7FE7CF), glassFallback = Color(0xE60E1817),
+        rimHigh = Color(0x66FFFFFF), rimLow = Color(0x14FFFFFF),
+        protein = Color(0xFFFF9A5C), steps = Color(0xFF7FE7CF), water = Color(0xFF5CC8E8),
+    )
+    /** The original orange Kinetic, kept as its own theme. */
+    val Blaze = FitTheme(
+        id = "blaze", name = "Blaze", isLight = false, art = BackdropArt.KINETIC,
         bgTop = Color(0xFF101216), bgBottom = Color(0xFF060709),
         blobs = listOf(Color(0xFFFF7A1A), Color(0xFFFFB547), Color(0xFF101216), Color(0xFFFF9A3D)),
         accent = Color(0xFFFF7A1A), accentBright = Color(0xFFFFA552), onAccent = Color(0xFF1A0C02),
@@ -438,7 +450,7 @@ object Themes {
     )
 
     val all = listOf(
-        Kinetic,
+        Kinetic, Blaze,
         // premium dark
         Cobalt, Graphite, Evergreen, Dusk, Steel, Golden,
         Ember, Oceanic, Aurora, Carbon, Neon, Sapphire, Forest, Volcanic, Cosmic, Matcha,

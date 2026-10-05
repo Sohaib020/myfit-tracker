@@ -23,8 +23,20 @@ service cloud.firestore {
       // public profile: display name, colour and whether you appear on the global board — nothing else
       allow read: if signedIn();
       allow create, update: if isMe(uid) && request.resource.data.name is string && request.resource.data.name.size() <= 24
-        && request.resource.data.keys().hasOnly(['name', 'public', 'color', 'createdAt']);
+        && request.resource.data.keys().hasOnly(['name', 'public', 'color', 'createdAt', 'username'])
+        // a username must be one you own in /usernames (claimed in the same transaction)
+        && (!('username' in request.resource.data) || (resource != null && request.resource.data.username == resource.data.get('username', ''))
+            || getAfter(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid == uid);
       allow delete: if isMe(uid);
+      // friend requests sent to this user (by @username search)
+      match /requests/{from} {
+        allow read: if isMe(uid);
+        allow create, update: if isMe(from) && from != uid
+          && request.resource.data.keys().hasOnly(['name', 'username', 'at'])
+          && request.resource.data.name is string && request.resource.data.name.size() <= 24
+          && request.resource.data.username is string && request.resource.data.username.size() <= 20;
+        allow delete: if isMe(uid) || isMe(from);
+      }
       match /private/{doc} {
         allow read, write: if isMe(uid);
       }
@@ -33,9 +45,20 @@ service cloud.firestore {
         // you can add someone to your own list; they appear on yours only if you hold THEIR code
         allow create: if isMe(uid)
           || (isMe(fid) && request.resource.data.code is string
-              && get(/databases/$(database)/documents/codes/$(request.resource.data.code)).data.uid == uid);
+              && get(/databases/$(database)/documents/codes/$(request.resource.data.code)).data.uid == uid)
+          // accepting a friend request: uid asked fid, so fid may add themselves to uid's list
+          || (isMe(fid) && exists(/databases/$(database)/documents/users/$(fid)/requests/$(uid)));
         allow delete: if isMe(uid) || isMe(fid);
       }
+    }
+
+    // unique @usernames: one doc per name, owned by one uid
+    match /usernames/{name} {
+      allow get: if signedIn();
+      allow create: if signedIn() && name.matches('^[a-z0-9_.]{3,20}$')
+        && request.resource.data.uid == request.auth.uid && request.resource.data.keys().hasOnly(['uid']);
+      allow update: if false;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
     match /codes/{code} {

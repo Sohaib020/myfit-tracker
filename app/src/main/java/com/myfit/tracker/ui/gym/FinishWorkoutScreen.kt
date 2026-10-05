@@ -1,5 +1,6 @@
 package com.myfit.tracker.ui.gym
 
+import kotlinx.coroutines.flow.first
 import com.myfit.tracker.ui.theme.Duo
 
 import androidx.compose.foundation.layout.Arrangement
@@ -112,6 +113,46 @@ fun FinishWorkoutScreen(container: AppContainer, workoutId: Long) {
                 }
             }
             com.myfit.tracker.ui.exercises.NewRecordsCard(prs)
+            // muscles worked today + comparison with the last time you did this workout
+            val ctxF = androidx.compose.ui.platform.LocalContext.current
+            val worked by androidx.compose.runtime.produceState(emptyList<String>() to emptyList<String>(), setKey) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val pairs = w.exercises.filter { it.sets.isNotEmpty() }.map { com.myfit.tracker.ui.exercises.MuscleData.of(ctxF, it.exercise) }
+                    val prim = pairs.flatMap { it.first }.distinct()
+                    prim to pairs.flatMap { it.second }.distinct().filter { it !in prim }
+                }
+            }
+            if (worked.first.isNotEmpty() || worked.second.isNotEmpty()) GlassCard {
+                Text("Muscles you trained", style = FitType.section, color = th.text)
+                Spacer(Modifier.height(10.dp))
+                com.myfit.tracker.ui.exercises.MuscleMap(worked.first, worked.second, Modifier.fillMaxWidth(), height = 220.dp)
+            }
+            val prevW by androidx.compose.runtime.produceState<com.myfit.tracker.data.repo.WorkoutView?>(null, workoutId) {
+                value = runCatching {
+                    kotlinx.coroutines.withTimeoutOrNull(3000) {
+                        container.workoutRepo.recentViews(40).first { true }.firstOrNull { o ->
+                            o.workout.id != workoutId && ((w.workout.templateId != null && o.workout.templateId == w.workout.templateId) || o.workout.name.equals(w.workout.name, true))
+                        }
+                    }
+                }.getOrNull()
+            }
+            prevW?.let { pw ->
+                val pt = pw.totals
+                val pDur = pw.workout.endedAt?.let { (it - pw.workout.startedAt) / 1000 }
+                GlassCard {
+                    Text("Compared with last time", style = FitType.section, color = th.text)
+                    Caption("${pw.workout.name} · ${pw.workout.localDate}")
+                    Spacer(Modifier.height(10.dp))
+                    CompareRow("Sets", "${t.sets}", (t.sets - pt.sets).let { d -> if (d == 0) "same" else if (d > 0) "+$d" else "$d" }, (t.sets - pt.sets).sign())
+                    if (t.volumeKg != null || pt.volumeKg != null) {
+                        val dv = (t.volumeKg ?: 0.0) - (pt.volumeKg ?: 0.0)
+                        CompareRow("Volume", t.volumeKg?.let { Fmt.weight(it, u.weight, 0) } ?: "—",
+                            if (kotlin.math.abs(dv) < 0.5) "same" else (if (dv > 0) "+" else "−") + Fmt.weight(kotlin.math.abs(dv), u.weight, 0), if (kotlin.math.abs(dv) < 0.5) 0 else if (dv > 0) 1 else -1)
+                    }
+                    CompareRow("Reps", "${t.reps}", (t.reps - pt.reps).let { d -> if (d == 0) "same" else if (d > 0) "+$d" else "$d" }, (t.reps - pt.reps).sign())
+                    if (pDur != null) CompareRow("Time", com.myfit.tracker.ui.exercises.mmss(durSec), ((durSec - pDur) / 60).let { d -> if (d == 0L) "same" else if (d > 0) "+$d min" else "$d min" }, 0)
+                }
+            }
             GlassCard {
                 Text("What you did", style = FitType.section, color = th.text)
                 Spacer(Modifier.height(8.dp))
@@ -194,3 +235,16 @@ private fun Cell(label: String, value: String, modifier: Modifier) {
     }
 }
 
+
+private fun Int.sign() = if (this > 0) 1 else if (this < 0) -1 else 0
+
+@Composable
+private fun CompareRow(label: String, now: String, delta: String, dir: Int) {
+    val th = LocalFitTheme.current
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = FitType.body, color = th.textDim, modifier = Modifier.weight(1f))
+        Text(now, style = FitType.label, color = th.text)
+        Spacer(Modifier.width(10.dp))
+        Text(delta, style = FitType.label, color = when (dir) { 1 -> th.success; -1 -> th.warning; else -> th.textDim }, modifier = Modifier.width(84.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+    }
+}

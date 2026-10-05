@@ -123,13 +123,18 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 Decisions: compile-check per phase · workout AI = hybrid (rules planner + optional LLM tweak) · AI keys → Cloudflare Worker proxy (Firebase ID-token check, per-user rate limit) · Now Bar live notifs: gym workout, rest timer, stopwatch, fasting + downloads · set fields: weight+reps, set type, RPE, per-exercise notes · progress = honest metrics (e1RM trend, volume/muscle, PRs, muscle map, calories; week/month/6mo) · backup = file + Google Drive · user HAS a Galaxy Watch → build Wear OS tile.
 Screenshot bugs: Train "Gym workout" wraps per letter; Settings "Download page" wraps; Home Pip card clips "Chat with Pip"; Arena leaderboard header squeezed by chips; onboarding activity row text under radio; DOB wheel highlight misaligned/overflow; Settings Privacy text wrong.
 Phases:
-1 ☐ Audit fixes (doc table #1–23 except #16; #11 R8 → phase 10)
-2 ☐ Launch risks (Play flavor w/o updater, targetSdk 36, CF worker proxy, HC minimal perms + privacy policy page, Firestore throttle, model mirror, AdMob placement + UMP, encrypted keys + delete-all, HR wellness label, exact alarms)
-3 ☐ Design: Mint default (dark), opaque mode API≤32 (dock glass anims kept, dock bg opaque, remove glass/blur settings there), responsive system (tall/wide/foldable/large fold) + fix screenshot glitches
-4 ☐ Onboarding: calorie target wording, DOB wheel redesign, Health Connect page (ref Hevy) then separate permission pages; OnboardingVersion bump
-5 ☐ Cleanups: remove Games tab; buddies (non-Pip) as download; Today = single calorie detail; offline AI RAM gate (<6 GB blocked + clear message)
-6 ☐ Train rebuild: workouts-first UX, custom days (multi-muscle), AI day/week/month planner by goal, live session (per-exercise timer, rest timer, compare last time, calories/effects), progress charts, Create Exercise (Hevy ref) + equipment picker with 3D renders (FLUX)
-7 ☐ Social: unique username + UID, search/add by either
-8 ☐ Live notifications (Android 16 Live Updates / Samsung Now Bar)
-9 ☐ First-week checklist, widgets (water/steps), Sunday report + share card, backup file+Drive, Pakistani meal plans (household units), Wear OS tile
-10 ☐ R8/minify + regression + single release
+1 ✅ (branch agent/r11, CI run 139) Audit fixes (doc table #1–23 except #16; #11 R8 → phase 10)
+2 ✅ (run 140) Launch risks (Play flavor w/o updater, targetSdk 36, CF worker proxy, HC minimal perms + privacy policy page, Firestore throttle, model mirror, AdMob placement + UMP, encrypted keys + delete-all, HR wellness label, exact alarms)
+3 ✅ (run 142) Design: Mint default (dark), opaque mode API≤32 (dock glass anims kept, dock bg opaque, remove glass/blur settings there), responsive system (tall/wide/foldable/large fold) + fix screenshot glitches
+4 ✅ (run 143) Onboarding: calorie target wording, DOB wheel redesign, Health Connect page (ref Hevy) then separate permission pages; OnboardingVersion bump
+5 ✅ (run 144) Cleanups: remove Games tab; buddies (non-Pip) as download; Today = single calorie detail; offline AI RAM gate (<6 GB blocked + clear message)
+6 ✅ (runs 147–150) Train rebuild: domain/WorkoutPlanner (rules) + WorkoutAi (LLM tweak via AiRouter.text, catalog-key whitelist); ui/train/Builders.kt (Day Builder, Plan Builder → ProgramLib.saveCustom my_programs.json + ProgramEngine); Train home workouts-first (segments Workouts/Plans/Exercises, quick muscle chips, plan card, progress strip, My workout days); TrainProgress (week/month/6mo honest metrics); Gym Mode time-on-exercise, set timer, per-set deltas, sticky notes, equipment; Finish muscle map + vs last time; CreateExercise.kt (rows+sheets, equipment art at assets/equipment/<id>.webp — PENDING copy from branch equipment-assets when render run 37307267969 finishes)
+7 ✅ (run 152) Social: unique @username (usernames/{name} transactional claim) + MyFit ID (6-char code) search; ID match = instant add, username match = friend request (users/{uid}/requests); FriendsFind.kt; firestore.rules updated — OWNER must re-publish rules
+8 ✅ (run 154) notify/LiveUpdates.kt: NotificationCompat.setRequestPromotedOngoing (core 1.17) + POST_PROMOTED_NOTIFICATIONS → Android 16 Live Updates / One UI 8 Now Bar: workout clock ↔ rest countdown, stopwatch (paused chip), fasting; model download; tap → Launch.open → screen
+9 ✅ (runs 156–162) FirstWeek.kt (Home checklist, 10 days); widget/Widgets.kt Glance water(+250/+500)+steps; domain/WeeklyReport + ui/report (share PNG) + SundayReportWorker (Sun ≥18:00); data/backup Backup.kt (zip, staged restore) + DriveBackup.kt (drive.appdata; OWNER: enable Drive API + add scope on OAuth consent screen); tools/mealplans/gen.py → assets/meal_plans.json (8 bands × 7 days) + MealPlansScreen; :wear module (tile + activity, Data Layer /myfit/today, WearSync from phone; CI copies out/MyFitWear.apk)
+10 ✅ R8 minify+shrinkResources (proguard-rules.pro, res/raw/keep.xml) — emulator smoke passed on debug (API 33, all tabs) AND minified release (API 34); AdaptiveShotTest 280–840 dp passes (ButtonLabel: drop icon → 2 lines); play-bundle.yml (manual AAB); merged agent/r11 → main for the single release
+
+R11 notes: ALL round-11 work is on branch agent/r11 (builds there never publish a release). Merge to main only at phase 10.
+- Guava must stay (CameraX/WorkManager ListenableFuture) — audit was wrong about it.
+- Owner TODO before release: Cloudflare setup (server/ai-proxy/README.md) → AI_PROXY_URL secret; run "Mirror offline AI model" workflow once (after merge); add support email to site/privacy.html.
+- Play AAB: gradle bundlePlayRelease (workflow to add in phase 10).

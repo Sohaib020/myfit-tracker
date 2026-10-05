@@ -51,7 +51,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-val realBlurSupported: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !com.myfit.tracker.CrashGuard.safeMode
+/**
+ * Low-effects mode: Android 12 and older (API ≤ 32). Blur, refraction and see-through glass are switched off and
+ * every glass surface is drawn as a solid, theme-coloured card instead — far cheaper on low-end phones.
+ * (The dock keeps its animations; only its background becomes solid.)
+ */
+val lowFx: Boolean get() = Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2 || com.myfit.tracker.CrashGuard.safeMode
+
+val realBlurSupported: Boolean get() = !lowFx
+
+/** Solid card colour for low-effects mode: the theme's frosted fill laid over its background. */
+fun FitTheme.opaqueSurface(): Color = glassFallback.copy(alpha = 1f).let { f ->
+    val a = glassFallback.alpha
+    Color(f.red * a + bgTop.red * (1 - a), f.green * a + bgTop.green * (1 - a), f.blue * a + bgTop.blue * (1 - a), 1f)
+}
 
 /** Haptic tick that respects the user's setting. */
 @Composable
@@ -96,7 +109,13 @@ fun Glass(
     val refr = st.refraction
     val lens = st.motion == 0 && LiquidGlass.supported && refr > 0.01f && !com.myfit.tracker.CrashGuard.safeMode
     val shader = remember(lens) { if (lens) LiquidGlass.newShader() else null }
-    val fill = tint ?: if (realBlurSupported) th.glassTint.copy(alpha = (th.glassTint.alpha * strength).coerceIn(0f, 1f)) else th.glassFallback
+    val fill = when {
+        lowFx -> th.opaqueSurface().let { base ->          // solid on Android 12 and older; a custom tint is mixed in, never see-through
+            if (tint == null) base else Color(tint.red * tint.alpha + base.red * (1 - tint.alpha), tint.green * tint.alpha + base.green * (1 - tint.alpha), tint.blue * tint.alpha + base.blue * (1 - tint.alpha), 1f)
+        }
+        tint != null -> tint
+        else -> th.glassTint.copy(alpha = (th.glassTint.alpha * strength).coerceIn(0f, 1f))
+    }
 
     Box(
         modifier
@@ -201,16 +220,10 @@ fun AccentButton(
             }
             .clickable(interaction, indication = null, enabled = enabled) { tick(); onClick() }
             .defaultMinSize(minHeight = height)
-            .padding(horizontal = 22.dp),
+            .padding(horizontal = if (com.myfit.tracker.ui.components.LocalWindowInfo.current.narrow) 14.dp else 22.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-            if (icon != null) {
-                Icon(icon, null, tint = th.onAccent, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-            }
-            Text(text, style = FitType.section, color = th.onAccent, textAlign = TextAlign.Center)
-        }
+        com.myfit.tracker.ui.components.ButtonLabel(text, icon, 20.dp, th.onAccent, FitType.section)
     }
 }
 
@@ -225,12 +238,8 @@ fun GlassButton(
 ) {
     val th = LocalFitTheme.current
     Glass(modifier.height(height), shape = RoundedCornerShape(height / 2), onClick = onClick) {
-        Row(Modifier.align(Alignment.Center).padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (icon != null) {
-                Icon(icon, null, tint = th.text, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-            }
-            Text(text, style = FitType.label.copy(fontSize = FitType.body.fontSize), color = th.text)
+        Box(Modifier.align(Alignment.Center).padding(horizontal = if (com.myfit.tracker.ui.components.LocalWindowInfo.current.narrow) 12.dp else 18.dp), contentAlignment = Alignment.Center) {
+            com.myfit.tracker.ui.components.ButtonLabel(text, icon, 18.dp, th.text, FitType.label.copy(fontSize = FitType.body.fontSize))
         }
     }
 }
@@ -265,7 +274,7 @@ fun GlassChip(text: String, selected: Boolean, onClick: () -> Unit, modifier: Mo
                 Icon(icon, null, tint = if (selected) th.onAccent else th.textDim, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
             }
-            Text(text, style = FitType.label, color = if (selected) th.onAccent else th.text, maxLines = 1, softWrap = false)
+            com.myfit.tracker.ui.components.FitText(text, FitType.label, if (selected) th.onAccent else th.text)
         }
     }
 }

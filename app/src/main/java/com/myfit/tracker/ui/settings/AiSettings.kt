@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import com.myfit.tracker.ui.components.clickableNoRipple
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.LinearProgressIndicator
@@ -73,7 +74,7 @@ fun OfflineBrainCard() {
     val spec = remember(cfg) { ModelCatalog.resolve(cfg) }
     val cap = remember(spec) { DeviceCheck.check(ctx, spec) }
     // poll while a download may be running (the worker updates the shared state too)
-    LaunchedEffect(Unit) { while (true) { ai.models.refresh(); delay(if (st is ModelStore.DlState.Downloading || st is ModelStore.DlState.Waiting) 1500 else 5000) } }
+    LaunchedEffect(Unit) { while (true) { androidx.compose.runtime.withFrameMillis { }; ai.models.refresh(); delay(if (st is ModelStore.DlState.Downloading || st is ModelStore.DlState.Waiting) 1500 else 5000) } }
 
     GlassCard {
         CardHeader(Duo.Lock, "Offline brain", th.accentBright)
@@ -252,6 +253,11 @@ fun AiCapSheetHost() {
             else Caption("You've reached today's ad limit too. See you tomorrow!", color = th.textDim)
             Spacer(Modifier.height(8.dp))
             GlassButton("Maybe later", { if (!busy) AiCapPrompt.dismiss() }, Modifier.fillMaxWidth(), height = 46.dp)
+            if (RewardedAds.privacyOptionsRequired(ctx)) {
+                Spacer(Modifier.height(6.dp))
+                Text("Ad privacy options", style = FitType.label, color = th.textDim,
+                    modifier = Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally).clickableNoRipple { ctx.activity()?.let { RewardedAds.privacyOptions(it) } }.padding(8.dp))
+            }
         }
     }
 }

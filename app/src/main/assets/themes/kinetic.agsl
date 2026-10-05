@@ -1,31 +1,31 @@
-// Kinetic: graphite gym floor, blaze-orange energy glow, diagonal speed stripes, rubber-dot texture
+// Kinetic (Mint): deep graphite-teal gym floor, mint energy glow, diagonal speed stripes, rubber-dot texture
 half4 main(float2 fc) {
     float2 uv = fc / res;
     float ar = res.x / res.y;
     float2 p = float2(uv.x * ar, uv.y);
-    float3 c = mix(float3(0.062, 0.066, 0.078), float3(0.024, 0.026, 0.032), uv.y);
+    float3 c = mix(float3(0.046, 0.070, 0.072), float3(0.016, 0.026, 0.028), uv.y);
     // energy glows (tight pockets of light)
     float2 g1 = float2(ar * (0.92 + 0.03 * sin(t * 0.07)), 0.06 + 0.02 * cos(t * 0.05));
     float r1 = length(p - g1);
-    c += float3(1.0, 0.46, 0.08) * exp(-r1 * r1 * 18.0) * 0.55;
-    c += float3(0.75, 0.22, 0.04) * exp(-r1 * r1 * 3.5) * 0.14;
+    c += float3(0.20, 0.86, 0.70) * exp(-r1 * r1 * 18.0) * 0.55;
+    c += float3(0.06, 0.52, 0.50) * exp(-r1 * r1 * 3.5) * 0.14;
     float2 g2 = float2(ar * 0.02, 0.97 + 0.02 * sin(t * 0.06));
     float r2 = length(p - g2);
-    c += float3(1.0, 0.56, 0.20) * exp(-r2 * r2 * 14.0) * 0.34;
+    c += float3(0.32, 0.78, 0.92) * exp(-r2 * r2 * 14.0) * 0.34;
     // diagonal speed band through the middle
     float d = p.x * 0.5 - p.y * 0.866;
     float centre = -0.36 + 0.015 * sin(t * 0.1);
     float bd = (d - centre) / 0.10;
     float band = exp(-bd * bd);
     float stripes = smoothstep(0.06, 0.0, 0.5 - abs(fract(d * 34.0 - t * 0.06) - 0.5));
-    c += float3(1.0, 0.62, 0.28) * stripes * band * 0.16;
+    c += float3(0.55, 0.95, 0.84) * stripes * band * 0.16;
     float l1 = (d - centre) / 0.012;
-    c += float3(1.0, 0.52, 0.16) * exp(-l1 * l1) * 0.22;
+    c += float3(0.30, 0.90, 0.76) * exp(-l1 * l1) * 0.22;
     float l2 = (d - centre - 0.07) / 0.006;
-    c += float3(1.0, 0.52, 0.16) * exp(-l2 * l2) * 0.12;
+    c += float3(0.30, 0.90, 0.76) * exp(-l2 * l2) * 0.12;
     // rubber gym-floor dots, fading in toward the bottom
     float2 q = fract(p * 42.0) - 0.5;
-    c += float3(1.0, 0.85, 0.7) * smoothstep(0.17, 0.10, length(q)) * 0.03 * smoothstep(0.45, 1.0, uv.y);
+    c += float3(0.75, 1.0, 0.92) * smoothstep(0.17, 0.10, length(q)) * 0.03 * smoothstep(0.45, 1.0, uv.y);
     // vignette + fine grain
     float2 vv = uv - float2(0.55, 0.4);
     c *= 1.0 - 0.6 * dot(vv, vv);

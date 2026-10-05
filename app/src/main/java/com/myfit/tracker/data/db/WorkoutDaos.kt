@@ -83,6 +83,7 @@ interface ExerciseDao {
 
 @Dao
 interface WorkoutDao {
+    @Query("SELECT COUNT(*) FROM workout WHERE status = 'COMPLETED' AND deletedAt IS NULL") suspend fun completedCount(): Int
     // ---- workouts
     @Insert suspend fun insertWorkout(w: Workout): Long
     @Update suspend fun updateWorkout(w: Workout)
@@ -161,11 +162,6 @@ interface WorkoutDao {
     @Query("SELECT DISTINCT we.exerciseId FROM workout_exercise we JOIN workout w ON we.workoutId = w.id WHERE w.deletedAt IS NULL AND w.status = 'COMPLETED'")
     fun observeUsedExerciseIds(): Flow<List<Long>>
 }
-
-data class TemplateWithItems(
-    val template: WorkoutTemplate,
-    val items: List<WorkoutTemplateExercise>,
-)
 
 @Dao
 interface TemplateDao {

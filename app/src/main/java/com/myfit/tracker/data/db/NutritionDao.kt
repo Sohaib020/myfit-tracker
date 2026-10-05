@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface NutritionDao {
+    @Query("SELECT COUNT(*) FROM meal_item") suspend fun mealItemCount(): Int
     // ---- foods
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertFoods(f: List<Food>): List<Long>

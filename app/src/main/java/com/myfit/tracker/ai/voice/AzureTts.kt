@@ -23,12 +23,15 @@ class AzureTts {
         val esc = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         val prosody = if (urdu) "<prosody rate=\"+4%\" pitch=\"+8%\">$esc</prosody>" else "<prosody rate=\"+2%\">$esc</prosody>"
         val ssml = "<speak version=\"1.0\" xml:lang=\"$lang\"><voice name=\"$voice\">$prosody</voice></speak>"
-        val c = (URL("https://${region.trim().lowercase()}.tts.speech.microsoft.com/cognitiveservices/v1").openConnection() as HttpURLConnection).apply {
+        val proxy = com.myfit.tracker.ai.AiProxy.isProxy(key)
+        val endpoint = if (proxy) com.myfit.tracker.ai.AiProxy.url("azure", "/cognitiveservices/v1")
+            else "https://${region.trim().lowercase()}.tts.speech.microsoft.com/cognitiveservices/v1"
+        val c = (URL(endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 8_000
             readTimeout = 20_000
             doOutput = true
-            setRequestProperty("Ocp-Apim-Subscription-Key", key)
+            if (proxy) com.myfit.tracker.ai.AiProxy.authorize(this) else setRequestProperty("Ocp-Apim-Subscription-Key", key)
             setRequestProperty("Content-Type", "application/ssml+xml")
             setRequestProperty("X-Microsoft-OutputFormat", "raw-24khz-16bit-mono-pcm")
             setRequestProperty("User-Agent", "MyFitTracker")

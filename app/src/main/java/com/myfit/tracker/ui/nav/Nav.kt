@@ -42,6 +42,16 @@ sealed interface Overlay {
     data object Deen : Overlay
     /** Pick exercises to append to a template (templateId) or to a running workout (workoutId). */
     data class ProgramDetail(val id: String) : Overlay
+    /** Build one workout day from muscle groups (preset = comma-separated WorkoutPlanner.Target names). */
+    data class DayBuilder(val preset: String? = null) : Overlay
+    /** Build a multi-week plan from a goal. */
+    data object PlanBuilder : Overlay
+    /** Week / month / 6-month training progress. */
+    data object TrainProgress : Overlay
+    /** Sunday report: last 7 days + shareable card. */
+    data object WeeklyReport : Overlay
+    data object Backup : Overlay
+    data object MealPlans : Overlay
     data class PickExercises(val templateId: Long? = null, val workoutId: Long? = null) : Overlay
     data class Food(val date: String? = null) : Overlay
     data class FoodAdd(val mealType: String, val date: String, val tab: Int) : Overlay
@@ -67,6 +77,8 @@ object Launch {
     @Volatile var cycle: String? = null
     fun takeMind(): String? = mind.also { mind = null }
     fun takeCycle(): String? = cycle.also { cycle = null }
+    /** Screen requested by tapping a live notification ("gym", "stopwatch", "fasting"). */
+    val open = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     @Volatile var calm: Boolean = false
     fun takeCalm(): Boolean = calm.also { calm = false }
 }

@@ -94,6 +94,8 @@ fun ProgramDetailScreen(container: AppContainer, id: String) {
                         }
                     }, Modifier.fillMaxWidth(), icon = Duo.Flag, height = 52.dp)
                     if (follow != null) Caption("You're following another program. Switching keeps all your workout history.", Modifier.padding(top = 6.dp, start = 6.dp))
+                    if (ProgramLib.isCustom(p.id)) Text("Delete this plan", style = FitType.label, color = th.danger,
+                        modifier = Modifier.padding(top = 4.dp).clickableNoRipple { ProgramLib.deleteCustom(ctx, p.id); toaster.show("Plan deleted"); nav.pop() }.padding(8.dp))
                 } else Glass(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Text(if (pos.finished) "Program complete!" else "Week ${pos.week} · ${p.phase(pos.week).label}", style = FitType.section, color = th.text)

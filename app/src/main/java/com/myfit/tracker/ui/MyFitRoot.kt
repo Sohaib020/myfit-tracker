@@ -1,5 +1,6 @@
 package com.myfit.tracker.ui
 
+import kotlinx.coroutines.flow.first
 import com.myfit.tracker.ui.theme.Duo
 
 import android.app.Activity
@@ -102,6 +103,7 @@ import com.myfit.tracker.ui.nav.TabItem
 import com.myfit.tracker.ui.components.PipTour
 import com.myfit.tracker.ui.components.TourStep
 import com.myfit.tracker.ui.components.tourTarget
+import com.myfit.tracker.ui.components.column
 import com.myfit.tracker.ui.pip.PipMood
 import com.myfit.tracker.ui.onboarding.OnboardingScreen
 import com.myfit.tracker.ui.settings.BackgroundImages
@@ -132,6 +134,7 @@ fun MyFitRoot(container: AppContainer) {
     val theme = Themes.byId(s.themeId)
     val backdrop = remember { Backdrop() }
     backdrop.theme = theme
+    LaunchedEffect(theme.id) { com.myfit.tracker.ui.theme.ThemeShaders.prewarm(theme.id) }
 
     // custom wallpaper
     LaunchedEffect(s.customBackground) {
@@ -141,8 +144,6 @@ fun MyFitRoot(container: AppContainer) {
     }
     // Themes are STILL images by default: rendered once (plus their two blurred versions) whenever the
     // theme, wallpaper, screen size or blur settings change — zero GPU work per frame after that.
-    // A few themes may drift very gently (4 updates/s) if "Gentle motion" is on.
-    val gentle = false   // every theme is a still image
     LaunchedEffect(theme.id) { backdrop.time.floatValue = theme.stillT }
     // status-bar icon colour follows the theme
     val view = LocalView.current
@@ -155,6 +156,7 @@ fun MyFitRoot(container: AppContainer) {
 
     val toaster = remember { Toaster() }
     MyFitTheme(theme, s) {
+      com.myfit.tracker.ui.components.ProvideWindowInfo {
         CompositionLocalProvider(LocalBackdrop provides backdrop, LocalToaster provides toaster) {
             Box(
                 Modifier
@@ -164,51 +166,20 @@ fun MyFitRoot(container: AppContainer) {
                 val dens = androidx.compose.ui.platform.LocalDensity.current
                 val cardBlurPx = with(dens) { (26.dp * s.blurAmount).toPx() }
                 val dockBlurPx = with(dens) { (30.dp * s.dockBlur).toPx() }
-                val blurOk = android.os.Build.VERSION.SDK_INT >= 31 && !com.myfit.tracker.CrashGuard.safeMode
+                val blurOk = !com.myfit.tracker.ui.theme.lowFx     // Android 12 and older: no blurred layers at all
                 val gfx = androidx.compose.ui.platform.LocalGraphicsContext.current
                 // ---- still path: bake three small bitmaps (theme, card blur, dock blur)
-                LaunchedEffect(theme.id, backdrop.image, backdrop.rootSize, cardBlurPx, dockBlurPx, gentle, blurOk) {
-                    if (gentle) { backdrop.bgImg = null; backdrop.cardImg = null; backdrop.dockImg = null; return@LaunchedEffect }
+                LaunchedEffect(theme.id, backdrop.image, backdrop.rootSize, cardBlurPx, dockBlurPx, blurOk) {
                     val full = backdrop.rootSize
                     if (full.width < 2f || full.height < 2f) return@LaunchedEffect
                     runCatching { com.myfit.tracker.ui.theme.BackdropBaker.bake(gfx, dens, theme, backdrop.image, full, cardBlurPx, dockBlurPx, blurOk) }
                         .onSuccess { (bg, card, dock) -> backdrop.bgImg = bg; backdrop.cardImg = card; backdrop.dockImg = dock }
                 }
-                // ---- gentle path: small live layers, updated only when `time` ticks (4×/s)
-                val small = rememberGraphicsLayer()
-                val smallCard = rememberGraphicsLayer()
-                val smallDock = rememberGraphicsLayer()
-                val bgLayer = rememberGraphicsLayer()
-                val blurLayer = rememberGraphicsLayer()
-                val dockLayer = rememberGraphicsLayer()
-                backdrop.layer = if (gentle) bgLayer else null
-                backdrop.blurLayer = if (gentle && blurOk) blurLayer else null
-                backdrop.dockLayer = if (gentle && blurOk) dockLayer else null
+                backdrop.layer = null; backdrop.blurLayer = null; backdrop.dockLayer = null
                 Canvas(Modifier.fillMaxSize()) {
                     val img = backdrop.bgImg
-                    if (!gentle) {
-                        if (img != null) drawBaked(img, size)
-                        else drawBackdrop(backdrop.theme, backdrop.image, theme.stillT, size.width, size.height)
-                        return@Canvas
-                    }
-                    val t = backdrop.time.floatValue
-                    val k = 3f
-                    val sw = (size.width / k).coerceAtLeast(1f); val sh = (size.height / k).coerceAtLeast(1f)
-                    val smallSize = androidx.compose.ui.unit.IntSize(kotlin.math.ceil(sw).toInt(), kotlin.math.ceil(sh).toInt())
-                    small.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
-                    small.record(smallSize) { drawBackdrop(backdrop.theme, backdrop.image, t, sw, sh) }
-                    bgLayer.record { scale(k, k, pivot = androidx.compose.ui.geometry.Offset.Zero) { drawLayer(small) } }
-                    drawLayer(bgLayer)
-                    if (blurOk) {
-                        smallCard.renderEffect = if (cardBlurPx / k > 0.5f) androidx.compose.ui.graphics.BlurEffect(cardBlurPx / k, cardBlurPx / k, androidx.compose.ui.graphics.TileMode.Clamp) else null
-                        smallCard.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
-                        smallCard.record(smallSize) { drawLayer(small) }
-                        blurLayer.record { scale(k, k, pivot = androidx.compose.ui.geometry.Offset.Zero) { drawLayer(smallCard) } }
-                        smallDock.renderEffect = if (dockBlurPx / k > 0.5f) androidx.compose.ui.graphics.BlurEffect(dockBlurPx / k, dockBlurPx / k, androidx.compose.ui.graphics.TileMode.Clamp) else null
-                        smallDock.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
-                        smallDock.record(smallSize) { drawLayer(small) }
-                        dockLayer.record { scale(k, k, pivot = androidx.compose.ui.geometry.Offset.Zero) { drawLayer(smallDock) } }
-                    }
+                    if (img != null) drawBaked(img, size)
+                    else drawBackdrop(backdrop.theme, backdrop.image, theme.stillT, size.width, size.height)
                 }
                 when (val ps = profileState) {
                     ProfileState.Loading -> Unit
@@ -217,6 +188,17 @@ fun MyFitRoot(container: AppContainer) {
                         val account by container.social.user.collectAsState()
                         val obCtx = androidx.compose.ui.platform.LocalContext.current
                         var catchUp by remember(ps.profile == null) { mutableStateOf(if (ps.profile == null) emptyList() else com.myfit.tracker.ui.onboarding.OnboardingVersion.pendingSteps(obCtx)) }
+                        // update that added the dedicated Health Connect page: show the permission pages once more
+                        // to existing users who never connected Health Connect
+                        LaunchedEffect(ps.profile != null) {
+                            if (ps.profile == null) return@LaunchedEffect
+                            val sp = obCtx.getSharedPreferences("onboarding", android.content.Context.MODE_PRIVATE)
+                            if (!sp.getBoolean("perms_v3", false)) {
+                                sp.edit().putBoolean("perms_v3", true).apply()
+                                val hcOn = runCatching { container.healthSync.granted().any { it in container.healthSync.dataPermissions } }.getOrDefault(false)
+                                if (!hcOn && container.healthSync.isAvailable) container.settings.setPermsAsked(false)
+                            }
+                        }
                         if (socialOn && account == null) com.myfit.tracker.ui.social.SignInGate(container)
                         else if (ps.profile == null) OnboardingScreen(container, s.units)
                         else if (catchUp.isNotEmpty()) com.myfit.tracker.ui.onboarding.OnboardingCatchUp(container, ps.profile, s.units, catchUp) { catchUp = emptyList() }
@@ -227,6 +209,7 @@ fun MyFitRoot(container: AppContainer) {
                 ToastHost(toaster, Modifier.align(Alignment.TopCenter))
             }
         }
+      }
     }
 }
 
@@ -260,8 +243,10 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
     BackHandler(enabled = top != null) { nav.pop() }
 
     CompositionLocalProvider(LocalNav provides nav) {
+        val win = com.myfit.tracker.ui.components.LocalWindowInfo.current
         Box(Modifier.fillMaxSize()) {
-          Box(Modifier.fillMaxSize()) {
+          // wide screens (foldables, tablets): content sits in a readable centred column; the theme fills the screen
+          Box(Modifier.align(Alignment.TopCenter).then(win.column()).fillMaxSize()) {
             AnimatedContent(
                 targetState = tab,
                 transitionSpec = {
@@ -291,6 +276,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                     },
                 )
             }
+            Box(Modifier.align(Alignment.TopCenter).then(win.column()).fillMaxSize()) {
             AnimatedVisibility(chrome, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
                 LiquidTabBar(
                     items = tabs, selected = tab, onSelect = { tab = it },
@@ -319,6 +305,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             ) {
                 Box(Modifier.tourTarget("me")) { MePill(dash.profile?.name ?: "", com.myfit.tracker.ui.social.rememberAccountPhoto(container), com.myfit.tracker.update.rememberUpdateProgress()) { nav.push(Overlay.Me) } }
             }
+            }
 
             // full-screen overlays (Gym Mode, details, editors) — each sits on its own copy of the backdrop
             AnimatedContent(
@@ -340,6 +327,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         else if (l != null) drawLayer(l)
                         else drawBackdrop(backdrop.theme, backdrop.image, backdrop.time.floatValue, size.width, size.height)
                     }
+                    Box(Modifier.align(Alignment.TopCenter).then(win.column()).fillMaxSize()) {
                     when (o) {
                         is Overlay.Gym -> GymModeScreen(container, o.workoutId)
                         is Overlay.FinishWorkout -> FinishWorkoutScreen(container, o.workoutId)
@@ -370,6 +358,12 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.Fasting -> com.myfit.tracker.ui.routine.FastingScreen(container)
                         Overlay.DevSettings -> com.myfit.tracker.ui.settings.DevSettingsScreen(container)
                         Overlay.HealthHub -> com.myfit.tracker.ui.dashboard.HealthHubScreen(container)
+                        is Overlay.DayBuilder -> com.myfit.tracker.ui.train.DayBuilderScreen(container, o.preset)
+                        Overlay.PlanBuilder -> com.myfit.tracker.ui.train.PlanBuilderScreen(container)
+                        Overlay.TrainProgress -> com.myfit.tracker.ui.train.TrainProgressScreen(container)
+                        Overlay.WeeklyReport -> com.myfit.tracker.ui.report.WeeklyReportScreen(container)
+                        Overlay.Backup -> com.myfit.tracker.ui.settings.BackupScreen(container)
+                        Overlay.MealPlans -> com.myfit.tracker.ui.food.MealPlansScreen(container)
                         is Overlay.PickExercises -> com.myfit.tracker.ui.train.PickExercisesScreen(container, o.templateId, o.workoutId)
                         is Overlay.ProgramDetail -> com.myfit.tracker.ui.programs.ProgramDetailScreen(container, o.id)
                         Overlay.Deen -> com.myfit.tracker.ui.deen.DeenScreen(container)
@@ -378,6 +372,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         is Overlay.Food -> com.myfit.tracker.ui.food.FoodDiaryScreen(container, o.date)
                         is Overlay.FoodAdd -> com.myfit.tracker.ui.food.FoodAddScreen(container, o.mealType, o.date, o.tab)
                         is Overlay.FoodPhoto -> com.myfit.tracker.ui.food.FoodPhotoScreen(container, o.mealType, o.date)
+                    }
                     }
                 }
             }
@@ -403,6 +398,20 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             // self-update from GitHub releases (checks on launch; downloads on Wi-Fi; user taps Install)
             LaunchedEffect(Unit) { runCatching { com.myfit.tracker.update.AppUpdater.autoRun(container.app) } }
             if (top == null) com.myfit.tracker.update.UpdateIsland(androidx.compose.foundation.layout.WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
+            // tapped a live notification: jump to what's running
+            val openReq by com.myfit.tracker.ui.nav.Launch.open.collectAsState()
+            LaunchedEffect(openReq) {
+                val o = openReq ?: return@LaunchedEffect
+                com.myfit.tracker.ui.nav.Launch.open.value = null
+                when (o) {
+                    "gym" -> kotlinx.coroutines.withTimeoutOrNull(2000) { container.workoutRepo.inProgress.first { true } }?.let { w ->
+                        if (nav.stack.lastOrNull() != Overlay.Gym(w.id)) { nav.popTo { false }; nav.push(Overlay.Gym(w.id)) }
+                    }
+                    "stopwatch" -> if (nav.stack.lastOrNull() != Overlay.Stopwatch) nav.push(Overlay.Stopwatch)
+                    "fasting" -> if (nav.stack.lastOrNull() != Overlay.Fasting) nav.push(Overlay.Fasting)
+                    "report" -> if (nav.stack.lastOrNull() != Overlay.WeeklyReport) nav.push(Overlay.WeeklyReport)
+                }
+            }
             // friend invite links (myfit://invite?c=CODE): add the friend once signed in, then show Arena → Friends
             val inviteToaster = LocalToaster.current
             val inviteCode by com.myfit.tracker.social.Invite.pending.collectAsState()

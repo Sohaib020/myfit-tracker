@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -237,6 +238,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         container.settings.setMuslim(if (s.muslim == "yes") "yes" else "no")
                         container.settings.setUnits(UnitPrefs(weight = s.weightUnit, length = s.lengthUnit, volume = units.volume, distance = units.distance))
                         OnboardingVersion.markDone(ctx0)   // before the profile exists, so no catch-up flashes
+                        ctx0.getSharedPreferences("onboarding", android.content.Context.MODE_PRIVATE).edit().putBoolean("perms_v3", true).apply()
                         container.profileRepo.createProfile(profile, targets)
                     }
                 }, Modifier.width(200.dp), enabled = !saving)
@@ -271,13 +273,17 @@ private fun ColumnScope.StepBody(st: Int, s: SetupState) {
             val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
             val nowY = java.time.LocalDate.now().year
             Row(Modifier.fillMaxWidth()) {
-                listOf("DAY", "MONTH", "YEAR").forEach { Text(it, style = FitType.overline, color = th.textDim, textAlign = TextAlign.Center, modifier = Modifier.weight(1f)) }
+                listOf("DAY" to 0.8f, "MONTH" to 1.2f, "YEAR" to 1f).forEach { (t, w) -> Text(t, style = FitType.overline, color = th.textDim, textAlign = TextAlign.Center, modifier = Modifier.weight(w)) }
             }
             Spacer(Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth()) {
-                WheelPicker(31, s.dobDay - 1, { s.dobDay = it + 1; s.syncAge() }, { "${it + 1}" }, Modifier.weight(1f))
-                WheelPicker(12, s.dobMonth - 1, { s.dobMonth = it + 1; s.syncAge() }, { months[it] }, Modifier.weight(1f))
-                WheelPicker(88, (s.dobYear - (nowY - 100)).coerceIn(0, 87), { s.dobYear = nowY - 100 + it; s.syncAge() }, { "${nowY - 100 + it}" }, Modifier.weight(1f))
+            // one selection band across all three wheels (iOS-style date picker)
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Glass(Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) {}
+                Row(Modifier.fillMaxWidth()) {
+                    WheelPicker(31, s.dobDay - 1, { s.dobDay = it + 1; s.syncAge() }, { "${it + 1}" }, Modifier.weight(0.8f), itemHeight = 46.dp, highlight = false)
+                    WheelPicker(12, s.dobMonth - 1, { s.dobMonth = it + 1; s.syncAge() }, { months[it] }, Modifier.weight(1.2f), itemHeight = 46.dp, highlight = false)
+                    WheelPicker(88, (s.dobYear - (nowY - 100)).coerceIn(0, 87), { s.dobYear = nowY - 100 + it; s.syncAge() }, { "${nowY - 100 + it}" }, Modifier.weight(1f), itemHeight = 46.dp, highlight = false)
+                }
             }
             Spacer(Modifier.height(22.dp))
             LaunchedEffect(Unit) { s.syncAge() }
@@ -446,10 +452,11 @@ private fun ColumnScope.StepBody(st: Int, s: SetupState) {
                 }
             }
             Spacer(Modifier.height(16.dp))
-            TargetField("Water", s.waterL, "L") { s.waterL = it }
-            TargetField("Steps", s.steps, "steps", decimal = false) { s.steps = it }
-            TargetField("Calories", s.calories, "${com.myfit.tracker.domain.EnergyUnit.label}", decimal = false) { s.calories = it }
-            TargetField("Protein", s.protein, "g", decimal = false) { s.protein = it }
+            TargetField("Water to drink", s.waterL, "L/day") { s.waterL = it }
+            TargetField("Steps", s.steps, "per day", decimal = false) { s.steps = it }
+            TargetField("Calories to eat", s.calories, "${com.myfit.tracker.domain.EnergyUnit.label}/day", decimal = false) { s.calories = it }
+            Caption("How much food to eat each day (intake). Calories you burn by moving are tracked separately.", Modifier.fillMaxWidth().padding(start = 4.dp, bottom = 6.dp))
+            TargetField("Protein to eat", s.protein, "g/day", decimal = false) { s.protein = it }
             TargetField("Sleep", s.sleepH, "hours") { s.sleepH = it }
         }
         14 -> {
@@ -604,10 +611,12 @@ private fun WeightPicker(display: Double, unit: WeightUnit, onChange: (Double) -
 @Composable
 private fun OptionRow(text: String, selected: Boolean, onClick: () -> Unit) {
     val th = LocalFitTheme.current
-    Glass(Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(20.dp), onClick = onClick) {
+    // grows with its text (long labels / big font sizes wrap onto 2 lines instead of running under the radio)
+    Glass(Modifier.fillMaxWidth().heightIn(min = 56.dp), shape = RoundedCornerShape(20.dp), onClick = onClick) {
         if (selected) Box(Modifier.matchParentSize().drawBehind { drawRect(th.accent.copy(alpha = 0.35f)) })
-        Row(Modifier.fillMaxSize().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(text, style = FitType.body, color = th.text, modifier = Modifier.weight(1f))
+            Spacer(Modifier.width(12.dp))
             Box(Modifier.size(20.dp).drawBehind {
                 drawCircle(if (selected) th.accentBright else th.textFaint, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
                 if (selected) drawCircle(th.accentBright, size.minDimension * 0.28f)

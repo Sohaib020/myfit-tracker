@@ -122,9 +122,9 @@ fun BodyScreen(container: AppContainer, open: (Sheet) -> Unit) {
     val th = LocalFitTheme.current
     val nav = LocalNav.current
     val u = LocalSettings.current.units
-    val weights by container.logRepo.weightsAll().collectAsState(initial = null)
-    val measures by container.logRepo.measurementsAll().collectAsState(initial = emptyList())
-    val photos by container.db.progressPhotoDao().observeAll().collectAsState(initial = emptyList())
+    val weights by remember { container.logRepo.weightsAll() }.collectAsState(initial = null)
+    val measures by remember { container.logRepo.measurementsAll() }.collectAsState(initial = emptyList())
+    val photos by remember { container.db.progressPhotoDao().observeAll() }.collectAsState(initial = emptyList())
     val profile by container.profileRepo.profile.collectAsState(initial = null)
     var range by remember { mutableIntStateOf(1) }   // 0 1M, 1 3M, 2 6M, 3 1Y, 4 All
     var showFat by remember { mutableStateOf(false) }

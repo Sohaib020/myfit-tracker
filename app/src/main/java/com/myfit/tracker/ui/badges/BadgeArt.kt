@@ -67,12 +67,6 @@ internal fun tierColors(t: Tier?): Pair<Color, Color> = when (t) {
     null -> Color(0xFF9AA0A8) to Color(0xFF5C626B)
 }
 
-internal fun tierColor(t: Tier): Color = when (t) {
-    Tier.BRONZE -> Color(0xFFD08A4E)
-    Tier.SILVER -> Color(0xFFB9C0CC)
-    Tier.GOLD -> Color(0xFFF2C14E)
-}
-
 /** Polygon with softly rounded corners (quadratic curves at each vertex). */
 private fun roundedPolygon(pts: List<Offset>, radius: Float): Path {
     val p = Path()

@@ -105,22 +105,6 @@ fun bestSet(m: String, rows: List<SetRow>): SetRow? = when (m) {
     else -> null
 }
 
-/** Per-session headline number used for the progress graph. */
-fun sessionMetric(m: String, s: Session): Double? = when (m) {
-    MeasurementType.WEIGHT_REPS, MeasurementType.WEIGHT_DURATION -> s.sets.mapNotNull { it.weightKg }.maxOrNull()
-    MeasurementType.BODYWEIGHT_REPS, MeasurementType.REPS_ONLY, MeasurementType.ASSISTED_REPS -> s.sets.mapNotNull { it.reps }.maxOrNull()?.toDouble()
-    MeasurementType.DURATION -> s.sets.mapNotNull { it.durationSec }.maxOrNull()?.toDouble()
-    MeasurementType.DISTANCE_DURATION -> s.sets.mapNotNull { it.distanceM }.maxOrNull()
-    else -> null
-}
-
-fun metricLabel(m: String) = when (m) {
-    MeasurementType.WEIGHT_REPS, MeasurementType.WEIGHT_DURATION -> "Top weight per session"
-    MeasurementType.DURATION -> "Longest set per session"
-    MeasurementType.DISTANCE_DURATION -> "Longest distance per session"
-    else -> "Most reps per session"
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
@@ -152,7 +136,11 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
                 GlassChip(measurementLabel(e.measurementType), false, {})
             }
             val ctxM = androidx.compose.ui.platform.LocalContext.current
-            val (prim, sec) = remember(e.id) { MuscleData.of(ctxM, e) }
+            // the catalog lookup parses a 760 KB file the first time — do it off the main thread
+            val pm by androidx.compose.runtime.produceState(emptyList<String>() to emptyList<String>(), e.id) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MuscleData.of(ctxM, e) }
+            }
+            val (prim, sec) = pm
             if (prim.isNotEmpty() || sec.isNotEmpty()) GlassCard {
                 Text("Muscles worked", style = FitType.section, color = th.text)
                 Spacer(Modifier.height(10.dp))
@@ -245,73 +233,6 @@ private fun Stat(label: String, value: String) {
 }
 
 // ------------------------------------------------------------------ custom / edit
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun ExerciseEditorScreen(container: AppContainer, exerciseId: Long?) {
-    val th = LocalFitTheme.current
-    val nav = LocalNav.current
-    val toaster = LocalToaster.current
-    var loaded by remember { mutableStateOf(exerciseId == null) }
-    var base by remember { mutableStateOf<Exercise?>(null) }
-    var name by remember { mutableStateOf("") }
-    var muscle by remember { mutableStateOf(MuscleGroup.CHEST) }
-    var secondary by remember { mutableStateOf(setOf<String>()) }
-    var equipment by remember { mutableStateOf("barbell") }
-    var mtype by remember { mutableStateOf(MeasurementType.WEIGHT_REPS) }
-    var instructions by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
-    var used by remember { mutableStateOf(0) }
-    LaunchedEffect(exerciseId) {
-        if (exerciseId != null) container.exerciseRepo.get(exerciseId)?.let { e ->
-            base = e; name = e.name; muscle = e.primaryMuscle; secondary = e.secondaryMuscles.split(",").filter { it.isNotBlank() }.toSet()
-            equipment = e.equipment; mtype = e.measurementType; instructions = e.instructions; notes = e.personalNotes
-            used = container.exerciseRepo.usageCount(e.id); loaded = true
-        }
-    }
-    OverlayScaffold(if (exerciseId == null) "New exercise" else "Edit exercise", { nav.pop() }) {
-        if (!loaded) return@OverlayScaffold
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            NotesField(name, { name = it.take(80) }, "Exercise name")
-            Label("Main muscle group")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                MuscleGroup.all.forEach { g -> GlassChip(g, muscle == g, { muscle = g }) }
-            }
-            Label("Also works (optional)")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                (MuscleGroup.all - muscle - MuscleGroup.CARDIO - MuscleGroup.OTHER).forEach { g ->
-                    GlassChip(g, g in secondary, { secondary = if (g in secondary) secondary - g else secondary + g })
-                }
-            }
-            Label("Equipment")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                equipmentOptions.forEach { q -> GlassChip(equipmentLabel(q), equipment == q, { equipment = q }) }
-            }
-            Label("How it's measured")
-            if (used > 0) Caption("Locked: this exercise already has $used logged session(s). Changing it would reinterpret your history.", color = th.warning)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                allMeasurementTypes.forEach { m -> GlassChip(measurementLabel(m), mtype == m, { if (used == 0) mtype = m }) }
-            }
-            Label("Instructions (optional)")
-            NotesField(instructions, { instructions = it }, "One step per line")
-            Label("Personal notes (optional)")
-            NotesField(notes, { notes = it })
-            AccentButton("Save exercise", {
-                val now = Clock.now()
-                val e = (base ?: Exercise(name = "", primaryMuscle = muscle, measurementType = mtype, isCustom = true, createdAt = now, updatedAt = now)).copy(
-                    name = name.trim(), primaryMuscle = muscle, secondaryMuscles = secondary.joinToString(","), equipment = equipment,
-                    measurementType = mtype, instructions = instructions.trim(), personalNotes = notes.trim(),
-                )
-                container.write {
-                    if (base == null) container.exerciseRepo.createCustom(e)
-                    else container.exerciseRepo.update(e).onFailure { toaster.show(it.message ?: "Couldn't save") }
-                }
-                toaster.show("Saved ${e.name}"); nav.pop()
-            }, Modifier.fillMaxWidth(), enabled = name.isNotBlank())
-            Spacer(Modifier.height(20.dp))
-        }
-    }
-}
 
 @Composable
 private fun Label(t: String) = Text(t, style = FitType.label, color = LocalFitTheme.current.textDim)

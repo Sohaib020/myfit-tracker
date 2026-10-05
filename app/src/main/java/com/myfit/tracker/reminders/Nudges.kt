@@ -62,8 +62,9 @@ object Nudges {
     fun setTypeOn(c: Context, t: Type, on: Boolean) { prefs(c).edit().putBoolean("t_" + t.key, on).apply(); ReminderScheduler.reschedule(c) }
     fun maxPerDay(c: Context) = prefs(c).getInt("max", 3).coerceIn(1, 6)
     fun setMaxPerDay(c: Context, n: Int) { prefs(c).edit().putInt("max", n.coerceIn(1, 6)).apply() }
-    fun quiet(c: Context) = ReminderScheduler.Quiet(true, prefs(c).getInt("q_start", 22 * 60), prefs(c).getInt("q_end", 8 * 60))
-    fun setQuiet(c: Context, start: Int, end: Int) { prefs(c).edit().putInt("q_start", start).putInt("q_end", end).apply(); ReminderScheduler.reschedule(c) }
+    /** One quiet-hours setting for the whole app (Reminders → Quiet hours); nudges always respect it. */
+    fun quiet(c: Context) = ReminderScheduler.quiet(c).copy(on = true)
+    fun setQuiet(c: Context, start: Int, end: Int) = ReminderScheduler.setQuiet(c, ReminderScheduler.quiet(c).copy(start = start, end = end))
 
     private data class Rhythm(val wake: Int, val sleep: Int, val workout: Int, val workoutDays: Int)
 

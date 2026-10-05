@@ -383,8 +383,9 @@ private fun PipBody(
         while (true) {
             when {
                 fx.isNotEmpty() -> withFrameMillis { step() }                 // particles: smooth
-                talking || moodNow in BUSY -> { step(); delay(50) }           // symbols / lip-sync: ~20 fps
-                else -> { step(); delay(400) }                               // nothing moving: almost free
+                // waiting on a frame first means the loop sleeps while the app is in the background (no frames)
+                talking || moodNow in BUSY -> { withFrameMillis { }; step(); delay(50) }   // symbols / lip-sync: ~20 fps
+                else -> { withFrameMillis { }; step(); delay(400) }                       // nothing moving: almost free
             }
         }
     }

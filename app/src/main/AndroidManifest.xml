@@ -4,6 +4,8 @@
 
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 16 Live Updates (Samsung Now Bar / status chip) for workouts, rest, stopwatch, fasting, downloads -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.CAMERA" />
@@ -38,7 +40,6 @@
     <uses-permission android:name="android.permission.health.READ_SKIN_TEMPERATURE" />
     <uses-permission android:name="android.permission.health.READ_VO2_MAX" />
     <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE" />
-    <uses-permission android:name="android.permission.health.WRITE_BLOOD_PRESSURE" />
     <uses-permission android:name="android.permission.health.READ_BLOOD_GLUCOSE" />
     <uses-permission android:name="android.permission.health.WRITE_BLOOD_GLUCOSE" />
     <uses-permission android:name="android.permission.health.READ_MENSTRUATION" />
@@ -51,8 +52,6 @@
     <uses-permission android:name="android.permission.health.WRITE_INTERMENSTRUAL_BLEEDING" />
     <uses-permission android:name="android.permission.health.READ_BASAL_BODY_TEMPERATURE" />
     <uses-permission android:name="android.permission.health.WRITE_BASAL_BODY_TEMPERATURE" />
-    <uses-permission android:name="android.permission.health.READ_MINDFULNESS" />
-    <uses-permission android:name="android.permission.health.WRITE_MINDFULNESS" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
 
@@ -126,12 +125,26 @@
             </intent-filter>
         </activity-alias>
         <!-- Reminder alarms + re-arming after reboot / clock change -->
+        <!-- home-screen widgets -->
+        <receiver android:name=".widget.WaterWidgetReceiver" android:exported="true" android:label="MyFit · Water">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/water_widget" />
+        </receiver>
+        <receiver android:name=".widget.StepsWidgetReceiver" android:exported="true" android:label="MyFit · Steps">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/steps_widget" />
+        </receiver>
         <receiver android:name=".update.InstallResultReceiver" android:exported="false" />
         <receiver android:name=".update.UpdatedReceiver" android:exported="false">
             <intent-filter><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /></intent-filter>
         </receiver>
+        <!-- alarms + notification buttons: only MyFit's own PendingIntents may reach it -->
         <receiver
             android:name=".reminders.ReminderReceiver"
+            android:exported="false" />
+        <!-- protected system broadcasts only (boot, clock/zone change, app update) → re-arm alarms -->
+        <receiver
+            android:name=".reminders.SystemEventsReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

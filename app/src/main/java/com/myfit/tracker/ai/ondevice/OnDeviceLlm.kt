@@ -103,7 +103,11 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
         }
         _status.value = Status.FAILED
         lastError = errors.joinToString(" · ").ifBlank { last?.message ?: "couldn't start" }
-        throw IllegalStateException("The offline brain couldn't start on this phone (${lastError}).")
+        val lowMem = errors.any { it.contains("memory", true) || it.contains("OOM", false) || it.contains("alloc", true) } || last is OutOfMemoryError
+        throw IllegalStateException(
+            if (lowMem) "Your phone ran out of memory starting the offline brain. Close other apps and try again — phones with 8 GB of RAM or more run it best."
+            else "The offline brain couldn't start on this phone (${lastError})."
+        )
     }
 
     private fun scheduleIdleRelease() {

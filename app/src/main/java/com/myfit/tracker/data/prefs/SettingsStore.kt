@@ -95,13 +95,14 @@ data class AppSettings(
     val diabetesAsked: Boolean = false,  // the Home "do you manage diabetes?" card was answered or dismissed
 ) {
     /** The user's own key if they added one, otherwise the key built into this build (from CI secrets). */
-    val geminiKeyEff: String get() = geminiKey.ifBlank { com.myfit.tracker.BuildConfig.GEMINI_KEY }
-    val elevenKeyEff: String get() = elevenKey.ifBlank { com.myfit.tracker.BuildConfig.ELEVEN_KEY }
-    val groqKeyEff: String get() = groqKey.ifBlank { com.myfit.tracker.BuildConfig.GROQ_KEY }
-    val openRouterKeyEff: String get() = openRouterKey.ifBlank { com.myfit.tracker.BuildConfig.OPENROUTER_KEY }
-    val mistralKeyEff: String get() = mistralKey.ifBlank { com.myfit.tracker.BuildConfig.MISTRAL_KEY }
-    val azureKeyEff: String get() = azureKey.ifBlank { com.myfit.tracker.BuildConfig.AZURE_SPEECH_KEY }
-    val azureRegionEff: String get() = azureRegion.ifBlank { com.myfit.tracker.BuildConfig.AZURE_SPEECH_REGION }
+    // No provider keys are compiled into the app: the user's own key, else MyFit's AI proxy (signed-in users).
+    val geminiKeyEff: String get() = com.myfit.tracker.ai.AiProxy.keyOr(geminiKey)
+    val elevenKeyEff: String get() = com.myfit.tracker.ai.AiProxy.keyOr(elevenKey)
+    val groqKeyEff: String get() = com.myfit.tracker.ai.AiProxy.keyOr(groqKey)
+    val openRouterKeyEff: String get() = com.myfit.tracker.ai.AiProxy.keyOr(openRouterKey)
+    val mistralKeyEff: String get() = com.myfit.tracker.ai.AiProxy.keyOr(mistralKey)
+    val azureKeyEff: String get() = com.myfit.tracker.ai.AiProxy.keyOr(azureKey)
+    val azureRegionEff: String get() = azureRegion.ifBlank { if (com.myfit.tracker.ai.AiProxy.configured) "proxy" else "" }
 }
 
 class SettingsStore(private val context: Context) {
@@ -186,13 +187,13 @@ class SettingsStore(private val context: Context) {
             keepScreenOn = p[K.screenOn] ?: true,
             lastHealthSync = p[K.hcSync],
             lastHealthSyncMsg = p[K.hcMsg] ?: "",
-            geminiKey = p[K.gKey] ?: "",
+            geminiKey = sec(p[K.gKey]),
             geminiModel = p[K.gModel] ?: "",
             onlineAi = p[K.online] ?: true,
             blurAmount = p[K.blurAmt] ?: 1f,
             dockBlur = p[K.dockBlur] ?: 1.6f,
             motion = p[K.motion] ?: 1,
-            elevenKey = p[K.elevenKey] ?: "",
+            elevenKey = sec(p[K.elevenKey]),
             voiceEngine = p[K.voiceEngine] ?: 0,
             refraction = p[K.refr] ?: 1f,
             pipVoice = p[K.voice] ?: true,
@@ -202,10 +203,10 @@ class SettingsStore(private val context: Context) {
                     else p[K.order]?.split(',')?.mapNotNull { n -> runCatching { DashCard.valueOf(n) }.getOrNull() }?.distinct() ?: emptyList()
                 saved + DashCard.entries.filter { it !in saved }
             },
-            groqKey = p[K.groq] ?: "",
-            openRouterKey = p[K.orKey] ?: "",
-            mistralKey = p[K.mistral] ?: "",
-            azureKey = p[K.azure] ?: "",
+            groqKey = sec(p[K.groq]),
+            openRouterKey = sec(p[K.orKey]),
+            mistralKey = sec(p[K.mistral]),
+            azureKey = sec(p[K.azure]),
             azureRegion = p[K.azureRegion] ?: "",
             aiPrimary = p[K.aiPrimary] ?: "auto",
             liveAi = p[K.liveAi] ?: false,
@@ -247,13 +248,13 @@ class SettingsStore(private val context: Context) {
     suspend fun setWeightStep(v: Double) = context.dataStore.edit { it[K.wStep] = v }
     suspend fun setKeepScreenOn(v: Boolean) = context.dataStore.edit { it[K.screenOn] = v }
     suspend fun setLastHealthSync(at: Long, msg: String) = context.dataStore.edit { it[K.hcSync] = at; it[K.hcMsg] = msg }
-    suspend fun setGeminiKey(v: String) = context.dataStore.edit { if (v.isBlank()) it.remove(K.gKey) else it[K.gKey] = v.trim() }
+    suspend fun setGeminiKey(v: String) = context.dataStore.edit { if (v.isBlank()) it.remove(K.gKey) else it[K.gKey] = SecretBox.seal(v.trim()) }
     suspend fun setGeminiModel(v: String) = context.dataStore.edit { it[K.gModel] = v }
     suspend fun setOnlineAi(v: Boolean) = context.dataStore.edit { it[K.online] = v }
     suspend fun setBlurAmount(v: Float) = context.dataStore.edit { it[K.blurAmt] = v }
     suspend fun setDockBlur(v: Float) = context.dataStore.edit { it[K.dockBlur] = v }
     suspend fun setMotion(v: Int) = context.dataStore.edit { it[K.motion] = v; it[K.animated] = v != 2 }
-    suspend fun setElevenKey(v: String) = context.dataStore.edit { it[K.elevenKey] = v.trim() }
+    suspend fun setElevenKey(v: String) = context.dataStore.edit { if (v.isBlank()) it.remove(K.elevenKey) else it[K.elevenKey] = SecretBox.seal(v.trim()) }
     suspend fun setVoiceEngine(v: Int) = context.dataStore.edit { it[K.voiceEngine] = v }
     suspend fun setRefraction(v: Float) = context.dataStore.edit { it[K.refr] = v }
     suspend fun setPipVoice(v: Boolean) = context.dataStore.edit { it[K.voice] = v }
@@ -266,8 +267,12 @@ class SettingsStore(private val context: Context) {
     }
     suspend fun setAiKey(provider: String, v: String) = context.dataStore.edit {
         val k = when (provider) { "groq" -> K.groq; "openrouter" -> K.orKey; "mistral" -> K.mistral; "azure" -> K.azure; "azure_region" -> K.azureRegion; else -> return@edit }
-        if (v.isBlank()) it.remove(k) else it[k] = v.trim()
+        if (v.isBlank()) it.remove(k) else it[k] = if (provider == "azure_region") v.trim() else SecretBox.seal(v.trim())
     }
+
+    // decrypted key cache: settings re-emit often, keystore decryption needn't run every time
+    private val secCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private fun sec(stored: String?): String = if (stored.isNullOrEmpty()) "" else secCache.getOrPut(stored) { SecretBox.open(stored) }
     suspend fun setAiPrimary(v: String) = context.dataStore.edit { it[K.aiPrimary] = v }
     suspend fun setLiveAi(v: Boolean) = context.dataStore.edit { it[K.liveAi] = v }
     suspend fun setPermsAsked(v: Boolean) = context.dataStore.edit { it[K.perms] = v }

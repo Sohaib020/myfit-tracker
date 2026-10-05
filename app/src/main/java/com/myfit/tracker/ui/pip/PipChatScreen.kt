@@ -277,7 +277,7 @@ private fun Bubble(m: ChatMessage, animate: Boolean, onShowShared: (() -> Unit)?
 private fun ThinkingBubble() {
     val th = LocalFitTheme.current
     var phase by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) { while (true) { delay(260); phase = (phase + 1) % 4 } }
+    LaunchedEffect(Unit) { while (true) { androidx.compose.runtime.withFrameMillis { }; delay(260); phase = (phase + 1) % 4 } }
     Glass(Modifier.size(width = 86.dp, height = 44.dp), shape = RoundedCornerShape(22.dp, 22.dp, 22.dp, 6.dp)) {
         Row(Modifier.align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             repeat(3) { i -> Box(Modifier.size(9.dp).clip(CircleShape).drawBehind { drawCircle(if (phase > i) th.accentBright else th.textFaint) }) }

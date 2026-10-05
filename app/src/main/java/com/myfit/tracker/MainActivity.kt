@@ -40,7 +40,10 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         val container = (application as MyFitApplication).container
+        (application as MyFitApplication).onUiStart()
         com.myfit.tracker.social.Invite.handle(intent)
+        intent?.getStringExtra(com.myfit.tracker.notify.LiveUpdates.EXTRA_OPEN)?.let { com.myfit.tracker.ui.nav.Launch.open.value = it }
+        com.myfit.tracker.notify.LiveUpdates.start(container)
         com.myfit.tracker.ui.pip.Buddy.init(this)
         com.myfit.tracker.ui.programs.ProgramEngine.init(this)
         if (BuildConfig.DEBUG && intent?.getBooleanExtra("smoke", false) == true) SmokeSetup.ensureProfile(container)
@@ -59,6 +62,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         com.myfit.tracker.social.Invite.handle(intent)
+        intent.getStringExtra(com.myfit.tracker.notify.LiveUpdates.EXTRA_OPEN)?.let { com.myfit.tracker.ui.nav.Launch.open.value = it }
     }
     override fun onStop() {
         super.onStop()

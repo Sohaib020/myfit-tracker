@@ -23,6 +23,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -50,6 +52,8 @@ fun WheelPicker(
     modifier: Modifier = Modifier,
     itemHeight: Dp = 52.dp,
     visible: Int = 5,
+    /** Draw this wheel's own selection pill. Pass false when several wheels share one band (date pickers). */
+    highlight: Boolean = true,
 ) {
     val th = LocalFitTheme.current
     val tick = rememberTick()
@@ -68,24 +72,37 @@ fun WheelPicker(
         snapshotFlow { center }.distinctUntilChanged().collect { if (it != curSel) { tick(); curOn(it) } }
     }
     Box(modifier.height(itemHeight * visible), contentAlignment = Alignment.Center) {
-        Glass(Modifier.fillMaxWidth(0.62f).height(itemHeight + 10.dp), shape = RoundedCornerShape(18.dp)) {}
+        if (highlight) Glass(Modifier.fillMaxWidth(0.86f).height(itemHeight + 6.dp), shape = RoundedCornerShape(16.dp)) {}
         LazyColumn(
             state = state,
             flingBehavior = fling,
             contentPadding = PaddingValues(vertical = itemHeight * (visible / 2)),
-            modifier = Modifier.fillMaxSize(),
+            // rows fade out toward the top and bottom edge, like a real wheel
+            modifier = Modifier.fillMaxSize()
+                .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    drawRect(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            0f to androidx.compose.ui.graphics.Color.Transparent, 0.3f to androidx.compose.ui.graphics.Color.Black,
+                            0.7f to androidx.compose.ui.graphics.Color.Black, 1f to androidx.compose.ui.graphics.Color.Transparent,
+                        ),
+                        blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                    )
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             items(count) { i ->
                 val d = abs(i - center)
-                Box(Modifier.height(itemHeight).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text(
+                Box(Modifier.height(itemHeight).fillMaxWidth().padding(horizontal = 6.dp), contentAlignment = Alignment.Center) {
+                    // one size for every row (scaled down off-centre) — the selected value never overflows its band
+                    FitText(
                         label(i),
-                        style = if (d == 0) FitType.display else FitType.title,
-                        color = when (d) { 0 -> th.text; 1 -> th.textDim; else -> th.textFaint },
+                        FitType.title.copy(fontWeight = if (d == 0) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium),
+                        when (d) { 0 -> th.text; 1 -> th.textDim; else -> th.textFaint },
                         textAlign = TextAlign.Center,
                         modifier = Modifier.graphicsLayer {
-                            val s = if (d == 0) 1f else 0.9f - d * 0.05f
+                            val s = if (d == 0) 1.08f else 0.92f - d * 0.05f
                             scaleX = s; scaleY = s
                         },
                     )
