@@ -122,7 +122,9 @@ fun equipmentIcon(ex: Exercise): ImageVector = when {
 }
 
 fun equipmentLabel(e: String) = when (e) {
-    "body only" -> "Bodyweight"; "e-z curl bar" -> "EZ bar"; "kettlebells" -> "Kettlebell"
+    "body only" -> "Bodyweight"; "e-z curl bar" -> "EZ bar"; "kettlebells" -> "Kettlebell"; "bands" -> "Resistance band"
+    "smith machine" -> "Smith machine"; "trap bar" -> "Trap bar"; "pull-up bar" -> "Pull-up bar"; "plate" -> "Weight plate"
+    "suspension" -> "Suspension straps"; "foam roll" -> "Foam roller"
     else -> e.replaceFirstChar { it.uppercase() }
 }
 
@@ -143,6 +145,30 @@ val allMeasurementTypes = listOf(
 )
 
 val equipmentOptions = listOf("barbell", "dumbbell", "machine", "cable", "body only", "kettlebells", "bands", "e-z curl bar", "medicine ball", "exercise ball", "other")
+
+/** Everything the Create Exercise picker offers (catalog values + extra gym kit). */
+val equipmentPickerOptions = listOf("body only", "barbell", "dumbbell", "kettlebells", "machine", "cable", "plate", "bands", "suspension",
+    "e-z curl bar", "smith machine", "trap bar", "pull-up bar", "bench", "medicine ball", "exercise ball", "foam roll", "other")
+
+/** 3D equipment art in assets/equipment/<id>.webp (rendered by tools/equipment). */
+fun equipmentArt(e: String): String = "equipment/" + when (e) {
+    "body only", "" -> "none"; "kettlebells" -> "kettlebell"; "bands" -> "band"; "e-z curl bar" -> "ezbar"; "medicine ball" -> "medicineball"
+    "exercise ball" -> "exerciseball"; "foam roll" -> "foamroller"; "smith machine" -> "smith"; "trap bar" -> "trapbar"; "pull-up bar" -> "pullupbar"
+    "barbell", "dumbbell", "machine", "cable", "plate", "suspension", "bench" -> e
+    else -> "other"
+} + ".webp"
+
+/** One-line description for each way of measuring, shown in the exercise-type picker. */
+fun measurementHint(m: String) = when (m) {
+    MeasurementType.WEIGHT_REPS -> "Bench press, curls, leg press"
+    MeasurementType.BODYWEIGHT_REPS -> "Pull-ups, dips, push-ups — add weight if you like"
+    MeasurementType.ASSISTED_REPS -> "Assisted pull-ups or dips (machine or band)"
+    MeasurementType.REPS_ONLY -> "Crunches, jumping jacks"
+    MeasurementType.DURATION -> "Plank, wall sit, stretching"
+    MeasurementType.DISTANCE_DURATION -> "Running, rowing, cycling"
+    MeasurementType.WEIGHT_DURATION -> "Farmer's carry, weighted plank"
+    else -> ""
+}
 
 /** Words-in-any-order search: "bench db" matches "Dumbbell Bench Press". */
 fun Exercise.matches(query: String): Boolean {
