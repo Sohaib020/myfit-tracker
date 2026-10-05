@@ -77,7 +77,9 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // a published release must never be debug-signed (users couldn't update over it): fail loudly on main
-            if (!hasReleaseKey && System.getenv("GITHUB_REF") == "refs/heads/main")
+            // (only when a release APK/AAB is actually being built — unit tests on main must still run without the key)
+            val buildingRelease = gradle.startParameter.taskNames.any { t -> t.contains("Release") && (t.contains("assemble") || t.contains("bundle")) }
+            if (!hasReleaseKey && buildingRelease && System.getenv("GITHUB_REF") == "refs/heads/main")
                 throw GradleException("Release signing secrets (MYFIT_KEYSTORE_*) are missing — refusing to publish a debug-signed release")
             signingConfig = if (hasReleaseKey) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
