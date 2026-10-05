@@ -223,13 +223,7 @@ fun AccentButton(
             .padding(horizontal = if (com.myfit.tracker.ui.components.LocalWindowInfo.current.narrow) 14.dp else 22.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-            if (icon != null) {
-                Icon(icon, null, tint = th.onAccent, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-            }
-            com.myfit.tracker.ui.components.FitText(text, FitType.section, th.onAccent, textAlign = TextAlign.Center)
-        }
+        com.myfit.tracker.ui.components.ButtonLabel(text, icon, 20.dp, th.onAccent, FitType.section)
     }
 }
 
@@ -244,12 +238,8 @@ fun GlassButton(
 ) {
     val th = LocalFitTheme.current
     Glass(modifier.height(height), shape = RoundedCornerShape(height / 2), onClick = onClick) {
-        Row(Modifier.align(Alignment.Center).padding(horizontal = if (com.myfit.tracker.ui.components.LocalWindowInfo.current.narrow) 12.dp else 18.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (icon != null) {
-                Icon(icon, null, tint = th.text, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-            }
-            com.myfit.tracker.ui.components.FitText(text, FitType.label.copy(fontSize = FitType.body.fontSize), th.text)
+        Box(Modifier.align(Alignment.Center).padding(horizontal = if (com.myfit.tracker.ui.components.LocalWindowInfo.current.narrow) 12.dp else 18.dp), contentAlignment = Alignment.Center) {
+            com.myfit.tracker.ui.components.ButtonLabel(text, icon, 18.dp, th.text, FitType.label.copy(fontSize = FitType.body.fontSize))
         }
     }
 }

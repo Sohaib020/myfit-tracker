@@ -88,7 +88,8 @@ class AdaptiveShotTest {
                 val b = t.boundsInRoot
                 val label = t.config.getOrNull(SemanticsProperties.Text)?.joinToString() ?: "?"
                 if (b.left < bounds.left - 1 || b.right > bounds.right + 1) problems += "$w: \"$label\" spills outside"
-                if (b.height > 30 * density) problems += "$w: \"$label\" wraps (${b.height / density} dp tall)"
+                if (b.height > 44 * density) problems += "$w: \"$label\" more than two lines (${b.height / density} dp tall)"
+                if (w >= 360 && b.height > 30 * density) problems += "$w: \"$label\" wraps on a normal phone"
             }
         }
         assertTrue(problems.joinToString("\n"), problems.isEmpty())

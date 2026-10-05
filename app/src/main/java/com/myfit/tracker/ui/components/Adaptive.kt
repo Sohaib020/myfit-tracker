@@ -2,6 +2,8 @@ package com.myfit.tracker.ui.components
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.Text
@@ -96,4 +98,34 @@ fun FitText(
             if (r.hasVisualOverflow && scale > minScale) scale = (scale - 0.07f).coerceAtLeast(minScale) else ready = 1f
         },
     )
+}
+
+/**
+ * Button content that always stays readable: icon + one-line label when it fits; on tight widths (Fold cover,
+ * two buttons side by side) the icon is dropped first, then the label may shrink a little, and only then wrap to
+ * two centred lines — never "Build …".
+ */
+@Composable
+fun ButtonLabel(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector?, iconSize: Dp, color: Color, style: TextStyle) {
+    BoxWithConstraints(contentAlignment = Alignment.Center) {
+        val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val avail = constraints.maxWidth
+        val full = remember(text, style) { measurer.measure(text, style, maxLines = 1, softWrap = false).size.width }
+        val iconPx = with(density) { (iconSize + 8.dp).roundToPx() }
+        val unbounded = avail == androidx.compose.ui.unit.Constraints.Infinity
+        val showIcon = icon != null && (unbounded || full + iconPx <= avail)
+        val oneLine = unbounded || full * 0.82f <= avail - (if (showIcon) iconPx else 0)
+        if (oneLine) androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+            if (showIcon) {
+                androidx.compose.material3.Icon(icon!!, null, tint = color, modifier = Modifier.size(iconSize))
+                androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
+            }
+            FitText(text, style, color, textAlign = TextAlign.Center, minScale = 0.82f)
+        } else {
+            val fs = if (style.fontSize == TextUnit.Unspecified) style.fontSize else style.fontSize * 0.88f
+            Text(text, style = style.copy(fontSize = fs, lineHeight = if (fs == TextUnit.Unspecified) fs else fs * 1.08f), color = color,
+                maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        }
+    }
 }
