@@ -72,7 +72,10 @@ android {
     }
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8: shrink + optimise library code (keep rules in proguard-rules.pro); smaller APK, faster start
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // a published release must never be debug-signed (users couldn't update over it): fail loudly on main
             if (!hasReleaseKey && System.getenv("GITHUB_REF") == "refs/heads/main")
                 throw GradleException("Release signing secrets (MYFIT_KEYSTORE_*) are missing — refusing to publish a debug-signed release")

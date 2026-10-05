@@ -1,7 +1,7 @@
 #!/bin/bash
 # Installs the debug APK on the emulator, opens the dashboard and each tab, and reports any crash.
 set +e
-APK=app/build/outputs/apk/debug/app-debug.apk
+APK=${SMOKE_APK:-app/build/outputs/apk/github/debug/app-github-debug.apk}
 adb install -r "$APK" || { echo "::error title=Smoke::install failed"; exit 1; }
 adb logcat -c
 adb shell am start -W -n com.myfit.tracker/.MainActivity --ez smoke true

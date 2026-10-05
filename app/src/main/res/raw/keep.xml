@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- resources looked up by name at runtime (resource shrinking must keep them) -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/default_web_client_id,@string/gcm_defaultSenderId,@string/google_app_id,@drawable/ic_notification" />
