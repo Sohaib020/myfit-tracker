@@ -77,18 +77,7 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
 
     Column(Modifier.fillMaxSize()) {
         val dayLabel = if (date == Clock.today()) "Today" else date.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.US))
-        if (asTab) Row(
-            Modifier.fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = com.myfit.tracker.ui.components.TopBarSpace, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text("Food", style = FitType.display, color = th.text)
-                Caption("$dayLabel · diary, snaps, fasting & supplements")
-            }
-            GlassIconButton(Duo.KeyboardArrowLeft, { date = date.minusDays(1) })
-            Spacer(Modifier.width(8.dp))
-            GlassIconButton(Duo.KeyboardArrowRight, { if (date < Clock.today()) date = date.plusDays(1) })
-        } else OverlayTopBar("Food", { nav.pop() }, dayLabel) {
+        if (!asTab) OverlayTopBar("Food", { nav.pop() }, dayLabel) {
             GlassIconButton(Duo.KeyboardArrowLeft, { date = date.minusDays(1) })
             GlassIconButton(Duo.KeyboardArrowRight, { if (date < Clock.today()) date = date.plusDays(1) })
         }
@@ -97,6 +86,20 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = bottomPad.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (asTab) item {
+                Row(
+                Modifier.fillMaxWidth().statusBarsPadding().padding(top = com.myfit.tracker.ui.components.TopBarSpace, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Food", style = FitType.display, color = th.text)
+                    Caption("$dayLabel · diary, snaps, fasting & supplements")
+                }
+                GlassIconButton(Duo.KeyboardArrowLeft, { date = date.minusDays(1) })
+                Spacer(Modifier.width(8.dp))
+                GlassIconButton(Duo.KeyboardArrowRight, { if (date < Clock.today()) date = date.plusDays(1) })
+            }
+            }
             item {
                 GlassCard {
                     MacroSummary(

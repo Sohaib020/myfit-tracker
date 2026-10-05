@@ -25,6 +25,7 @@ class AppContainer(app: Application) {
     val exerciseRepo = ExerciseRepository(db, app)
     val workoutRepo = WorkoutRepository(db)
     val restTimer = RestTimer(app)
+    val glucoseFamily by lazy { com.myfit.tracker.social.GlucoseFamily(this) }
     val healthSync = HealthSync(app, db)
     val healthRepo = HealthRepository(db)
     val nutritionRepo = com.myfit.tracker.data.repo.NutritionRepository(db, app)

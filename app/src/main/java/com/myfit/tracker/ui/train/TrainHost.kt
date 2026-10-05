@@ -25,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import com.myfit.tracker.AppContainer
@@ -41,16 +43,35 @@ import com.myfit.tracker.ui.theme.LocalFitTheme
 fun TrainHost(container: AppContainer, bottomPad: Int) {
     val th = LocalFitTheme.current
     var seg by rememberSaveable { mutableIntStateOf(0) }
-    Column(Modifier.fillMaxSize()) {
-        Column(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = TopBarSpace, bottom = 6.dp)) {
+    val chrome = com.myfit.tracker.ui.components.LocalChrome.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    var headerPx by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    // while Train is on screen the chrome travels the full header height, so title + segments slide away too
+    androidx.compose.runtime.DisposableEffect(headerPx) {
+        if (headerPx > 0) chrome.limit = maxOf(chrome.baseLimit, headerPx.toFloat())
+        onDispose { chrome.limit = chrome.baseLimit; chrome.show() }
+    }
+    Box(Modifier.fillMaxSize()) {
+        androidx.compose.runtime.CompositionLocalProvider(com.myfit.tracker.ui.components.LocalTopInset provides with(density) { headerPx.toDp() }) {
+            Box(Modifier.fillMaxSize()) {
+                if (seg == 0) TrainScreen(container, bottomPad, embedded = true, onBrowsePlans = { seg = 1 })
+                else if (seg == 1) com.myfit.tracker.ui.programs.ProgramsScreen(container, bottomPad)
+                else ExercisesScreen(container, bottomPad, embedded = true)
+            }
+        }
+        Column(
+            Modifier.fillMaxWidth()
+                .graphicsLayer { translationY = chrome.offset }
+                .onSizeChanged { headerPx = it.height }
+                .drawBehind {
+                    // soft fade so list items sliding under the header stay readable
+                    drawRect(Brush.verticalGradient(listOf(th.bgTop.copy(alpha = 0.78f), th.bgTop.copy(alpha = 0.5f), androidx.compose.ui.graphics.Color.Transparent)))
+                }
+                .statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = TopBarSpace, bottom = 10.dp),
+        ) {
             Text("Train", style = FitType.display, color = th.text)
             androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp))
             Segmented(listOf("Workouts", "Plans", "Exercises"), seg) { seg = it }
-        }
-        Box(Modifier.fillMaxWidth().weight(1f).fadeTopEdge()) {
-            if (seg == 0) TrainScreen(container, bottomPad, embedded = true, onBrowsePlans = { seg = 1 })
-            else if (seg == 1) com.myfit.tracker.ui.programs.ProgramsScreen(container, bottomPad)
-            else Box(Modifier.padding(horizontal = 0.dp)) { ExercisesScreen(container, bottomPad, embedded = true) }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.myfit.tracker.ui.settings
 
+import androidx.compose.foundation.background
 import com.myfit.tracker.ui.theme.Duo
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -312,6 +313,8 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 Spacer(Modifier.height(8.dp))
                 val navB = com.myfit.tracker.ui.nav.LocalNav.current
                 com.myfit.tracker.ui.theme.AccentButton("Backup & restore", { navB.push(com.myfit.tracker.ui.nav.Overlay.Backup) }, Modifier.fillMaxWidth(), icon = com.myfit.tracker.ui.theme.Duo.Cloud, height = 44.dp)
+                Spacer(Modifier.height(14.dp))
+                LiveNotifRow()
             }
         }
         if (settings.devMode) item {
@@ -363,97 +366,137 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit) {
     val nav = com.myfit.tracker.ui.nav.LocalNav.current
     val profile by container.profileRepo.profile.collectAsState(initial = null)
     val targets by container.profileRepo.targets.collectAsState(initial = emptyList())
+    val latest by remember { container.logRepo.latestWeight() }.collectAsState(initial = null)
+    val photo = com.myfit.tracker.ui.social.rememberAccountPhoto(container)
+    val user by container.social.user.collectAsState()
+    val today = Clock.today()
     Column(Modifier.fillMaxSize()) {
-        com.myfit.tracker.ui.components.OverlayTopBar("Me", { nav.pop() }, "Profile, body & daily targets")
+        com.myfit.tracker.ui.components.OverlayTopBar("You", { nav.pop() }, "Account, body, goals and history")
         LazyColumn(
             Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-        // ---------- profile
-        item {
-            val p = profile
-            GlassCard(onClick = { open(Sheet.EditProfile) }) {
-                CardHeader(Duo.Person, p?.name ?: "Profile", th.accentBright) {
-                    Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.Edit, null, tint = th.textDim) }
-                }
-                if (p != null) {
-                    val age = p.age + ChronoUnit.YEARS.between(LocalDate.parse(p.ageRecordedOn), Clock.today()).toInt()
-                    Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                        KV("Age", "$age")
-                        KV("Sex", if (p.sex == Sex.MALE) "Male" else "Female")
-                        KV("Height", Fmt.length(p.heightCm, settings.units.length))
-                        KV("Target", p.targetWeightKg?.let { Fmt.weight(it, settings.units.weight) } ?: "—")
+            // ---------- 1. online account first (sync, friends, backup identity)
+            item { MeSection("Your MyFit account", "Sign in once to unlock friends, challenges and cloud backup") }
+            item { com.myfit.tracker.ui.social.AccountCard(container) }
+
+            // ---------- 2. identity hero
+            item { MeSection("About you", "Used to work out calories, protein and pace — never shared") }
+            item {
+                val p = profile
+                GlassCard(onClick = { open(Sheet.EditProfile) }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(68.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(th.accentBright, th.accent))), contentAlignment = Alignment.Center) {
+                            if (photo != null) androidx.compose.foundation.Image(photo, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                            else Text((p?.name?.firstOrNull() ?: 'Y').uppercase(), style = FitType.display, color = th.onAccent)
+                        }
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(p?.name?.ifBlank { null } ?: "Your profile", style = FitType.title, color = th.text, maxLines = 1)
+                            Caption(user?.let { "Signed in · " + (it.email ?: "Google") } ?: "Only on this phone")
+                        }
+                        Box(Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape).background(th.text.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
+                            androidx.compose.material3.Icon(Duo.Edit, "Edit profile", tint = th.text, modifier = Modifier.size(18.dp))
+                        }
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Caption("Profile created ${Clock.localDateOf(p.createdAt)} · editing it never changes past entries.")
+                    if (p != null) {
+                        val age = p.age + ChronoUnit.YEARS.between(LocalDate.parse(p.ageRecordedOn), today).toInt()
+                        Spacer(Modifier.height(16.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StatPill("Age", "$age", Modifier.weight(1f))
+                            StatPill("Height", Fmt.length(p.heightCm, settings.units.length), Modifier.weight(1f))
+                            StatPill("Now", latest?.let { Fmt.weight(it.weightKg, settings.units.weight) } ?: "—", Modifier.weight(1f))
+                            StatPill("Goal", p.targetWeightKg?.let { Fmt.weight(it, settings.units.weight) } ?: "—", Modifier.weight(1f))
+                        }
+                    }
                 }
             }
-        }
 
-        item { com.myfit.tracker.ui.social.AccountCard(container) }
-
-        // ---------- targets
-        item {
-            GlassCard(onClick = { open(Sheet.EditTargets) }) {
-                CardHeader(Duo.TrackChanges, "Daily targets", th.success) {
-                    Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.Edit, null, tint = th.textDim) }
+            // ---------- 3. goals
+            item { MeSection("Your daily goals", "What MyFit cheers you towards each day · tap to change") }
+            item {
+                GlassCard(onClick = { open(Sheet.EditTargets) }) {
+                    val cells = listOf(
+                        Triple(Duo.WaterDrop, "Water", Targets.on(targets, TargetType.WATER_ML, today)?.let { Fmt.volume(it, settings.units.volume) }) to th.water,
+                        Triple(Duo.Footprints, "Steps", Targets.on(targets, TargetType.STEPS, today)?.let { Fmt.int(it) }) to th.success,
+                        Triple(Duo.Flame, "Calories", Targets.on(targets, TargetType.CALORIES, today)?.let { Fmt.int(it) }) to th.warning,
+                        Triple(Duo.Egg, "Protein", Targets.on(targets, TargetType.PROTEIN_G, today)?.let { "${Fmt.int(it)} g" }) to th.protein,
+                        Triple(Duo.Bedtime, "Sleep", Targets.on(targets, TargetType.SLEEP_MIN, today)?.let { Fmt.duration(it.toLong()) }) to th.sleep,
+                        Triple(Duo.FitnessCenter, "Workouts / wk", Targets.on(targets, TargetType.WEEKLY_WORKOUTS, today)?.let { Fmt.int(it) }) to th.accentBright,
+                    )
+                    cells.chunked(3).forEachIndexed { i, row ->
+                        if (i > 0) Spacer(Modifier.height(14.dp))
+                        Row(Modifier.fillMaxWidth()) {
+                            row.forEach { (t, color) ->
+                                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    com.myfit.tracker.ui.components.IconBubble(t.first, color, 40.dp)
+                                    Spacer(Modifier.height(6.dp))
+                                    com.myfit.tracker.ui.components.FitText(t.third ?: "—", FitType.section, th.text)
+                                    Caption(t.second)
+                                }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Caption("Changes apply from today — past days keep the goal they had.", Modifier.align(Alignment.CenterHorizontally))
                 }
-                Spacer(Modifier.height(12.dp))
-                val today = Clock.today()
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    KV("Water", Targets.on(targets, TargetType.WATER_ML, today)?.let { Fmt.volume(it, settings.units.volume) } ?: "—")
-                    KV("Steps", Targets.on(targets, TargetType.STEPS, today)?.let { Fmt.int(it) } ?: "—")
-                    KV("Calories", Targets.on(targets, TargetType.CALORIES, today)?.let { "${Fmt.int(it)} ${com.myfit.tracker.domain.EnergyUnit.label}" } ?: "—")
-                    KV("Protein", Targets.on(targets, TargetType.PROTEIN_G, today)?.let { "${Fmt.int(it)} g" } ?: "—")
-                    KV("Sleep", Targets.on(targets, TargetType.SLEEP_MIN, today)?.let { Fmt.duration(it.toLong()) } ?: "—")
-                    KV("Workouts/wk", Targets.on(targets, TargetType.WEEKLY_WORKOUTS, today)?.let { Fmt.int(it) } ?: "—")
-                }
-                Spacer(Modifier.height(8.dp))
-                Caption("Target changes apply from today. Past days keep the target that applied then.")
             }
-        }
 
+            // ---------- 4. connected data
+            item { MeSection("Watch & health data", "Where your steps, sleep and heart rate come from") }
             item { HealthStatusCard(container) }
+
+            // ---------- 5. history shortcuts
+            item { MeSection("Your progress & history", null) }
             item {
-                GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Body) }) {
-                    CardHeader(Duo.MonitorWeight, "Body & progress photos", th.fat) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
-                    Spacer(Modifier.height(6.dp))
-                    Caption("Weight and body-fat trends, weekly averages, measurements and private before/after photos.")
-                }
-            }
-            item {
-                GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Social) }) {
-                    CardHeader(Duo.Person, "Friends", th.accent) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
-                    Spacer(Modifier.height(6.dp))
-                    val u = container.social.user.collectAsState().value
-                    Caption(if (u != null) "Signed in as ${u.email ?: u.displayName ?: "you"} · challenges and weekly boards." else "Sign in with Google or email to compete with friends.")
-                }
-            }
-            item {
-                GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Records) }) {
-                    CardHeader(Duo.EmojiEvents, "Personal records", th.warning) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
-                    Spacer(Modifier.height(6.dp))
-                    Caption("Every PR you've set, detected from your logged sets.")
-                }
-            }
-            item {
-                GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Food(null)) }) {
-                    CardHeader(Duo.ForkKnife, "Food diary", th.protein) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
-                    Spacer(Modifier.height(6.dp))
-                    Caption("Every meal you've logged, day by day, with calories and macros.")
-                }
-            }
-            item {
-                GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.Archive) }) {
-                    CardHeader(Duo.Inventory2, "Archive", th.textDim) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
-                    Spacer(Modifier.height(6.dp))
-                    Caption("Archived exercises and templates.")
+                val tiles = listOf(
+                    Quad(Duo.MonitorWeight, "Body & photos", "Weight trend, measurements, before/after", th.fat) { nav.push(com.myfit.tracker.ui.nav.Overlay.Body) },
+                    Quad(Duo.EmojiEvents, "Personal records", "Every PR from your sets", th.warning) { nav.push(com.myfit.tracker.ui.nav.Overlay.Records) },
+                    Quad(Duo.ForkKnife, "Food diary", "Meals and macros by day", th.protein) { nav.push(com.myfit.tracker.ui.nav.Overlay.Food(null)) },
+                    Quad(Duo.Insights, "Your week", "Shareable weekly report", th.success) { nav.push(com.myfit.tracker.ui.nav.Overlay.WeeklyReport) },
+                    Quad(Duo.Person, "Friends", if (user != null) "Boards and challenges" else "Sign in to compete", th.accent) { nav.push(com.myfit.tracker.ui.nav.Overlay.Social) },
+                    Quad(Duo.Inventory2, "Archive", "Hidden exercises & workouts", th.textDim) { nav.push(com.myfit.tracker.ui.nav.Overlay.Archive) },
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    tiles.chunked(2).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            row.forEach { q ->
+                                GlassCard(Modifier.weight(1f), onClick = q.onClick) {
+                                    com.myfit.tracker.ui.components.IconBubble(q.icon, q.color, 38.dp)
+                                    Spacer(Modifier.height(10.dp))
+                                    com.myfit.tracker.ui.components.FitText(q.title, FitType.section, th.text)
+                                    Caption(q.sub)
+                                }
+                            }
+                        }
+                    }
                 }
             }
             item { Spacer(Modifier.navigationBarsPadding()) }
         }
+    }
+}
+
+private class Quad(val icon: androidx.compose.ui.graphics.vector.ImageVector, val title: String, val sub: String, val color: Color, val onClick: () -> Unit)
+
+@Composable
+private fun MeSection(title: String, sub: String?) {
+    val th = LocalFitTheme.current
+    Column(Modifier.padding(start = 4.dp, top = 6.dp)) {
+        Text(title, style = FitType.section, color = th.text)
+        if (sub != null) Caption(sub)
+    }
+}
+
+@Composable
+private fun StatPill(k: String, v: String, modifier: Modifier) {
+    val th = LocalFitTheme.current
+    Column(modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).background(th.text.copy(alpha = 0.06f)).padding(vertical = 10.dp, horizontal = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        com.myfit.tracker.ui.components.FitText(v, FitType.label, th.text)
+        Text(k, style = FitType.caption, color = th.textDim)
     }
 }
 
@@ -927,5 +970,28 @@ private fun AiProvidersCard(container: AppContainer) {
         }
         Spacer(Modifier.height(10.dp))
         router.lastProvider?.let { Caption("Last answer came from $it.", color = th.textFaint) }
+    }
+}
+
+
+/** Now Bar / live notifications: status, test and the settings shortcut (Samsung hides third-party ones by default). */
+@androidx.compose.runtime.Composable
+private fun LiveNotifRow() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val th = com.myfit.tracker.ui.theme.LocalFitTheme.current
+    val allowed = androidx.compose.runtime.remember { com.myfit.tracker.notify.LiveUpdates.promotionAllowed(ctx) }
+    val canPost = androidx.compose.runtime.remember { com.myfit.tracker.notify.LiveUpdates.canPost(ctx) }
+    androidx.compose.material3.Text("Now Bar · live notifications", style = com.myfit.tracker.ui.theme.FitType.label, color = th.text)
+    com.myfit.tracker.ui.components.Caption(when {
+        !canPost -> "Notifications are off for MyFit — turn them on to see workouts, rest and fasting live."
+        allowed == false -> "Live notifications are turned off for MyFit in Android settings."
+        android.os.Build.MANUFACTURER.equals("samsung", true) -> "Samsung shows other apps in the Now Bar only when Developer options → \"Live notifications for all apps\" is on."
+        allowed == null -> "Your Android version shows these as normal ongoing notifications."
+        else -> "Workouts, rest timer, stopwatch and fasting appear in the status bar chip while running."
+    })
+    Spacer(Modifier.height(8.dp))
+    androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+        com.myfit.tracker.ui.theme.GlassButton("Test now", { com.myfit.tracker.notify.LiveUpdates.test(ctx) }, Modifier.weight(1f), height = 42.dp)
+        com.myfit.tracker.ui.theme.GlassButton("Settings", { com.myfit.tracker.notify.LiveUpdates.openSettings(ctx) }, Modifier.weight(1f), height = 42.dp)
     }
 }

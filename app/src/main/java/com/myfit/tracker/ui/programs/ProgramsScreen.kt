@@ -121,7 +121,7 @@ fun ProgramsScreen(container: AppContainer, bottomPad: Int) {
     val shown = remember(query, filter, all) { all.filter { filter.matches(it) && it.matchesQuery(query) } }
 
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = bottomPad.dp),
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp + com.myfit.tracker.ui.components.LocalTopInset.current, bottom = bottomPad.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -100,6 +100,35 @@ object LiveUpdates {
         runCatching { nm.notify(id, n) }
     }
 
+    const val TEST = 4309
+
+    /**
+     * Android 16+: may this app's live notifications be promoted (Now Bar / status chip)? null = can't tell
+     * (older Android, where there is no promotion at all). Samsung additionally hides third-party ones unless
+     * Developer options → "Live notifications for all apps" is on — Android can't report that.
+     */
+    fun promotionAllowed(c: Context): Boolean? = if (Build.VERSION.SDK_INT < 36) null else runCatching {
+        val nm = c.getSystemService(NotificationManager::class.java)
+        nm.javaClass.getMethod("canPostPromotedNotifications").invoke(nm) as Boolean
+    }.getOrNull()
+
+    /** Opens the best settings screen for live notifications (app promotion page, else MyFit's notification settings). */
+    fun openSettings(c: Context) {
+        val pkg = c.packageName
+        val tries = listOf("android.settings.MANAGE_APP_PROMOTED_NOTIFICATIONS", "android.settings.APP_NOTIFICATION_PROMOTION_SETTINGS", android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        for (a in tries) {
+            val i = Intent(a).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (i.resolveActivity(c.packageManager) != null) { runCatching { c.startActivity(i) }.onSuccess { return } }
+        }
+    }
+
+    /** Posts a 2-minute test live notification so you can check the Now Bar without starting a workout. */
+    fun test(c: Context) {
+        post(c, TEST, "MyFit live test", "If you see this in the Now Bar / status chip, live notifications work", "gym",
+            chrono = System.currentTimeMillis() + 120_000, countDown = true, category = Notification.CATEGORY_STOPWATCH)
+        scope.launch { delay(120_000); cancel(c, TEST) }
+    }
+
     fun cancel(c: Context, id: Int) { runCatching { c.getSystemService(NotificationManager::class.java)?.cancel(id) } }
 
     /** Starts watching workouts, rest, the stopwatch and fasts. Call once from the UI start. */
