@@ -410,11 +410,13 @@ private fun Leaderboard(container: AppContainer, me: Level, partner: Mascot) {
         }.getOrDefault(emptyList())
     }
     GlassCard(padding = 14.dp) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Weekly leaderboard", style = FitType.section, color = th.text, modifier = Modifier.weight(1f))
+        // title on its own line, the Friends / Everyone switch underneath — never squeezed on narrow screens
+        Text("Weekly leaderboard", style = FitType.section, color = th.text, maxLines = 1)
+        Caption("Steps since Monday · device-recorded only")
+        Spacer(Modifier.height(8.dp))
+        Row {
             GlassChip("Friends", !global, { global = false }); Spacer(Modifier.width(6.dp)); GlassChip("Everyone", global, { global = true })
         }
-        Caption("Steps since Monday · device-recorded only")
         Spacer(Modifier.height(10.dp))
         val r = rows
         when {

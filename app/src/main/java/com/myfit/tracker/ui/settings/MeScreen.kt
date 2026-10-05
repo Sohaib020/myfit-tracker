@@ -187,18 +187,20 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 Spacer(Modifier.height(14.dp))
                 Spacer(Modifier.height(12.dp))
                 Text("Motion", style = FitType.section, color = th.text)
-                Caption("Pip and glass effects. Themes are always still images. Battery saver keeps everything still.")
+                Caption(if (com.myfit.tracker.ui.theme.lowFx) "Pip animations. Battery saver keeps everything still." else "Pip and glass effects. Battery saver keeps everything still.")
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Smooth", "Balanced", "Battery saver").forEachIndexed { i, label ->
                         GlassChip(label, settings.motion == i, { container.write { container.settings.setMotion(i) } })
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                GlassSlider("Glass tint", "How milky the cards are", settings.glassStrength, 0.4f..1.6f) { v -> container.write { container.settings.setGlassStrength(v) } }
-                GlassSlider("Blur amount", "0 = crystal clear, right = heavy frost", settings.blurAmount, 0f..2f) { v -> container.write { container.settings.setBlurAmount(v) } }
-                GlassSlider("Dock blur", "How frosted the bottom bar is", settings.dockBlur, 0f..2.5f) { v -> container.write { container.settings.setDockBlur(v) } }
-                if (!realBlurSupported) Caption("This phone runs Android 11 or older, so glass uses a frosted fallback instead of live blur.")
+                // Android 12 and older use solid cards (no glass/blur), so these controls would do nothing there
+                if (!com.myfit.tracker.ui.theme.lowFx) {
+                    Spacer(Modifier.height(12.dp))
+                    GlassSlider("Glass tint", "How milky the cards are", settings.glassStrength, 0.4f..1.6f) { v -> container.write { container.settings.setGlassStrength(v) } }
+                    GlassSlider("Blur amount", "0 = crystal clear, right = heavy frost", settings.blurAmount, 0f..2f) { v -> container.write { container.settings.setBlurAmount(v) } }
+                    GlassSlider("Dock blur", "How frosted the bottom bar is", settings.dockBlur, 0f..2.5f) { v -> container.write { container.settings.setDockBlur(v) } }
+                }
             }
         }
 
@@ -337,7 +339,7 @@ fun DevSettingsScreen(container: AppContainer) {
                 GlassCard {
                     CardHeader(Duo.Palette, "Advanced glass", th.fat)
                     Spacer(Modifier.height(8.dp))
-                    if (com.myfit.tracker.ui.theme.LiquidGlass.supported)
+                    if (com.myfit.tracker.ui.theme.LiquidGlass.supported && !com.myfit.tracker.ui.theme.lowFx)
                         GlassSlider("Refraction", "How strongly the glass edges bend what's behind", settings.refraction, 0f..2f) { v -> container.write { container.settings.setRefraction(v) } }
                 }
             }

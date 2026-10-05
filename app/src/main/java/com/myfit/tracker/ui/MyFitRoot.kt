@@ -102,6 +102,7 @@ import com.myfit.tracker.ui.nav.TabItem
 import com.myfit.tracker.ui.components.PipTour
 import com.myfit.tracker.ui.components.TourStep
 import com.myfit.tracker.ui.components.tourTarget
+import com.myfit.tracker.ui.components.column
 import com.myfit.tracker.ui.pip.PipMood
 import com.myfit.tracker.ui.onboarding.OnboardingScreen
 import com.myfit.tracker.ui.settings.BackgroundImages
@@ -154,6 +155,7 @@ fun MyFitRoot(container: AppContainer) {
 
     val toaster = remember { Toaster() }
     MyFitTheme(theme, s) {
+      com.myfit.tracker.ui.components.ProvideWindowInfo {
         CompositionLocalProvider(LocalBackdrop provides backdrop, LocalToaster provides toaster) {
             Box(
                 Modifier
@@ -163,7 +165,7 @@ fun MyFitRoot(container: AppContainer) {
                 val dens = androidx.compose.ui.platform.LocalDensity.current
                 val cardBlurPx = with(dens) { (26.dp * s.blurAmount).toPx() }
                 val dockBlurPx = with(dens) { (30.dp * s.dockBlur).toPx() }
-                val blurOk = android.os.Build.VERSION.SDK_INT >= 31 && !com.myfit.tracker.CrashGuard.safeMode
+                val blurOk = !com.myfit.tracker.ui.theme.lowFx     // Android 12 and older: no blurred layers at all
                 val gfx = androidx.compose.ui.platform.LocalGraphicsContext.current
                 // ---- still path: bake three small bitmaps (theme, card blur, dock blur)
                 LaunchedEffect(theme.id, backdrop.image, backdrop.rootSize, cardBlurPx, dockBlurPx, blurOk) {
@@ -195,6 +197,7 @@ fun MyFitRoot(container: AppContainer) {
                 ToastHost(toaster, Modifier.align(Alignment.TopCenter))
             }
         }
+      }
     }
 }
 
@@ -228,8 +231,10 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
     BackHandler(enabled = top != null) { nav.pop() }
 
     CompositionLocalProvider(LocalNav provides nav) {
+        val win = com.myfit.tracker.ui.components.LocalWindowInfo.current
         Box(Modifier.fillMaxSize()) {
-          Box(Modifier.fillMaxSize()) {
+          // wide screens (foldables, tablets): content sits in a readable centred column; the theme fills the screen
+          Box(Modifier.align(Alignment.TopCenter).then(win.column()).fillMaxSize()) {
             AnimatedContent(
                 targetState = tab,
                 transitionSpec = {
@@ -259,6 +264,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                     },
                 )
             }
+            Box(Modifier.align(Alignment.TopCenter).then(win.column()).fillMaxSize()) {
             AnimatedVisibility(chrome, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
                 LiquidTabBar(
                     items = tabs, selected = tab, onSelect = { tab = it },
@@ -287,6 +293,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             ) {
                 Box(Modifier.tourTarget("me")) { MePill(dash.profile?.name ?: "", com.myfit.tracker.ui.social.rememberAccountPhoto(container), com.myfit.tracker.update.rememberUpdateProgress()) { nav.push(Overlay.Me) } }
             }
+            }
 
             // full-screen overlays (Gym Mode, details, editors) — each sits on its own copy of the backdrop
             AnimatedContent(
@@ -308,6 +315,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         else if (l != null) drawLayer(l)
                         else drawBackdrop(backdrop.theme, backdrop.image, backdrop.time.floatValue, size.width, size.height)
                     }
+                    Box(Modifier.align(Alignment.TopCenter).then(win.column()).fillMaxSize()) {
                     when (o) {
                         is Overlay.Gym -> GymModeScreen(container, o.workoutId)
                         is Overlay.FinishWorkout -> FinishWorkoutScreen(container, o.workoutId)
@@ -346,6 +354,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         is Overlay.Food -> com.myfit.tracker.ui.food.FoodDiaryScreen(container, o.date)
                         is Overlay.FoodAdd -> com.myfit.tracker.ui.food.FoodAddScreen(container, o.mealType, o.date, o.tab)
                         is Overlay.FoodPhoto -> com.myfit.tracker.ui.food.FoodPhotoScreen(container, o.mealType, o.date)
+                    }
                     }
                 }
             }

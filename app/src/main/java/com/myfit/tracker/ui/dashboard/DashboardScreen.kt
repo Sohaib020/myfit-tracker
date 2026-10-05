@@ -57,6 +57,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -594,9 +595,10 @@ private fun PipSmall(s: DashState) {
             Text(com.myfit.tracker.ui.pip.Buddy.active.collectAsState().value.label.substringBefore(' ').uppercase(), style = FitType.overline, color = th.accentBright, modifier = Modifier.weight(1f))
             Icon(Duo.ChatBubble, "Chat", tint = th.textDim, modifier = Modifier.size(15.dp))
         }
-        Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { Pip(mood, size = 70.dp, interactive = false) }
+        // the buddy stays inside its tile (clipped) and the button label is short enough for half-width tiles
+        Box(Modifier.fillMaxWidth().weight(1f).clipToBounds(), contentAlignment = Alignment.Center) { Pip(mood, size = 70.dp, interactive = false) }
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            CompactPill("Chat with " + com.myfit.tracker.ui.pip.Buddy.active.collectAsState().value.label.substringBefore(' '), Duo.ChatBubble, { nav.push(Overlay.PipChat) }, height = 34.dp)
+            CompactPill("Chat", Duo.ChatBubble, { nav.push(Overlay.PipChat) }, height = 34.dp)
         }
     }
 }
@@ -906,6 +908,6 @@ internal fun CompactPill(text: String, icon: ImageVector, onClick: () -> Unit, h
     ) {
         Icon(icon, null, tint = th.onAccent, modifier = Modifier.size(15.dp))
         Spacer(Modifier.width(6.dp))
-        Text(text, style = FitType.label, color = th.onAccent, maxLines = 1, softWrap = false)
+        com.myfit.tracker.ui.components.FitText(text, FitType.label, th.onAccent)
     }
 }

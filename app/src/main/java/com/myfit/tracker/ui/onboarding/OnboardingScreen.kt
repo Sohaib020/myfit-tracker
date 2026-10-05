@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -604,10 +605,12 @@ private fun WeightPicker(display: Double, unit: WeightUnit, onChange: (Double) -
 @Composable
 private fun OptionRow(text: String, selected: Boolean, onClick: () -> Unit) {
     val th = LocalFitTheme.current
-    Glass(Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(20.dp), onClick = onClick) {
+    // grows with its text (long labels / big font sizes wrap onto 2 lines instead of running under the radio)
+    Glass(Modifier.fillMaxWidth().heightIn(min = 56.dp), shape = RoundedCornerShape(20.dp), onClick = onClick) {
         if (selected) Box(Modifier.matchParentSize().drawBehind { drawRect(th.accent.copy(alpha = 0.35f)) })
-        Row(Modifier.fillMaxSize().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(text, style = FitType.body, color = th.text, modifier = Modifier.weight(1f))
+            Spacer(Modifier.width(12.dp))
             Box(Modifier.size(20.dp).drawBehind {
                 drawCircle(if (selected) th.accentBright else th.textFaint, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
                 if (selected) drawCircle(th.accentBright, size.minDimension * 0.28f)
