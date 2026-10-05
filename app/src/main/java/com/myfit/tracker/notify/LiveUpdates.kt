@@ -82,34 +82,21 @@ object LiveUpdates {
         if (!canPost(c)) return
         channel(c)
         val nm = c.getSystemService(NotificationManager::class.java) ?: return
-        val n: Notification = if (Build.VERSION.SDK_INT >= 36) {
-            Notification.Builder(c, CHANNEL)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(title).setContentText(text)
-                .setContentIntent(intent(c, open))
-                .setOngoing(true).setOnlyAlertOnce(true).setCategory(category)
-                .apply {
-                    if (chrono != null) { setWhen(chrono); setShowWhen(true); setUsesChronometer(true); setChronometerCountDown(countDown) }
-                    else setShowWhen(false)
-                    if (chip != null) setShortCriticalText(chip)
-                    if (progress != null) setProgress(progress.second, progress.first.coerceIn(0, progress.second), false)
-                    setRequestPromotedOngoing(true)
-                }
-                .build()
-        } else {
-            NotificationCompat.Builder(c, CHANNEL)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(title).setContentText(text)
-                .setContentIntent(intent(c, open))
-                .setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setCategory(category)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .apply {
-                    if (chrono != null) { setWhen(chrono); setShowWhen(true); setUsesChronometer(true); setChronometerCountDown(countDown) }
-                    else setShowWhen(false)
-                    if (progress != null) setProgress(progress.second, progress.first.coerceIn(0, progress.second), false)
-                }
-                .build()
-        }
+        // NotificationCompat writes the Android 16 "promoted ongoing" request + chip text; older Android ignores them
+        val n: Notification = NotificationCompat.Builder(c, CHANNEL)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title).setContentText(text)
+            .setContentIntent(intent(c, open))
+            .setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setCategory(category)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .apply {
+                if (chrono != null) { setWhen(chrono); setShowWhen(true); setUsesChronometer(true); setChronometerCountDown(countDown) }
+                else setShowWhen(false)
+                if (chip != null) setShortCriticalText(chip)
+                if (progress != null) setProgress(progress.second, progress.first.coerceIn(0, progress.second), false)
+                setRequestPromotedOngoing(true)
+            }
+            .build()
         runCatching { nm.notify(id, n) }
     }
 

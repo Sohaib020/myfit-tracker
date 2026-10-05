@@ -58,7 +58,7 @@ class ModelDownloadWorker(ctx: Context, params: WorkerParameters) : CoroutineWor
             .setProgress(1000, (progress * 1000).toInt().coerceIn(0, 1000), progress <= 0f)
             .apply {
                 // Android 16 Live Update: download progress in the Now Bar / status chip
-                if (Build.VERSION.SDK_INT >= 36) addExtras(android.os.Bundle().apply { putBoolean(android.app.Notification.EXTRA_REQUEST_PROMOTED_ONGOING, true) })
+                setRequestPromotedOngoing(true)
                 setShortCriticalText("${(progress * 100).toInt().coerceIn(0, 100)}%")
             }
             .build()
