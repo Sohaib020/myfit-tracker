@@ -39,13 +39,21 @@ import kotlinx.coroutines.withContext
 private val TRACK_DONE = Color(0xFFFFC83D)
 private val PIN = Color(0xFF4CC38A)
 
-/** Decoded map/cover art, kept small: at most a few bitmaps stay in memory. */
+/** Decoded map/cover art, capped at ~24 MB; [sample] 2 decodes at half size for thumbnails. */
 internal object MapArt {
-    private val cache = android.util.LruCache<String, ImageBitmap>(6)
-    suspend fun get(c: android.content.Context, path: String): ImageBitmap? {
-        cache.get(path)?.let { return it }
-        val b = withContext(Dispatchers.IO) { runCatching { c.assets.open(path).use { android.graphics.BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull() }
-        if (b != null) cache.put(path, b)
+    private val cache = object : android.util.LruCache<String, ImageBitmap>(24 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * 4
+    }
+    suspend fun get(c: android.content.Context, path: String, sample: Int = 1): ImageBitmap? {
+        val key = "$path@$sample"
+        cache.get(key)?.let { return it }
+        val b = withContext(Dispatchers.IO) {
+            runCatching {
+                val o = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+                c.assets.open(path).use { android.graphics.BitmapFactory.decodeStream(it, null, o) }!!.asImageBitmap()
+            }.getOrNull()
+        }
+        if (b != null) cache.put(key, b)
         return b
     }
 }

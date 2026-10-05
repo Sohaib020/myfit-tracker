@@ -162,9 +162,9 @@ val Journeys = listOf(
 )
 
 @Composable
-private fun rememberCover(j: Journey): ImageBitmap? {
+private fun rememberCover(j: Journey, sample: Int = 1): ImageBitmap? {
     val ctx = LocalContext.current
-    val a by produceState<ImageBitmap?>(null, j.id) { value = MapArt.get(ctx, "journey/${j.id}.webp") }
+    val a by produceState<ImageBitmap?>(null, j.id, sample) { value = MapArt.get(ctx, "journey/${j.id}.webp", sample) }
     return a
 }
 
@@ -219,7 +219,7 @@ fun JourneyHub(container: AppContainer, days: List<Day>, partner: Mascot, ver: I
 @Composable
 private fun JourneyCard(j: Journey, done: Boolean, active: Boolean, onClick: () -> Unit) {
     val tick = rememberTick()
-    val cover = rememberCover(j)
+    val cover = rememberCover(j, sample = 2)
     Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(24.dp))
         .background(Brush.verticalGradient(j.scene.sky + j.scene.hills))
         .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
