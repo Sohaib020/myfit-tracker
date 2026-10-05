@@ -309,6 +309,9 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                     }, Modifier.weight(1f), height = 44.dp)
                     com.myfit.tracker.ui.theme.GlassButton("Delete my data", { eraseAsk = true }, Modifier.weight(1f), height = 44.dp)
                 }
+                Spacer(Modifier.height(8.dp))
+                val navB = com.myfit.tracker.ui.nav.LocalNav.current
+                com.myfit.tracker.ui.theme.AccentButton("Backup & restore", { navB.push(com.myfit.tracker.ui.nav.Overlay.Backup) }, Modifier.fillMaxWidth(), icon = com.myfit.tracker.ui.theme.Duo.Cloud, height = 44.dp)
             }
         }
         if (settings.devMode) item {

@@ -362,6 +362,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.PlanBuilder -> com.myfit.tracker.ui.train.PlanBuilderScreen(container)
                         Overlay.TrainProgress -> com.myfit.tracker.ui.train.TrainProgressScreen(container)
                         Overlay.WeeklyReport -> com.myfit.tracker.ui.report.WeeklyReportScreen(container)
+                        Overlay.Backup -> com.myfit.tracker.ui.settings.BackupScreen(container)
                         is Overlay.PickExercises -> com.myfit.tracker.ui.train.PickExercisesScreen(container, o.templateId, o.workoutId)
                         is Overlay.ProgramDetail -> com.myfit.tracker.ui.programs.ProgramDetailScreen(container, o.id)
                         Overlay.Deen -> com.myfit.tracker.ui.deen.DeenScreen(container)
