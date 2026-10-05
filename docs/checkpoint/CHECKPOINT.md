@@ -118,3 +118,18 @@ Agent briefs used: docs/checkpoint/agent_common.md and the prompts (summarised b
 - Icons v1: appicon-assets branch has 12 PNGs; sent comparison (pulse_b, glassheart_a, monogram_b, runner_a, summit_b, flameleaf_b) — waiting for user pick; plan: re-render chosen one at 1024 with "symbol fills canvas, no inner tile" then adaptive icon fg/bg.
 - R10-4 ✅ journeys build-133 (covers picked: angkor_a arafat_b camino_a canyon_b greatwall_a inca_b k2_a kkh_a lahore_b london_b migration_a paris_a; MapArt byte LRU 24 MB + sample=2 thumbs). Icons: appicon-run triggered ~01:00 UTC. Earlier note: journeys code done build-129 (ui/arena/Journeys.kt: 12 journeys × 4 themes, JourneyCard covers, JourneySheet with stop facts, RouteMap generalised from ChallengeMap, MapArt LRU by path). Art: journeyart.yml run 37236975654 → branch journeyart-assets (journey/<id>_a|_b.webp + sheet.jpg) → pick best → app/src/main/assets/journey/<id>.webp. Then trigger appicon-run (tools/appicon, 6 concepts ×2) → send sheet to user. Audit done (agent report) + Launch Readiness doc https://claude.ai/code/artifact/4f842166-5be6-4dd9-a211-4f5701653142 (audit fixes await user approval).
 - Next (old): R10-4 journeys revamp + 6 icon concepts → R10-5 audit report, launch-risk research, beta plan, beta-tester review.
+
+## Round 11 (5 Oct 15:49 PKT) — decisions & plan (NO release until all phases done; private compile check per phase)
+Decisions: compile-check per phase · workout AI = hybrid (rules planner + optional LLM tweak) · AI keys → Cloudflare Worker proxy (Firebase ID-token check, per-user rate limit) · Now Bar live notifs: gym workout, rest timer, stopwatch, fasting + downloads · set fields: weight+reps, set type, RPE, per-exercise notes · progress = honest metrics (e1RM trend, volume/muscle, PRs, muscle map, calories; week/month/6mo) · backup = file + Google Drive · user HAS a Galaxy Watch → build Wear OS tile.
+Screenshot bugs: Train "Gym workout" wraps per letter; Settings "Download page" wraps; Home Pip card clips "Chat with Pip"; Arena leaderboard header squeezed by chips; onboarding activity row text under radio; DOB wheel highlight misaligned/overflow; Settings Privacy text wrong.
+Phases:
+1 ☐ Audit fixes (doc table #1–23 except #16; #11 R8 → phase 10)
+2 ☐ Launch risks (Play flavor w/o updater, targetSdk 36, CF worker proxy, HC minimal perms + privacy policy page, Firestore throttle, model mirror, AdMob placement + UMP, encrypted keys + delete-all, HR wellness label, exact alarms)
+3 ☐ Design: Mint default (dark), opaque mode API≤32 (dock glass anims kept, dock bg opaque, remove glass/blur settings there), responsive system (tall/wide/foldable/large fold) + fix screenshot glitches
+4 ☐ Onboarding: calorie target wording, DOB wheel redesign, Health Connect page (ref Hevy) then separate permission pages; OnboardingVersion bump
+5 ☐ Cleanups: remove Games tab; buddies (non-Pip) as download; Today = single calorie detail; offline AI RAM gate (<6 GB blocked + clear message)
+6 ☐ Train rebuild: workouts-first UX, custom days (multi-muscle), AI day/week/month planner by goal, live session (per-exercise timer, rest timer, compare last time, calories/effects), progress charts, Create Exercise (Hevy ref) + equipment picker with 3D renders (FLUX)
+7 ☐ Social: unique username + UID, search/add by either
+8 ☐ Live notifications (Android 16 Live Updates / Samsung Now Bar)
+9 ☐ First-week checklist, widgets (water/steps), Sunday report + share card, backup file+Drive, Pakistani meal plans (household units), Wear OS tile
+10 ☐ R8/minify + regression + single release
