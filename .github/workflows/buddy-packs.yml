@@ -1,0 +1,32 @@
+name: Buddy packs
+# Zips each Arena buddy's animation clips (assets/buddy/<id>, everything except the portrait) and publishes them
+# to the GitHub release "buddies-v1". The app downloads a pack only when you pick that buddy.
+# Push to branch buddypacks-run to start (reads the assets from main).
+on:
+  push:
+    branches: [ buddypacks-run ]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - name: Zip packs
+        run: |
+          mkdir -p out
+          cd app/src/main/assets/buddy
+          for d in */; do
+            id="${d%/}"
+            (cd "$id" && zip -qr "../../../../../../out/$id.zip" . -x portrait.webp)
+          done
+          cd -; ls -l out
+      - name: Publish release buddies-v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view buddies-v1 -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create buddies-v1 -R "$GITHUB_REPOSITORY" --title "Buddy packs" --notes "Animation packs for the Arena buddies — downloaded on demand by the app." --latest=false
+          gh release upload buddies-v1 -R "$GITHUB_REPOSITORY" out/*.zip --clobber
