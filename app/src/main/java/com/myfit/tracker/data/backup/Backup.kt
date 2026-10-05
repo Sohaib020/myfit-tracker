@@ -58,15 +58,17 @@ object Backup {
 
     /** Reads only the manifest (to show what a backup is before restoring). */
     fun peek(input: InputStream): Info? = runCatching {
+        var info: Info? = null
         ZipInputStream(input).use { z ->
-            while (true) {
-                val e = z.nextEntry ?: return@use null
+            while (info == null) {
+                val e = z.nextEntry ?: break
                 if (e.name == "manifest.json") {
                     val o = JSONObject(z.readBytes().decodeToString())
-                    return@use Info(o.getLong("createdAt"), o.optString("app"), o.optInt("db"), 0)
+                    info = Info(o.getLong("createdAt"), o.optString("app"), o.optInt("db"), 0)
                 }
             }
         }
+        info
     }.getOrNull()
 
     /**
