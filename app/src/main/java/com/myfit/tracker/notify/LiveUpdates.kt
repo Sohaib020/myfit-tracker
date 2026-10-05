@@ -145,7 +145,7 @@ object LiveUpdates {
         scope.launch {
             val today = com.myfit.tracker.domain.Clock.today()
             combine(container.logRepo.day(today), container.healthRepo.day(today)) { d, h -> d.water.sumOf { it.amountMl } to (h.daily?.steps ?: h.phoneSteps) }
-                .distinctUntilChanged().collectLatest { delay(800); com.myfit.tracker.widget.Widgets.refresh(app) }
+                .distinctUntilChanged().collectLatest { delay(800); com.myfit.tracker.widget.Widgets.refresh(app); WearSync.push(app) }
         }
 
         // ---- fasting

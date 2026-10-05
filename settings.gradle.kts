@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "MyFitTracker"
 include(":app")
+include(":wear")
