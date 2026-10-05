@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">MyFit Tracker</string>
-    <string name="widget_water_desc">Today's water with quick +250 / +500 buttons</string>
-    <string name="widget_steps_desc">Today's steps towards your goal</string>
+    <string name="widget_water_desc">Today’s water with quick +250 / +500 buttons</string>
+    <string name="widget_steps_desc">Today’s steps towards your goal</string>
 </resources>
