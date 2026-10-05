@@ -230,6 +230,7 @@ private val tabs = listOf(
 @Composable
 private fun MainShell(container: AppContainer, s: AppSettings) {
     com.myfit.tracker.domain.EnergyUnit.label = s.units.energy.label
+    com.myfit.tracker.domain.ClockFmt.use24 = s.clock24
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var sheet by remember { mutableStateOf<Sheet?>(null) }
     var lastSheet by remember { mutableStateOf<Sheet?>(null) }

@@ -330,7 +330,7 @@ private fun WatchSleepCard(sleeps: List<com.myfit.tracker.data.db.HcSleep>) {
 private fun SessionsCard(sessions: List<HcSession>) {
     val th = LocalFitTheme.current
     val u = LocalSettings.current.units
-    val fmt = DateTimeFormatter.ofPattern("EEE d MMM · HH:mm", Locale.US)
+    val fmt = com.myfit.tracker.domain.ClockFmt.f("EEE d MMM · ")
     GlassCard {
         CardHeader(Duo.DirectionsRun, "Detected activities · 30 days", th.accentBright)
         Spacer(Modifier.height(10.dp))

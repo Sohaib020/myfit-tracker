@@ -112,7 +112,7 @@ fun MoodCheckInForm(container: AppContainer, onDone: () -> Unit) {
 }
 
 private val dayFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault())
-private val timeFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM · HH:mm", Locale.getDefault())
+private val timeFmt: DateTimeFormatter get() = com.myfit.tracker.domain.ClockFmt.f("EEE d MMM · ")
 
 /** Today's check-in summary + button. */
 @Composable

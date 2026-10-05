@@ -44,7 +44,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val dayFmt = DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.US)
-private val timeFmt = DateTimeFormatter.ofPattern("HH:mm", Locale.US)
+private val timeFmt get() = com.myfit.tracker.domain.ClockFmt.f()
 
 /** Date + time chips. Defaults to "now"; tap either to back-date an entry. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,7 +82,7 @@ fun DateTimeRow(label: String, epochMs: Long, onChange: (Long) -> Unit, modifier
         ) { DatePicker(state) }
     }
     if (showTime) {
-        val state = rememberTimePickerState(zdt.hour, zdt.minute, is24Hour = true)
+        val state = rememberTimePickerState(zdt.hour, zdt.minute, is24Hour = com.myfit.tracker.domain.ClockFmt.use24)
         AlertDialog(
             onDismissRequest = { showTime = false },
             confirmButton = {
@@ -102,9 +102,9 @@ fun DateTimeRow(label: String, epochMs: Long, onChange: (Long) -> Unit, modifier
 @Composable
 fun MinuteOfDayChip(minOfDay: Int, onChange: (Int) -> Unit) {
     var show by remember { mutableStateOf(false) }
-    Chip(Duo.Schedule, "%02d:%02d".format(Locale.US, minOfDay / 60, minOfDay % 60)) { show = true }
+    Chip(Duo.Schedule, com.myfit.tracker.domain.ClockFmt.time(minOfDay)) { show = true }
     if (show) {
-        val state = rememberTimePickerState(minOfDay / 60, minOfDay % 60, is24Hour = true)
+        val state = rememberTimePickerState(minOfDay / 60, minOfDay % 60, is24Hour = com.myfit.tracker.domain.ClockFmt.use24)
         AlertDialog(
             onDismissRequest = { show = false },
             confirmButton = { TextButton({ onChange(state.hour * 60 + state.minute); show = false }) { Text("OK") } },

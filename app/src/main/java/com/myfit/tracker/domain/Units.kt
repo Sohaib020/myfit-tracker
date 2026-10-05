@@ -88,13 +88,23 @@ object Fmt {
         return if (h > 0) "${h}h ${m.toString().padStart(2, '0')}m" else "${m}m"
     }
 
-    fun clock(minOfDay: Int): String {
-        val h = ((minOfDay / 60) % 24 + 24) % 24; val m = ((minOfDay % 60) + 60) % 60
-        return "%02d:%02d".format(Locale.US, h, m)
-    }
+    fun clock(minOfDay: Int): String = ClockFmt.time(minOfDay)
 }
 
 /** Display unit for food/activity energy: "Cal" (default) or "kcal" — same number, set in Settings → Units. */
 object EnergyUnit {
     @Volatile var label: String = "Cal"
+}
+
+
+/** 12-hour (default) or 24-hour clock everywhere times are shown (Settings → Units → Clock). */
+object ClockFmt {
+    @Volatile var use24: Boolean = false
+    fun time(minOfDay: Int): String {
+        val h = ((minOfDay / 60) % 24 + 24) % 24; val m = ((minOfDay % 60) + 60) % 60
+        return if (use24) "%02d:%02d".format(Locale.US, h, m) else "%d:%02d %s".format(Locale.US, if (h % 12 == 0) 12 else h % 12, m, if (h < 12) "AM" else "PM")
+    }
+    /** A formatter: [prefix] (date part, may be empty) followed by the time in the chosen clock. */
+    fun f(prefix: String = ""): java.time.format.DateTimeFormatter =
+        java.time.format.DateTimeFormatter.ofPattern(prefix + if (use24) "HH:mm" else "h:mm a", Locale.US)
 }
