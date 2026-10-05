@@ -134,7 +134,7 @@ fun BackupScreen(container: AppContainer) {
                     Text("Backup file", style = FitType.section, color = th.text)
                     Caption("One .zip you can keep in Files, send to your PC or another phone.")
                     Spacer(Modifier.height(12.dp))
-                    AccentButton("Save backup file", { if (busy == null) save.launch("myfit-backup-${java.time.LocalDate.now()}.zip") }, Modifier.fillMaxWidth(), icon = Duo.Save, height = 48.dp)
+                    AccentButton("Save to a file", { if (busy == null) save.launch("myfit-backup-${java.time.LocalDate.now()}.zip") }, Modifier.fillMaxWidth(), icon = Duo.Save, height = 48.dp)
                     Spacer(Modifier.height(8.dp))
                     GlassButton("Restore from file", { if (busy == null) open.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }, Modifier.fillMaxWidth(), icon = Duo.Unarchive, height = 48.dp)
                 }

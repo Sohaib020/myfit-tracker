@@ -132,7 +132,7 @@ Phases:
 7 ✅ (run 152) Social: unique @username (usernames/{name} transactional claim) + MyFit ID (6-char code) search; ID match = instant add, username match = friend request (users/{uid}/requests); FriendsFind.kt; firestore.rules updated — OWNER must re-publish rules
 8 ✅ (run 154) notify/LiveUpdates.kt: NotificationCompat.setRequestPromotedOngoing (core 1.17) + POST_PROMOTED_NOTIFICATIONS → Android 16 Live Updates / One UI 8 Now Bar: workout clock ↔ rest countdown, stopwatch (paused chip), fasting; model download; tap → Launch.open → screen
 9 ✅ (runs 156–162) FirstWeek.kt (Home checklist, 10 days); widget/Widgets.kt Glance water(+250/+500)+steps; domain/WeeklyReport + ui/report (share PNG) + SundayReportWorker (Sun ≥18:00); data/backup Backup.kt (zip, staged restore) + DriveBackup.kt (drive.appdata; OWNER: enable Drive API + add scope on OAuth consent screen); tools/mealplans/gen.py → assets/meal_plans.json (8 bands × 7 days) + MealPlansScreen; :wear module (tile + activity, Data Layer /myfit/today, WearSync from phone; CI copies out/MyFitWear.apk)
-10 ☐ R8/minify + regression + single release
+10 ✅ R8 minify+shrinkResources (proguard-rules.pro, res/raw/keep.xml) — emulator smoke passed on debug (API 33, all tabs) AND minified release (API 34); AdaptiveShotTest 280–840 dp passes (ButtonLabel: drop icon → 2 lines); play-bundle.yml (manual AAB); merged agent/r11 → main for the single release
 
 R11 notes: ALL round-11 work is on branch agent/r11 (builds there never publish a release). Merge to main only at phase 10.
 - Guava must stay (CameraX/WorkManager ListenableFuture) — audit was wrong about it.
