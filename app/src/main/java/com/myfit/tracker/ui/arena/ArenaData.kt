@@ -138,8 +138,6 @@ object ArenaPrefs {
     fun stopJourney(c: Context) = p(c).edit().remove("journey").remove("journey_start").apply()
     fun finished(c: Context): Set<String> = p(c).getStringSet("journeys_done", emptySet())!!
     fun markFinished(c: Context, id: String) = p(c).edit().putStringSet("journeys_done", finished(c) + id).apply()
-    fun gardenBest(c: Context) = p(c).getInt("garden_best", 0)
-    fun setGardenBest(c: Context, v: Int) = p(c).edit().putInt("garden_best", v).apply()
     fun partner(c: Context): Mascot = Mascot.entries.firstOrNull { it.id == p(c).getString("partner", "pip") } ?: Mascot.PIP
     fun setPartner(c: Context, m: Mascot) = p(c).edit().putString("partner", m.id).apply()
     fun raced(c: Context): Set<String> = p(c).getStringSet("raced", emptySet())!!

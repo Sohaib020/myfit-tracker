@@ -152,8 +152,6 @@ object ArenaProgress {
             Badge("journey", "Explorer", "Finish any journey", "🧭", journeys.isNotEmpty()),
             Badge("k2", "Summit", "Reach K2 Base Camp", "🏔️", "k2" in journeys),
             Badge("kkh", "Silk Road", "Walk the Karakoram Highway", "🛣️", "kkh" in journeys),
-            Badge("garden", "Green Thumb", "Grow all 10 flowers in Pip's Garden", "🌸", ids.any { it.startsWith("g:garden") }),
-            Badge("ghost", "Ghostbuster", "Beat your ghost 5 times", "👻", ids.count { it.startsWith("g:ghost") } >= 5),
             Badge("duel", "Champion", "Win a duel or team battle", "🏆", ids.any { it.startsWith("duel:") }),
             Badge("lv5", "Rising Star", "Reach level 5", "🌟", lv >= 5),
             Badge("lv10", "Elite", "Reach level 10", "💎", lv >= 10),

@@ -385,7 +385,7 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
         DashCard.NUTRITION -> if (small) NutritionSmall(container) { goTab(Tabs.FOOD) } else FoodHydrationCard(state, container, open) { goTab(Tabs.FOOD) }
         DashCard.SOCIAL -> if (small) CompeteSmall(container) { goTab(Tabs.ARENA) } else com.myfit.tracker.ui.social.FriendsHero(container) { goTab(Tabs.ARENA) }
         DashCard.HYDRATION -> HydrationTile(state, container, open, wide = !small)
-        DashCard.STEPS -> StepsTile(state) { nav.push(Overlay.Activity) }
+        DashCard.STEPS -> StepsTile(state) { nav.push(Overlay.Today) }   // Today is the one detail view for today's steps & calories
         DashCard.RECOVERY -> SleepTile(state) { open(Sheet.Sleep()) }
         DashCard.CHECKIN -> CheckInTile(state) { open(Sheet.CheckIn()) }
         DashCard.BODY -> BodyTile(state) { nav.push(Overlay.Body) }

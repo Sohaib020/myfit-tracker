@@ -105,7 +105,7 @@ object DeviceCheck {
         val free = runCatching { StatFs(ctx.filesDir.absolutePath).availableBytes }.getOrDefault(0L)
         val (tier, reason) = when {
             !arm64 -> Tier.UNSUPPORTED to "This phone's processor isn't supported (needs 64-bit ARM)."
-            ram < spec.minRamBytes -> Tier.UNSUPPORTED to "Needs a phone with about 6 GB of RAM or more (this one has ${gb(ram)})."
+            ram < spec.minRamBytes -> Tier.UNSUPPORTED to "Your phone isn't compatible with the offline brain: it needs at least 6 GB of RAM and this phone has ${gb(ram)}. Online AI still works."
             ram < spec.minRamBytes + 1_800_000_000L -> Tier.OK to "Works, but answers may be slower on ${gb(ram)} of RAM."
             else -> Tier.RECOMMENDED to null
         }

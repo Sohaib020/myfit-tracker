@@ -31,7 +31,7 @@ import kotlinx.coroutines.withContext
 enum class CastClip(val file: String, val pip: String) { CHEER("cheer", "cheer"), RUN("run", "jog"), SAD("sad", "sad"), WAVE("wave", "wave") }
 
 private fun portraitPath(m: Mascot) = if (m == Mascot.PIP) "pip/look/look_06_06.webp" else "buddy/${m.id}/portrait.webp"
-// the sharp 448 px buddy packs cover cheer and wave; the small running loop stays in assets/arena
+// the buddy packs (downloaded on demand) cover cheer and wave
 private fun clipPath(m: Mascot, c: CastClip) = when {
     m == Mascot.PIP -> "pip/${c.pip}.webp"
     c == CastClip.CHEER -> "buddy/${m.id}/celebrate.webp"
@@ -72,10 +72,11 @@ fun CastAnim(m: Mascot, clip: CastClip, size: Dp, modifier: Modifier = Modifier,
     if (Build.VERSION.SDK_INT < 28) { CastImage(m, size, modifier); return }
     val ctx = LocalContext.current
     val path = clipPath(m, clip)
-    val ok = remember(path) { runCatching { ctx.assets.openFd(path).close(); true }.getOrElse { runCatching { ctx.assets.open(path).close(); true }.getOrDefault(false) } }
+    // non-Pip buddies' clips live in their downloaded pack; without it, show the portrait
+    val ok = remember(path) { com.myfit.tracker.ui.pip.Buddy.hasClip(ctx, path) }
     if (!ok) { CastImage(m, size, modifier); return }
     val drawable by produceState<android.graphics.drawable.Drawable?>(null, path) {
-        value = withContext(Dispatchers.IO) { runCatching { ImageDecoder.decodeDrawable(ImageDecoder.createSource(ctx.assets, path)) }.getOrNull() }
+        value = withContext(Dispatchers.IO) { runCatching { ImageDecoder.decodeDrawable(com.myfit.tracker.ui.pip.Buddy.sourceFor(ctx, path)) }.getOrNull() }
     }
     val d = drawable
     if (d == null) { CastImage(m, size, modifier); return }

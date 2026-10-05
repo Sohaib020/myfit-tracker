@@ -66,7 +66,7 @@ private val GOLD = Color(0xFFFFC83D)
 /** One-shot: which Arena tab to open next time (e.g. Friends after accepting an invite). */
 object ArenaLaunch { var tab: Int? = null }
 
-/** Arena: levels & stars, scenic challenge tracks with checkpoints, journeys, battles & leaderboards, games, rewards, friends. */
+/** Arena: levels & stars, challenge maps with checkpoints, journeys, battles & leaderboards, rewards. */
 @Composable
 fun ArenaScreen(container: AppContainer, bottomPad: Int) {
     val th = LocalFitTheme.current
@@ -119,12 +119,12 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                                 StarPill(total)
                             }
                             Spacer(Modifier.height(10.dp))
-                            LevelHero(lvl, partner) { tab = 4 }
+                            LevelHero(lvl, partner) { tab = 3 }
                         }
                     }
                     item(key = "tabs") {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            val tabs = listOf("Challenges", "Journeys", "Battles", "Games", "Rewards")
+                            val tabs = listOf("Challenges", "Journeys", "Battles", "Rewards")
                             items(tabs.size) { i -> GlassChip(tabs[i], tab == i, { tab = i }) }
                         }
                     }
@@ -142,7 +142,6 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                         }
                         1 -> item(key = "journeys") { JourneyHub(container, d, partner, ver, { ver++ }) { openJourney = it } }
                         2 -> { item { DuelsPane(container, award) { nav.push(com.myfit.tracker.ui.nav.Overlay.Social) } }; item { Leaderboard(container, lvl, partner) } }
-                        3 -> { item { GardenGame(d, award) }; item { GhostRace(d, partner, award) } }
                         else -> item { RewardsPane(lvl, d, partner, ver) { partner = it; ArenaPrefs.setPartner(ctx, it) } }
                     }
                 }
@@ -458,108 +457,7 @@ private fun Leaderboard(container: AppContainer, me: Level, partner: Mascot) {
     }
 }
 
-// ------------------------------------------------------------------ games
 
-@Composable
-private fun GardenGame(days: List<Day>, award: (String, Int, String) -> Unit) {
-    val th = LocalFitTheme.current
-    val ctx = LocalContext.current
-    val today = Clock.today()
-    val steps = days.firstOrNull { it.date == today }?.steps ?: 0L
-    val plants = (steps / 1000).toInt().coerceAtMost(10)
-    LaunchedEffect(plants) {
-        if (plants > ArenaPrefs.gardenBest(ctx)) ArenaPrefs.setGardenBest(ctx, plants)
-        if (plants >= 10) award("g:garden:$today", 2, "Grew all 10 flowers in Pip's Garden")
-    }
-    val grow by animateFloatAsState(((steps % 1000) / 1000f), tween(900), label = "grow")
-    val inf = rememberInfiniteTransition(label = "garden")
-    val sway by inf.animateFloat(-1f, 1f, infiniteRepeatable(tween(2200), RepeatMode.Reverse), label = "sway")
-    GlassCard(padding = 14.dp) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            CastImage(Mascot.PIP, 58.dp)
-            Spacer(Modifier.width(8.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Pip's Garden", style = FitType.section, color = th.text)
-                Caption("Every 1,000 steps today grows a flower. Fill all 10 beds for 2 ⭐.")
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        Canvas(Modifier.fillMaxWidth().height(130.dp).clip(RoundedCornerShape(18.dp))) {
-            drawRect(Brush.verticalGradient(listOf(Color(0xFFBDE8FF), Color(0xFFEAF8FF))))
-            val n = 10; val w = size.width / n; val ground = size.height * 0.78f
-            drawRect(Brush.verticalGradient(listOf(Color(0xFF7A5434), Color(0xFF5A3C24)), ground, size.height), Offset(0f, ground), Size(size.width, size.height - ground))
-            drawRect(Color(0xFF5DBB63), Offset(0f, ground - 4.dp.toPx()), Size(size.width, 6.dp.toPx()))
-            val petals = listOf(Color(0xFFFF8FAB), Color(0xFFFFD166), Color(0xFF9B8CFF), Color(0xFF6FD3FF), Color(0xFFFF9F68))
-            for (i in 0 until n) {
-                val x = w * i + w / 2
-                val g = when { i < plants -> 1f; i == plants -> grow; else -> 0f }
-                if (g <= 0f) { drawCircle(Color(0xFF3E2A19), 3.dp.toPx(), Offset(x, ground + 6.dp.toPx())); continue }
-                val top = ground - size.height * 0.55f * g
-                val tx = x + sway * 3.dp.toPx() * g
-                drawLine(Color(0xFF3DAA5C), Offset(x, ground), Offset(tx, top), 3.dp.toPx(), StrokeCap.Round)
-                drawOval(Color(0xFF4CC46E), Offset(x - w * 0.02f, ground - (ground - top) * 0.45f), Size(w * 0.34f, w * 0.18f))
-                if (g >= 1f) {
-                    val c = petals[i % petals.size]
-                    for (k in 0 until 6) {
-                        val a = Math.toRadians(k * 60.0 + sway * 10)
-                        drawCircle(c, w * 0.15f, Offset(tx + (w * 0.17f * cos(a)).toFloat(), top + (w * 0.17f * sin(a)).toFloat()))
-                    }
-                    drawCircle(Color(0xFFFFE08A), w * 0.12f, Offset(tx, top))
-                } else drawCircle(Color(0xFF4CC46E), w * 0.08f, Offset(tx, top))
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Caption("${Fmt.int(steps.toDouble())} steps · $plants/10 flowers · best ever ${ArenaPrefs.gardenBest(ctx)}/10")
-    }
-}
-
-@Composable
-private fun GhostRace(days: List<Day>, partner: Mascot, award: (String, Int, String) -> Unit) {
-    val th = LocalFitTheme.current
-    val today = Clock.today()
-    val mine = days.firstOrNull { it.date == today }?.steps ?: 0L
-    val past = days.filter { it.date.isBefore(today) && !it.date.isBefore(today.minusDays(7)) }
-    val ghost = if (past.isEmpty()) 5000.0 else past.map { it.steps }.average().coerceAtLeast(2000.0)
-    val now = java.time.LocalTime.now()
-    val dayFrac = ((now.hour * 60 + now.minute) / 1440f).coerceIn(0.05f, 1f)
-    val ghostNow = ghost * dayFrac
-    LaunchedEffect(mine >= ghost) { if (mine >= ghost) award("g:ghost:$today", 1, "Beat your ghost") }
-    val finish = (maxOf(ghost, mine.toDouble()) * 1.05).coerceAtLeast(1000.0)
-    val me by animateFloatAsState((mine / finish).toFloat(), tween(1200), label = "me")
-    val gh by animateFloatAsState((ghostNow / finish).toFloat(), tween(1200), label = "ghost")
-    val inf = rememberInfiniteTransition(label = "ghost")
-    val float by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(1600), RepeatMode.Reverse), label = "float")
-    GlassCard(padding = 14.dp) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            CastImage(Mascot.SHAHEEN, 58.dp)
-            Spacer(Modifier.width(8.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Ghost Race", style = FitType.section, color = th.text)
-                Caption("Race your own 7-day average. Beat the ghost's full day for 1 ⭐.")
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        BoxWithConstraints(Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(18.dp)).background(Brush.verticalGradient(listOf(Color(0xFF2B2F5C), Color(0xFF4B3F7A))))) {
-            val usable = maxWidth - 60.dp
-            Canvas(Modifier.matchParentSize()) {
-                for (l in 0..1) {
-                    val y = size.height * (0.32f + 0.4f * l)
-                    drawLine(Color.White.copy(alpha = 0.12f), Offset(0f, y), Offset(size.width, y), size.height * 0.26f, StrokeCap.Round)
-                    drawLine(Color.White.copy(alpha = 0.4f), Offset(0f, y), Offset(size.width, y), 2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(18f, 16f)))
-                }
-                for (k in 0 until 8) drawRect(if (k % 2 == 0) Color.White else Color.Black, Offset(size.width - 10.dp.toPx(), k * size.height / 8), Size(10.dp.toPx(), size.height / 8))
-                // stars in the night sky
-                val rnd = Random(7); repeat(14) { drawCircle(Color.White.copy(alpha = 0.5f), 1.5f, Offset(rnd.nextFloat() * size.width, rnd.nextFloat() * size.height * 0.15f)) }
-            }
-            Box(Modifier.offset(x = usable * me.coerceIn(0f, 1f), y = 0.dp)) { CastAnim(partner, CastClip.RUN, 60.dp) }
-            Box(Modifier.offset(x = usable * gh.coerceIn(0f, 1f), y = 58.dp + (float * 4).dp).graphicsLayer { alpha = 0.55f }) { CastImage(partner, 56.dp, dim = true) }
-        }
-        Spacer(Modifier.height(6.dp))
-        val diff = mine - ghostNow
-        Text(if (diff >= 0) "You're ${Fmt.int(diff)} steps ahead of your ghost 🏁" else "Ghost leads by ${Fmt.int(-diff)} steps — catch it!", style = FitType.label, color = if (diff >= 0) th.success else th.warning)
-        Caption("You: ${Fmt.int(mine.toDouble())} · Ghost now: ${Fmt.int(ghostNow)} · Full-day ghost: ${Fmt.int(ghost)}")
-    }
-}
 
 // ------------------------------------------------------------------ rewards
 
