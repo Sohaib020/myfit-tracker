@@ -129,8 +129,8 @@ Phases:
 4 ✅ (run 143) Onboarding: calorie target wording, DOB wheel redesign, Health Connect page (ref Hevy) then separate permission pages; OnboardingVersion bump
 5 ✅ (run 144) Cleanups: remove Games tab; buddies (non-Pip) as download; Today = single calorie detail; offline AI RAM gate (<6 GB blocked + clear message)
 6 ✅ (runs 147–150) Train rebuild: domain/WorkoutPlanner (rules) + WorkoutAi (LLM tweak via AiRouter.text, catalog-key whitelist); ui/train/Builders.kt (Day Builder, Plan Builder → ProgramLib.saveCustom my_programs.json + ProgramEngine); Train home workouts-first (segments Workouts/Plans/Exercises, quick muscle chips, plan card, progress strip, My workout days); TrainProgress (week/month/6mo honest metrics); Gym Mode time-on-exercise, set timer, per-set deltas, sticky notes, equipment; Finish muscle map + vs last time; CreateExercise.kt (rows+sheets, equipment art at assets/equipment/<id>.webp — PENDING copy from branch equipment-assets when render run 37307267969 finishes)
-7 ☐ Social: unique username + UID, search/add by either
-8 ☐ Live notifications (Android 16 Live Updates / Samsung Now Bar)
+7 ✅ (run 152) Social: unique @username (usernames/{name} transactional claim) + MyFit ID (6-char code) search; ID match = instant add, username match = friend request (users/{uid}/requests); FriendsFind.kt; firestore.rules updated — OWNER must re-publish rules
+8 ✅ (run 154) notify/LiveUpdates.kt: NotificationCompat.setRequestPromotedOngoing (core 1.17) + POST_PROMOTED_NOTIFICATIONS → Android 16 Live Updates / One UI 8 Now Bar: workout clock ↔ rest countdown, stopwatch (paused chip), fasting; model download; tap → Launch.open → screen
 9 ☐ First-week checklist, widgets (water/steps), Sunday report + share card, backup file+Drive, Pakistani meal plans (household units), Wear OS tile
 10 ☐ R8/minify + regression + single release
 
