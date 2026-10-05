@@ -125,9 +125,9 @@ Screenshot bugs: Train "Gym workout" wraps per letter; Settings "Download page" 
 Phases:
 1 ✅ (branch agent/r11, CI run 139) Audit fixes (doc table #1–23 except #16; #11 R8 → phase 10)
 2 ✅ (run 140) Launch risks (Play flavor w/o updater, targetSdk 36, CF worker proxy, HC minimal perms + privacy policy page, Firestore throttle, model mirror, AdMob placement + UMP, encrypted keys + delete-all, HR wellness label, exact alarms)
-3 ☐ Design: Mint default (dark), opaque mode API≤32 (dock glass anims kept, dock bg opaque, remove glass/blur settings there), responsive system (tall/wide/foldable/large fold) + fix screenshot glitches
-4 ☐ Onboarding: calorie target wording, DOB wheel redesign, Health Connect page (ref Hevy) then separate permission pages; OnboardingVersion bump
-5 ☐ Cleanups: remove Games tab; buddies (non-Pip) as download; Today = single calorie detail; offline AI RAM gate (<6 GB blocked + clear message)
+3 ✅ (run 142) Design: Mint default (dark), opaque mode API≤32 (dock glass anims kept, dock bg opaque, remove glass/blur settings there), responsive system (tall/wide/foldable/large fold) + fix screenshot glitches
+4 ✅ (run 143) Onboarding: calorie target wording, DOB wheel redesign, Health Connect page (ref Hevy) then separate permission pages; OnboardingVersion bump
+5 ✅ (run 144) Cleanups: remove Games tab; buddies (non-Pip) as download; Today = single calorie detail; offline AI RAM gate (<6 GB blocked + clear message)
 6 ☐ Train rebuild: workouts-first UX, custom days (multi-muscle), AI day/week/month planner by goal, live session (per-exercise timer, rest timer, compare last time, calories/effects), progress charts, Create Exercise (Hevy ref) + equipment picker with 3D renders (FLUX)
 7 ☐ Social: unique username + UID, search/add by either
 8 ☐ Live notifications (Android 16 Live Updates / Samsung Now Bar)
