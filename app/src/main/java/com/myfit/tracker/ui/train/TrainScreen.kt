@@ -97,7 +97,7 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
 
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = bottomPad.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp + com.myfit.tracker.ui.components.LocalTopInset.current, bottom = bottomPad.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         if (!embedded) item {

@@ -1,5 +1,6 @@
 package com.myfit.tracker.ui
 
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import kotlinx.coroutines.flow.first
 import com.myfit.tracker.ui.theme.Duo
 
@@ -242,11 +243,18 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
 
     BackHandler(enabled = top != null) { nav.pop() }
 
-    CompositionLocalProvider(LocalNav provides nav) {
+    val chromeState = remember { com.myfit.tracker.ui.components.ChromeState() }
+    val densityC = androidx.compose.ui.platform.LocalDensity.current
+    val statusTop = androidx.compose.foundation.layout.WindowInsets.statusBars.getTop(densityC)
+    LaunchedEffect(statusTop) { chromeState.baseLimit = statusTop + with(densityC) { 76.dp.toPx() }; if (chromeState.limit < chromeState.baseLimit) chromeState.limit = chromeState.baseLimit }
+    LaunchedEffect(tab) { chromeState.show() }
+    LaunchedEffect(top) { if (top == null) chromeState.show() }
+    CompositionLocalProvider(LocalNav provides nav, com.myfit.tracker.ui.components.LocalChrome provides chromeState) {
         val win = com.myfit.tracker.ui.components.LocalWindowInfo.current
         Box(Modifier.fillMaxSize()) {
           // wide screens (foldables, tablets): content sits in a readable centred column; the theme fills the screen
-          Box(Modifier.align(Alignment.TopCenter).then(win.column()).fillMaxSize()) {
+          Box(Modifier.align(Alignment.TopCenter).then(win.column()).fillMaxSize()
+              .nestedScroll(chromeState.connection)) {
             AnimatedContent(
                 targetState = tab,
                 transitionSpec = {
@@ -286,7 +294,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             // quick add: floating glass orb, top-right on every tab
             AnimatedVisibility(
                 chrome,
-                modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 10.dp, end = 16.dp),
+                modifier = Modifier.align(Alignment.TopEnd).graphicsLayer { translationY = chromeState.offset }.statusBarsPadding().padding(top = 10.dp, end = 16.dp),
                 enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
             ) {
                 androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
@@ -300,7 +308,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             // Me: profile, body & targets — top-left on every tab
             AnimatedVisibility(
                 chrome,
-                modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(top = 10.dp, start = 16.dp),
+                modifier = Modifier.align(Alignment.TopStart).graphicsLayer { translationY = chromeState.offset }.statusBarsPadding().padding(top = 10.dp, start = 16.dp),
                 enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
             ) {
                 Box(Modifier.tourTarget("me")) { MePill(dash.profile?.name ?: "", com.myfit.tracker.ui.social.rememberAccountPhoto(container), com.myfit.tracker.update.rememberUpdateProgress()) { nav.push(Overlay.Me) } }
@@ -513,3 +521,4 @@ private fun MePill(name: String, photo: androidx.compose.ui.graphics.ImageBitmap
         }
     }
 }
+

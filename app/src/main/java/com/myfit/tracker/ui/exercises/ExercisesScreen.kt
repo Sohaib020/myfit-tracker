@@ -166,7 +166,7 @@ fun ExerciseBrowser(
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = (bottomPad + if (pickMode) 80 else 0).dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp + com.myfit.tracker.ui.components.LocalTopInset.current, bottom = (bottomPad + if (pickMode) 80 else 0).dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
