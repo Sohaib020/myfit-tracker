@@ -29,18 +29,6 @@ import kotlinx.coroutines.launch
 
 private fun mb(b: Long) = "%.0f MB".format(b / 1_048_576.0)
 
-/** Banner shown on top of the app when a new build is available / downloading / ready to install. */
-@Composable
-fun UpdateBanner(modifier: Modifier = Modifier) {
-    val ctx = LocalContext.current
-    val s by AppUpdater.state.collectAsState()
-    var hidden by remember { mutableIntStateOf(AppUpdater.dismissed(ctx)) }
-    val build = when (val x = s) { is AppUpdater.State.Available -> x.r.build; is AppUpdater.State.Ready -> x.r.build; is AppUpdater.State.Downloading -> x.r.build; else -> 0 }
-    AnimatedVisibility(build > 0 && build != hidden, modifier, enter = fadeIn() + slideInVertically { -it }, exit = fadeOut() + slideOutVertically { -it }) {
-        UpdateCard(s, compact = true) { AppUpdater.dismiss(ctx, build); hidden = build }
-    }
-}
-
 @Composable
 private fun UpdateCard(s: AppUpdater.State, compact: Boolean, onLater: (() -> Unit)? = null) {
     val th = LocalFitTheme.current

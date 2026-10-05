@@ -83,7 +83,7 @@ fun ExerciseImage(ex: Exercise, modifier: Modifier = Modifier, animate: Boolean 
     }
     var frame by remember(key) { mutableIntStateOf(0) }
     if (animate && ex.imageFrames > 1) {
-        LaunchedEffect(key) { while (true) { delay(periodMs); frame = 1 - frame } }
+        LaunchedEffect(key) { while (true) { androidx.compose.runtime.withFrameMillis { }; delay(periodMs); frame = 1 - frame } }
     }
     val f0 by produceState<ImageBitmap?>(null, key) { value = ExerciseImages.load(ctx, key, 0) }
     val f1 by produceState<ImageBitmap?>(null, key, animate) { if (animate && ex.imageFrames > 1) value = ExerciseImages.load(ctx, key, 1) }

@@ -17,8 +17,26 @@ object ThemeShaders {
 
     private var app: Context? = null
     private var common: String? = null
-    private val cache = HashMap<String, Pair<Any, ShaderBrush>>()   // id -> (RuntimeShader, brush)
-    private val failed = mutableSetOf<String>()
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, Pair<Any, ShaderBrush>>()   // id -> (RuntimeShader, brush)
+    private val failed = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+
+    /** Reads + compiles a theme's shader off the main thread so its first frame doesn't stall. */
+    fun prewarm(themeId: String) {
+        if (!supported || themeId in failed || cache.containsKey(themeId)) return
+        Thread { runCatching { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) compile(themeId) } }.apply { isDaemon = true; priority = Thread.MIN_PRIORITY }.start()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    @Synchronized
+    private fun compile(themeId: String): Pair<Any, ShaderBrush>? {
+        cache[themeId]?.let { return it }
+        val ctx = app ?: return null
+        val base = common ?: ctx.assets.open("themes/common.agsl").bufferedReader().use { it.readText() }.also { common = it }
+        val body = runCatching { ctx.assets.open("themes/$themeId.agsl").bufferedReader().use { it.readText() } }.getOrNull()
+            ?: run { failed += themeId; return null }
+        val rs = RuntimeShader(base + "\n" + body)
+        return Pair<Any, ShaderBrush>(rs, ShaderBrush(rs)).also { cache[themeId] = it }
+    }
 
     fun init(context: Context) { app = context.applicationContext }
 
@@ -30,14 +48,7 @@ object ThemeShaders {
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun drawImpl(scope: DrawScope, themeId: String, t: Float, w: Float, h: Float): Boolean {
-        val ctx = app ?: return false
-        val entry = cache[themeId] ?: run {
-            val base = common ?: ctx.assets.open("themes/common.agsl").bufferedReader().use { it.readText() }.also { common = it }
-            val body = runCatching { ctx.assets.open("themes/$themeId.agsl").bufferedReader().use { it.readText() } }.getOrNull()
-                ?: run { failed += themeId; return false }
-            val rs = RuntimeShader(base + "\n" + body)
-            Pair<Any, ShaderBrush>(rs, ShaderBrush(rs)).also { cache[themeId] = it }
-        }
+        val entry = cache[themeId] ?: compile(themeId) ?: return false
         val s = entry.first as RuntimeShader
         s.setFloatUniform("res", w, h)
         s.setFloatUniform("t", t % 3600f)

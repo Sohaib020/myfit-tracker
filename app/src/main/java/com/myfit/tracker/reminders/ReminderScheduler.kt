@@ -48,8 +48,8 @@ object ReminderScheduler {
 
     // prefs keys
     const val K_QUIET_ON = "quiet_on"
-    const val K_QUIET_START = "quiet_start"    // minute of day, default 22:30
-    const val K_QUIET_END = "quiet_end"        // minute of day, default 07:00
+    const val K_QUIET_START = "quiet_start"    // minute of day, default 22:00
+    const val K_QUIET_END = "quiet_end"        // minute of day, default 08:00
     const val K_WATER_SKIP_GOAL = "water_skip_goal"
     const val K_SNOOZE_MIN = "snooze_min"
     const val K_MED_AUTO = "med_auto"          // remind for medicine times set in Medicines
@@ -58,8 +58,8 @@ object ReminderScheduler {
     private const val K_SCHEDULED = "scheduled_ids"
     private const val K_EXTRA_COUNT = "extra_count"
     private const val K_FAST_AT = "fast_alarm_at"
-    const val DEFAULT_QUIET_START = 22 * 60 + 30
-    const val DEFAULT_QUIET_END = 7 * 60
+    const val DEFAULT_QUIET_START = 22 * 60
+    const val DEFAULT_QUIET_END = 8 * 60
 
     // intent plumbing
     const val ACTION_FIRE = "com.myfit.tracker.reminders.FIRE"
@@ -248,10 +248,16 @@ object ReminderScheduler {
             if (startD != null && d.isBefore(startD)) continue
             if (endD != null && d.isAfter(endD)) break
             if ((r.repeatDaysMask and (1 shl (d.dayOfWeek.value - 1))) == 0) continue
+            val single = times.size == 1
             for (t in times) {
-                val fireDay = d.plusDays((t / 1440).toLong())
-                val m = t % 1440
-                if (r.respectQuietHours && q.contains(m)) continue
+                var fireDay = d.plusDays((t / 1440).toLong())
+                var m = t % 1440
+                if (r.respectQuietHours && q.contains(m)) {
+                    // interval reminders just skip the quiet window; a once-a-day reminder moves to when it ends
+                    if (!single) continue
+                    if (q.start > q.end && m >= q.start) fireDay = fireDay.plusDays(1)
+                    m = q.end
+                }
                 val at = fireDay.atTime(m / 60, m % 60).atZone(zone).toInstant().toEpochMilli()
                 if (at > afterMs) return at
             }
@@ -375,16 +381,44 @@ object ReminderScheduler {
         else disarm(app, am, RC_FAST)
 
         // ---- Shariah & Health: adhan and suhoor alerts (next 2 days)
-        val deen = runCatching { com.myfit.tracker.ui.deen.DeenAlarms.upcoming(app, after) }.getOrDefault(emptyList())
-        val deenRcs = deen.map { it.rc }.toSet()
-        deen.forEach { a -> arm(app, am, a.rc, a.at, "deen", 0, a.title, a.text) }
-        for (rc in (920_000..920_016) + (920_100..920_101)) if (rc !in deenRcs) disarm(app, am, rc)
+        armDeen(app, am, after)
 
         // ---- health features: medicines, blood-sugar checks, Ramadan, HbA1c, pregnancy appointments
         runCatching { com.myfit.tracker.health.HealthReminders.arm(app) }
 
         // ---- smart gentle nudges (water / move / workout days / wind-down / Monday weigh-in)
         runCatching { Nudges.arm(app) }
+    }
+
+    /**
+     * After an alarm fires, arm only what that alarm needs (its own next occurrence) instead of re-arming every
+     * reminder, prayer, health and nudge alarm. Unknown kinds fall back to the full [rescheduleNow].
+     */
+    suspend fun rearmAfterFire(ctx: Context, kind: String?, id: Long) {
+        val app = ctx.applicationContext
+        when (kind) {
+            KIND_DB -> lock.withLock {
+                val container = (app as? MyFitApplication)?.container ?: return@withLock
+                val am = app.getSystemService(AlarmManager::class.java) ?: return@withLock
+                val r = container.db.reminderDao().get(id)?.takeIf { it.enabled } ?: return@withLock
+                val at = nextFire(r, System.currentTimeMillis() + 60_000L, ZoneId.systemDefault(), quiet(app)) ?: return@withLock
+                arm(app, am, rcFor(r.id), at, KIND_DB, r.id, r.title, r.message, type = r.type)
+            }
+            Nudges.KIND -> lock.withLock { runCatching { Nudges.arm(app) } }
+            "deen" -> lock.withLock {
+                val am = app.getSystemService(AlarmManager::class.java) ?: return@withLock
+                armDeen(app, am, System.currentTimeMillis() + 60_000L)
+            }
+            com.myfit.tracker.health.HealthReminders.KIND -> lock.withLock { runCatching { com.myfit.tracker.health.HealthReminders.arm(app) } }
+            else -> rescheduleNow(app)
+        }
+    }
+
+    private fun armDeen(app: Context, am: AlarmManager, after: Long) {
+        val deen = runCatching { com.myfit.tracker.ui.deen.DeenAlarms.upcoming(app, after) }.getOrDefault(emptyList())
+        val deenRcs = deen.map { it.rc }.toSet()
+        deen.forEach { a -> arm(app, am, a.rc, a.at, "deen", 0, a.title, a.text) }
+        for (rc in (920_000..920_016) + (920_100..920_101)) if (rc !in deenRcs) disarm(app, am, rc)
     }
 
     internal fun clearFastAlarm(ctx: Context) { prefs(ctx).edit().putLong(K_FAST_AT, 0L).apply() }

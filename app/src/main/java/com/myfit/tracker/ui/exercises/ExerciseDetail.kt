@@ -105,22 +105,6 @@ fun bestSet(m: String, rows: List<SetRow>): SetRow? = when (m) {
     else -> null
 }
 
-/** Per-session headline number used for the progress graph. */
-fun sessionMetric(m: String, s: Session): Double? = when (m) {
-    MeasurementType.WEIGHT_REPS, MeasurementType.WEIGHT_DURATION -> s.sets.mapNotNull { it.weightKg }.maxOrNull()
-    MeasurementType.BODYWEIGHT_REPS, MeasurementType.REPS_ONLY, MeasurementType.ASSISTED_REPS -> s.sets.mapNotNull { it.reps }.maxOrNull()?.toDouble()
-    MeasurementType.DURATION -> s.sets.mapNotNull { it.durationSec }.maxOrNull()?.toDouble()
-    MeasurementType.DISTANCE_DURATION -> s.sets.mapNotNull { it.distanceM }.maxOrNull()
-    else -> null
-}
-
-fun metricLabel(m: String) = when (m) {
-    MeasurementType.WEIGHT_REPS, MeasurementType.WEIGHT_DURATION -> "Top weight per session"
-    MeasurementType.DURATION -> "Longest set per session"
-    MeasurementType.DISTANCE_DURATION -> "Longest distance per session"
-    else -> "Most reps per session"
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
@@ -152,7 +136,11 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
                 GlassChip(measurementLabel(e.measurementType), false, {})
             }
             val ctxM = androidx.compose.ui.platform.LocalContext.current
-            val (prim, sec) = remember(e.id) { MuscleData.of(ctxM, e) }
+            // the catalog lookup parses a 760 KB file the first time — do it off the main thread
+            val pm by androidx.compose.runtime.produceState(emptyList<String>() to emptyList<String>(), e.id) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MuscleData.of(ctxM, e) }
+            }
+            val (prim, sec) = pm
             if (prim.isNotEmpty() || sec.isNotEmpty()) GlassCard {
                 Text("Muscles worked", style = FitType.section, color = th.text)
                 Spacer(Modifier.height(10.dp))

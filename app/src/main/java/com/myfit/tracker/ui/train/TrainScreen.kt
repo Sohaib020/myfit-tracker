@@ -170,7 +170,7 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
 private fun ResumeCard(container: AppContainer, workoutId: Long, onResume: () -> Unit) {
     val th = LocalFitTheme.current
     val v by remember(workoutId) { container.workoutRepo.workoutView(workoutId) }.collectAsState(null)
-    val now by produceState(Clock.now()) { while (true) { value = Clock.now(); delay(1000) } }
+    val now by produceState(Clock.now()) { while (true) { androidx.compose.runtime.withFrameMillis { }; value = Clock.now(); delay(1000) } }
     val w = v ?: return
     Glass(Modifier.fillMaxWidth(), onClick = onResume) {
         Box(Modifier.matchParentSize().drawBehind { drawRect(Brush.horizontalGradient(listOf(th.accent.copy(alpha = 0.55f), th.accent.copy(alpha = 0.1f)))) })

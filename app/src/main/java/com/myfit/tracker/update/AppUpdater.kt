@@ -11,6 +11,7 @@ import androidx.core.content.FileProvider
 import com.myfit.tracker.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
@@ -59,7 +60,20 @@ object AppUpdater {
     /** Queries GitHub for the newest release. */
     suspend fun check(c: Context, force: Boolean = false): State = withContext(Dispatchers.IO) {
         val p = prefs(c)
-        if (!force && System.currentTimeMillis() - p.getLong("last", 0) < 6 * 3600_000L && state.value !is State.Idle) return@withContext state.value
+        if (!force && System.currentTimeMillis() - p.getLong("last", 0) < 6 * 3600_000L) {
+            // at most one GitHub call per 6 h — even across cold starts (the last answer is cached)
+            if (state.value !is State.Idle) return@withContext state.value
+            val cached = runCatching {
+                val b = p.getInt("c_build", 0)
+                if (b <= current || p.getString("c_url", "").isNullOrEmpty()) State.UpToDate
+                else {
+                    val r = Release(b, p.getString("c_tag", "")!!, p.getString("c_notes", "")!!, p.getString("c_url", "")!!, p.getLong("c_size", 0), p.getString("c_date", "")!!)
+                    File(dir(c), "MyFitTracker-$b.apk").takeIf { it.exists() && (r.sizeBytes <= 0 || it.length() == r.sizeBytes) }?.let { State.Ready(r, it) } ?: State.Available(r)
+                }
+            }.getOrDefault(State.UpToDate)
+            state.value = cached
+            return@withContext cached
+        }
         state.value = State.Checking
         val s = runCatching {
             val conn = (URL("https://api.github.com/repos/$REPO/releases/latest").openConnection() as HttpURLConnection).apply {
@@ -75,9 +89,10 @@ object AppUpdater {
                 val a = assets.getJSONObject(i); val n = a.getString("name")
                 if (n.endsWith(".apk") && (url.isEmpty() || n == "MyFitTracker.apk")) { url = a.getString("browser_download_url"); size = a.optLong("size") }
             }
-            p.edit().putLong("last", System.currentTimeMillis()).apply()
             val r = Release(build, tag, j.optString("body").lineSequence().filterNot { it.startsWith("Co-Authored-By") || it.startsWith("Claude-Session") || it.isBlank() }.joinToString("\n").take(600),
                 url, size, j.optString("published_at").take(10))
+            p.edit().putLong("last", System.currentTimeMillis()).putInt("c_build", build).putString("c_tag", tag).putString("c_notes", r.notes)
+                .putString("c_url", url).putLong("c_size", size).putString("c_date", r.date).apply()
             when {
                 url.isEmpty() || build <= current -> State.UpToDate
                 else -> File(dir(c), "MyFitTracker-$build.apk").takeIf { it.exists() && (size <= 0 || it.length() == size) }?.let { State.Ready(r, it) } ?: State.Available(r)
@@ -135,9 +150,13 @@ object AppUpdater {
     }
 
     /** Called when the app goes to the background: a ready update installs then, so it never interrupts you. */
+    /** Called from onStop. The session copy of a 100+ MB APK runs on a background thread, never the main thread. */
     fun installIfReady(c: Context) {
         val s = state.value
-        if (s is State.Ready && autoInstall(c) && canInstall(c) && s.file.exists()) runCatching { SelfInstaller.install(c.applicationContext, s.file) }
+        if (s is State.Ready && autoInstall(c) && canInstall(c) && s.file.exists()) {
+            val app = c.applicationContext
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO).launch { runCatching { SelfInstaller.install(app, s.file) } }
+        }
     }
 
     private fun installLegacy(c: Context, f: File) {

@@ -132,6 +132,7 @@ fun MyFitRoot(container: AppContainer) {
     val theme = Themes.byId(s.themeId)
     val backdrop = remember { Backdrop() }
     backdrop.theme = theme
+    LaunchedEffect(theme.id) { com.myfit.tracker.ui.theme.ThemeShaders.prewarm(theme.id) }
 
     // custom wallpaper
     LaunchedEffect(s.customBackground) {
@@ -141,8 +142,6 @@ fun MyFitRoot(container: AppContainer) {
     }
     // Themes are STILL images by default: rendered once (plus their two blurred versions) whenever the
     // theme, wallpaper, screen size or blur settings change — zero GPU work per frame after that.
-    // A few themes may drift very gently (4 updates/s) if "Gentle motion" is on.
-    val gentle = false   // every theme is a still image
     LaunchedEffect(theme.id) { backdrop.time.floatValue = theme.stillT }
     // status-bar icon colour follows the theme
     val view = LocalView.current
@@ -167,48 +166,17 @@ fun MyFitRoot(container: AppContainer) {
                 val blurOk = android.os.Build.VERSION.SDK_INT >= 31 && !com.myfit.tracker.CrashGuard.safeMode
                 val gfx = androidx.compose.ui.platform.LocalGraphicsContext.current
                 // ---- still path: bake three small bitmaps (theme, card blur, dock blur)
-                LaunchedEffect(theme.id, backdrop.image, backdrop.rootSize, cardBlurPx, dockBlurPx, gentle, blurOk) {
-                    if (gentle) { backdrop.bgImg = null; backdrop.cardImg = null; backdrop.dockImg = null; return@LaunchedEffect }
+                LaunchedEffect(theme.id, backdrop.image, backdrop.rootSize, cardBlurPx, dockBlurPx, blurOk) {
                     val full = backdrop.rootSize
                     if (full.width < 2f || full.height < 2f) return@LaunchedEffect
                     runCatching { com.myfit.tracker.ui.theme.BackdropBaker.bake(gfx, dens, theme, backdrop.image, full, cardBlurPx, dockBlurPx, blurOk) }
                         .onSuccess { (bg, card, dock) -> backdrop.bgImg = bg; backdrop.cardImg = card; backdrop.dockImg = dock }
                 }
-                // ---- gentle path: small live layers, updated only when `time` ticks (4×/s)
-                val small = rememberGraphicsLayer()
-                val smallCard = rememberGraphicsLayer()
-                val smallDock = rememberGraphicsLayer()
-                val bgLayer = rememberGraphicsLayer()
-                val blurLayer = rememberGraphicsLayer()
-                val dockLayer = rememberGraphicsLayer()
-                backdrop.layer = if (gentle) bgLayer else null
-                backdrop.blurLayer = if (gentle && blurOk) blurLayer else null
-                backdrop.dockLayer = if (gentle && blurOk) dockLayer else null
+                backdrop.layer = null; backdrop.blurLayer = null; backdrop.dockLayer = null
                 Canvas(Modifier.fillMaxSize()) {
                     val img = backdrop.bgImg
-                    if (!gentle) {
-                        if (img != null) drawBaked(img, size)
-                        else drawBackdrop(backdrop.theme, backdrop.image, theme.stillT, size.width, size.height)
-                        return@Canvas
-                    }
-                    val t = backdrop.time.floatValue
-                    val k = 3f
-                    val sw = (size.width / k).coerceAtLeast(1f); val sh = (size.height / k).coerceAtLeast(1f)
-                    val smallSize = androidx.compose.ui.unit.IntSize(kotlin.math.ceil(sw).toInt(), kotlin.math.ceil(sh).toInt())
-                    small.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
-                    small.record(smallSize) { drawBackdrop(backdrop.theme, backdrop.image, t, sw, sh) }
-                    bgLayer.record { scale(k, k, pivot = androidx.compose.ui.geometry.Offset.Zero) { drawLayer(small) } }
-                    drawLayer(bgLayer)
-                    if (blurOk) {
-                        smallCard.renderEffect = if (cardBlurPx / k > 0.5f) androidx.compose.ui.graphics.BlurEffect(cardBlurPx / k, cardBlurPx / k, androidx.compose.ui.graphics.TileMode.Clamp) else null
-                        smallCard.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
-                        smallCard.record(smallSize) { drawLayer(small) }
-                        blurLayer.record { scale(k, k, pivot = androidx.compose.ui.geometry.Offset.Zero) { drawLayer(smallCard) } }
-                        smallDock.renderEffect = if (dockBlurPx / k > 0.5f) androidx.compose.ui.graphics.BlurEffect(dockBlurPx / k, dockBlurPx / k, androidx.compose.ui.graphics.TileMode.Clamp) else null
-                        smallDock.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
-                        smallDock.record(smallSize) { drawLayer(small) }
-                        dockLayer.record { scale(k, k, pivot = androidx.compose.ui.geometry.Offset.Zero) { drawLayer(smallDock) } }
-                    }
+                    if (img != null) drawBaked(img, size)
+                    else drawBackdrop(backdrop.theme, backdrop.image, theme.stillT, size.width, size.height)
                 }
                 when (val ps = profileState) {
                     ProfileState.Loading -> Unit

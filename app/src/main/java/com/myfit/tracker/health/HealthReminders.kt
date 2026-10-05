@@ -11,7 +11,6 @@ import com.myfit.tracker.ui.cycle.CycleMode
 import com.myfit.tracker.ui.cycle.CyclePrefs
 import com.myfit.tracker.ui.glucose.GlucoseConfigStore
 import com.myfit.tracker.ui.glucose.HbA1cStore
-import com.myfit.tracker.ui.glucose.MedReminders
 import com.myfit.tracker.ui.glucose.RamadanTimes
 import kotlinx.coroutines.flow.first
 import java.time.Instant
@@ -19,7 +18,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * Notifications for the health features: medicines, blood-sugar checks, Ramadan checks,
+ * Notifications for the health features: blood-sugar checks, Ramadan checks,
  * the 3-monthly HbA1c reminder and pregnancy appointments.
  *
  * Called from [ReminderScheduler.rescheduleNow] (which already runs after boot, after every alarm,
@@ -55,10 +54,7 @@ object HealthReminders {
         val after = System.currentTimeMillis() + 60_000L
         val out = ArrayList<Alarm>()
 
-        // ---- medicines (record-only app: the reminder never states a dose)
-        runCatching { MedReminders.schedule(container) }.getOrDefault(emptyList()).forEach { (name, min) ->
-            out += Alarm(dailyNext(min, after, zone), "Medicine reminder", "Time for $name, as prescribed by your doctor.")
-        }
+        // medicines are armed once, by ReminderScheduler.extraDaily (it honours quiet hours and discreet mode)
 
         // ---- blood sugar
         val g = runCatching { GlucoseConfigStore.get(app) }.getOrNull()

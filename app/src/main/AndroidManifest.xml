@@ -130,8 +130,13 @@
         <receiver android:name=".update.UpdatedReceiver" android:exported="false">
             <intent-filter><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /></intent-filter>
         </receiver>
+        <!-- alarms + notification buttons: only MyFit's own PendingIntents may reach it -->
         <receiver
             android:name=".reminders.ReminderReceiver"
+            android:exported="false" />
+        <!-- protected system broadcasts only (boot, clock/zone change, app update) → re-arm alarms -->
+        <receiver
+            android:name=".reminders.SystemEventsReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

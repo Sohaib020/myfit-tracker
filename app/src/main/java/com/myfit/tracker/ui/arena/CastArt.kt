@@ -41,7 +41,10 @@ private fun clipPath(m: Mascot, c: CastClip) = when {
 }
 
 private object PortraitCache {
-    val lru = android.util.LruCache<String, ImageBitmap>(24)
+    // byte-sized (~10 MB): portraits are 448² (~0.8 MB each)
+    val lru = object : android.util.LruCache<String, ImageBitmap>(10 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * 4
+    }
 }
 
 /** Still 3D portrait of a cast member (falls back to the drawn face if the art isn't bundled). */

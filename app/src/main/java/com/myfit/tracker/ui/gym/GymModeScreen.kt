@@ -130,7 +130,7 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
     val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     LaunchedEffect(Unit) { if (Build.VERSION.SDK_INT >= 33) permLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }
 
-    val now by produceState(System.currentTimeMillis()) { while (true) { value = System.currentTimeMillis(); delay(250) } }
+    val now by produceState(System.currentTimeMillis()) { while (true) { androidx.compose.runtime.withFrameMillis { }; value = System.currentTimeMillis(); delay(500) } }
     BackHandler { if (showPicker) showPicker = false else nav.pop() }
 
     val v = view ?: return

@@ -145,7 +145,7 @@ internal fun SignIn(container: AppContainer, bottomPad: Int = 40, gate: Boolean 
                 val cred = CredentialManager.create(ctx).getCredential(ctx, req).credential
                 if (cred is CustomCredential && cred.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                     social.signInWithGoogleToken(GoogleIdTokenCredential.createFrom(cred.data).idToken)
-                    runCatching { social.uploadNow() }
+                    runCatching { social.uploadNow(5) }
                     toaster.show("Signed in")
                 } else error = "That account type isn't supported."
             } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
@@ -164,7 +164,7 @@ internal fun SignIn(container: AppContainer, bottomPad: Int = 40, gate: Boolean 
         scope.launch {
             try {
                 if (mode == 0) social.signInEmail(email, pass) else social.createEmail(email, pass, name)
-                runCatching { social.uploadNow() }
+                runCatching { social.uploadNow(5) }
                 toaster.show(if (mode == 0) "Signed in" else "Account created")
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
             } catch (e: Exception) { error = friendly(e) }
@@ -263,7 +263,7 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
     val syncMsg by social.lastSync.collectAsState()
 
     LaunchedEffect(refresh) {
-        runCatching { social.uploadNow() }
+        runCatching { social.uploadNow(5) }
         profile = runCatching { social.ensureProfile() }.getOrNull()
         friends = runCatching { social.friends() }.getOrElse { error = it.message; emptyList() }
         challenges = runCatching { social.myChallenges() }.getOrElse { emptyList() }

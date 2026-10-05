@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         val container = (application as MyFitApplication).container
+        (application as MyFitApplication).onUiStart()
         com.myfit.tracker.social.Invite.handle(intent)
         com.myfit.tracker.ui.pip.Buddy.init(this)
         com.myfit.tracker.ui.programs.ProgramEngine.init(this)

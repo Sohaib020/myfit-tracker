@@ -162,11 +162,6 @@ interface WorkoutDao {
     fun observeUsedExerciseIds(): Flow<List<Long>>
 }
 
-data class TemplateWithItems(
-    val template: WorkoutTemplate,
-    val items: List<WorkoutTemplateExercise>,
-)
-
 @Dao
 interface TemplateDao {
     @Insert suspend fun insertTemplate(t: WorkoutTemplate): Long

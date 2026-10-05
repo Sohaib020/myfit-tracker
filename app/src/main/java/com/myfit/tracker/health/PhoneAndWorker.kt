@@ -76,14 +76,14 @@ object PhoneSteps {
     }
 }
 
-/** Background refresh every 30 min: Health Connect window + phone counter snapshot. */
+/** Background refresh every 3 h: Health Connect window + phone counter snapshot + throttled social upload. */
 class HealthSyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
         val c = (applicationContext as MyFitApplication).container
         runCatching { PhoneSteps.snapshot(applicationContext, c.db) }
         runCatching {
             val g = c.healthSync.granted()
-            if (c.healthSync.backgroundPermission in g || g.isNotEmpty()) {
+            if (c.healthSync.backgroundPermission in g) {     // without it, background reads throw on Android 14+
                 val r = c.healthSync.sync(3)
                 c.settings.setLastHealthSync(Clock.now(), r.message)
             }
@@ -96,8 +96,8 @@ class HealthSyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker
     companion object {
         fun schedule(ctx: Context) {
             WorkManager.getInstance(ctx).enqueueUniquePeriodicWork(
-                "health_sync", ExistingPeriodicWorkPolicy.KEEP,
-                PeriodicWorkRequestBuilder<HealthSyncWorker>(30, TimeUnit.MINUTES).build(),
+                "health_sync", ExistingPeriodicWorkPolicy.UPDATE,
+                PeriodicWorkRequestBuilder<HealthSyncWorker>(3, TimeUnit.HOURS).build(),
             )
         }
     }
@@ -115,10 +115,13 @@ class HealthPrivacyActivity : ComponentActivity() {
                 Text("How MyFit uses your health data", color = Color.White, fontSize = 22.sp)
                 Spacer(Modifier.height(16.dp))
                 listOf(
-                    "MyFit only READS data from Health Connect (steps, distance, calories, floors, workouts, heart rate, resting heart rate, HRV, blood oxygen and sleep). It never writes to or deletes anything in Samsung Health or Health Connect.",
-                    "Everything is stored only on this phone. There is no account, no server, no advertising and no analytics.",
+                    "MyFit reads activity, heart, sleep, body and vitals data from Health Connect (steps, distance, calories, floors, workouts, heart rate, resting heart rate, HRV, blood oxygen, sleep, weight, body fat, hydration, respiratory rate, temperature, VO2 max, blood pressure and blood glucose) to show your dashboards, goals and trends.",
+                    "If you choose to sync cycle tracking or log blood pressure / glucose, MyFit writes those entries to Health Connect, and removes only the entries it wrote itself when you edit or delete them. It never changes data written by other apps.",
+                    "Your health records are stored on this phone. They are not uploaded, sold or used for advertising.",
+                    "If you sign in to compete with friends, only your display name and weekly totals (steps, active minutes, distance, Arena level) are shared with the friends and leaderboards you choose. Cycle, glucose, mood and medicine data are never uploaded.",
+                    "MyFit shows optional rewarded ads in a few places; ads never appear on health, cycle, glucose or mental-health screens and are never targeted using your health data.",
                     "Imported data is kept separate from what you log by hand, labelled with its source, and never counted twice.",
-                    "If you use Pip's online answers, only a short summary of the specific numbers needed for your question is sent to Google Gemini. Your full history and notes are never sent.",
+                    "If you use Pip's online answers, only a short summary of the specific numbers needed for your question is sent to the AI service. Your full history and notes are never sent. The offline brain keeps everything on the phone.",
                     "You can revoke access at any time in Health Connect settings.",
                 ).forEach {
                     Text("•  $it", color = Color(0xCCFFFFFF), fontSize = 15.sp, lineHeight = 22.sp)

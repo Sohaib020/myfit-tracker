@@ -73,7 +73,7 @@ fun OfflineBrainCard() {
     val spec = remember(cfg) { ModelCatalog.resolve(cfg) }
     val cap = remember(spec) { DeviceCheck.check(ctx, spec) }
     // poll while a download may be running (the worker updates the shared state too)
-    LaunchedEffect(Unit) { while (true) { ai.models.refresh(); delay(if (st is ModelStore.DlState.Downloading || st is ModelStore.DlState.Waiting) 1500 else 5000) } }
+    LaunchedEffect(Unit) { while (true) { androidx.compose.runtime.withFrameMillis { }; ai.models.refresh(); delay(if (st is ModelStore.DlState.Downloading || st is ModelStore.DlState.Waiting) 1500 else 5000) } }
 
     GlassCard {
         CardHeader(Duo.Lock, "Offline brain", th.accentBright)

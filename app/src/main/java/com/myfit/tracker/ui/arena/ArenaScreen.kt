@@ -308,23 +308,6 @@ private fun ChallengeCard(ch: ArenaChallenge, days: List<Day>, today: LocalDate,
     }
 }
 
-@Composable
-private fun MiniBars(days: List<Day>, m: ArenaMetric, color: Color) {
-    val th = LocalFitTheme.current
-    if (days.isEmpty()) return
-    val vals = days.map { dayValue(it, m) }
-    val max = (vals.maxOrNull() ?: 1.0).coerceAtLeast(1e-6)
-    val grow by animateFloatAsState(1f, tween(900), label = "bars")
-    Canvas(Modifier.fillMaxWidth().height(36.dp)) {
-        val n = vals.size.coerceAtLeast(7); val gap = 3.dp.toPx(); val bw = ((size.width - gap * (n - 1)) / n).coerceAtLeast(2f)
-        vals.forEachIndexed { i, v ->
-            val h = ((v / max).toFloat() * size.height * grow).coerceAtLeast(3f)
-            drawRoundRect(if (v > 0) Brush.verticalGradient(listOf(color, color.copy(alpha = 0.55f))) else Brush.verticalGradient(listOf(th.textFaint.copy(alpha = 0.25f), th.textFaint.copy(alpha = 0.25f))),
-                Offset(i * (bw + gap), size.height - h), Size(bw, h), CornerRadius(bw / 3))
-        }
-    }
-}
-
 // ------------------------------------------------------------------ battles & leaderboard
 
 @Composable
@@ -335,7 +318,7 @@ private fun DuelsPane(container: AppContainer, award: (String, Int, String) -> U
     var list by remember { mutableStateOf<List<Pair<com.myfit.tracker.social.Challenge, List<com.myfit.tracker.social.ChallengeRow>>>?>(null) }
     LaunchedEffect(user) {
         list = if (user == null || !social.available) emptyList() else runCatching {
-            runCatching { social.uploadNow() }
+            runCatching { social.uploadNow(5) }
             social.myChallenges().map { it to runCatching { social.standings(it) }.getOrDefault(emptyList()) }
         }.getOrDefault(emptyList())
     }

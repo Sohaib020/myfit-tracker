@@ -169,7 +169,7 @@ class Social(private val c: AppContainer) {
         val m = buildMap<String, Any> { name?.let { put("name", it.trim().take(24)) }; isPublic?.let { put("public", it) } }
         if (m.isNotEmpty()) db.collection("users").document(u.uid).set(m, SetOptions.merge()).await()
         if (isPublic == false) runCatching { db.collection("weeklyPublic").document(weekKey()).collection("entries").document(u.uid).delete().await() }
-        uploadNow()
+        uploadNow(0)
     }
 
     // ------------------------------------------------------------------ friends
@@ -235,7 +235,7 @@ class Social(private val c: AppContainer) {
             "start" to start.toString(), "end" to end.toString(), "creator" to me, "members" to (listOf(me) + friendIds).distinct(),
             "createdAt" to FieldValue.serverTimestamp(),
         )).await()
-        uploadNow()
+        uploadNow(0)
         return ref.id
     }
 
@@ -296,9 +296,16 @@ class Social(private val c: AppContainer) {
     // ------------------------------------------------------------------ upload (only auto-recorded data)
 
     /** Uploads this week's device-recorded totals and your progress in active challenges. Safe to call often. */
-    suspend fun uploadNow(): String? {
+    /**
+     * Uploads this week's device-recorded totals. Throttled: skipped when the last upload was under [minGapMin]
+     * minutes ago, and the Firestore writes are skipped when nothing changed since the last upload.
+     */
+    suspend fun uploadNow(minGapMin: Int = 60): String? {
         if (!available) return null
         val u = auth.currentUser ?: return null
+        val up = ctx.getSharedPreferences("social_upload", android.content.Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        if (minGapMin > 0 && now - up.getLong("at", 0L) < minGapMin * 60_000L) return lastSync.value
         val p = profile(u.uid) ?: ensureProfile() ?: return null
         val hs = c.healthSync
         val today = Clock.today()
@@ -314,6 +321,11 @@ class Social(private val c: AppContainer) {
             "distanceM" to week.sumOf { it.distanceM }.let { Math.round(it).toDouble() },
             "days" to week.size, "updatedAt" to FieldValue.serverTimestamp(),
         )
+        val sig = listOf(weekKey(), p.name, p.color, p.isPublic, entry["steps"], entry["activeMin"], entry["distanceM"],
+            com.myfit.tracker.ui.arena.ArenaProgress.total(ctx), com.myfit.tracker.ui.arena.ArenaPrefs.partner(ctx).id,
+            challenges.joinToString { it.id }, days.firstOrNull { it.date == today }?.steps).joinToString("|")
+        up.edit().putLong("at", now).apply()
+        if (sig == up.getString("sig", null) && now - up.getLong("sigAt", 0L) < 6 * 3_600_000L) return lastSync.value
         db.collection("weekly").document(weekKey()).collection("entries").document(u.uid).set(entry).await()
         val pub = db.collection("weeklyPublic").document(weekKey()).collection("entries").document(u.uid)
         if (p.isPublic) pub.set(entry).await() else runCatching { pub.delete().await() }
@@ -340,6 +352,7 @@ class Social(private val c: AppContainer) {
             val lvl = com.myfit.tracker.ui.arena.ArenaProgress.level(com.myfit.tracker.ui.arena.ArenaProgress.total(ctx)).n
             if (lvl > 1) postEvent("level-$lvl", "level", "reached Arena level $lvl")
         }
+        up.edit().putString("sig", sig).putLong("sigAt", now).apply()
         lastSync.value = "Synced ${java.time.LocalTime.now().withNano(0).withSecond(0)}"
         return lastSync.value
     }

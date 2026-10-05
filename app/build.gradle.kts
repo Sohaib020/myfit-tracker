@@ -39,8 +39,8 @@ android {
         ndk { abiFilters += (System.getenv("MYFIT_ABIS") ?: "arm64-v8a").split(",") }
     }
 
-    // Release signing comes from CI secrets (never committed). Without them the build falls back
-    // to debug signing so it still produces an installable APK.
+    // Release signing comes from CI secrets (never committed). Local / branch builds without them fall back
+    // to debug signing; builds on main fail instead (see buildTypes.release).
     val ksFile = System.getenv("MYFIT_KEYSTORE_FILE")?.let { file(it) }
     val ksPass = System.getenv("MYFIT_KEYSTORE_PASSWORD")
     val hasReleaseKey = ksFile != null && ksFile.exists() && !ksPass.isNullOrEmpty()
@@ -65,6 +65,9 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            // a published release must never be debug-signed (users couldn't update over it): fail loudly on main
+            if (!hasReleaseKey && System.getenv("GITHUB_REF") == "refs/heads/main")
+                throw GradleException("Release signing secrets (MYFIT_KEYSTORE_*) are missing — refusing to publish a debug-signed release")
             signingConfig = if (hasReleaseKey) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
     }
@@ -99,7 +102,6 @@ dependencies {
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.material3:material3")
@@ -116,7 +118,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     // on-device LLM (Gemma via LiteRT-LM; the model itself is an optional in-app download, never bundled)
-    implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.17.1")
     // rewarded ads (only after the free daily AI allowance; SDK started on first tap)
     implementation("com.google.android.gms:play-services-ads:23.6.0")
     implementation("androidx.health.connect:connect-client:1.1.0")
@@ -141,7 +143,6 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$camerax")
     implementation("androidx.camera:camera-view:$camerax")
     implementation("com.google.mlkit:image-labeling:17.0.9")
-    implementation("com.google.guava:guava:33.3.1-android")
     // accounts, friends & leaderboards
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth")

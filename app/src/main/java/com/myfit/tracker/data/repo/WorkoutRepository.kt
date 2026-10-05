@@ -38,9 +38,12 @@ class ExerciseRepository(private val db: AppDatabase, private val context: Conte
      * anything — including personal notes the user has added to a built-in exercise.
      */
     suspend fun seedIfNeeded() = withContext(Dispatchers.IO) {
+        // assets only change with an app update: once seeded for this version, don't even open the 760 KB file
+        val sp = context.getSharedPreferences("seed", android.content.Context.MODE_PRIVATE)
+        if (sp.getInt("exercises", 0) == com.myfit.tracker.BuildConfig.VERSION_CODE && dao.builtInCount() > 0) return@withContext
         val json = context.assets.open("exercise_catalog.json").bufferedReader().use { it.readText() }
         val arr = JSONArray(json)
-        if (dao.builtInCount() >= arr.length()) return@withContext
+        if (dao.builtInCount() >= arr.length()) { sp.edit().putInt("exercises", com.myfit.tracker.BuildConfig.VERSION_CODE).apply(); return@withContext }
         val now = Clock.now()
         val list = (0 until arr.length()).map { i ->
             val o = arr.getJSONObject(i)
@@ -66,6 +69,7 @@ class ExerciseRepository(private val db: AppDatabase, private val context: Conte
             )
         }
         list.chunked(200).forEach { dao.insertAll(it) }
+        sp.edit().putInt("exercises", com.myfit.tracker.BuildConfig.VERSION_CODE).apply()
     }
 
     suspend fun createCustom(e: Exercise): Long = dao.insert(e.copy(id = 0, isCustom = true, createdAt = Clock.now(), updatedAt = Clock.now()))
@@ -265,11 +269,12 @@ class WorkoutRepository(private val db: AppDatabase) {
 
     suspend fun saveTemplate(id: Long?, name: String, notes: String, items: List<WorkoutTemplateExercise>): Long = db.withTransaction {
         val now = Clock.now()
-        val tid = if (id == null) {
+        // the template may have been deleted while the editor was open → save it as a new one instead of crashing
+        val existing = id?.let { tdao.getTemplate(it) }
+        val tid = if (existing == null) {
             tdao.insertTemplate(WorkoutTemplate(name = name, notes = notes, sortOrder = (System.currentTimeMillis() / 1000).toInt(), createdAt = now, updatedAt = now))
         } else {
-            val t = tdao.getTemplate(id)!!
-            tdao.updateTemplate(t.copy(name = name, notes = notes, updatedAt = now)); id
+            tdao.updateTemplate(existing.copy(name = name, notes = notes, updatedAt = now)); existing.id
         }
         tdao.replaceItems(tid, items.mapIndexed { i, it -> it.copy(position = i) })
         tid

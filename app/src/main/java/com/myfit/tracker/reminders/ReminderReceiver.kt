@@ -12,9 +12,8 @@ import java.time.Instant
 import java.time.ZoneId
 
 /**
- * Handles: reminder alarms (ACTION_FIRE), the notification buttons (ACTION_DONE / ACTION_SNOOZE,
- * plus the legacy ACTION_WATER), and system events that invalidate alarms
- * (boot, clock/time-zone change, app update) → reschedule.
+ * Handles: reminder alarms (ACTION_FIRE) and the notification buttons (ACTION_DONE / ACTION_SNOOZE,
+ * plus the legacy ACTION_WATER). Not exported: only MyFit's own PendingIntents reach it.
  */
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -34,7 +33,8 @@ class ReminderReceiver : BroadcastReceiver() {
         when (intent.action) {
             ReminderScheduler.ACTION_FIRE -> {
                 fire(app, intent)
-                if (intent.getStringExtra(ReminderScheduler.EXTRA_KIND) != ReminderScheduler.KIND_SNOOZED) ReminderScheduler.rescheduleNow(app)
+                val kind = intent.getStringExtra(ReminderScheduler.EXTRA_KIND)
+                if (kind != ReminderScheduler.KIND_SNOOZED) ReminderScheduler.rearmAfterFire(app, kind, intent.getLongExtra(ReminderScheduler.EXTRA_ID, -1L))
             }
             ReminderScheduler.ACTION_WATER -> {
                 val container = (app as? MyFitApplication)?.container ?: return
@@ -50,7 +50,7 @@ class ReminderReceiver : BroadcastReceiver() {
                     ReminderScheduler.snooze(app, nid, intent)
                 }
             }
-            else -> ReminderScheduler.rescheduleNow(app)   // BOOT_COMPLETED, TIME_SET, TIMEZONE_CHANGED, MY_PACKAGE_REPLACED
+            else -> Unit   // system broadcasts go to SystemEventsReceiver (this receiver isn't exported)
         }
     }
 
@@ -102,6 +102,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 if (!r.enabled) return
                 // a late delivery that drifted into quiet hours is dropped
                 val now = Instant.now().atZone(ZoneId.systemDefault())
+                // (a once-a-day reminder that was moved to the end of quiet hours fires right at that edge, which isn't "in" the window)
                 if (!snoozed && r.respectQuietHours && ReminderScheduler.quiet(app).contains(now.hour * 60 + now.minute)) return
                 // smart water: stay silent once today's goal is reached
                 if (r.type == ReminderType.WATER && ReminderScheduler.waterSkipGoal(app)) {

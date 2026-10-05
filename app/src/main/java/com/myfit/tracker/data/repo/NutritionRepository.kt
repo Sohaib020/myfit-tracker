@@ -72,8 +72,9 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
 
     /** Seeds the built-in food list (typical values for common Pakistani dishes and staples). Idempotent. */
     suspend fun seedIfNeeded() = withContext(Dispatchers.IO) {
-        val text = context.assets.open("foods_pk.json").bufferedReader().use { it.readText() }
         val prefs = context.getSharedPreferences("food_seed", Context.MODE_PRIVATE)
+        if (prefs.getInt("version", 0) == com.myfit.tracker.BuildConfig.VERSION_CODE && dao.seededCount() > 0) return@withContext
+        val text = context.assets.open("foods_pk.json").bufferedReader().use { it.readText() }
         val hash = text.hashCode()
         if (prefs.getInt("hash", 0) == hash && dao.seededCount() > 0) return@withContext
         val arr = JSONArray(text)
@@ -97,7 +98,7 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
                 dao.refreshSeeded(f.uuid, f.name, f.servingSize, f.servingUnit, f.servingGrams, f.calories, f.proteinG, f.carbsG, f.fatG, f.fiberG, f.sourceRef ?: "", now)
             }
         }
-        prefs.edit().putInt("hash", hash).apply()
+        prefs.edit().putInt("hash", hash).putInt("version", com.myfit.tracker.BuildConfig.VERSION_CODE).apply()
     }
 
     suspend fun addFood(f: Food): Long = dao.insertFood(f)

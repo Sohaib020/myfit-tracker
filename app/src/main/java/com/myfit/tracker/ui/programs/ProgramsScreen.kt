@@ -54,7 +54,10 @@ private val GOAL_COLORS = mapOf(
 private fun Program.colors() = GOAL_COLORS[goals.firstOrNull()] ?: (Color(0xFF555B66) to Color(0xFF22262D))
 
 private object CoverCache {
-    private val cache = android.util.LruCache<String, ImageBitmap>(24)
+    // byte-sized (~12 MB) — covers are 768×448, so ~9 full covers stay decoded
+    private val cache = object : android.util.LruCache<String, ImageBitmap>(12 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * 4
+    }
     private val missing = mutableSetOf<String>()
     suspend fun get(c: android.content.Context, id: String): ImageBitmap? {
         cache.get(id)?.let { return it }

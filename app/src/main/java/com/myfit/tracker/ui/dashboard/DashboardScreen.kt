@@ -705,41 +705,7 @@ private fun RingsSmall(s: DashState, onClick: () -> Unit) {
     }
 }
 
-@Composable
-fun DashSection(text: String) = SectionTitle(text)
-
 // ------------------------------------------------------------------ Food
-
-@Composable
-private fun NutritionCard(c: AppContainer, onOpen: () -> Unit) {
-    val th = LocalFitTheme.current
-    val nav = LocalNav.current
-    val today = Clock.today()
-    val items by remember(today) { c.nutritionRepo.itemsOn(today) }.collectAsState(initial = emptyList())
-    val targets by c.profileRepo.targets.collectAsState(initial = emptyList())
-    val t = com.myfit.tracker.ui.food.totalsOf(items)
-    val key = Clock.dateKey(today)
-    GlassCard(onClick = onOpen) {
-        CardHeader(Duo.ForkKnife, "Food", th.protein) {
-            Caption(if (items.isEmpty()) "Nothing logged yet" else "${items.size} ${if (items.size == 1) "item" else "items"}")
-        }
-        Spacer(Modifier.height(12.dp))
-        com.myfit.tracker.ui.food.MacroSummary(
-            t,
-            com.myfit.tracker.domain.Targets.on(targets, com.myfit.tracker.data.db.TargetType.CALORIES, today),
-            com.myfit.tracker.domain.Targets.on(targets, com.myfit.tracker.data.db.TargetType.PROTEIN_G, today),
-            com.myfit.tracker.domain.Targets.on(targets, com.myfit.tracker.data.db.TargetType.CARBS_G, today),
-            com.myfit.tracker.domain.Targets.on(targets, com.myfit.tracker.data.db.TargetType.FAT_G, today),
-            ringSize = 104,
-        )
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val meal = com.myfit.tracker.ui.food.mealForNow()
-            com.myfit.tracker.ui.theme.GlassButton("Snap meal", { nav.push(Overlay.FoodPhoto(meal, key)) }, Modifier.weight(1f), icon = Duo.Camera, height = 44.dp)
-            com.myfit.tracker.ui.theme.GlassButton("Add food", { nav.push(Overlay.FoodAdd(meal, key, 0)) }, Modifier.weight(1f), icon = Duo.ForkKnife, height = 44.dp)
-        }
-    }
-}
 
 @Composable
 private fun NutritionSmall(c: AppContainer, onOpen: () -> Unit) {
@@ -796,9 +762,12 @@ internal fun SnapHeroCard(dateKey: String = Clock.dateKey(Clock.today()), meal: 
 @Composable
 private fun rememberPipFuel(): androidx.compose.ui.graphics.ImageBitmap? {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    return remember {
-        runCatching { ctx.assets.open("pip/still_fuel.webp").use { android.graphics.BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
+    val b by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { ctx.assets.open("pip/still_fuel.webp").use { android.graphics.BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
+        }
     }
+    return b
 }
 
 /** Viewfinder corners framing [content]. */
@@ -886,38 +855,6 @@ private fun rememberBoard(container: AppContainer): Pair<Boolean, List<com.myfit
         value = if (user != null) runCatching { social.friendsBoard(com.myfit.tracker.social.Metric.STEPS) }.getOrNull() else null
     }
     return (user != null) to board
-}
-
-/** Your place on this week's friends board, or an invite to sign in. */
-@Composable
-private fun CompeteCard(container: AppContainer, onOpen: () -> Unit) {
-    val th = LocalFitTheme.current
-    val social = container.social
-    val (signedIn, board) = rememberBoard(container)
-    GlassCard(onClick = onOpen) {
-        CardHeader(Duo.EmojiEvents, "Arena", th.warning) { Caption("This week") }
-        Spacer(Modifier.height(10.dp))
-        val b = board
-        when {
-            !social.available -> Caption("Online challenges arrive once Firebase is connected to this build.")
-            !signedIn -> {
-                Caption("Sign in with Google or email to race friends on steps, distance and watch-recorded workouts.")
-                Spacer(Modifier.height(10.dp))
-                CompactPill("Sign in", Duo.Person, onOpen)
-            }
-            b == null -> Caption("Loading…")
-            b.size <= 1 -> Caption("Add a friend with your code to start competing.")
-            else -> b.take(3).forEachIndexed { i, r ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("${i + 1}", style = FitType.label, color = th.textDim, modifier = Modifier.width(22.dp))
-                    com.myfit.tracker.ui.social.Avatar(r.name, r.color, 28)
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (r.me) "${r.name} (you)" else r.name, style = FitType.body, color = th.text, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(Fmt.int(r.value), style = FitType.section, color = th.text)
-                }
-            }
-        }
-    }
 }
 
 @Composable

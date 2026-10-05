@@ -133,7 +133,7 @@ enum class Scene(val sky: List<Color>, val hills: List<Color>, val ground: Color
 
 object ArenaPrefs {
     private fun p(c: Context) = c.applicationContext.getSharedPreferences("arena_prefs", Context.MODE_PRIVATE)
-    fun journey(c: Context): Pair<String, LocalDate>? = p(c).getString("journey", null)?.let { id -> p(c).getString("journey_start", null)?.let { id to LocalDate.parse(it) } }
+    fun journey(c: Context): Pair<String, LocalDate>? = p(c).getString("journey", null)?.let { id -> p(c).getString("journey_start", null)?.let { d -> runCatching { LocalDate.parse(d) }.getOrNull()?.let { id to it } } }
     fun startJourney(c: Context, id: String) = p(c).edit().putString("journey", id).putString("journey_start", Clock.today().toString()).apply()
     fun stopJourney(c: Context) = p(c).edit().remove("journey").remove("journey_start").apply()
     fun finished(c: Context): Set<String> = p(c).getStringSet("journeys_done", emptySet())!!

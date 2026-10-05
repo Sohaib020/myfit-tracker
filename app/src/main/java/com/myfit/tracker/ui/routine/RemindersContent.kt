@@ -99,7 +99,7 @@ internal fun RemindersContent(container: AppContainer) {
     val ctx = LocalContext.current
     val toaster = LocalToaster.current
     val dao = container.db.reminderDao()
-    val reminders by dao.observeAll().collectAsState(initial = null)
+    val reminders by remember { dao.observeAll() }.collectAsState(initial = null)
     var editing by remember { mutableStateOf<Reminder?>(null) }
     var refresh by remember { mutableIntStateOf(0) }
     val allowed = remember(refresh) { ReminderNotifier.canPost(ctx) }
@@ -272,7 +272,6 @@ private fun NudgesCard(ctx: Context) {
     var on by remember { mutableStateOf(com.myfit.tracker.reminders.Nudges.enabled(ctx)) }
     var types by remember { mutableStateOf(com.myfit.tracker.reminders.Nudges.Type.entries.associateWith { com.myfit.tracker.reminders.Nudges.typeOn(ctx, it) }) }
     var max by remember { mutableIntStateOf(com.myfit.tracker.reminders.Nudges.maxPerDay(ctx)) }
-    var q by remember { mutableStateOf(com.myfit.tracker.reminders.Nudges.quiet(ctx)) }
     GlassCard {
         CardHeader(Duo.AutoAwesome, "Smart nudges", th.accentBright)
         Spacer(Modifier.height(6.dp))
@@ -289,16 +288,8 @@ private fun NudgesCard(ctx: Context) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(1, 2, 3, 4).forEach { n -> GlassChip("$n", max == n, { max = n; com.myfit.tracker.reminders.Nudges.setMaxPerDay(ctx, n) }) }
             }
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Quiet", style = FitType.label, color = th.textDim)
-                Spacer(Modifier.width(8.dp))
-                MinuteOfDayChip(q.start) { q = q.copy(start = it); com.myfit.tracker.reminders.Nudges.setQuiet(ctx, q.start, q.end) }
-                Spacer(Modifier.width(10.dp))
-                Text("to", style = FitType.label, color = th.textDim)
-                Spacer(Modifier.width(8.dp))
-                MinuteOfDayChip(q.end) { q = q.copy(end = it); com.myfit.tracker.reminders.Nudges.setQuiet(ctx, q.start, q.end) }
-            }
+            Spacer(Modifier.height(8.dp))
+            Caption("Never during your quiet hours (set below).")
         }
     }
 }
@@ -311,7 +302,7 @@ private fun QuietHoursCard(ctx: Context) {
     GlassCard {
         CardHeader(Duo.Bedtime, "Quiet hours", th.sleep)
         Spacer(Modifier.height(6.dp))
-        SwitchRow("Silence reminders overnight", "Reminders that respect quiet hours are skipped in this window", q.on, { update(q.copy(on = it)) })
+        SwitchRow("Silence reminders overnight", "Repeating reminders skip this window; daily ones move to when it ends", q.on, { update(q.copy(on = it)) })
         if (q.on) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("From", style = FitType.label, color = th.textDim)
@@ -377,7 +368,7 @@ private fun ReminderEditForm(initial: Reminder, onSave: (Reminder) -> Unit, onDe
     if ((mask and 0x7F) == 0) Caption("Pick at least one day.", color = th.warning)
 
     Spacer(Modifier.height(8.dp))
-    SwitchRow("Respect quiet hours", "Skip this reminder during quiet hours", quiet, { quiet = it })
+    SwitchRow("Respect quiet hours", "If it falls in quiet hours it arrives when they end", quiet, { quiet = it })
     SwitchRow("Enabled", null, enabled, { enabled = it })
 
     Spacer(Modifier.height(16.dp))

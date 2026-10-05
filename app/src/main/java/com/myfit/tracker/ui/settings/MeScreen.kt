@@ -273,7 +273,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
             GlassCard {
                 CardHeader(Duo.Lock, "Privacy", th.textDim)
                 Spacer(Modifier.height(10.dp))
-                Caption("All data lives only on this phone. No account, no ads, no analytics. Backup & export arrive in a later build. Exercise photos & instructions: free-exercise-db (public domain).")
+                Caption("Your health records stay on this phone. Signing in shares only your name and weekly totals with friends you choose. Ads are optional and never use your health data. Exercise photos & instructions: free-exercise-db (public domain).")
                 Spacer(Modifier.height(6.dp))
                 var taps by remember { mutableIntStateOf(0) }
                 val toasterV = LocalToaster.current

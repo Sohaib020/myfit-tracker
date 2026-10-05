@@ -50,7 +50,7 @@ fun RecordsScreen(container: AppContainer) {
     val th = LocalFitTheme.current
     val nav = LocalNav.current
     val u = LocalSettings.current.units
-    val history by container.workoutRepo.allHistory().collectAsState(initial = null)
+    val history by remember { container.workoutRepo.allHistory() }.collectAsState(initial = null)
     val exercises by container.exerciseRepo.everything.collectAsState(initial = emptyList())
     var range by remember { mutableIntStateOf(1) }   // 0 = 30 days, 1 = 90 days, 2 = all
     val byId = exercises.associateBy { it.id }

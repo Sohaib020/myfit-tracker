@@ -62,7 +62,7 @@ fun VitalsScreen(container: AppContainer) {
     var refresh by remember { mutableIntStateOf(0) }
     val data by produceState<VitalsReader.All?>(null, refresh) { value = runCatching { reader.all() }.getOrNull() }
     val fromMs = remember { Clock.today().minusDays(29).atStartOfDay(Clock.zone()).toInstant().toEpochMilli() }
-    val manualBp by container.db.bloodPressureDao().observeSince(fromMs).collectAsState(initial = emptyList())
+    val manualBp by remember(fromMs) { container.db.bloodPressureDao().observeSince(fromMs) }.collectAsState(initial = emptyList())
     var bpSheet by remember { mutableStateOf(false) }
     val permLauncher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { refresh++ }
     val askPerms: () -> Unit = { runCatching { permLauncher.launch(hs.allPermissions) } }
