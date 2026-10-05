@@ -233,6 +233,39 @@ class AiRouter(private val c: AppContainer) {
         throw last ?: IllegalStateException("No Gemini model")
     }
 
+    /**
+     * One-shot text task (e.g. "adjust this workout"): tries the online providers in order, then the offline brain
+     * if it's installed. Throws with a friendly message when nothing can answer.
+     */
+    suspend fun text(system: String, user: String, perProviderMs: Long = 45_000): String {
+        val s = c.settings.settings.first()
+        val errors = mutableListOf<String>()
+        for (p in chain(s)) {
+            try {
+                val out = withTimeout(perProviderMs) {
+                    if (p.id == "gemini") {
+                        val model = s.geminiModel.ifBlank { gemini.pickModel(p.key) }
+                        gemini.generate(p.key, model, system, listOf("user" to user))
+                    } else compat(p.id).chat(p.key, system, listOf("user" to user))
+                }
+                lastProvider = p.label
+                return out
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                errors += "${p.label}: too slow"
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                errors += "${p.label}: ${shortMsg(e)}"
+            }
+        }
+        // offline brain as a last resort
+        runCatching {
+            val hub = com.myfit.tracker.ai.ondevice.OnDeviceAi.get(c.app)
+            if (hub.models.installedFile() != null) return hub.llm.chat(system, listOf("user" to user)).also { lastProvider = "Offline brain" }
+        }
+        throw IllegalStateException(if (errors.isEmpty()) "Online AI isn't set up yet — sign in or add a key in Settings → AI." else "The AI is busy right now — try again in a moment.")
+    }
+
     /** Chat with a non-Gemini provider (Gemini chat keeps its own robust fallback in PipBrain). */
     suspend fun chatCompat(id: String, key: String, system: String, turn: List<Pair<String, String>>): String =
         withTimeout(45_000) { compat(id).chat(key, system, turn) }
