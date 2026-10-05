@@ -301,7 +301,7 @@ private fun GlucoseMain(
             GlassCard {
                 CardHeader(Duo.Send, "Report for your doctor", th.water)
                 Spacer(Modifier.height(10.dp))
-                Caption("A 1–2 page PDF with averages, lows and highs, sensor time in range, a chart, your medicines and daily carbs.")
+                Caption("A designed PDF with blood sugar, blood pressure & heart rate, weight, activity, sleep and your medicines — ready to send to your doctor.")
                 Spacer(Modifier.height(10.dp))
                 GlassSegmented(listOf(14, 30), reportDays, { "Last $it days" }, { reportDays = it }, Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp))
@@ -309,10 +309,10 @@ private fun GlucoseMain(
                     if (building) return@AccentButton
                     building = true
                     scope.launch {
-                        val f = runCatching { GlucoseReport.build(container, reportDays, cfg) }.getOrNull()
+                        val f = runCatching { com.myfit.tracker.ui.report.DoctorReport.build(container, reportDays, cfg) }.getOrNull()
                         building = false
                         if (f == null) toaster.show("Couldn't build the report")
-                        else runCatching { GlucoseReport.share(ctx, f) }.onFailure { toaster.show("No app found to share the PDF") }
+                        else runCatching { com.myfit.tracker.ui.report.DoctorReport.share(ctx, f) }.onFailure { toaster.show("No app found to share the PDF") }
                     }
                 }, Modifier.fillMaxWidth(), icon = Duo.Send, enabled = !building, height = 48.dp)
             }
