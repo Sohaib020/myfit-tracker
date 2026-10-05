@@ -159,4 +159,6 @@ dependencies {
     testImplementation("io.github.takahirom.roborazzi:roborazzi:1.40.1")
     testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.40.1")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+    // CameraX / WorkManager futures expose Guava's ListenableFuture (the androidx stub artifact is empty) — keep
+    implementation("com.google.guava:guava:33.3.1-android")
 }
