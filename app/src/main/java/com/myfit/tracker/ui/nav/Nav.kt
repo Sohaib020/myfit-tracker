@@ -73,6 +73,8 @@ object Launch {
     @Volatile var cycle: String? = null
     fun takeMind(): String? = mind.also { mind = null }
     fun takeCycle(): String? = cycle.also { cycle = null }
+    /** Screen requested by tapping a live notification ("gym", "stopwatch", "fasting"). */
+    val open = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     @Volatile var calm: Boolean = false
     fun takeCalm(): Boolean = calm.also { calm = false }
 }

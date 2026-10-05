@@ -1,5 +1,6 @@
 package com.myfit.tracker.ui
 
+import kotlinx.coroutines.flow.first
 import com.myfit.tracker.ui.theme.Duo
 
 import android.app.Activity
@@ -394,6 +395,19 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             // self-update from GitHub releases (checks on launch; downloads on Wi-Fi; user taps Install)
             LaunchedEffect(Unit) { runCatching { com.myfit.tracker.update.AppUpdater.autoRun(container.app) } }
             if (top == null) com.myfit.tracker.update.UpdateIsland(androidx.compose.foundation.layout.WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
+            // tapped a live notification: jump to what's running
+            val openReq by com.myfit.tracker.ui.nav.Launch.open.collectAsState()
+            LaunchedEffect(openReq) {
+                val o = openReq ?: return@LaunchedEffect
+                com.myfit.tracker.ui.nav.Launch.open.value = null
+                when (o) {
+                    "gym" -> kotlinx.coroutines.withTimeoutOrNull(2000) { container.workoutRepo.inProgress.first { true } }?.let { w ->
+                        if (nav.stack.lastOrNull() != Overlay.Gym(w.id)) { nav.popTo { false }; nav.push(Overlay.Gym(w.id)) }
+                    }
+                    "stopwatch" -> if (nav.stack.lastOrNull() != Overlay.Stopwatch) nav.push(Overlay.Stopwatch)
+                    "fasting" -> if (nav.stack.lastOrNull() != Overlay.Fasting) nav.push(Overlay.Fasting)
+                }
+            }
             // friend invite links (myfit://invite?c=CODE): add the friend once signed in, then show Arena → Friends
             val inviteToaster = LocalToaster.current
             val inviteCode by com.myfit.tracker.social.Invite.pending.collectAsState()
