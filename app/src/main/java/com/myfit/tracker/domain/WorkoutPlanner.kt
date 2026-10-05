@@ -179,6 +179,48 @@ object WorkoutPlanner {
         return if (level == Level.BEGINNER) all.filter { it.key !in ADVANCED_ONLY } else all
     }
 
+    /** Other exercises that train the same muscle as [key] with this equipment (for the "Swap" button). */
+    fun alternatives(key: String, equip: Equip, level: Level, exclude: Set<String> = emptySet()): List<String> {
+        val m = muscleOf(key) ?: return emptyList()
+        return candidates(m, equip, level).map { it.key }.filter { it != key && it !in exclude }
+    }
+
+    /** Every exercise key the planner may use for these targets (the AI is restricted to this list). */
+    fun allowedKeys(targets: List<Target>, equip: Equip, level: Level): List<Pair<String, Muscle>> =
+        targets.flatMap { it.muscles }.distinct().flatMap { m -> candidates(m, equip, level).map { it.key to m } }.distinctBy { it.first }
+
+    private val MUSCLE_OF: Map<String, Muscle> by lazy {
+        val out = HashMap<String, Muscle>()
+        LIB.forEach { (m, byEq) -> byEq.values.forEach { l -> l.forEach { out.putIfAbsent(it.key, m) } } }
+        out
+    }
+    fun muscleOf(key: String): Muscle? = MUSCLE_OF[key]
+    fun isMain(key: String): Boolean = LIB.values.any { e -> e.values.any { l -> l.any { it.key == key && it.role == Role.MAIN } } }
+
+    /** "chest and biceps", "legs + abs", "push day" → targets. Empty when nothing matched. */
+    fun targetsFromText(text: String): List<Target> {
+        val t = text.lowercase()
+        val out = LinkedHashSet<Target>()
+        fun has(vararg w: String) = w.any { Regex("\\b$it").containsMatchIn(t) }
+        if (has("push")) out += PUSH
+        if (has("pull")) out += PULL
+        if (has("upper")) out += UPPER
+        if (has("lower")) out += LOWER
+        if (has("full", "whole body", "total body")) out += Target.FULL
+        if (has("chest", "pec")) out += Target.CHEST
+        if (has("back", "lat", "row")) out += Target.BACK
+        if (has("shoulder", "delt")) out += Target.SHOULDERS
+        if (has("bicep", "bi\\b")) out += Target.BICEPS
+        if (has("tricep", "tri\\b")) out += Target.TRICEPS
+        if (has("arm")) out += Target.ARMS
+        if (has("leg", "quad", "hamstring", "calf", "calves")) out += Target.LEGS
+        if (has("glute", "butt", "hip")) out += Target.GLUTES
+        if (has("abs", "core", "six pack", "stomach", "belly")) out += Target.CORE
+        if (has("cardio", "hiit", "conditioning", "run")) out += Target.CARDIO
+        if (Target.ARMS in out) { out -= Target.BICEPS; out -= Target.TRICEPS }
+        return out.toList()
+    }
+
     /**
      * Builds one training day for [targets]. [variant] picks alternative exercises (for "Shuffle" and for the A/B days
      * of a plan) while keeping the same structure.

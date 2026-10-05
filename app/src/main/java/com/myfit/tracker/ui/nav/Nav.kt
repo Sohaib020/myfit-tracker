@@ -42,6 +42,12 @@ sealed interface Overlay {
     data object Deen : Overlay
     /** Pick exercises to append to a template (templateId) or to a running workout (workoutId). */
     data class ProgramDetail(val id: String) : Overlay
+    /** Build one workout day from muscle groups (preset = comma-separated WorkoutPlanner.Target names). */
+    data class DayBuilder(val preset: String? = null) : Overlay
+    /** Build a multi-week plan from a goal. */
+    data object PlanBuilder : Overlay
+    /** Week / month / 6-month training progress. */
+    data object TrainProgress : Overlay
     data class PickExercises(val templateId: Long? = null, val workoutId: Long? = null) : Overlay
     data class Food(val date: String? = null) : Overlay
     data class FoodAdd(val mealType: String, val date: String, val tab: Int) : Overlay

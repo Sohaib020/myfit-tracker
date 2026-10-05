@@ -73,15 +73,22 @@ import com.myfit.tracker.ui.theme.LocalSettings
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = false) {
+fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = false, onBrowsePlans: () -> Unit = {}) {
     val th = LocalFitTheme.current
     val nav = LocalNav.current
     val toaster = LocalToaster.current
     val scope = rememberCoroutineScope()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val active by container.workoutRepo.inProgress.collectAsState(initial = null)
     val templates by container.workoutRepo.templates.collectAsState(initial = emptyList())
     val recent by remember { container.workoutRepo.recentViews(20) }.collectAsState(initial = emptyList())
+    val follow by com.myfit.tracker.ui.programs.ProgramEngine.follow.collectAsState()
+    val ver by com.myfit.tracker.ui.programs.ProgramLib.version.collectAsState()
+    val plan = remember(follow, ver) { com.myfit.tracker.ui.programs.ProgramLib.byId(ctx, follow?.id) }
+    // program days already appear in the plan card; keep "My workout days" for the user's own
+    val myDays = remember(templates, follow) { templates.filter { t -> follow?.tpl?.contains(t.template.id) != true } }
 
     fun start(block: suspend () -> Long) {
         if (active != null) { toaster.show("Finish or discard your current workout first"); nav.push(Overlay.Gym(active!!.id)); return }
@@ -96,58 +103,81 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
         if (!embedded) item {
             Column(Modifier.statusBarsPadding().padding(top = com.myfit.tracker.ui.components.TopBarSpace)) {
                 Text("Train", style = FitType.display, color = th.text)
-                Caption("Templates, Gym Mode and your workout history.")
             }
         }
-        active?.let { w -> item { ResumeCard(container, w.id) { nav.push(Overlay.Gym(w.id)) } } }
-        if (active == null) item {
+        active?.let { w -> item(key = "resume") { ResumeCard(container, w.id) { nav.push(Overlay.Gym(w.id)) } } }
+        if (active == null) item(key = "hero") {
             Glass(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Pip(PipMood.HAPPY, size = 72.dp)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("Ready when you are", style = FitType.section, color = th.text)
-                        Spacer(Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            AccentButton("Gym workout", { start { container.workoutRepo.startEmpty() } }, Modifier.weight(1f), icon = Duo.PlayArrow, height = 46.dp)
-                            GlassButton("Activity", { nav.push(Overlay.Stopwatch) }, Modifier.weight(1f), icon = Duo.Timer, height = 46.dp)
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("What are we training?", style = FitType.title, color = th.text)
+                            Caption("Tap a muscle — your workout builds itself.")
                         }
+                        Pip(PipMood.HAPPY, size = 56.dp)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        QUICK_DAYS.forEach { (label, tg) ->
+                            com.myfit.tracker.ui.theme.GlassChip(label, false, { nav.push(Overlay.DayBuilder(tg.joinToString(",") { it.name })) })
+                        }
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        AccentButton("Build my day", { nav.push(Overlay.DayBuilder()) }, Modifier.weight(1f), icon = Duo.AutoAwesome, height = 48.dp)
+                        GlassButton("Empty workout", { start { container.workoutRepo.startEmpty() } }, Modifier.weight(1f), icon = Duo.PlayArrow, height = 48.dp)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickableNoRipple { nav.push(Overlay.Stopwatch) }.padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Duo.Timer, null, tint = th.accentBright, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
+                        Text("Walk, run, cycle or sport — start an activity timer", style = FitType.label, color = th.accentBright)
                     }
                 }
             }
         }
 
-        item {
-            Glass(Modifier.fillMaxWidth(), onClick = { nav.push(Overlay.Records) }) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    com.myfit.tracker.ui.components.IconBubble(Duo.EmojiEvents, th.warning, 44.dp)
+        item(key = "plan") {
+            val p = plan
+            val f = follow
+            if (p != null && f != null) PlanCard(container, p, f, active?.id)
+            else Glass(Modifier.fillMaxWidth(), onClick = { nav.push(Overlay.PlanBuilder) }) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    com.myfit.tracker.ui.components.IconBubble(Duo.CalendarMonth, th.accent, 48.dp)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Progress & PRs", style = FitType.section, color = th.text)
+                        Text("Make me a weekly plan", style = FitType.section, color = th.text)
+                        Caption("Pick your goal and days — get a plan that progresses week by week.")
+                        Spacer(Modifier.height(4.dp))
+                        Text("Or browse ready-made programs", style = FitType.label, color = th.accentBright, modifier = Modifier.clickableNoRipple(onBrowsePlans).padding(vertical = 4.dp))
                     }
-                    androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim)
+                    Icon(Duo.KeyboardArrowRight, null, tint = th.textDim)
                 }
             }
         }
-        item {
+
+        item(key = "progress") { ProgressStrip(recent) { nav.push(Overlay.TrainProgress) } }
+
+        item(key = "daysHead") {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                SectionTitle("Templates", Modifier.weight(1f))
-                GlassButton("New", { nav.push(Overlay.TemplateEditor(null)) }, icon = Duo.Add, height = 40.dp)
+                SectionTitle("My workout days", Modifier.weight(1f))
+                GlassButton("New day", { nav.push(Overlay.DayBuilder()) }, icon = Duo.Add, height = 40.dp)
             }
         }
-        if (templates.isEmpty()) item {
+        if (myDays.isEmpty()) item(key = "daysEmpty") {
             Glass(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
-                    Text("No templates yet", style = FitType.section, color = th.text)
-                    Caption("Build your own, or add a Push / Pull / Legs starter set (exercises and set targets only — no weights, those come from your own logs).")
+                    Text("Save the days you repeat", style = FitType.section, color = th.text)
+                    Caption("Build a day like \"Chest & Biceps\" once, then start it with one tap every week.")
                     Spacer(Modifier.height(12.dp))
-                    GlassButton("Add Push / Pull / Legs", {
-                        container.write { val n = container.workoutRepo.createStarterTemplates(); toaster.show("Added $n templates") }
-                    }, icon = Duo.AutoAwesome, height = 44.dp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GlassButton("Build a day", { nav.push(Overlay.DayBuilder()) }, Modifier.weight(1f), icon = Duo.AutoAwesome, height = 44.dp)
+                        GlassButton("Start from scratch", { nav.push(Overlay.TemplateEditor(null)) }, Modifier.weight(1f), icon = Duo.Edit, height = 44.dp)
+                    }
                 }
             }
         }
-        items(templates, key = { "t" + it.template.id }) { t ->
+        items(myDays, key = { "t" + it.template.id }) { t ->
             TemplateCard(t,
                 onStart = { start { container.workoutRepo.startFromTemplate(t.template.id) } },
                 onEdit = { nav.push(Overlay.TemplateEditor(t.template.id)) },
@@ -158,10 +188,72 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
             )
         }
 
-        item { SectionTitle("History") }
-        if (recent.isEmpty()) item { Caption("Finished workouts appear here.", Modifier.padding(start = 6.dp)) }
+        item(key = "histHead") { SectionTitle("History") }
+        if (recent.isEmpty()) item(key = "histEmpty") { Caption("Finished workouts appear here.", Modifier.padding(start = 6.dp)) }
         items(recent, key = { "w" + it.workout.id }) { w ->
             HistoryRow(w, onOpen = { nav.push(Overlay.WorkoutDetail(w.workout.id)) }, onRepeat = { start { container.workoutRepo.repeatWorkout(w.workout.id) } })
+        }
+    }
+}
+
+@Composable
+private fun PlanCard(container: AppContainer, p: com.myfit.tracker.ui.programs.Program, f: com.myfit.tracker.ui.programs.Follow, activeId: Long?) {
+    val th = LocalFitTheme.current
+    val nav = LocalNav.current
+    val toaster = LocalToaster.current
+    val scope = rememberCoroutineScope()
+    val done by remember(f) { com.myfit.tracker.ui.programs.ProgramEngine.sessionsDone(container, f) }.collectAsState(0)
+    val pos = com.myfit.tracker.ui.programs.ProgramEngine.position(p, done)
+    Glass(Modifier.fillMaxWidth(), onClick = { nav.push(Overlay.ProgramDetail(p.id)) }) {
+        Box(Modifier.matchParentSize().drawBehind { drawRect(Brush.horizontalGradient(listOf(th.accent.copy(alpha = 0.4f), th.accent.copy(alpha = 0.05f)))) })
+        Column(Modifier.padding(16.dp)) {
+            Text("YOUR PLAN", style = FitType.overline, color = th.text)
+            Text(p.name, style = FitType.title, color = th.text, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Caption(if (pos.finished) "Completed — all ${p.sessions} sessions" else "Week ${pos.week} of ${p.weeks} · ${p.phase(pos.week).label} · session ${done + 1} of ${p.sessions}", color = th.text)
+            Spacer(Modifier.height(10.dp))
+            com.myfit.tracker.ui.components.GlassProgressBar((done.toFloat() / p.sessions).coerceIn(0f, 1f), th.accentBright)
+            if (!pos.finished) {
+                val day = p.days[pos.day]
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Up next: ${day.name}", style = FitType.section, color = th.text)
+                        Caption("${day.items.size} exercises · ~${p.mins} min")
+                    }
+                    AccentButton("Start", {
+                        if (activeId != null) { toaster.show("Finish or discard your current workout first"); nav.push(Overlay.Gym(activeId)) }
+                        else scope.launch { nav.push(Overlay.Gym(com.myfit.tracker.ui.programs.ProgramEngine.startSession(container, p, f, pos))) }
+                    }, icon = Duo.PlayArrow, height = 46.dp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProgressStrip(recent: List<WorkoutView>, onOpen: () -> Unit) {
+    val th = LocalFitTheme.current
+    val u = LocalSettings.current.units
+    val today = java.time.LocalDate.now()
+    fun inRange(w: WorkoutView, from: Long, to: Long) = runCatching { java.time.LocalDate.parse(w.workout.localDate) }.getOrNull()
+        ?.let { d -> val ago = java.time.temporal.ChronoUnit.DAYS.between(d, today); ago in from..to } == true
+    val week = recent.filter { inRange(it, 0, 6) }
+    val last = recent.filter { inRange(it, 7, 13) }
+    val vol = week.sumOf { it.totals.volumeKg ?: 0.0 }
+    val lastVol = last.sumOf { it.totals.volumeKg ?: 0.0 }
+    Glass(Modifier.fillMaxWidth(), onClick = onOpen) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.myfit.tracker.ui.components.IconBubble(Duo.Insights, th.success, 44.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Progress & PRs", style = FitType.section, color = th.text)
+                Caption(
+                    "This week: ${week.size} workout${if (week.size == 1) "" else "s"} · ${week.sumOf { it.totals.sets }} sets" +
+                        (if (vol > 0) " · ${Fmt.weight(vol, u.weight, 0)}" else "") +
+                        (if (lastVol > 0 && vol > 0) ((vol - lastVol) / lastVol * 100).toInt().let { p -> if (p >= 0) " (▲$p%)" else " (▼${-p}%)" } else ""),
+                )
+            }
+            Icon(Duo.KeyboardArrowRight, null, tint = th.textDim)
         }
     }
 }

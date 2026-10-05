@@ -33,13 +33,51 @@ data class Program(
 
 object ProgramLib {
     @Volatile private var cache: List<Program>? = null
+    @Volatile private var mine: List<Program>? = null
+    /** Bumps whenever the user's own plans change, so lists can refresh. */
+    val version = MutableStateFlow(0)
 
-    fun all(c: Context): List<Program> = cache ?: runCatching {
+    private fun bundled(c: Context): List<Program> = cache ?: runCatching {
         val a = JSONArray(c.assets.open("programs.json").bufferedReader().use { it.readText() })
         (0 until a.length()).map { parse(a.getJSONObject(it)) }
     }.getOrDefault(emptyList()).also { if (it.isNotEmpty()) cache = it }
 
+    private fun mineFile(c: Context) = java.io.File(c.applicationContext.filesDir, "my_programs.json")
+    private fun mineJson(c: Context): JSONArray = runCatching { JSONArray(mineFile(c).readText()) }.getOrDefault(JSONArray())
+
+    /** Plans the user built (Plan Builder / AI), newest first. */
+    fun custom(c: Context): List<Program> = mine ?: runCatching {
+        val a = mineJson(c); (0 until a.length()).mapNotNull { runCatching { parse(a.getJSONObject(it)) }.getOrNull() }.reversed()
+    }.getOrDefault(emptyList()).also { mine = it }
+
+    fun all(c: Context): List<Program> = custom(c) + bundled(c)
+
     fun byId(c: Context, id: String?): Program? = id?.let { i -> all(c).firstOrNull { it.id == i } }
+
+    /** Parses a plan without saving it (Plan Builder preview). */
+    fun preview(o: JSONObject): Program = parse(o)
+
+    fun isCustom(id: String?) = id?.startsWith("my-") == true
+
+    /** Saves (or replaces, same id) one of the user's own plans. */
+    @Synchronized fun saveCustom(c: Context, o: JSONObject): Program {
+        val p = parse(o)
+        val a = mineJson(c)
+        val out = JSONArray()
+        for (i in 0 until a.length()) a.optJSONObject(i)?.takeIf { it.optString("id") != p.id }?.let { out.put(it) }
+        out.put(o)
+        val f = mineFile(c); val tmp = java.io.File(f.path + ".tmp")
+        tmp.writeText(out.toString()); tmp.renameTo(f)
+        mine = null; version.value++
+        return p
+    }
+
+    @Synchronized fun deleteCustom(c: Context, id: String) {
+        val a = mineJson(c); val out = JSONArray()
+        for (i in 0 until a.length()) a.optJSONObject(i)?.takeIf { it.optString("id") != id }?.let { out.put(it) }
+        mineFile(c).writeText(out.toString())
+        mine = null; version.value++
+    }
 
     private fun strs(a: JSONArray?) = (0 until (a?.length() ?: 0)).map { a!!.getString(it) }
     private fun parse(o: JSONObject): Program {

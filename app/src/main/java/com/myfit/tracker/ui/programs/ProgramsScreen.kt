@@ -111,13 +111,14 @@ fun ProgramsScreen(container: AppContainer, bottomPad: Int) {
     val th = LocalFitTheme.current
     val ctx = LocalContext.current
     val nav = LocalNav.current
-    val all = remember { ProgramLib.all(ctx) }
+    val ver by ProgramLib.version.collectAsState()
+    val all = remember(ver) { ProgramLib.all(ctx) }
     var query by rememberSaveable { mutableStateOf("") }
     var filter by remember { mutableStateOf(ProgramFilter()) }
     var sheet by remember { mutableStateOf(false) }
     val follow by ProgramEngine.follow.collectAsState()
-    val active = remember(follow) { ProgramLib.byId(ctx, follow?.id) }
-    val shown = remember(query, filter) { all.filter { filter.matches(it) && it.matchesQuery(query) } }
+    val active = remember(follow, ver) { ProgramLib.byId(ctx, follow?.id) }
+    val shown = remember(query, filter, all) { all.filter { filter.matches(it) && it.matchesQuery(query) } }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = bottomPad.dp),
