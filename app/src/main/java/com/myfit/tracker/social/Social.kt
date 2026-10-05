@@ -38,6 +38,11 @@ data class Profile(val uid: String, val name: String, val code: String, val isPu
 /** A search hit: [viaId] = matched by their MyFit ID (instant add), else by username (sends a friend request). */
 data class Found(val profile: Profile, val viaId: Boolean, val isFriend: Boolean)
 data class FriendRequest(val uid: String, val name: String, val username: String)
+/** What friends can see about each other (arenaProfile/{uid}). */
+data class ArenaProfile(
+    val uid: String, val level: Int, val stars: Int, val mascot: String?, val rewards: List<String>, val journeys: List<String>,
+    val weekSteps: Long, val weekActiveMin: Long, val weekWorkouts: Int,
+)
 data class BoardRow(val uid: String, val name: String, val color: Long, val value: Double, val me: Boolean, val level: Int? = null, val mascot: String? = null)
 data class Challenge(
     val id: String, val title: String, val metric: Metric, val start: String, val end: String,
@@ -127,6 +132,7 @@ class Social(private val c: AppContainer) {
         p?.username?.takeIf { it.isNotBlank() }?.let { runCatching { db.collection("usernames").document(it).delete().await() } }
         runCatching { db.collection("users").document(u.uid).collection("requests").get().await().documents.forEach { runCatching { it.reference.delete().await() } } }
         runCatching { db.collection("users").document(u.uid).collection("private").document("me").delete().await() }
+        runCatching { db.collection("arenaProfile").document(u.uid).delete().await() }
         runCatching { db.collection("users").document(u.uid).delete().await() }
     }
 
@@ -291,6 +297,16 @@ class Social(private val c: AppContainer) {
         db.collection("users").document(u.uid).collection("requests").document(from).delete().await()
     }
 
+    /** A friend's (or your own) Arena profile; null if they haven't synced since this feature arrived. */
+    suspend fun arenaProfile(uid: String): ArenaProfile? {
+        val d = db.collection("arenaProfile").document(uid).get().await()
+        if (!d.exists()) return null
+        @Suppress("UNCHECKED_CAST")
+        fun strs(k: String) = (d.get(k) as? List<Any?>)?.filterIsInstance<String>().orEmpty()
+        return ArenaProfile(uid, d.getLong("level")?.toInt() ?: 1, d.getLong("stars")?.toInt() ?: 0, d.getString("mascot"), strs("rewards"), strs("journeys"),
+            d.getLong("weekSteps") ?: 0L, d.getLong("weekActiveMin") ?: 0L, d.getLong("weekWorkouts")?.toInt() ?: 0)
+    }
+
     suspend fun removeFriend(uid: String) {
         val me = auth.currentUser?.uid ?: return
         runCatching { db.collection("users").document(me).collection("friends").document(uid).delete().await() }
@@ -447,6 +463,20 @@ class Social(private val c: AppContainer) {
                 db.collection("challenges").document(ch.id).collection("progress").document(u.uid)
                     .set(mapOf(ch.metric.key to v, "updatedAt" to FieldValue.serverTimestamp())).await()
             }
+        }
+        // public Arena profile friends can open: level, stars, recent rewards, journeys, this week's numbers
+        runCatching {
+            val ledger = com.myfit.tracker.ui.arena.ArenaProgress.ledger(ctx)
+            val total = ledger.sumOf { it.stars }
+            val workouts = c.workoutRepo.completedRange(weekStart().toString(), today.toString()).first().size
+            db.collection("arenaProfile").document(u.uid).set(mapOf(
+                "level" to com.myfit.tracker.ui.arena.ArenaProgress.level(total).n, "stars" to total.coerceIn(0, 100000),
+                "mascot" to com.myfit.tracker.ui.arena.ArenaPrefs.partner(ctx).id,
+                "rewards" to ledger.take(30).map { it.title.take(40) },
+                "journeys" to com.myfit.tracker.ui.arena.ArenaPrefs.finished(ctx).take(20).toList(),
+                "weekSteps" to week.sumOf { it.steps }, "weekActiveMin" to week.sumOf { it.activeMin }, "weekWorkouts" to workouts.coerceIn(0, 200),
+                "updatedAt" to FieldValue.serverTimestamp(),
+            )).await()
         }
         // activity feed: a few milestones friends can see (idempotent ids — re-syncing never duplicates)
         runCatching {
