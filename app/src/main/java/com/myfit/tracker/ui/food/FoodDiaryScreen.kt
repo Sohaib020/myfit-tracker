@@ -117,6 +117,19 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
                     QuickTile("Saved", Duo.Bookmark, th.fat, Modifier.weight(1f)) { nav.push(Overlay.FoodAdd(mealForNow(), dateKey, 2)) }
                 }
             }
+            item {
+                com.myfit.tracker.ui.theme.Glass(Modifier.fillMaxWidth(), onClick = { nav.push(Overlay.MealPlans) }) {
+                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        com.myfit.tracker.ui.components.IconBubble(Duo.ForkKnife, th.success, 40.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Pakistani meal plans", style = FitType.section, color = th.text)
+                            Caption("7 days of desi meals in roti, katori and cups — log a meal in one tap")
+                        }
+                        Icon(Duo.KeyboardArrowRight, null, tint = th.textDim)
+                    }
+                }
+            }
             if (asTab) item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     HubChip("Fasting", Duo.Timer, th.sleep, Modifier.weight(1f)) { nav.push(Overlay.Fasting) }
