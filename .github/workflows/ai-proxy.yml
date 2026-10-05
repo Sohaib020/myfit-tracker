@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
-    paths: [ 'server/ai-proxy/**' ]
+    paths: [ 'server/ai-proxy/**', '.github/workflows/ai-proxy.yml' ]
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -22,7 +22,7 @@ jobs:
             echo "::error::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets first (see server/ai-proxy/README.md)"; exit 1; fi
       - name: Deploy
         working-directory: server/ai-proxy
-        run: npx --yes wrangler@3 deploy --var FIREBASE_PROJECT_ID:${{ secrets.FIREBASE_PROJECT_ID }} | tee deploy.log
+        run: npx --yes wrangler@4 deploy --var FIREBASE_PROJECT_ID:${{ secrets.FIREBASE_PROJECT_ID }} | tee deploy.log
       - name: Upload provider keys as Worker secrets
         working-directory: server/ai-proxy
         env:
@@ -35,7 +35,7 @@ jobs:
           AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
         run: |
           for k in GEMINI_API_KEY GROQ_API_KEY OPENROUTER_API_KEY MISTRAL_API_KEY ELEVENLABS_API_KEY AZURE_SPEECH_KEY AZURE_SPEECH_REGION; do
-            v="${!k}"; if [ -n "$v" ]; then printf '%s' "$v" | npx --yes wrangler@3 secret put "$k" >/dev/null && echo "set $k"; fi
+            v="${!k}"; if [ -n "$v" ]; then printf '%s' "$v" | npx --yes wrangler@4 secret put "$k" >/dev/null && echo "set $k"; fi
           done
       - name: Worker URL
         working-directory: server/ai-proxy
