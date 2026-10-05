@@ -361,6 +361,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         is Overlay.DayBuilder -> com.myfit.tracker.ui.train.DayBuilderScreen(container, o.preset)
                         Overlay.PlanBuilder -> com.myfit.tracker.ui.train.PlanBuilderScreen(container)
                         Overlay.TrainProgress -> com.myfit.tracker.ui.train.TrainProgressScreen(container)
+                        Overlay.WeeklyReport -> com.myfit.tracker.ui.report.WeeklyReportScreen(container)
                         is Overlay.PickExercises -> com.myfit.tracker.ui.train.PickExercisesScreen(container, o.templateId, o.workoutId)
                         is Overlay.ProgramDetail -> com.myfit.tracker.ui.programs.ProgramDetailScreen(container, o.id)
                         Overlay.Deen -> com.myfit.tracker.ui.deen.DeenScreen(container)
@@ -406,6 +407,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                     }
                     "stopwatch" -> if (nav.stack.lastOrNull() != Overlay.Stopwatch) nav.push(Overlay.Stopwatch)
                     "fasting" -> if (nav.stack.lastOrNull() != Overlay.Fasting) nav.push(Overlay.Fasting)
+                    "report" -> if (nav.stack.lastOrNull() != Overlay.WeeklyReport) nav.push(Overlay.WeeklyReport)
                 }
             }
             // friend invite links (myfit://invite?c=CODE): add the friend once signed in, then show Arena → Friends

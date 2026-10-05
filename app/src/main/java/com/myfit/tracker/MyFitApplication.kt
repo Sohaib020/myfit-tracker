@@ -62,6 +62,7 @@ class MyFitApplication : Application() {
         container.write { container.exerciseRepo.seedIfNeeded() }
         container.write { container.nutritionRepo.seedIfNeeded() }
         HealthSyncWorker.schedule(this)
+        com.myfit.tracker.reminders.SundayReportWorker.schedule(this)
         com.myfit.tracker.reminders.ReminderScheduler.reschedule(this)
         runCatching { container.social.start() }
         container.write { runCatching { container.social.uploadNow() } }

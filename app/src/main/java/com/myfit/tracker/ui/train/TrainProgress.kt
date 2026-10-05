@@ -214,6 +214,14 @@ fun TrainProgressScreen(container: AppContainer) {
                 item { Caption("Estimates (Epley formula) from sets of 1–12 reps — not a weight you've actually lifted.", Modifier.padding(horizontal = 6.dp)) }
             }
             item {
+                Glass(Modifier.fillMaxWidth(), onClick = { nav.push(Overlay.WeeklyReport) }) {
+                    Row(Modifier.padding(14.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Text("Your week · shareable report", style = FitType.label, color = th.text, modifier = Modifier.weight(1f))
+                        androidx.compose.material3.Icon(com.myfit.tracker.ui.theme.Duo.KeyboardArrowRight, null, tint = th.textDim)
+                    }
+                }
+            }
+            item {
                 Glass(Modifier.fillMaxWidth(), onClick = { nav.push(Overlay.Records) }) {
                     Row(Modifier.padding(14.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Text("All personal records", style = FitType.label, color = th.text, modifier = Modifier.weight(1f))

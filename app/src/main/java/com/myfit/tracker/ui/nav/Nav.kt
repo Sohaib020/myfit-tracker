@@ -48,6 +48,8 @@ sealed interface Overlay {
     data object PlanBuilder : Overlay
     /** Week / month / 6-month training progress. */
     data object TrainProgress : Overlay
+    /** Sunday report: last 7 days + shareable card. */
+    data object WeeklyReport : Overlay
     data class PickExercises(val templateId: Long? = null, val workoutId: Long? = null) : Overlay
     data class Food(val date: String? = null) : Overlay
     data class FoodAdd(val mealType: String, val date: String, val tab: Int) : Overlay
