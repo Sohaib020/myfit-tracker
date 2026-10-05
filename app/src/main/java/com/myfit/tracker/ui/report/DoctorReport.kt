@@ -209,7 +209,7 @@ object DoctorReport {
         c.drawRoundRect(RectF(M, y, W - M, y + 56f), 10f, 10f, Paint().apply { color = Color.WHITE; style = Paint.Style.FILL })
         c.drawRoundRect(RectF(M, y, W - M, y + 56f), 10f, 10f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = LINE; style = Paint.Style.STROKE; strokeWidth = 1f })
         val pc = listOf("Patient" to (profile?.name?.ifBlank { null } ?: "—"), "Age" to (age?.toString() ?: "—"),
-            "Sex" to (profile?.sex?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "—"), "Height" to (profile?.heightCm?.let { "${it.toInt()} cm" } ?: "—"),
+            "Sex" to (profile?.sex?.toString()?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "—"), "Height" to (profile?.heightCm?.let { "${it.toInt()} cm" } ?: "—"),
             "Diabetes" to DiabetesType.label(cfg.type))
         val colW = (W - 2 * M) / pc.size
         pc.forEachIndexed { i, (k, v) ->
