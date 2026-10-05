@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui.glucose
 
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -125,6 +127,7 @@ fun GlucoseScreen(container: AppContainer) {
         if (importing) return
         importing = true
         val n = GlucoseHc.importRecent(container, 30)
+        runCatching { container.glucoseFamily.upload(container.app) }
         importing = false
         if (!quiet || n > 0) toaster.show(if (n > 0) "Imported $n sensor readings" else "No new readings in Health Connect")
     }
@@ -256,8 +259,9 @@ private fun GlucoseMain(
 
     LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 40.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // ---- latest
-        item { LatestCard(latest, cfg, onLog) }
+        item { StatusHero(latest, cfg, onLog) }
         if (latest != null && latest.mgdl < Glucose.LOW) item { LowBanner(latest) }
+        item { MeaningStrip(cfg) }
 
         // ---- today
         item {
@@ -275,27 +279,10 @@ private fun GlucoseMain(
             TrendCard(inWindow, cfg, range) { range = it }
         }
 
-        // ---- CGM
-        item {
-            val check = remember(all, cfg.low, cfg.high, todayKey) {
-                val from30 = startOfDayMs(29)
-                Glucose.cgmCheck(all.filter { it.takenAt >= from30 }, todayKey, cfg.low, cfg.high)
-            }
-            val lastSensor = all.lastOrNull { it.tag == GlucoseTag.CGM }
-            CgmCard(check, lastSensor, canRead, importing, onImport, onConnect)
-        }
-
-        // ---- food link
-        item { CarbsCard(all, carbs, cfg) }
-
+        // ---- family
+        item { FamilyCard(container) }
         // ---- medicines
         item { MedsSummaryCard(container) { nav.push(Overlay.Meds) } }
-
-        // ---- HbA1c, reminders, Ramadan
-        item { HbA1cCard(container, cfg) }
-        item { CheckRemindersCard(cfg) }
-        item { RamadanCard(container, cfg) }
-
         // ---- report
         item {
             GlassCard {
@@ -317,6 +304,26 @@ private fun GlucoseMain(
                 }, Modifier.fillMaxWidth(), icon = Duo.Send, enabled = !building, height = 48.dp)
             }
         }
+
+        item { Text("More tools", style = FitType.section, color = th.text, modifier = Modifier.padding(start = 6.dp, top = 8.dp)) }
+        // ---- CGM
+        item {
+            val check = remember(all, cfg.low, cfg.high, todayKey) {
+                val from30 = startOfDayMs(29)
+                Glucose.cgmCheck(all.filter { it.takenAt >= from30 }, todayKey, cfg.low, cfg.high)
+            }
+            val lastSensor = all.lastOrNull { it.tag == GlucoseTag.CGM }
+            CgmCard(check, lastSensor, canRead, importing, onImport, onConnect)
+        }
+
+        // ---- food link
+        item { CarbsCard(all, carbs, cfg) }
+
+
+        // ---- HbA1c, reminders, Ramadan
+        item { HbA1cCard(container, cfg) }
+        item { CheckRemindersCard(cfg) }
+        item { RamadanCard(container, cfg) }
 
         // ---- settings
         item {
@@ -409,9 +416,9 @@ private fun TodayCard(today: List<GlucoseReading>, cfg: GlucoseConfig, carbsToda
                 meals.filter { it.eatenAt <= r.takenAt && r.takenAt - it.eatenAt <= 3 * 3_600_000L }.maxByOrNull { it.eatenAt } else null
             Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(timeOf(r.takenAt), style = FitType.label, color = th.textDim, modifier = Modifier.width(46.dp))
-                Box(Modifier.size(10.dp).clip(CircleShape).background(col))
+                Text(Glucose.format(r.mgdl, cfg.mmol), style = FitType.title, color = th.text)
                 Spacer(Modifier.width(8.dp))
-                Text(Glucose.format(r.mgdl, cfg.mmol), style = FitType.section, color = th.text)
+                MeaningPill(r.mgdl, cfg)
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(Glucose.tagLabel(r.tag), style = FitType.label, color = th.textDim)
@@ -430,7 +437,9 @@ private fun TrendCard(rs: List<GlucoseReading>, cfg: GlucoseConfig, range: Int, 
     val mmol = cfg.mmol
     val u = Glucose.unitLabel(mmol)
     GlassCard {
-        CardHeader(Duo.Insights, "Trends", th.water)
+        CardHeader(Duo.Insights, "Your last $range days", th.water)
+        Spacer(Modifier.height(6.dp))
+        Text(summarySentence(rs, cfg), style = FitType.body, color = th.text)
         Spacer(Modifier.height(10.dp))
         GlassSegmented(listOf(7, 14, 30, 90), range, { "${it}d" }, onRange, Modifier.fillMaxWidth())
         Spacer(Modifier.height(12.dp))
@@ -664,10 +673,23 @@ private fun LogReadingSheet(visible: Boolean, cfg: GlucoseConfig, container: App
     var writeHc by remember(visible, canWrite) { mutableStateOf(cfg.writeHc && canWrite) }
 
     GlassSheet(visible = visible, onDismiss = onDismiss) {
-        Text("Log blood sugar", style = FitType.title, color = th.text)
-        Spacer(Modifier.height(14.dp))
-        NumberInput(value, { value = it }, Glucose.unitLabel(cfg.mmol), Modifier.fillMaxWidth(), decimal = cfg.mmol)
+        Text("Add my sugar reading", style = FitType.title, color = th.text)
+        Spacer(Modifier.height(10.dp))
+        val typed = value.toDoubleOrNull()?.let { Glucose.toMgdl(it, cfg.mmol) }?.takeIf { it in 10.0..700.0 }
+        val meaning = typed?.let { meaningOf(it, cfg) }
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background((meaning?.color ?: th.text).copy(alpha = 0.1f)).padding(horizontal = 18.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(value.ifEmpty { "0" }, fontSize = 46.sp, fontWeight = FontWeight.Bold, color = if (value.isEmpty()) th.textFaint else th.text)
+            Spacer(Modifier.width(8.dp))
+            Text(Glucose.unitLabel(cfg.mmol), style = FitType.section, color = th.textDim, modifier = Modifier.weight(1f))
+            if (meaning != null) Text(meaning.word, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White,
+                modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(meaning.color).padding(horizontal = 12.dp, vertical = 6.dp))
+        }
+        Spacer(Modifier.height(10.dp))
+        BigKeypad(value, cfg.mmol) { value = it }
         Spacer(Modifier.height(12.dp))
+        Text("When did you check?", style = FitType.label, color = th.textDim)
+        Spacer(Modifier.height(6.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Glucose.manualTags.forEach { t -> GlassChip(Glucose.tagLabel(t), tag == t, { tag = t }) }
         }
@@ -698,6 +720,7 @@ private fun LogReadingSheet(visible: Boolean, cfg: GlucoseConfig, container: App
             container.write {
                 val id = container.db.glucoseDao().insert(r)
                 if (alsoHc) GlucoseHc.write(container, r.copy(id = id))
+                runCatching { container.glucoseFamily.upload(container.app) }
             }
             val band = Glucose.band(mg, cfg.high)
             toaster.show(

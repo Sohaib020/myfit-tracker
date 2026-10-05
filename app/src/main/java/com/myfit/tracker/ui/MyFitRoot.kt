@@ -418,6 +418,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                     "stopwatch" -> if (nav.stack.lastOrNull() != Overlay.Stopwatch) nav.push(Overlay.Stopwatch)
                     "fasting" -> if (nav.stack.lastOrNull() != Overlay.Fasting) nav.push(Overlay.Fasting)
                     "report" -> if (nav.stack.lastOrNull() != Overlay.WeeklyReport) nav.push(Overlay.WeeklyReport)
+                    "glucose" -> if (nav.stack.lastOrNull() != Overlay.Glucose) nav.push(Overlay.Glucose)
                 }
             }
             // friend invite links (myfit://invite?c=CODE): add the friend once signed in, then show Arena → Friends

@@ -61,6 +61,32 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
+    // blood-sugar family sharing (opt-in): code → patient; carers listed under the patient can read the readings
+    match /glucoseShares/{code} {
+      allow get: if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'name']) && request.resource.data.name is string && request.resource.data.name.size() <= 24;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+    match /glucose/{uid} {
+      function isCarer() { return signedIn() && exists(/databases/$(database)/documents/glucose/$(uid)/carers/$(request.auth.uid)); }
+      allow read: if isMe(uid) || isCarer();
+      allow write: if isMe(uid);
+      match /readings/{rid} {
+        allow read: if isMe(uid) || isCarer();
+        allow write: if isMe(uid) && (request.resource == null || (request.resource.data.keys().hasOnly(['mgdl', 'tag', 'takenAt'])
+          && request.resource.data.mgdl is number && request.resource.data.mgdl > 0 && request.resource.data.mgdl < 1000));
+      }
+      match /carers/{cid} {
+        allow read: if isMe(uid) || isMe(cid);
+        // a carer can add themselves only with the patient's family code
+        allow create: if isMe(cid) && request.resource.data.code is string
+          && get(/databases/$(database)/documents/glucoseShares/$(request.resource.data.code)).data.uid == uid
+          && request.resource.data.keys().hasOnly(['name', 'code']);
+        allow delete: if isMe(uid) || isMe(cid);
+      }
+    }
+
     match /codes/{code} {
       allow get: if signedIn();      // look up one code; listing all codes is not allowed
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
