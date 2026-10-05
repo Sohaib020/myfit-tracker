@@ -187,6 +187,17 @@ fun MyFitRoot(container: AppContainer) {
                         val account by container.social.user.collectAsState()
                         val obCtx = androidx.compose.ui.platform.LocalContext.current
                         var catchUp by remember(ps.profile == null) { mutableStateOf(if (ps.profile == null) emptyList() else com.myfit.tracker.ui.onboarding.OnboardingVersion.pendingSteps(obCtx)) }
+                        // update that added the dedicated Health Connect page: show the permission pages once more
+                        // to existing users who never connected Health Connect
+                        LaunchedEffect(ps.profile != null) {
+                            if (ps.profile == null) return@LaunchedEffect
+                            val sp = obCtx.getSharedPreferences("onboarding", android.content.Context.MODE_PRIVATE)
+                            if (!sp.getBoolean("perms_v3", false)) {
+                                sp.edit().putBoolean("perms_v3", true).apply()
+                                val hcOn = runCatching { container.healthSync.granted().any { it in container.healthSync.dataPermissions } }.getOrDefault(false)
+                                if (!hcOn && container.healthSync.isAvailable) container.settings.setPermsAsked(false)
+                            }
+                        }
                         if (socialOn && account == null) com.myfit.tracker.ui.social.SignInGate(container)
                         else if (ps.profile == null) OnboardingScreen(container, s.units)
                         else if (catchUp.isNotEmpty()) com.myfit.tracker.ui.onboarding.OnboardingCatchUp(container, ps.profile, s.units, catchUp) { catchUp = emptyList() }
