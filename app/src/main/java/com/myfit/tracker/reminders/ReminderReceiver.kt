@@ -78,6 +78,26 @@ class ReminderReceiver : BroadcastReceiver() {
         if (nid != 0) ReminderNotifier.cancel(app, nid)
     }
 
+    /** A richer card for reminders from the reminder list: water shows today's progress, the rest pick a matching animation. */
+    private suspend fun cardFor(container: com.myfit.tracker.AppContainer, type: String, title: String, text: String): com.myfit.tracker.notify.NCard {
+        val K = com.myfit.tracker.notify.NKind
+        return when (type) {
+            ReminderType.WATER -> {
+                val (ml, target) = HabitActions.waterToday(container)
+                val t = target ?: 2500.0
+                val l = { v: Double -> "%.1f".format(java.util.Locale.US, v / 1000.0) }
+                com.myfit.tracker.notify.NCard(K.DROP, title, text, value = l(ml) + " L", progress = (ml / t).toFloat(), progressLabel = "${l(ml)} of ${l(t)} L today")
+            }
+            ReminderType.SUPPLEMENT, ReminderScheduler.MEDICINE -> com.myfit.tracker.notify.NCard(K.PILL, title, text, chip = com.myfit.tracker.domain.ClockFmt.f().format(java.time.LocalTime.now()))
+            ReminderType.WORKOUT -> com.myfit.tracker.notify.NCard(K.LIFT, title, text)
+            ReminderType.STEPS -> com.myfit.tracker.notify.NCard(K.RUN, title, text)
+            ReminderType.MEAL -> com.myfit.tracker.notify.NCard(K.MEAL, title, text)
+            ReminderType.SLEEP -> com.myfit.tracker.notify.NCard(K.MOON, title, text)
+            ReminderType.WEEKLY_REPORT -> com.myfit.tracker.notify.NCard(K.TROPHY, title, text)
+            else -> com.myfit.tracker.notify.NCard(ReminderNotifier.guessKind(title, text), title, text)
+        }
+    }
+
     private fun doneLabelFor(type: String?, canLogMed: Boolean): String? = when (type) {
         ReminderType.WATER -> "+250 ml"
         ReminderType.SUPPLEMENT -> "Taken"
@@ -123,6 +143,7 @@ class ReminderReceiver : BroadcastReceiver() {
                     if (discreet) "Reminder" else r.title,
                     if (discreet) "A gentle reminder from MyFit." else r.message,
                     doneLabel = doneLabelFor(r.type, canLogMed), payload = payload, snooze = true, discreet = discreet,
+                    card = runCatching { cardFor(container, r.type, r.title, r.message) }.getOrNull(),
                 )
             }
             ReminderScheduler.KIND_EXTRA -> {
@@ -136,7 +157,7 @@ class ReminderReceiver : BroadcastReceiver() {
             Nudges.KIND -> Nudges.fire(app, intent.getLongExtra(ReminderScheduler.EXTRA_ID, -1L).toInt())
             ReminderScheduler.KIND_FAST -> {
                 ReminderScheduler.clearFastAlarm(app)
-                ReminderNotifier.post(app, nid, title, text)
+                ReminderNotifier.post(app, nid, title, text, card = com.myfit.tracker.notify.NCard(com.myfit.tracker.notify.NKind.TROPHY, title, text, progress = 1f, progressLabel = "Fast complete"))
             }
             ReminderScheduler.KIND_PILL, ReminderScheduler.KIND_PERIOD ->
                 ReminderNotifier.post(app, nid, title, text, doneLabel = "Done", payload = payload, snooze = kind == ReminderScheduler.KIND_PILL, discreet = true)

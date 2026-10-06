@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="2dp" android:paddingBottom="2dp">
+    <FrameLayout android:layout_width="40dp" android:layout_height="40dp">
+      <ProgressBar android:id="@+id/n_anim_run" android:layout_width="40dp" android:layout_height="40dp"
+          android:indeterminate="true" android:indeterminateDrawable="@drawable/na_run" android:indeterminateDuration="900" android:visibility="gone"/>
+      <ProgressBar android:id="@+id/n_anim_lift" android:layout_width="40dp" android:layout_height="40dp"
+          android:indeterminate="true" android:indeterminateDrawable="@drawable/na_lift" android:indeterminateDuration="900" android:visibility="gone"/>
+      <ProgressBar android:id="@+id/n_anim_rest" android:layout_width="40dp" android:layout_height="40dp"
+          android:indeterminate="true" android:indeterminateDrawable="@drawable/na_rest" android:indeterminateDuration="900" android:visibility="gone"/>
+      <ProgressBar android:id="@+id/n_anim_flame" android:layout_width="40dp" android:layout_height="40dp"
+          android:indeterminate="true" android:indeterminateDrawable="@drawable/na_flame" android:indeterminateDuration="900" android:visibility="gone"/>
+      <ProgressBar android:id="@+id/n_anim_drop" android:layout_width="40dp" android:layout_height="40dp"
+          android:indeterminate="true" android:indeterminateDrawable="@drawable/na_drop" android:indeterminateDuration="900" android:visibility="gone"/>
+      <ProgressBar android:id="@+id/n_anim_pill" android:layout_width="40dp" android:layout_height="40dp"
+          android:indeterminate="true" android:indeterminateDrawable="@drawable/na_pill" android:indeterminateDuration="900" android:visibility="gone"/>
+      <ProgressBar android:id="@+id/n_anim_bell" android:layout_width="40dp" android:layout_height="40dp"
+          android:indeterminate="true" android:indeterminateDrawable="@drawable/na_bell" android:indeterminateDuration="900" android:visibility="gone"/>
+      <ProgressBar android:id="@+id/n_anim_moon" android:layout_width="40dp" android:layout_height="40dp"
+          android:indeterminate="true" android:indeterminateDrawable="@drawable/na_moon" android:indeterminateDuration="900" android:visibility="gone"/>
+      <ProgressBar android:id="@+id/n_anim_trophy" android:layout_width="40dp" android:layout_height="40dp"
+          android:indeterminate="true" android:indeterminateDrawable="@drawable/na_trophy" android:indeterminateDuration="900" android:visibility="gone"/>
+      <ProgressBar android:id="@+id/n_anim_heart" android:layout_width="40dp" android:layout_height="40dp"
+          android:indeterminate="true" android:indeterminateDrawable="@drawable/na_heart" android:indeterminateDuration="900" android:visibility="gone"/>
+      <ProgressBar android:id="@+id/n_anim_sugar" android:layout_width="40dp" android:layout_height="40dp"
+          android:indeterminate="true" android:indeterminateDrawable="@drawable/na_sugar" android:indeterminateDuration="900" android:visibility="gone"/>
+      <ProgressBar android:id="@+id/n_anim_meal" android:layout_width="40dp" android:layout_height="40dp"
+          android:indeterminate="true" android:indeterminateDrawable="@drawable/na_meal" android:indeterminateDuration="900" android:visibility="gone"/>
+    </FrameLayout>
+    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+        android:orientation="vertical" android:layout_marginStart="12dp">
+        <TextView android:id="@+id/n_title" style="@style/TextAppearance.Compat.Notification.Title" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:maxLines="1" android:ellipsize="end" android:textStyle="bold"/>
+        <TextView android:id="@+id/n_text" style="@style/TextAppearance.Compat.Notification" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:maxLines="1" android:ellipsize="end"/>
+        <ProgressBar android:id="@+id/n_bar_small" style="@android:style/Widget.ProgressBar.Horizontal" android:layout_width="match_parent"
+            android:layout_height="4dp" android:layout_marginTop="5dp" android:max="1000" android:progressDrawable="@drawable/notif_progress" android:visibility="gone"/>
+    </LinearLayout>
+    <Chronometer android:id="@+id/n_chrono_small" style="@style/TextAppearance.Compat.Notification.Title" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" android:layout_marginStart="10dp" android:textSize="18sp" android:textStyle="bold" android:visibility="gone"/>
+    <TextView android:id="@+id/n_value_small" style="@style/TextAppearance.Compat.Notification.Title" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" android:layout_marginStart="10dp" android:textSize="18sp" android:textStyle="bold" android:visibility="gone"/>
+</LinearLayout>

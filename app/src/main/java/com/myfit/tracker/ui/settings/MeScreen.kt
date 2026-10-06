@@ -976,24 +976,18 @@ private fun AiProvidersCard(container: AppContainer) {
 }
 
 
-/** Now Bar / live notifications: status, test and the settings shortcut (Samsung hides third-party ones by default). */
+/** Live notifications: Android 16 system Live Update (Now Bar) or MyFit's animated card. */
 @androidx.compose.runtime.Composable
 private fun LiveNotifRow() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val th = com.myfit.tracker.ui.theme.LocalFitTheme.current
-    val allowed = androidx.compose.runtime.remember { com.myfit.tracker.notify.LiveUpdates.promotionAllowed(ctx) }
-    val canPost = androidx.compose.runtime.remember { com.myfit.tracker.notify.LiveUpdates.canPost(ctx) }
-    androidx.compose.material3.Text("Now Bar · live notifications", style = com.myfit.tracker.ui.theme.FitType.label, color = th.text)
-    com.myfit.tracker.ui.components.Caption(when {
-        !canPost -> "Notifications are off for MyFit — turn them on to see workouts, rest and fasting live."
-        allowed == false -> "Live notifications are turned off for MyFit in Android settings."
-        android.os.Build.MANUFACTURER.equals("samsung", true) -> "Samsung shows other apps in the Now Bar only when Developer options → \"Live notifications for all apps\" is on."
-        allowed == null -> "Your Android version shows these as normal ongoing notifications."
-        else -> "Workouts, rest timer, stopwatch and fasting appear in the status bar chip while running."
-    })
+    if (android.os.Build.VERSION.SDK_INT < 36) return
+    var native by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.myfit.tracker.notify.LiveUpdates.nativeStyle(ctx)) }
+    androidx.compose.material3.Text("Live notifications", style = com.myfit.tracker.ui.theme.FitType.label, color = th.text)
+    com.myfit.tracker.ui.components.Caption(if (native) "Workouts, rest, activity and fasting show as a live progress bar in the Now Bar and on the lock screen."
+        else "Workouts, rest, activity and fasting show as MyFit's animated card in the notification shade (not in the Now Bar).")
     Spacer(Modifier.height(8.dp))
-    androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-        com.myfit.tracker.ui.theme.GlassButton("Test now", { com.myfit.tracker.notify.LiveUpdates.test(ctx) }, Modifier.weight(1f), height = 42.dp)
-        com.myfit.tracker.ui.theme.GlassButton("Settings", { com.myfit.tracker.notify.LiveUpdates.openSettings(ctx) }, Modifier.weight(1f), height = 42.dp)
-    }
+    com.myfit.tracker.ui.components.GlassSegmented(listOf(true, false), native, { if (it) "Now Bar" else "Rich card" }, { v ->
+        native = v; com.myfit.tracker.notify.LiveUpdates.setRichStyle(ctx, !v)
+    }, Modifier.fillMaxWidth())
 }

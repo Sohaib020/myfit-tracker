@@ -120,7 +120,9 @@ class FriendsRepo(private val c: AppContainer) {
                 val week = c.social.weekKey()
                 val ids = db.collection("users").document(me).collection("friends").get().await().documents.map { it.id }
                 val cards = coroutineScope { (listOf(me) + ids).map { uid -> async { runCatching { card(db, week, uid, uid == me) }.getOrNull() } }.awaitAll() }.filterNotNull()
-                val reqs = runCatching { db.collection("users").document(me).collection("requests").get().await().size() }.getOrDefault(0)
+                val reqDocs = runCatching { db.collection("users").document(me).collection("requests").get().await().documents }.getOrDefault(emptyList())
+                val reqs = reqDocs.size
+                runCatching { notifyNewRequests(reqDocs.map { it.id to (it.getString("name") ?: "Someone") }) }
                 val s = FriendsSnap(cards.firstOrNull { it.me }, cards.filter { !it.me }, reqs, System.currentTimeMillis())
                 _snap.value = s
                 withContext(Dispatchers.IO) { runCatching { file.writeText(toJson(s).toString()) } }
@@ -144,6 +146,28 @@ class FriendsRepo(private val c: AppContainer) {
             wd?.getLong("steps") ?: ad?.getLong("weekSteps") ?: 0L, wd?.getLong("activeMin") ?: ad?.getLong("weekActiveMin") ?: 0L,
             ad?.getLong("weekWorkouts")?.toInt() ?: 0, strs("journeys"), strs("rewards"), me, upd,
         )
+    }
+
+    /** "Ali wants to be friends" — once per request. */
+    private fun notifyNewRequests(reqs: List<Pair<String, String>>) {
+        val ctx = c.app
+        val sp = ctx.getSharedPreferences("social_notified", Context.MODE_PRIVATE)
+        val seen = sp.getStringSet("req", emptySet()).orEmpty()
+        val fresh = reqs.filter { it.first !in seen }
+        sp.edit().putStringSet("req", reqs.map { it.first }.toSet()).apply()
+        if (fresh.isEmpty() || !com.myfit.tracker.notify.LiveUpdates.canPost(ctx)) return
+        val nm = ctx.getSystemService(android.app.NotificationManager::class.java) ?: return
+        if (nm.getNotificationChannel("social") == null) nm.createNotificationChannel(
+            android.app.NotificationChannel("social", "Friends", android.app.NotificationManager.IMPORTANCE_DEFAULT).apply { description = "Friend requests and challenges" })
+        val names = fresh.map { it.second }
+        val title = if (names.size == 1) "${names[0]} wants to be friends" else "${names.size} new friend requests"
+        val card = com.myfit.tracker.notify.NCard(com.myfit.tracker.notify.NKind.HEART, title, "Accept to race each other on steps every week.", chip = "Friends")
+        val pi = android.app.PendingIntent.getActivity(ctx, 4500, android.content.Intent(ctx, com.myfit.tracker.MainActivity::class.java)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra(com.myfit.tracker.notify.LiveUpdates.EXTRA_OPEN, "friends"),
+            android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+        val n = com.myfit.tracker.notify.NotifKit.apply(ctx, androidx.core.app.NotificationCompat.Builder(ctx, "social"), card)
+            .setSmallIcon(com.myfit.tracker.R.drawable.ic_notification).setContentIntent(pi).setAutoCancel(true).build()
+        runCatching { nm.notify(4500, n) }
     }
 
     // ---------------------------------------------------------------- cache (de)serialisation
