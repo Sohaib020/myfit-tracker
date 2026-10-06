@@ -291,7 +291,7 @@ private fun MeStat(value: String, label: String, modifier: Modifier) {
 
 /** Top three, 2nd – 1st – 3rd, with steps under each. */
 @Composable
-private fun Podium(top: List<FriendCard>, onOpen: (FriendCard) -> Unit) {
+internal fun Podium(top: List<FriendCard>, onOpen: (FriendCard) -> Unit) {
     val th = LocalFitTheme.current
     val order = listOfNotNull(top.getOrNull(1)?.let { it to 2 }, top.getOrNull(0)?.let { it to 1 }, top.getOrNull(2)?.let { it to 3 })
     Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp)) {
@@ -319,7 +319,7 @@ private fun Podium(top: List<FriendCard>, onOpen: (FriendCard) -> Unit) {
 }
 
 @Composable
-private fun RaceRow(rank: Int, f: FriendCard, frac: Float, onClick: () -> Unit) {
+internal fun RaceRow(rank: Int, f: FriendCard, frac: Float, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     val medal = when (rank) { 1 -> GOLD; 2 -> SILVER; 3 -> BRONZE; else -> null }
     val bar by animateFloatAsState(frac.coerceIn(0.02f, 1f), tween(700), label = "bar")
@@ -348,7 +348,7 @@ private fun RaceRow(rank: Int, f: FriendCard, frac: Float, onClick: () -> Unit) 
 }
 
 @Composable
-private fun ChallengeCard(ch: Challenge, onClick: () -> Unit) {
+internal fun ChallengeCard(ch: Challenge, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     val today = com.myfit.tracker.domain.Clock.today()
     val end = runCatching { java.time.LocalDate.parse(ch.end) }.getOrNull()
