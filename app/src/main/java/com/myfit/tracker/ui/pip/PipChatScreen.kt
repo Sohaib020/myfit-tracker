@@ -167,7 +167,7 @@ fun PipChatScreen(container: AppContainer) {
         }
         if (messages.isEmpty()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Hi! I'm ${com.myfit.tracker.ui.pip.Buddy.name} " + (if (com.myfit.tracker.ui.pip.Buddy.active.value == com.myfit.tracker.ui.arena.Mascot.PIP) "🌱" else "👋"), style = FitType.title, color = th.text)
+                Text("Hi! I'm ${com.myfit.tracker.ui.pip.Buddy.name} " + (if (Buddy.active.collectAsState().value == com.myfit.tracker.ui.arena.Mascot.PIP) "🌱" else "👋"), style = FitType.title, color = th.text)
                 Spacer(Modifier.height(6.dp))
                 Caption("Ask about your training, food, sleep or steps — or tap the mic and just talk. Tap me, stroke me, or long-press for a hug.")
             }

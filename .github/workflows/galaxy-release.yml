@@ -35,7 +35,15 @@ jobs:
           [ -n "$A" ] || echo "::warning::ADMOB_REWARDED_ID not set — the Galaxy build hides ads (no test ads in store builds)"
           [ -n "$P" ] || echo "::warning::AI_PROXY_URL not set — online AI would be unavailable"
       - name: Unit tests
-        run: gradle :app:testGalaxyDebugUnitTest --stacktrace
+        run: |
+          gradle :app:testGalaxyDebugUnitTest --stacktrace
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          t = f = s = 0
+          for p in glob.glob('app/build/test-results/testGalaxyDebugUnitTest/*.xml'):
+              r = ET.parse(p).getroot(); t += int(r.get('tests', 0)); f += int(r.get('failures', 0)) + int(r.get('errors', 0)); s += int(r.get('skipped', 0))
+          print(f"::notice title=Unit tests::{t} run, {f} failed, {s} skipped")
+          PY
       - name: Build APK + AAB
         env:
           MYFIT_KEYSTORE_PASSWORD: ${{ secrets.MYFIT_KEYSTORE_PASSWORD }}
@@ -56,7 +64,10 @@ jobs:
               c[(i.get('severity'), i.get('id'))] += 1
               if i.get('severity') in ('Error', 'Fatal'):
                   loc = i.find('location'); errs.append(f"{i.get('id')}: {i.get('message')} @ {loc.get('file') if loc is not None else '?'}:{loc.get('line') if loc is not None else ''}")
-          for (sev, id_), n in sorted(c.items()): print(f"{sev:8} {n:4}  {id_}")
+          tot = collections.Counter(sev for (sev, _), n in c.items() for _ in range(n))
+          print("::notice title=Lint totals::" + ", ".join(f"{k}: {v}" for k, v in sorted(tot.items())))
+          warn = sorted(((n, id_) for (sev, id_), n in c.items() if sev == 'Warning'), reverse=True)[:25]
+          print("::notice title=Top lint warnings::" + "; ".join(f"{id_} x{n}" for n, id_ in warn))
           for e in errs[:60]: print("::error::LINT " + e[:400])
           PY
       - name: Manifest check (no self-update)
@@ -65,7 +76,9 @@ jobs:
           aapt=$(ls $ANDROID_HOME/build-tools/*/aapt2 | tail -1)
           $aapt dump permissions "$apk" | tee perms.txt
           if grep -q REQUEST_INSTALL_PACKAGES perms.txt; then echo "::error::REQUEST_INSTALL_PACKAGES is still in the Galaxy APK"; exit 1; fi
-          $aapt dump badging "$apk" | grep -E "package:|sdkVersion|targetSdkVersion|native-code|application-debuggable" || true
+          echo "::notice title=Permissions::$(grep -o "name='[^']*'" perms.txt | sed "s/name='//;s/'//" | tr '\n' ' ')"
+          echo "::notice title=Badging::$($aapt dump badging "$apk" | grep -E "^package:|^sdkVersion|^targetSdkVersion|^native-code|application-debuggable" | tr '\n' ' ')"
+          echo "::notice title=APK size::$(du -h "$apk" | cut -f1) $(basename "$apk")"
       - uses: actions/upload-artifact@v4
         with:
           name: galaxy-store-${{ env.MYFIT_VERSION_NAME }}
