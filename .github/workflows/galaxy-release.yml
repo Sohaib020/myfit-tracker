@@ -9,11 +9,12 @@ jobs:
   galaxy:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      MYFIT_VERSION_CODE: ${{ 100000 + github.run_number }}
-      MYFIT_VERSION_NAME: 1.0.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
+      - name: Version
+        run: |
+          echo "MYFIT_VERSION_CODE=$((100000 + ${{ github.run_number }}))" >> "$GITHUB_ENV"
+          echo "MYFIT_VERSION_NAME=1.0.${{ github.run_number }}" >> "$GITHUB_ENV"
       - name: Fetch sherpa-onnx AAR
         run: mkdir -p app/libs && curl -fsSL --retry 4 -o app/libs/sherpa-onnx.aar https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-static-link-onnxruntime-1.13.8.aar
       - name: Firebase config
