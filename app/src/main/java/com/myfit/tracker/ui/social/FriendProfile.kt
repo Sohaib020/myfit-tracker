@@ -29,53 +29,58 @@ import com.myfit.tracker.social.ArenaProfile
 import com.myfit.tracker.ui.arena.Journeys
 import com.myfit.tracker.ui.arena.Mascot
 import com.myfit.tracker.ui.components.Caption
+import com.myfit.tracker.ui.components.clickableNoRipple
 import com.myfit.tracker.ui.theme.FitType
 import com.myfit.tracker.ui.theme.LocalFitTheme
 
-/** A friend's profile: level, stars, buddy, this week's numbers, finished journeys and recent rewards. */
+/**
+ * A friend's profile: picture, level, stars, buddy, this week's numbers, finished journeys and recent rewards.
+ * Shows the cached [f] instantly and swaps in fresher Arena data when it arrives.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun FriendProfileContent(container: AppContainer, uid: String, name: String, color: Long) {
+fun FriendProfileContent(container: AppContainer, f: com.myfit.tracker.social.FriendCard, onRemove: (() -> Unit)? = null) {
     val th = LocalFitTheme.current
-    val p by produceState<ArenaProfile?>(null, uid) { value = runCatching { container.social.arenaProfile(uid) }.getOrNull() }
-    val loaded by produceState(false, uid) { kotlinx.coroutines.delay(2500); value = true }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Avatar(name, color, 64)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(name, style = FitType.title, color = th.text, maxLines = 1)
-            val pr = p
-            if (pr != null) Row(verticalAlignment = Alignment.CenterVertically) {
-                LevelChip(pr.level)
-                Spacer(Modifier.width(8.dp))
-                Text("★ ${Fmt.int(pr.stars.toDouble())} stars", style = FitType.label, color = Color(0xFFFFC83D))
-            }
+    val fresh by produceState<ArenaProfile?>(null, f.uid) { value = runCatching { container.social.arenaProfile(f.uid) }.getOrNull() }
+    val level = fresh?.level ?: f.level
+    val stars = fresh?.stars ?: f.stars
+    val steps = fresh?.weekSteps?.let { maxOf(it, f.weekSteps) } ?: f.weekSteps
+    val active = fresh?.weekActiveMin?.let { maxOf(it, f.weekActiveMin) } ?: f.weekActiveMin
+    val workouts = fresh?.weekWorkouts ?: f.weekWorkouts
+    val journeys = fresh?.journeys ?: f.journeys
+    val rewards = fresh?.rewards ?: f.rewards
+    val mascot = fresh?.mascot ?: f.mascot
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        UserAvatar(f.avatar, f.photo, f.name, f.color, 96.dp, ring = th.accentBright)
+        Spacer(Modifier.height(10.dp))
+        Text(f.name, style = FitType.title, color = th.text, maxLines = 1)
+        if (f.username.isNotBlank()) Caption("@${f.username}")
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            level?.let { LevelChip(it) }
+            if (stars != null) { Spacer(Modifier.width(8.dp)); Text("★ ${Fmt.int(stars.toDouble())} stars", style = FitType.label, color = Color(0xFFFFC83D)) }
+            val buddy = mascot?.let { m -> Mascot.entries.firstOrNull { it.id == m } }
+            if (buddy != null) { Spacer(Modifier.width(8.dp)); com.myfit.tracker.ui.arena.CastImage(buddy, 36.dp) }
         }
-        val buddy = p?.mascot?.let { m -> Mascot.entries.firstOrNull { it.id == m } }
-        if (buddy != null) com.myfit.tracker.ui.arena.CastImage(buddy, 56.dp)
     }
     Spacer(Modifier.height(16.dp))
-    val pr = p
-    if (pr == null) {
-        Caption(if (loaded) "$name hasn't synced their Arena profile yet — it appears after their next app update and sync." else "Loading…")
-        return
-    }
     Text("This week", style = FitType.label, color = th.textDim)
     Spacer(Modifier.height(6.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf("Steps" to Fmt.int(pr.weekSteps.toDouble()), "Active min" to Fmt.int(pr.weekActiveMin.toDouble()), "Workouts" to "${pr.weekWorkouts}").forEach { (k, v) ->
+        listOf("Steps" to Fmt.int(steps.toDouble()), "Active min" to Fmt.int(active.toDouble()), "Workouts" to "$workouts").forEach { (k, v) ->
             Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(th.text.copy(alpha = 0.06f)).padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 com.myfit.tracker.ui.components.FitText(v, FitType.section, th.text)
                 Caption(k)
             }
         }
     }
-    if (pr.journeys.isNotEmpty()) {
+    Caption("Updated ${ago(f.updatedAt)}", Modifier.padding(top = 6.dp), color = th.textFaint)
+    if (journeys.isNotEmpty()) {
         Spacer(Modifier.height(14.dp))
         Text("Journeys completed", style = FitType.label, color = th.textDim)
         Spacer(Modifier.height(6.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            pr.journeys.forEach { id ->
+            journeys.forEach { id ->
                 val j = Journeys.firstOrNull { it.id == id }
                 Text("🏁 " + (j?.title ?: id), style = FitType.caption, color = th.text,
                     modifier = Modifier.clip(CircleShape).background(com.myfit.tracker.ui.arena.journeyAccent(id).copy(alpha = 0.25f)).padding(horizontal = 10.dp, vertical = 5.dp))
@@ -85,12 +90,17 @@ fun FriendProfileContent(container: AppContainer, uid: String, name: String, col
     Spacer(Modifier.height(14.dp))
     Text("Recent rewards", style = FitType.label, color = th.textDim)
     Spacer(Modifier.height(6.dp))
-    if (pr.rewards.isEmpty()) Caption("No rewards yet.")
-    pr.rewards.take(12).forEach { r ->
+    if (rewards.isEmpty()) Caption(if (level == null) "${f.name} hasn't synced their Arena profile yet — it appears after their next app update and sync." else "No rewards yet.")
+    rewards.take(12).forEach { r ->
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("★", style = FitType.label, color = Color(0xFFFFC83D), modifier = Modifier.size(20.dp))
             Text(r, style = FitType.body, color = th.text)
         }
+    }
+    if (onRemove != null) {
+        var confirm by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+        Text(if (confirm) "Tap again to remove ${f.name}" else "Remove friend", style = FitType.label, color = th.danger,
+            modifier = Modifier.padding(top = 10.dp).clickableNoRipple { if (confirm) onRemove() else confirm = true }.padding(vertical = 8.dp))
     }
     Spacer(Modifier.height(10.dp))
 }

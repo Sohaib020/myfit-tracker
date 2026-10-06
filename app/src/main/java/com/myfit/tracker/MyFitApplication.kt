@@ -31,6 +31,7 @@ class AppContainer(app: Application) {
     val nutritionRepo = com.myfit.tracker.data.repo.NutritionRepository(db, app)
     val aiRouter by lazy { com.myfit.tracker.ai.AiRouter(this) }
     val social by lazy { com.myfit.tracker.social.Social(this) }
+    val friendsRepo by lazy { com.myfit.tracker.social.FriendsRepo(this) }
     val pipBrain by lazy { com.myfit.tracker.ai.PipBrain(this) }
     val pipVoice by lazy { com.myfit.tracker.ai.PipVoice(app, settings) }
     val app: Application = app
@@ -66,7 +67,7 @@ class MyFitApplication : Application() {
         com.myfit.tracker.reminders.SundayReportWorker.schedule(this)
         com.myfit.tracker.reminders.ReminderScheduler.reschedule(this)
         runCatching { container.social.start() }
-        container.write { runCatching { container.social.uploadNow() } }
+        container.write { runCatching { container.social.uploadNow() }; runCatching { container.friendsRepo.refresh() } }
         if (!java.io.File(filesDir, "voice/" + com.myfit.tracker.ai.voice.VoicePack.MODEL + "/.complete").exists())
             com.myfit.tracker.ai.voice.VoicePackWorker.schedule(this)
     }

@@ -47,7 +47,8 @@ fun rememberAccountPhoto(container: AppContainer): ImageBitmap? {
             }.getOrNull()
         }
     }
-    return img
+    // a picture chosen in Friends (ready-made or own photo) wins over the Google account photo
+    return rememberMyChosenAvatar() ?: img
 }
 
 /** Round avatar: account photo, or [fallback] (usually the initial). */

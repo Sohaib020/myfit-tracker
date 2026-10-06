@@ -96,6 +96,7 @@ fun SocialScreen(container: AppContainer, asTab: Boolean = false, bottomPad: Int
     val social = container.social
     val user by social.user.collectAsState()
     val sub = if (user != null) "Leaderboards, challenges & friends · only device-recorded activity counts" else "Sign in to challenge friends"
+    if (social.available && user != null && !asTab) { FriendsHome(container, bottomPad, showTopBar = !embedded); return }
     Column(Modifier.fillMaxSize()) {
         if (embedded) Unit
         else if (asTab) Column(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = com.myfit.tracker.ui.components.TopBarSpace, bottom = 6.dp)) {
@@ -105,7 +106,7 @@ fun SocialScreen(container: AppContainer, asTab: Boolean = false, bottomPad: Int
         when {
             !social.available -> NotConfigured()
             user == null -> SignIn(container, bottomPad)
-            else -> SignedIn(container, bottomPad)
+            else -> FriendsHome(container, bottomPad, showTopBar = false)
         }
     }
 }
@@ -225,7 +226,7 @@ private fun friendly(e: Throwable): String {
 }
 
 @Composable
-private fun Field(v: String, on: (String) -> Unit, hint: String, kb: KeyboardType = KeyboardType.Text, secret: Boolean = false) {
+internal fun Field(v: String, on: (String) -> Unit, hint: String, kb: KeyboardType = KeyboardType.Text, secret: Boolean = false) {
     val th = LocalFitTheme.current
     Glass(Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(20.dp)) {
         Box(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
@@ -236,290 +237,6 @@ private fun Field(v: String, on: (String) -> Unit, hint: String, kb: KeyboardTyp
                 visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
                 modifier = Modifier.fillMaxWidth(),
             )
-        }
-    }
-}
-
-// ------------------------------------------------------------------ signed in
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
-    val th = LocalFitTheme.current
-    val social = container.social
-    val scope = rememberCoroutineScope()
-    val toaster = LocalToaster.current
-    val ctx = LocalContext.current
-    var tab by remember { mutableIntStateOf(0) }        // 0 board, 1 challenges, 2 friends, 3 profile
-    var metric by remember { mutableStateOf(Metric.STEPS) }
-    var global by remember { mutableStateOf(false) }
-    var refresh by remember { mutableIntStateOf(0) }
-    var profile by remember { mutableStateOf<Profile?>(null) }
-    var board by remember { mutableStateOf<List<BoardRow>?>(null) }
-    var friends by remember { mutableStateOf<List<Profile>?>(null) }
-    var challenges by remember { mutableStateOf<List<Challenge>?>(null) }
-    var openChallenge by remember { mutableStateOf<Challenge?>(null) }
-    var creating by remember { mutableStateOf(false) }
-    var openFriend by remember { mutableStateOf<Triple<String, String, Long>?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
-    val syncMsg by social.lastSync.collectAsState()
-
-    LaunchedEffect(refresh) {
-        runCatching { social.uploadNow(5) }
-        profile = runCatching { social.ensureProfile() }.getOrNull()
-        friends = runCatching { social.friends() }.getOrElse { error = it.message; emptyList() }
-        challenges = runCatching { social.myChallenges() }.getOrElse { emptyList() }
-    }
-    val levels by androidx.compose.runtime.produceState(emptyMap<String, Int>(), friends) {
-        value = friends.orEmpty().mapNotNull { f -> runCatching { social.arenaProfile(f.uid) }.getOrNull()?.let { f.uid to it.level } }.toMap()
-    }
-    LaunchedEffect(refresh, metric, global) {
-        board = null
-        board = runCatching { if (global) social.globalBoard(metric) else social.friendsBoard(metric) }.getOrElse { error = it.message; emptyList() }
-    }
-
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = bottomPad.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item {
-            val chipScroll = androidx.compose.foundation.rememberScrollState()
-            Row(Modifier.fadeEdges(chipScroll).horizontalScroll(chipScroll), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(0 to "Leaderboard", 2 to "Friends", 1 to "Challenges", 4 to "Activity", 3 to "Account").forEach { (i, l) -> GlassChip(l, tab == i, { tab = i }) }
-            }
-        }
-        error?.let { e -> item { Caption(e, color = th.warning) } }
-        when (tab) {
-            0 -> {
-                item {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Metric.entries.forEach { m -> GlassChip(m.label, metric == m, { metric = m }) }
-                    }
-                }
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        GlassChip("Friends", !global, { global = false }, icon = Duo.Person); GlassChip("Global", global, { global = true }, icon = Duo.Cloud)
-                        Spacer(Modifier.weight(1f))
-                        Text("Refresh", style = FitType.label, color = th.accentBright, modifier = Modifier.clickableNoRipple { refresh++ }.padding(6.dp))
-                    }
-                }
-                item { Caption("This week (Mon–Sun) · ${syncMsg ?: "syncing…"}", color = th.textFaint) }
-                val b = board
-                if (b == null) item { Caption("Loading…") }
-                else if (b.isEmpty() || (b.size == 1 && !global)) item {
-                    GlassCard {
-                        Text(if (global) "No one on the global board yet this week" else "Add a friend to start competing", style = FitType.section, color = th.text)
-                        Spacer(Modifier.height(4.dp))
-                        Caption(if (global) "Your entry appears after your next sync." else "Share your code from the Friends tab — when they add it, you'll both appear here.")
-                    }
-                }
-                if (b != null) itemsIndexed(b, key = { _, r -> r.uid }) { i, r -> RankRow(i + 1, r.name, r.color, formatMetric(metric, r.value), r.me, r.level) { if (!r.me) openFriend = Triple(r.uid, r.name, r.color) } }
-                item { Caption("Counts only steps, distance and workouts recorded by your watch or phone through Health Connect. Anything typed in by hand is left out.", color = th.textFaint) }
-            }
-            1 -> {
-                item { AccentButton("New challenge", { creating = true }, Modifier.fillMaxWidth(), icon = Duo.Flag) }
-                val cs = challenges
-                if (cs == null) item { Caption("Loading…") }
-                else if (cs.isEmpty()) item { Caption("No challenges yet. Start one with your friends — steps this weekend, workout minutes this month…") }
-                else cs.forEach { ch ->
-                    item(key = ch.id) {
-                        val ended = runCatching { java.time.LocalDate.parse(ch.end).isBefore(com.myfit.tracker.domain.Clock.today()) }.getOrDefault(false)
-                        Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), onClick = { openChallenge = ch }) {
-                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                IconBubble(Duo.Flag, if (ended) th.textDim else th.accent, 40.dp)
-                                Spacer(Modifier.width(10.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(ch.title, style = FitType.section, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Caption("${ch.metric.label} · ${ch.start} → ${ch.end} · ${ch.members.size} people" + if (ended) " · finished" else "")
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            2 -> {
-                item { UsernameCard(social, profile) { refresh++ } }
-                item { FindFriendsCard(social, refresh) { refresh++ } }
-                item { InviteCard(profile) }
-                item {
-                    var code by remember { mutableStateOf("") }
-                    GlassCard {
-                        Text("Add by code or QR", style = FitType.section, color = th.text)
-                        Spacer(Modifier.height(8.dp))
-                        Field(code, { code = it.uppercase().filter { ch -> ch.isLetterOrDigit() }.take(6) }, "Their MyFit ID (6 characters)")
-                        Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            GlassButton("Add friend", {
-                                scope.launch {
-                                    runCatching { social.addFriendByCode(code) }
-                                        .onSuccess { toaster.show("Added ${it.name}"); code = ""; refresh++ }
-                                        .onFailure { toaster.show(it.message ?: "Couldn't add") }
-                                }
-                            }, Modifier.weight(1f), icon = Duo.Add, height = 44.dp)
-                            GlassButton("Scan QR", {
-                                com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(ctx).startScan()
-                                    .addOnSuccessListener { bc ->
-                                        val c = com.myfit.tracker.social.Invite.parse(bc.rawValue)
-                                        if (c == null) toaster.show("That QR isn't a MyFit invite") else scope.launch {
-                                            runCatching { social.addFriendByCode(c) }
-                                                .onSuccess { toaster.show("Added ${it.name}"); refresh++ }
-                                                .onFailure { toaster.show(it.message ?: "Couldn't add") }
-                                        }
-                                    }
-                            }, Modifier.weight(1f), icon = Duo.Scan, height = 44.dp)
-                        }
-                    }
-                }
-                val fs = friends
-                if (fs != null) {
-                    item { Text("FRIENDS · ${fs.size}", style = FitType.overline, color = th.textDim) }
-                    fs.forEach { f ->
-                        item(key = "f" + f.uid) {
-                            Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), onClick = { openFriend = Triple(f.uid, f.name, f.color) }) {
-                                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Avatar(f.name, f.color, 40)
-                                    Spacer(Modifier.width(10.dp))
-                                    Column(Modifier.weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(f.name, style = FitType.section, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                                            levels[f.uid]?.let { LevelChip(it) }
-                                        }
-                                        if (f.username.isNotBlank()) Caption("@${f.username}")
-                                    }
-                                    Text("Remove", style = FitType.caption, color = th.textDim, modifier = Modifier.clickableNoRipple {
-                                        scope.launch { runCatching { social.removeFriend(f.uid) }; refresh++ }
-                                    }.padding(6.dp))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            4 -> {
-                item { ActivityFeed(container, refresh) }
-            }
-            else -> {
-                val p = profile
-                item {
-                    GlassCard {
-                        var name by remember(p?.name) { mutableStateOf(p?.name ?: "") }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Avatar(p?.name ?: "?", p?.color ?: 0xFFFF7A1AL, 52)
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(p?.name ?: "…", style = FitType.section, color = th.text)
-                                Caption(social.user.value?.email ?: "")
-                            }
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        Field(name, { name = it.take(24) }, "Display name")
-                        if (p != null && name.isNotBlank() && name != p.name) {
-                            Spacer(Modifier.height(8.dp))
-                            GlassButton("Save name", { scope.launch { runCatching { social.updateProfile(name = name) }.onSuccess { refresh++; toaster.show("Name saved") }.onFailure { toaster.show("Couldn't save — check your connection") } } }, height = 44.dp)
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        if (p != null) ToggleRow("Show me on the global leaderboard", "Only your display name and weekly totals. Friends always see you.", p.isPublic) { v ->
-                            scope.launch { runCatching { social.updateProfile(isPublic = v) }.onFailure { toaster.show("Couldn't update — check your connection") }; refresh++ }
-                        }
-                    }
-                }
-                item { GlassButton("Sign out", { social.signOut() }, Modifier.fillMaxWidth(), icon = Duo.ArrowBack, height = 48.dp) }
-                item {
-                    var confirm by remember { mutableStateOf(false) }
-                    Text(if (confirm) "Tap again to permanently delete your online account" else "Delete online account", style = FitType.label, color = th.danger,
-                        modifier = Modifier.clickableNoRipple {
-                            if (!confirm) confirm = true
-                            else scope.launch {
-                                runCatching { social.deleteAccount() }.onSuccess { toaster.show("Online account deleted — your logs on this phone are untouched") }
-                                    .onFailure { toaster.show(it.message ?: "Please sign in again, then delete") }
-                            }
-                        }.padding(8.dp))
-                }
-            }
-        }
-    }
-
-    // ---- create challenge
-    GlassSheet(visible = creating, onDismiss = { creating = false }) {
-        var title by remember { mutableStateOf("") }
-        var m by remember { mutableStateOf(Metric.STEPS) }
-        var days by remember { mutableIntStateOf(7) }
-        val picked = remember { androidx.compose.runtime.mutableStateListOf<String>() }
-        Text("New challenge", style = FitType.title, color = th.text)
-        Spacer(Modifier.height(10.dp))
-        Field(title, { title = it.take(40) }, "Name (e.g. Weekend step-off)")
-        Spacer(Modifier.height(10.dp))
-        Text("Compete on", style = FitType.label, color = th.textDim); Spacer(Modifier.height(6.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Metric.entries.forEach { x -> GlassChip(x.label, m == x, { m = x }) }
-        }
-        Spacer(Modifier.height(10.dp))
-        Text("Length", style = FitType.label, color = th.textDim); Spacer(Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(1 to "1 day", 3 to "3 days", 7 to "1 week", 30 to "30 days").forEach { (d, l) -> GlassChip(l, days == d, { days = d }) }
-        }
-        Spacer(Modifier.height(10.dp))
-        Text("Friends", style = FitType.label, color = th.textDim); Spacer(Modifier.height(6.dp))
-        val fs = friends.orEmpty()
-        if (fs.isEmpty()) Caption("Add friends first (Friends tab).")
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            fs.forEach { f -> GlassChip(f.name, f.uid in picked, { if (f.uid in picked) picked.remove(f.uid) else picked.add(f.uid) }) }
-        }
-        Spacer(Modifier.height(14.dp))
-        AccentButton("Start challenge", {
-            if (picked.isEmpty()) { toaster.show("Pick at least one friend"); return@AccentButton }
-            scope.launch {
-                runCatching { social.createChallenge(title, m, days, picked.toList()) }
-                    .onSuccess { creating = false; refresh++; toaster.show("Challenge started — starts counting today") }
-                    .onFailure { toaster.show(it.message ?: "Couldn't create") }
-            }
-        }, Modifier.fillMaxWidth(), icon = Duo.Flag)
-    }
-
-    // ---- friend profile
-    GlassSheet(visible = openFriend != null, onDismiss = { openFriend = null }) {
-        val f = openFriend
-        if (f != null) FriendProfileContent(container, f.first, f.second, f.third)
-    }
-
-    // ---- challenge standings
-    GlassSheet(visible = openChallenge != null, onDismiss = { openChallenge = null }) {
-        val ch = openChallenge
-        if (ch != null) {
-            var rows by remember(ch.id) { mutableStateOf<List<ChallengeRow>?>(null) }
-            LaunchedEffect(ch.id) { rows = runCatching { social.standings(ch) }.getOrElse { emptyList() } }
-            Text(ch.title, style = FitType.title, color = th.text)
-            Caption("${ch.metric.label} · ${ch.start} → ${ch.end}")
-            Spacer(Modifier.height(10.dp))
-            val r = rows
-            if (r == null) Caption("Loading…")
-            else r.forEachIndexed { i, row -> RankRow(i + 1, row.name, null, formatMetric(ch.metric, row.value), row.me); Spacer(Modifier.height(6.dp)) }
-            Spacer(Modifier.height(10.dp))
-            Caption("Updates whenever each person's app syncs (about every 30 minutes).", color = th.textFaint)
-            Spacer(Modifier.height(10.dp))
-            Text("Leave challenge", style = FitType.label, color = th.danger, modifier = Modifier.clickableNoRipple {
-                scope.launch { runCatching { social.leaveChallenge(ch.id) }; openChallenge = null; refresh++ }
-            }.padding(6.dp))
-        }
-    }
-}
-
-@Composable
-private fun RankRow(rank: Int, name: String, color: Long?, value: String, me: Boolean, level: Int? = null, onClick: (() -> Unit)? = null) {
-    val th = LocalFitTheme.current
-    val medal = when (rank) { 1 -> Color(0xFFFFC94D); 2 -> Color(0xFFC9D1DB); 3 -> Color(0xFFE09B5A); else -> null }
-    Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), onClick = onClick) {
-        Row(
-            Modifier.then(if (me) Modifier.background(th.accent.copy(alpha = 0.14f)) else Modifier).padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(Modifier.size(30.dp).clip(CircleShape).background(medal ?: th.textFaint.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
-                Text("$rank", style = FitType.label, color = if (medal != null) Color(0xFF1A1A1A) else th.text)
-            }
-            Spacer(Modifier.width(10.dp))
-            Avatar(name, color ?: 0xFF4C8DFFL, 36)
-            Spacer(Modifier.width(10.dp))
-            Text(if (me) "$name (you)" else name, style = FitType.section, color = th.text, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            level?.let { LevelChip(it) }
-            Spacer(Modifier.weight(1f))
-            Text(value, style = FitType.section, color = th.text)
         }
     }
 }
@@ -548,7 +265,7 @@ fun SignInGate(container: AppContainer) {
 
 /** Your invite: QR code + link that works even for people who don't have the app (download page + "Open in MyFit"). */
 @Composable
-private fun InviteCard(profile: Profile?) {
+internal fun InviteCard(profile: Profile?) {
     val th = LocalFitTheme.current
     val ctx = LocalContext.current
     val toaster = LocalToaster.current
@@ -591,7 +308,7 @@ private fun InviteCard(profile: Profile?) {
 
 /** What friends have been up to: step milestones, finished workouts, level-ups. */
 @Composable
-private fun ActivityFeed(container: AppContainer, refresh: Int) {
+internal fun ActivityFeed(container: AppContainer, refresh: Int) {
     val th = LocalFitTheme.current
     val items by produceState<List<com.myfit.tracker.social.Social.FeedItem>?>(null, refresh) {
         value = runCatching { container.social.feed() }.getOrDefault(emptyList())
@@ -622,7 +339,7 @@ private fun ActivityFeed(container: AppContainer, refresh: Int) {
     }
 }
 
-private fun feedAgo(t: Long): String {
+internal fun feedAgo(t: Long): String {
     if (t <= 0) return "just now"
     val m = (System.currentTimeMillis() - t) / 60_000
     return when { m < 1 -> "just now"; m < 60 -> "${m}m ago"; m < 1440 -> "${m / 60}h ago"; else -> "${m / 1440}d ago" }
