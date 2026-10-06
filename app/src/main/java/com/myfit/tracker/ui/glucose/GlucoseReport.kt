@@ -29,7 +29,7 @@ object GlucoseReport {
     private const val H = 842
     private const val M = 40f
     private val dayFmt = DateTimeFormatter.ofPattern("EEE d MMM", Locale.US)
-    private val dtFmt = DateTimeFormatter.ofPattern("d MMM HH:mm", Locale.US)
+    private val dtFmt get() = com.myfit.tracker.domain.ClockFmt.f("d MMM ")
     private val longFmt = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US)
 
     suspend fun build(container: AppContainer, days: Int, cfg: GlucoseConfig): File = withContext(Dispatchers.IO) {

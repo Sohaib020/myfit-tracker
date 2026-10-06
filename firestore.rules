@@ -61,6 +61,18 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
+    // Arena profile friends can open: level, stars, reward titles, finished journeys, this week's totals
+    match /arenaProfile/{uid} {
+      allow read: if isMe(uid) || isFriend(uid);
+      allow write: if isMe(uid)
+        && request.resource.data.keys().hasOnly(['level', 'stars', 'mascot', 'rewards', 'journeys', 'weekSteps', 'weekActiveMin', 'weekWorkouts', 'updatedAt'])
+        && request.resource.data.level is int && request.resource.data.level >= 1 && request.resource.data.level <= 60
+        && request.resource.data.stars is int && request.resource.data.stars >= 0 && request.resource.data.stars <= 100000
+        && request.resource.data.rewards is list && request.resource.data.rewards.size() <= 30
+        && request.resource.data.journeys is list && request.resource.data.journeys.size() <= 20;
+      allow delete: if isMe(uid);
+    }
+
     // blood-sugar family sharing (opt-in): code → patient; carers listed under the patient can read the readings
     match /glucoseShares/{code} {
       allow get: if signedIn();

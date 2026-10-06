@@ -49,7 +49,7 @@ fun GrowFrom(content: @Composable BoxScope.() -> Unit) {
             val visibleH = (r.height / s).coerceAtMost(h)
             shape = ClipShape(Rect(0f, 0f, w, visibleH), corner / s * (1f - t))
             clip = t < 0.999f
-        },
+        }.blockTouchesBelow(),
         content = content,
     )
 }

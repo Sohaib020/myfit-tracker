@@ -1,5 +1,9 @@
 package com.myfit.tracker.ui.dashboard
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -171,32 +175,59 @@ internal fun CycleCard(container: AppContainer) {
 
 private val faces = listOf("😫", "😣", "😟", "😕", "😐", "🙂", "😊", "😄", "😁", "🤩")
 
-/** Check-in strip at the bottom of the large Today's progress card. */
+/** Check-in at the bottom of the large Today's progress card: a friendly prompt, or your mood / energy / stress meters. */
 @Composable
 internal fun CheckInStrip(s: DashState, open: (Sheet) -> Unit) {
     val th = LocalFitTheme.current
     val ci = s.checkIn
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-            .background(if (th.isLight) Color.Black.copy(alpha = 0.04f) else Color.White.copy(alpha = 0.06f))
-            .clickableNoRipple { open(Sheet.CheckIn(ci?.id)) }.padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    val shape = RoundedCornerShape(22.dp)
+    Column(
+        Modifier.fillMaxWidth().clip(shape)
+            .background(Brush.horizontalGradient(listOf(th.warning.copy(alpha = if (th.isLight) 0.10f else 0.14f), th.accent.copy(alpha = if (th.isLight) 0.06f else 0.08f))))
+            .clickableNoRipple { open(Sheet.CheckIn(ci?.id)) }.padding(14.dp),
     ) {
-        IconBubble(Duo.Mood, th.warning, 30.dp)
-        Spacer(Modifier.width(10.dp))
         if (ci == null) {
-            Column(Modifier.weight(1f)) {
-                Text("Daily check-in", style = FitType.label, color = th.text)
-                Caption("20 seconds · mood, energy, stress")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("How are you feeling?", style = FitType.section, color = th.text)
+                    Caption("20-second check-in · mood, energy, stress")
+                }
+                Row(Modifier.clip(androidx.compose.foundation.shape.CircleShape).background(Brush.verticalGradient(listOf(th.accentBright, th.accent)))
+                    .padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Check in", style = FitType.label, color = th.onAccent)
+                    Spacer(Modifier.width(4.dp))
+                    androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.onAccent, modifier = Modifier.size(16.dp))
+                }
             }
-            Text("Check in", style = FitType.label, color = th.accentBright)
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                listOf("😣", "😕", "😐", "🙂", "😄").forEach { f ->
+                    Box(Modifier.size(42.dp).clip(androidx.compose.foundation.shape.CircleShape).background(th.text.copy(alpha = 0.07f)), contentAlignment = Alignment.Center) {
+                        Text(f, style = FitType.section)
+                    }
+                }
+            }
         } else {
-            Text("Check-in", style = FitType.label, color = th.text, modifier = Modifier.weight(1f))
-            listOf("Mood" to ci.mood, "Energy" to ci.energy).forEach { (l, v) ->
-                Text(v?.let { faces[(it - 1).coerceIn(0, 9)] } ?: "·", style = FitType.section)
-                Spacer(Modifier.width(4.dp))
-                Text("$l ${v ?: "—"}", style = FitType.caption, color = th.textDim)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(ci.mood?.let { faces[(it - 1).coerceIn(0, 9)] } ?: "🙂", style = FitType.title)
                 Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Today's check-in", style = FitType.section, color = th.text)
+                    Caption("Tap to update")
+                }
+                androidx.compose.material3.Icon(Duo.Edit, null, tint = th.textDim, modifier = Modifier.size(18.dp))
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf(Triple("Mood", ci.mood, th.warning), Triple("Energy", ci.energy, th.success), Triple("Stress", ci.stress, th.danger)).forEach { (l, v, col) ->
+                    Column(Modifier.weight(1f)) {
+                        Row { Text(l, style = FitType.caption, color = th.textDim, modifier = Modifier.weight(1f)); Text(v?.let { "$it/10" } ?: "—", style = FitType.caption, color = th.text) }
+                        Spacer(Modifier.height(4.dp))
+                        Box(Modifier.fillMaxWidth().height(6.dp).clip(androidx.compose.foundation.shape.CircleShape).background(th.text.copy(alpha = 0.08f))) {
+                            Box(Modifier.fillMaxWidth(((v ?: 0) / 10f).coerceIn(0f, 1f)).height(6.dp).clip(androidx.compose.foundation.shape.CircleShape).background(col))
+                        }
+                    }
+                }
             }
         }
     }

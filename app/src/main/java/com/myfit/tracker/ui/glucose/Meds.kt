@@ -60,7 +60,7 @@ import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val hm = DateTimeFormatter.ofPattern("HH:mm", Locale.US)
+private val hm get() = com.myfit.tracker.domain.ClockFmt.f()
 
 private fun isInsulin(kind: String) = kind == MedKind.INSULIN_RAPID || kind == MedKind.INSULIN_LONG
 
@@ -199,7 +199,7 @@ private fun TodayDosesCard(meds: List<Medication>, logs: List<MedicationLog>) {
         val remaining = meds.flatMap { m -> MedReminders.parseTimes(m.times).map { m to it } }
             .filter { (_, t) -> t > Clock.minuteOfDay(Clock.now(), Clock.zone().id) }
             .minByOrNull { it.second }
-        if (remaining != null) Caption("Next: ${remaining.first.name} at %02d:%02d".format(Locale.US, remaining.second / 60, remaining.second % 60))
+        if (remaining != null) Caption("Next: ${remaining.first.name} at ${com.myfit.tracker.domain.ClockFmt.time(remaining.second)}")
     }
 }
 

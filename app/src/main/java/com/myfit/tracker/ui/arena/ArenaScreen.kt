@@ -1,5 +1,6 @@
 package com.myfit.tracker.ui.arena
 
+import com.myfit.tracker.ui.components.fadeEdges
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.LinearEasing
@@ -123,7 +124,8 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                         }
                     }
                     item(key = "tabs") {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val tabsState = androidx.compose.foundation.lazy.rememberLazyListState()
+                        LazyRow(state = tabsState, modifier = Modifier.fadeEdges(tabsState), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             val tabs = listOf("Challenges", "Journeys", "Battles", "Rewards")
                             items(tabs.size) { i -> GlassChip(tabs[i], tab == i, { tab = i }) }
                         }

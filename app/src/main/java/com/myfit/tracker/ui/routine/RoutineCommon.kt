@@ -31,8 +31,7 @@ import com.myfit.tracker.ui.theme.LocalFitTheme
 import java.util.Locale
 
 internal fun fmtMin(m: Int): String {
-    val x = ((m % 1440) + 1440) % 1440
-    return "%02d:%02d".format(Locale.US, x / 60, x % 60)
+    return com.myfit.tracker.domain.ClockFmt.time(((m % 1440) + 1440) % 1440)
 }
 
 /** "5 h 12 m" / "12 m" / "0 m". */

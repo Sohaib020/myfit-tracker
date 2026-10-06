@@ -65,7 +65,7 @@ private val FAST_PRESETS = listOf(
 )
 private const val RAMADAN = "Ramadan"
 private const val HOUR_MS = 3_600_000L
-private val startFmt = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.US)
+private val startFmt get() = com.myfit.tracker.domain.ClockFmt.f("EEE d MMM, ")
 
 /** Educational, deliberately modest stage labels. */
 private fun stageOf(hours: Double): Pair<String, String> = when {

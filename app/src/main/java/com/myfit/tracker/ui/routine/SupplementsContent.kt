@@ -68,7 +68,7 @@ private val PRESETS = listOf(
     SuppPreset("Iron", null, "mg"), SuppPreset("Caffeine", 200.0, "mg"),
 )
 private const val CREATINE_NOTE = "Creatine: daily consistency matters more than timing."
-private val histFmt = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.US)
+private val histFmt get() = com.myfit.tracker.domain.ClockFmt.f("EEE d MMM, ")
 
 private fun suppKey(id: Long) = "supp_rem_$id"
 private fun isCreatine(name: String) = name.contains("creatine", ignoreCase = true)

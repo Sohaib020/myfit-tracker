@@ -230,6 +230,7 @@ private val tabs = listOf(
 @Composable
 private fun MainShell(container: AppContainer, s: AppSettings) {
     com.myfit.tracker.domain.EnergyUnit.label = s.units.energy.label
+    com.myfit.tracker.domain.ClockFmt.use24 = s.clock24
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var sheet by remember { mutableStateOf<Sheet?>(null) }
     var lastSheet by remember { mutableStateOf<Sheet?>(null) }
@@ -277,11 +278,22 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             val chrome = top == null && com.myfit.tracker.ui.components.SheetsOpen.count.intValue == 0
             AnimatedVisibility(chrome, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn(), exit = fadeOut()) {
                 val th = LocalFitTheme.current
-                val base = if (th.isLight) Color.White else Color.Black
+                // theme-coloured fade behind the dock (dark themes: the theme's own deep colour, light themes: white)
+                val base = if (th.isLight) Color.White else th.bgBottom
                 Box(
                     Modifier.fillMaxWidth().height(150.dp).drawBehind {
-                        drawRect(Brush.verticalGradient(listOf(Color.Transparent, base.copy(alpha = if (th.isLight) 0.55f else 0.45f), base.copy(alpha = if (th.isLight) 0.85f else 0.75f))))
+                        drawRect(Brush.verticalGradient(listOf(Color.Transparent, base.copy(alpha = if (th.isLight) 0.55f else 0.5f), base.copy(alpha = if (th.isLight) 0.85f else 0.82f))))
                     },
+                )
+            }
+            // status-bar fade (like Samsung's apps): appears as content scrolls under the status bar, tabs only
+            AnimatedVisibility(chrome, modifier = Modifier.align(Alignment.TopCenter), enter = fadeIn(), exit = fadeOut()) {
+                val th = LocalFitTheme.current
+                val base = if (th.isLight) Color.White else th.bgTop
+                Box(
+                    Modifier.fillMaxWidth().height(with(densityC) { statusTop.toDp() } + 36.dp)
+                        .graphicsLayer { alpha = chromeState.hidden }
+                        .drawBehind { drawRect(Brush.verticalGradient(listOf(base.copy(alpha = if (th.isLight) 0.92f else 0.9f), base.copy(alpha = if (th.isLight) 0.6f else 0.55f), Color.Transparent))) },
                 )
             }
             Box(Modifier.align(Alignment.TopCenter).then(win.column()).fillMaxSize()) {

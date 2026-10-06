@@ -1,5 +1,6 @@
 package com.myfit.tracker.ui.social
 
+import com.myfit.tracker.ui.components.fadeEdges
 import androidx.compose.foundation.horizontalScroll
 
 import android.content.Intent
@@ -259,6 +260,7 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
     var challenges by remember { mutableStateOf<List<Challenge>?>(null) }
     var openChallenge by remember { mutableStateOf<Challenge?>(null) }
     var creating by remember { mutableStateOf(false) }
+    var openFriend by remember { mutableStateOf<Triple<String, String, Long>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     val syncMsg by social.lastSync.collectAsState()
 
@@ -268,6 +270,9 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
         friends = runCatching { social.friends() }.getOrElse { error = it.message; emptyList() }
         challenges = runCatching { social.myChallenges() }.getOrElse { emptyList() }
     }
+    val levels by androidx.compose.runtime.produceState(emptyMap<String, Int>(), friends) {
+        value = friends.orEmpty().mapNotNull { f -> runCatching { social.arenaProfile(f.uid) }.getOrNull()?.let { f.uid to it.level } }.toMap()
+    }
     LaunchedEffect(refresh, metric, global) {
         board = null
         board = runCatching { if (global) social.globalBoard(metric) else social.friendsBoard(metric) }.getOrElse { error = it.message; emptyList() }
@@ -275,7 +280,8 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = bottomPad.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val chipScroll = androidx.compose.foundation.rememberScrollState()
+            Row(Modifier.fadeEdges(chipScroll).horizontalScroll(chipScroll), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(0 to "Leaderboard", 2 to "Friends", 1 to "Challenges", 4 to "Activity", 3 to "Account").forEach { (i, l) -> GlassChip(l, tab == i, { tab = i }) }
             }
         }
@@ -304,7 +310,7 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
                         Caption(if (global) "Your entry appears after your next sync." else "Share your code from the Friends tab — when they add it, you'll both appear here.")
                     }
                 }
-                if (b != null) itemsIndexed(b, key = { _, r -> r.uid }) { i, r -> RankRow(i + 1, r.name, r.color, formatMetric(metric, r.value), r.me) }
+                if (b != null) itemsIndexed(b, key = { _, r -> r.uid }) { i, r -> RankRow(i + 1, r.name, r.color, formatMetric(metric, r.value), r.me, r.level) { if (!r.me) openFriend = Triple(r.uid, r.name, r.color) } }
                 item { Caption("Counts only steps, distance and workouts recorded by your watch or phone through Health Connect. Anything typed in by hand is left out.", color = th.textFaint) }
             }
             1 -> {
@@ -366,11 +372,17 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
                     item { Text("FRIENDS · ${fs.size}", style = FitType.overline, color = th.textDim) }
                     fs.forEach { f ->
                         item(key = "f" + f.uid) {
-                            Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+                            Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), onClick = { openFriend = Triple(f.uid, f.name, f.color) }) {
                                 Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Avatar(f.name, f.color, 40)
                                     Spacer(Modifier.width(10.dp))
-                                    Text(f.name, style = FitType.section, color = th.text, modifier = Modifier.weight(1f))
+                                    Column(Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(f.name, style = FitType.section, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                                            levels[f.uid]?.let { LevelChip(it) }
+                                        }
+                                        if (f.username.isNotBlank()) Caption("@${f.username}")
+                                    }
                                     Text("Remove", style = FitType.caption, color = th.textDim, modifier = Modifier.clickableNoRipple {
                                         scope.launch { runCatching { social.removeFriend(f.uid) }; refresh++ }
                                     }.padding(6.dp))
@@ -461,6 +473,12 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
         }, Modifier.fillMaxWidth(), icon = Duo.Flag)
     }
 
+    // ---- friend profile
+    GlassSheet(visible = openFriend != null, onDismiss = { openFriend = null }) {
+        val f = openFriend
+        if (f != null) FriendProfileContent(container, f.first, f.second, f.third)
+    }
+
     // ---- challenge standings
     GlassSheet(visible = openChallenge != null, onDismiss = { openChallenge = null }) {
         val ch = openChallenge
@@ -484,10 +502,10 @@ private fun SignedIn(container: AppContainer, bottomPad: Int = 40) {
 }
 
 @Composable
-private fun RankRow(rank: Int, name: String, color: Long?, value: String, me: Boolean) {
+private fun RankRow(rank: Int, name: String, color: Long?, value: String, me: Boolean, level: Int? = null, onClick: (() -> Unit)? = null) {
     val th = LocalFitTheme.current
     val medal = when (rank) { 1 -> Color(0xFFFFC94D); 2 -> Color(0xFFC9D1DB); 3 -> Color(0xFFE09B5A); else -> null }
-    Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+    Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), onClick = onClick) {
         Row(
             Modifier.then(if (me) Modifier.background(th.accent.copy(alpha = 0.14f)) else Modifier).padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -498,7 +516,9 @@ private fun RankRow(rank: Int, name: String, color: Long?, value: String, me: Bo
             Spacer(Modifier.width(10.dp))
             Avatar(name, color ?: 0xFF4C8DFFL, 36)
             Spacer(Modifier.width(10.dp))
-            Text(if (me) "$name (you)" else name, style = FitType.section, color = th.text, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(if (me) "$name (you)" else name, style = FitType.section, color = th.text, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            level?.let { LevelChip(it) }
+            Spacer(Modifier.weight(1f))
             Text(value, style = FitType.section, color = th.text)
         }
     }

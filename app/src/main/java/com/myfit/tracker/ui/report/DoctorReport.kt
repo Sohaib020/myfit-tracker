@@ -67,7 +67,7 @@ object DoctorReport {
     private val RED = Color.rgb(214, 64, 64)
     private val AMBER = Color.rgb(232, 150, 30)
     private val longFmt = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US)
-    private val dtFmt = DateTimeFormatter.ofPattern("d MMM, HH:mm", Locale.US)
+    private val dtFmt get() = com.myfit.tracker.domain.ClockFmt.f("d MMM, ")
     private val dayFmt = DateTimeFormatter.ofPattern("EEE d MMM", Locale.US)
 
     private fun paint(size: Float, color: Int = INK, bold: Boolean = false) = Paint(Paint.ANTI_ALIAS_FLAG).apply {

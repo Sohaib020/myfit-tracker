@@ -1,5 +1,6 @@
 package com.myfit.tracker.ui.settings
 
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.background
 import com.myfit.tracker.ui.theme.Duo
 
@@ -253,6 +254,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 UnitRow("Water") { GlassSegmented(VolumeUnit.entries, u.volume, { it.label }, { container.write { container.settings.setUnits(u.copy(volume = it)) } }, Modifier.width(200.dp)) }
                 UnitRow("Distance") { GlassSegmented(DistanceUnit.entries, u.distance, { it.label }, { container.write { container.settings.setUnits(u.copy(distance = it)) } }, Modifier.width(170.dp)) }
                 UnitRow("Energy") { GlassSegmented(com.myfit.tracker.domain.EnergyUnits.entries, u.energy, { it.label }, { container.write { container.settings.setUnits(u.copy(energy = it)) } }, Modifier.width(170.dp)) }
+                UnitRow("Clock") { GlassSegmented(listOf(false, true), settings.clock24, { if (it) "24-hour" else "12-hour" }, { container.write { container.settings.setClock24(it) } }, Modifier.width(200.dp)) }
                 Caption("Data is stored in metric at full precision; units only change how it's shown.")
             }
         }
@@ -461,9 +463,9 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit) {
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     tiles.chunked(2).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             row.forEach { q ->
-                                GlassCard(Modifier.weight(1f), onClick = q.onClick) {
+                                GlassCard(Modifier.weight(1f).fillMaxHeight(), onClick = q.onClick) {
                                     com.myfit.tracker.ui.components.IconBubble(q.icon, q.color, 38.dp)
                                     Spacer(Modifier.height(10.dp))
                                     com.myfit.tracker.ui.components.FitText(q.title, FitType.section, th.text)

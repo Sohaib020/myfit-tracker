@@ -80,7 +80,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private val timeFmt = DateTimeFormatter.ofPattern("HH:mm", Locale.US)
+private val timeFmt get() = com.myfit.tracker.domain.ClockFmt.f()
 private val dayFmt = DateTimeFormatter.ofPattern("EEE d MMM", Locale.US)
 private val Orange = Color(0xFFFF8A3D)
 

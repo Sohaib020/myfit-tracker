@@ -75,9 +75,9 @@ fun FriendsHero(container: AppContainer, modifier: Modifier = Modifier, onOpenFr
         value = if (user != null && social.available) runCatching { social.friendsBoard(Metric.STEPS) }.getOrNull() else null
     }
     val accent = th.accentBright
-    Box(modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
-        .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.30f), Color(0xFF2E6FD8).copy(alpha = 0.22f), th.bgBottom.copy(alpha = 0.6f))))
-        .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(26.dp))) {
+    // real glass (follows the blur / glass settings), with a soft accent wash on top
+    com.myfit.tracker.ui.theme.Glass(modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp)) {
+        Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(accent.copy(alpha = 0.16f), Color(0xFF2E6FD8).copy(alpha = 0.10f), Color.Transparent))))
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(40.dp).clip(CircleShape).background(accent.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
@@ -105,7 +105,9 @@ fun FriendsHero(container: AppContainer, modifier: Modifier = Modifier, onOpenFr
                         Text("${i + 1}", style = FitType.label, color = if (i == 0) Color(0xFFFFC83D) else th.textDim, modifier = Modifier.width(20.dp))
                         Avatar(r.name, r.color, 28)
                         Spacer(Modifier.width(8.dp))
-                        Text(if (r.me) "You" else r.name, style = FitType.body, color = th.text, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(if (r.me) "You" else r.name, style = FitType.body, color = th.text, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        r.level?.let { LevelChip(it) }
+                        Spacer(Modifier.weight(1f))
                         Text(Fmt.int(r.value) + " steps", style = FitType.label, color = th.text)
                     }
                 }
@@ -159,4 +161,12 @@ fun FriendsGlimpse(container: AppContainer, modifier: Modifier = Modifier) {
             }, height = 36.dp)
         }
     }
+}
+
+
+/** Small "Lv 4" pill shown next to a friend's name. */
+@Composable
+fun LevelChip(level: Int) {
+    Text("Lv $level", style = FitType.caption, color = Color(0xFF14161B),
+        modifier = Modifier.padding(start = 6.dp).clip(CircleShape).background(Color(0xFFFFC83D)).padding(horizontal = 7.dp, vertical = 2.dp))
 }

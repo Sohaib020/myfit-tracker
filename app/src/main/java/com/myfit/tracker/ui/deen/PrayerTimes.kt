@@ -194,4 +194,4 @@ object DeenAlarms {
 
 data class DeenAlarm(val rc: Int, val at: Long, val title: String, val text: String)
 
-fun clock(min: Int): String { val h = min / 60; val m = min % 60; val h12 = if (h % 12 == 0) 12 else h % 12; return "%d:%02d %s".format(h12, m, if (h < 12) "AM" else "PM") }
+fun clock(min: Int): String = com.myfit.tracker.domain.ClockFmt.time(min)

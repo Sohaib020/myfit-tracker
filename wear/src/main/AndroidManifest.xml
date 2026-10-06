@@ -3,7 +3,7 @@
     <uses-feature android:name="android.hardware.type.watch" />
     <application
         android:label="MyFit"
-        android:icon="@drawable/ic_tile"
+        android:icon="@mipmap/ic_launcher"
         android:theme="@android:style/Theme.DeviceDefault">
         <uses-library android:name="com.google.android.wearable" android:required="false" />
         <!-- needs the phone app: data comes from it -->

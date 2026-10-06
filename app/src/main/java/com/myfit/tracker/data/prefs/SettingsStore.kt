@@ -85,6 +85,7 @@ data class AppSettings(
     val permsAsked: Boolean = false,
     val tourDone: Boolean = false,
     val pip3d: Boolean = true,
+    val clock24: Boolean = false,         // false = 12-hour clock (default)
     val muslim: String = "unset",        // "yes" / "no" / "unset" — shows Shariah & Health
     val devMode: Boolean = false,        // developer options unlocked (tap version 7×)
     val cycleEnabled: Boolean = false,
@@ -151,6 +152,7 @@ class SettingsStore(private val context: Context) {
         val perms = booleanPreferencesKey("perms_asked")
         val tour = booleanPreferencesKey("tour_done")
         val pip3d = booleanPreferencesKey("pip3d")
+        val clock24 = booleanPreferencesKey("clock24")
         val muslim = stringPreferencesKey("muslim")
         val dev = booleanPreferencesKey("dev_mode")
         val cycle = booleanPreferencesKey("cycle_on")
@@ -213,6 +215,7 @@ class SettingsStore(private val context: Context) {
             permsAsked = p[K.perms] ?: false,
             tourDone = p[K.tour] ?: false,
             pip3d = p[K.pip3d] ?: true,
+            clock24 = p[K.clock24] ?: false,
             muslim = p[K.muslim] ?: "unset",
             devMode = p[K.dev] ?: false,
             cycleEnabled = p[K.cycle] ?: false,
@@ -279,6 +282,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setTourDone(v: Boolean) = context.dataStore.edit { it[K.tour] = v }
     suspend fun setPip3d(v: Boolean) = context.dataStore.edit { it[K.pip3d] = v }
     suspend fun setMuslim(v: String) = context.dataStore.edit { it[K.muslim] = v }
+    suspend fun setClock24(v: Boolean) = context.dataStore.edit { it[K.clock24] = v }
     suspend fun setDevMode(v: Boolean) = context.dataStore.edit { it[K.dev] = v }
     suspend fun setCycle(enabled: Boolean) = context.dataStore.edit { it[K.cycle] = enabled; it[K.cycleAsked] = true }
     suspend fun setGlucose(enabled: Boolean) = context.dataStore.edit { it[K.glucose] = enabled }
