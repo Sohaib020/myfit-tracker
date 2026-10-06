@@ -91,6 +91,9 @@ class FriendsNotifShotTest {
         val w = 412 * 3
         col.measure(android.view.View.MeasureSpec.makeMeasureSpec(w, android.view.View.MeasureSpec.EXACTLY), android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED))
         col.layout(0, 0, w, col.measuredHeight)
-        col.captureRoboImage("build/shots/notif_cards.png")
+        val bmp = android.graphics.Bitmap.createBitmap(w, col.measuredHeight, android.graphics.Bitmap.Config.ARGB_8888)
+        col.draw(android.graphics.Canvas(bmp))
+        java.io.File("build/shots").mkdirs()
+        java.io.FileOutputStream("build/shots/notif_cards.png").use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
     }
 }
