@@ -207,8 +207,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         }
 
         // ---------- pip / AI
-        item { PipSettingsCard(container, dev = false) }
-        item { OfflineBrainCard() }
+        item { PipEntryCard(container) }
         item {
             GlassCard {
                 ToggleRow("Shariah & Health", "Prayer times, Qibla, fasting hub, dhikr, halal check", settings.muslim == "yes") { v -> container.write { container.settings.setMuslim(if (v) "yes" else "no") } }
@@ -217,7 +216,6 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         item {
             GlassButton("Replay Pip's tour", { container.write { container.settings.setTourDone(false) } }, Modifier.fillMaxWidth(), icon = Duo.AutoAwesome, height = 46.dp)
         }
-        item { VoiceSettingsCard(container, dev = false) }
 
         // ---------- gym mode
         item {
@@ -664,6 +662,34 @@ fun EditTargetsForm(c: AppContainer, close: () -> Unit) {
 }
 
 
+/** Me → Pip: who your buddy is, which brain answers, and one tap to chat or change settings (all in one sheet). */
+@Composable
+private fun PipEntryCard(container: AppContainer) {
+    val th = LocalFitTheme.current
+    val settings = LocalSettings.current
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
+    val ctx = LocalContext.current
+    val buddy by com.myfit.tracker.ui.pip.Buddy.active.collectAsState()
+    val brain by com.myfit.tracker.ai.BrainMode.flow.collectAsState()
+    val mode = brain ?: com.myfit.tracker.ai.BrainMode.get(ctx)
+    val installed by androidx.compose.runtime.produceState(false) { value = com.myfit.tracker.ai.ondevice.OnDeviceAi.get(ctx).models.installedFile() != null }
+    GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.PipChat) }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            com.myfit.tracker.ui.arena.CastImage(buddy, 64.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("${buddy.label.substringBefore(' ')} · AI buddy", style = FitType.section, color = th.text)
+                Caption("Brain: ${com.myfit.tracker.ai.BrainMode.label(mode)} · voice ${if (settings.pipVoice) "on" else "off"} · on-phone brain ${if (installed) "downloaded" else "not downloaded"}")
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AccentButton("Chat", { nav.push(com.myfit.tracker.ui.nav.Overlay.PipChat) }, Modifier.weight(1f), icon = Duo.ChatBubble, height = 44.dp)
+            GlassButton("Pip settings", { com.myfit.tracker.ui.pip.PipChatLaunch.openSettings = true; nav.push(com.myfit.tracker.ui.nav.Overlay.PipChat) }, Modifier.weight(1f), icon = Duo.Gear, height = 44.dp)
+        }
+    }
+}
+
 @Composable
 private fun PipSettingsCard(container: AppContainer, dev: Boolean) {
     val th = LocalFitTheme.current
@@ -745,7 +771,7 @@ private fun GlassSlider(title: String, hint: String, value: Float, range: Closed
 }
 
 @Composable
-private fun VoiceSettingsCard(container: AppContainer, dev: Boolean) {
+internal fun VoiceSettingsCard(container: AppContainer, dev: Boolean) {
     val th = LocalFitTheme.current
     val settings = LocalSettings.current
     val toaster = LocalToaster.current
@@ -976,24 +1002,18 @@ private fun AiProvidersCard(container: AppContainer) {
 }
 
 
-/** Now Bar / live notifications: status, test and the settings shortcut (Samsung hides third-party ones by default). */
+/** Live notifications: Android 16 system Live Update (Now Bar) or MyFit's animated card. */
 @androidx.compose.runtime.Composable
 private fun LiveNotifRow() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val th = com.myfit.tracker.ui.theme.LocalFitTheme.current
-    val allowed = androidx.compose.runtime.remember { com.myfit.tracker.notify.LiveUpdates.promotionAllowed(ctx) }
-    val canPost = androidx.compose.runtime.remember { com.myfit.tracker.notify.LiveUpdates.canPost(ctx) }
-    androidx.compose.material3.Text("Now Bar · live notifications", style = com.myfit.tracker.ui.theme.FitType.label, color = th.text)
-    com.myfit.tracker.ui.components.Caption(when {
-        !canPost -> "Notifications are off for MyFit — turn them on to see workouts, rest and fasting live."
-        allowed == false -> "Live notifications are turned off for MyFit in Android settings."
-        android.os.Build.MANUFACTURER.equals("samsung", true) -> "Samsung shows other apps in the Now Bar only when Developer options → \"Live notifications for all apps\" is on."
-        allowed == null -> "Your Android version shows these as normal ongoing notifications."
-        else -> "Workouts, rest timer, stopwatch and fasting appear in the status bar chip while running."
-    })
+    if (android.os.Build.VERSION.SDK_INT < 36) return
+    var native by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.myfit.tracker.notify.LiveUpdates.nativeStyle(ctx)) }
+    androidx.compose.material3.Text("Live notifications", style = com.myfit.tracker.ui.theme.FitType.label, color = th.text)
+    com.myfit.tracker.ui.components.Caption(if (native) "Workouts, rest, activity and fasting show as a live progress bar in the Now Bar and on the lock screen."
+        else "Workouts, rest, activity and fasting show as MyFit's animated card in the notification shade (not in the Now Bar).")
     Spacer(Modifier.height(8.dp))
-    androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-        com.myfit.tracker.ui.theme.GlassButton("Test now", { com.myfit.tracker.notify.LiveUpdates.test(ctx) }, Modifier.weight(1f), height = 42.dp)
-        com.myfit.tracker.ui.theme.GlassButton("Settings", { com.myfit.tracker.notify.LiveUpdates.openSettings(ctx) }, Modifier.weight(1f), height = 42.dp)
-    }
+    com.myfit.tracker.ui.components.GlassSegmented(listOf(true, false), native, { if (it) "Now Bar" else "Rich card" }, { v ->
+        native = v; com.myfit.tracker.notify.LiveUpdates.setRichStyle(ctx, !v)
+    }, Modifier.fillMaxWidth())
 }

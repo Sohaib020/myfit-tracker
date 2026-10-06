@@ -99,7 +99,8 @@ fun PipChatScreen(container: AppContainer) {
     var thinking by remember { mutableStateOf(false) }
     var mood by remember { mutableStateOf(PipMood.WAVE) }
     var typingId by remember { mutableLongStateOf(-1L) }
-    var confirmClear by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(PipChatLaunch.openSettings.also { PipChatLaunch.openSettings = false }) }
+    var showBrain by remember { mutableStateOf(false) }
     var sharedFor by remember { mutableStateOf<String?>(null) }
     var showShared by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -133,21 +134,32 @@ fun PipChatScreen(container: AppContainer) {
         }
     }
 
+    val toaster = com.myfit.tracker.ui.components.LocalToaster.current
+    val mic = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { res ->
+        val heard = res.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+        if (!heard.isNullOrBlank()) send(heard)
+    }
     val imeOpen = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
     LaunchedEffect(imeOpen) { if (imeOpen && messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex) }
     Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().imePadding()) {
-        OverlayTopBar(Buddy.active.collectAsState().value.label.substringBefore(' '), { nav.pop() }, if (online) "Your data offline · general questions online" else "Answers from your data (offline)") {
-            GlassIconButton(
-                if (settings.pipVoice) Duo.VolumeUp else Duo.VolumeOff,
-                {
-                    val on = !settings.pipVoice
-                    if (!on) container.pipVoice.stop()
-                    container.write { container.settings.setPipVoice(on) }
-                },
-                tint = if (settings.pipVoice) th.accentBright else th.textDim,
-            )
-            if (messages.isNotEmpty()) { Spacer(Modifier.size(12.dp)); GlassIconButton(Duo.DeleteSweep, { confirmClear = true }) }
+        val ctxB = androidx.compose.ui.platform.LocalContext.current
+        val brain by com.myfit.tracker.ai.BrainMode.flow.collectAsState()
+        val brainNow = brain ?: com.myfit.tracker.ai.BrainMode.get(ctxB)
+        OverlayTopBar(Buddy.active.collectAsState().value.label.substringBefore(' '), { nav.pop() },
+            when { speaking -> "Speaking…"; thinking -> "Thinking…"; else -> "Your AI buddy" }) {
+            // brain chip: Auto / Online / On this phone
+            Glass(Modifier.height(40.dp), shape = RoundedCornerShape(20.dp), onClick = { showBrain = true }) {
+                Row(Modifier.padding(horizontal = 12.dp).align(Alignment.Center), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(when (brainNow) { com.myfit.tracker.ai.BrainMode.ONLINE -> Duo.Cloud; com.myfit.tracker.ai.BrainMode.PHONE -> Duo.Lock; else -> Duo.AutoAwesome }, null,
+                        tint = th.accentBright, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text(com.myfit.tracker.ai.BrainMode.label(brainNow), style = FitType.label, color = th.text, maxLines = 1)
+                    Icon(Duo.KeyboardArrowDown, null, tint = th.textDim, modifier = Modifier.size(16.dp))
+                }
+            }
+            Spacer(Modifier.size(10.dp))
+            GlassIconButton(Duo.Gear, { showSettings = true })
         }
         // ---- welcome: big Pip. Once chatting, Pip floats in the corner so the chat gets the whole screen.
         if (messages.isEmpty()) Box(Modifier.fillMaxWidth().height(250.dp), contentAlignment = Alignment.Center) {
@@ -157,7 +169,7 @@ fun PipChatScreen(container: AppContainer) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Hi! I'm ${com.myfit.tracker.ui.pip.Buddy.name} " + (if (com.myfit.tracker.ui.pip.Buddy.active.value == com.myfit.tracker.ui.arena.Mascot.PIP) "🌱" else "👋"), style = FitType.title, color = th.text)
                 Spacer(Modifier.height(6.dp))
-                Caption("Ask me about your training, weight, steps, sleep or water — I answer those from your own logs, offline. Stroke me, tap me, or long-press for a hug.")
+                Caption("Ask about your training, food, sleep or steps — or tap the mic and just talk. Tap me, stroke me, or long-press for a hug.")
             }
         }
         LazyColumn(
@@ -183,7 +195,7 @@ fun PipChatScreen(container: AppContainer) {
         Row(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
             Glass(Modifier.weight(1f).heightIn(min = 54.dp), shape = RoundedCornerShape(27.dp)) {
                 Box(Modifier.padding(horizontal = 18.dp, vertical = 15.dp)) {
-                    if (input.isEmpty()) Text("Ask Pip anything…", style = FitType.body, color = th.textFaint)
+                    if (input.isEmpty()) Text("Message ${Buddy.name}…", style = FitType.body, color = th.textFaint)
                     BasicTextField(
                         input, { input = it.take(600) },
                         textStyle = FitType.body.copy(color = th.text), cursorBrush = SolidColor(th.accent),
@@ -194,13 +206,22 @@ fun PipChatScreen(container: AppContainer) {
                 }
             }
             Spacer(Modifier.size(10.dp))
+            val listening = input.isEmpty()
             Box(
                 Modifier.size(54.dp).clip(CircleShape)
                     .drawBehind { drawCircle(Brush.verticalGradient(listOf(th.accentBright, th.accent))) }
-                    .clickableNoRipple { send(input) },
+                    .clickableNoRipple {
+                        if (input.isNotBlank()) send(input)
+                        else runCatching {
+                            container.pipVoice.stop()
+                            mic.launch(android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Ask ${Buddy.name}…"))
+                        }.onFailure { toaster.show("Voice typing isn't available on this phone") }
+                    },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Duo.Send, "Send", tint = th.onAccent, modifier = Modifier.size(24.dp))
+                Icon(if (listening) Duo.Microphone else Duo.Send, if (listening) "Talk" else "Send", tint = th.onAccent, modifier = Modifier.size(24.dp))
             }
         }
     }
@@ -252,13 +273,16 @@ fun PipChatScreen(container: AppContainer) {
         text = { Text(sharedFor ?: "Nothing.") },
         confirmButton = { TextButton({ showShared = false }) { Text("OK") } },
     )
-    if (confirmClear) AlertDialog(
-        onDismissRequest = { confirmClear = false },
-        title = { Text("Clear chat history?") },
-        text = { Text("Only the conversation is removed. None of your logged data is touched.") },
-        confirmButton = { TextButton({ container.write { container.healthRepo.clearChat() }; confirmClear = false; mood = PipMood.WAVE }) { Text("Clear") } },
-        dismissButton = { TextButton({ confirmClear = false }) { Text("Cancel") } },
-    )
+    com.myfit.tracker.ui.components.GlassSheet(visible = showBrain, onDismiss = { showBrain = false }) {
+        Text("Which brain answers?", style = FitType.title, color = th.text)
+        Caption("Questions about your own logs are always answered from your data, on the phone.")
+        Spacer(Modifier.height(12.dp))
+        BrainPicker(container) { showBrain = false }
+        Spacer(Modifier.height(10.dp))
+    }
+    com.myfit.tracker.ui.components.GlassSheet(visible = showSettings, onDismiss = { showSettings = false }) {
+        PipSettingsContent(container) { container.write { container.healthRepo.clearChat() }; mood = PipMood.WAVE; showSettings = false }
+    }
 }
 
 
@@ -285,9 +309,9 @@ private fun Bubble(m: ChatMessage, animate: Boolean, onShowShared: (() -> Unit)?
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val (label, color, icon) = when (m.source) {
                             "data" -> Triple("From your data", th.success, Duo.Insights)
-                            "online" -> Triple("Online · Gemini", th.water, Duo.Cloud)
-                            "on-device" -> Triple("Offline brain · on this phone", th.accentBright, Duo.Lock)
-                            "error" -> Triple("Couldn't reach Gemini", th.warning, Duo.Cloud)
+                            "online" -> Triple("Online AI", th.water, Duo.Cloud)
+                            "on-device" -> Triple("On this phone", th.accentBright, Duo.Lock)
+                            "error" -> Triple("Couldn't reach the online AI", th.warning, Duo.Cloud)
                             else -> Triple(Buddy.name, th.textFaint, Duo.Insights)
                         }
                         Icon(icon, null, tint = color, modifier = Modifier.size(12.dp))

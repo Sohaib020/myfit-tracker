@@ -91,6 +91,7 @@ class HealthSyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker
         }
         // background reads need the background permission; otherwise wait until the app is opened
         runCatching { if (c.healthSync.backgroundPermission in c.healthSync.granted()) { c.social.start(); c.social.uploadNow() } }
+        runCatching { c.social.start(); c.friendsRepo.refresh(300) }
         return Result.success()
     }
 

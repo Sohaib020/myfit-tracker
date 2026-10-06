@@ -32,9 +32,10 @@ class SundayReportWorker(ctx: Context, p: WorkerParameters) : CoroutineWorker(ct
         val pi = PendingIntent.getActivity(applicationContext, 77,
             Intent(applicationContext, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra(LiveUpdates.EXTRA_OPEN, "report"),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val n = NotificationCompat.Builder(applicationContext, CHANNEL).setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Your week is ready").setContentText("Workouts, steps, sleep and more — tap to see and share.")
-            .setContentIntent(pi).setAutoCancel(true).build()
+        val card = com.myfit.tracker.notify.NCard(com.myfit.tracker.notify.NKind.TROPHY, "Your week is ready",
+            "Workouts, steps, sleep and more — tap to see and share.", chip = "Weekly report")
+        val n = com.myfit.tracker.notify.NotifKit.apply(applicationContext, NotificationCompat.Builder(applicationContext, CHANNEL), card)
+            .setSmallIcon(R.drawable.ic_notification).setContentIntent(pi).setAutoCancel(true).build()
         runCatching { nm.notify(4310, n) }
         sp.edit().putString("last", key).apply()
         return Result.success()

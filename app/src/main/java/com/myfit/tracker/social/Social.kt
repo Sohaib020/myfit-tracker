@@ -106,7 +106,7 @@ class Social(private val c: AppContainer) {
 
     suspend fun resetPassword(email: String) { auth.sendPasswordResetEmail(email.trim()).await() }
 
-    fun signOut() { auth.signOut() }
+    fun signOut() { auth.signOut(); runCatching { c.friendsRepo.clear() } }
 
     /** Deletes your public data and account. */
     suspend fun deleteAccount() {
@@ -445,7 +445,8 @@ class Social(private val c: AppContainer) {
         )
         val sig = listOf(weekKey(), p.name, p.color, p.isPublic, entry["steps"], entry["activeMin"], entry["distanceM"],
             com.myfit.tracker.ui.arena.ArenaProgress.total(ctx), com.myfit.tracker.ui.arena.ArenaPrefs.partner(ctx).id,
-            challenges.joinToString { it.id }, days.firstOrNull { it.date == today }?.steps).joinToString("|")
+            challenges.joinToString { it.id }, days.firstOrNull { it.date == today }?.steps,
+            MyAvatar.id(ctx), MyAvatar.photoFile(ctx).let { if (it.exists()) it.lastModified() else 0L }).joinToString("|")
         up.edit().putLong("at", now).apply()
         if (sig == up.getString("sig", null) && now - up.getLong("sigAt", 0L) < 6 * 3_600_000L) return lastSync.value
         db.collection("weekly").document(weekKey()).collection("entries").document(u.uid).set(entry).await()
@@ -476,8 +477,10 @@ class Social(private val c: AppContainer) {
                 "journeys" to com.myfit.tracker.ui.arena.ArenaPrefs.finished(ctx).take(20).toList(),
                 "weekSteps" to week.sumOf { it.steps }, "weekActiveMin" to week.sumOf { it.activeMin }, "weekWorkouts" to workouts.coerceIn(0, 200),
                 "updatedAt" to FieldValue.serverTimestamp(),
-            )).await()
+            ) + (MyAvatar.photoForUpload(ctx)?.let { mapOf("photo" to it) } ?: emptyMap())).await()
         }
+        // which picture to show (a ready-made avatar id, or "photo" = friends see the small photo above)
+        runCatching { db.collection("users").document(u.uid).set(mapOf("avatar" to MyAvatar.id(ctx).take(40)), SetOptions.merge()).await() }
         // activity feed: a few milestones friends can see (idempotent ids — re-syncing never duplicates)
         runCatching {
             val todaySteps = days.firstOrNull { it.date == today }?.steps ?: 0L

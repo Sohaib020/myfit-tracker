@@ -47,8 +47,10 @@ class GlucoseAlertWorker(ctx: Context, p: WorkerParameters) : CoroutineWorker(ct
                 nm.createNotificationChannel(NotificationChannel(CHANNEL, "Family blood sugar alerts", NotificationManager.IMPORTANCE_HIGH).apply { description = "Lows and very highs of people you care for" })
                 val pi = PendingIntent.getActivity(applicationContext, 90 + i, Intent(applicationContext, MainActivity::class.java).putExtra(LiveUpdates.EXTRA_OPEN, "glucose"),
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-                nm.notify(4400 + i, NotificationCompat.Builder(applicationContext, CHANNEL).setSmallIcon(R.drawable.ic_notification)
-                    .setContentTitle(title).setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                val card = com.myfit.tracker.notify.NCard(com.myfit.tracker.notify.NKind.SUGAR, title, text.orEmpty(), value = "${r.mgdl.toInt()} mg/dL",
+                    chip = if (r.mgdl < Glucose.LOW) "LOW" else "HIGH")
+                nm.notify(4400 + i, com.myfit.tracker.notify.NotifKit.apply(applicationContext, NotificationCompat.Builder(applicationContext, CHANNEL), card)
+                    .setSmallIcon(R.drawable.ic_notification)
                     .setPriority(NotificationCompat.PRIORITY_HIGH).setCategory(NotificationCompat.CATEGORY_ALARM).setContentIntent(pi).setAutoCancel(true).build())
             }
             sp.edit().putString(p.uid, r.id).apply()

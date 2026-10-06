@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Top chrome that scrolls away with the content and comes back as soon as you scroll up (like Chrome / Samsung apps).
+ * Top chrome that scrolls with the content as if it were part of the page.
  * The tab area reports every scroll through [connection]; the floating Me / Friends / Daily log / + buttons and the
  * fixed tab headers (Train) translate by [offset] (0 = fully shown, -[limit] = fully hidden).
  */
@@ -27,25 +27,21 @@ class ChromeState {
     var limit by mutableFloatStateOf(0f)
     var baseLimit = 0f
 
-    fun show() { offset = 0f }
+    /** How far the current list is scrolled from its top (px), tracked from what the list actually consumed. */
+    private var scrolled = 0f
+
+    fun show() { offset = 0f; scrolled = 0f }
 
     /**
-     * Scrolling down hides the chrome; it only comes back once the list is back at the very top (the leftover upward
-     * scroll the list can't use), not on every small upward flick.
+     * The chrome is glued to the page: it moves exactly as far as the list scrolls (1:1, no animation, no snapping)
+     * and is fully back only when the top of the page is back on screen.
      */
     val connection = object : NestedScrollConnection {
-        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-            val dy = available.y
-            if (dy < 0f && limit > 0f) offset = (offset + dy).coerceIn(-limit, 0f)
-            return Offset.Zero     // never steal scroll from the list — the chrome just follows it
-        }
         override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-            if (available.y > 0f && limit > 0f) offset = (offset + available.y).coerceIn(-limit, 0f)
+            scrolled = (scrolled - consumed.y).coerceAtLeast(0f)
+            if (available.y > 0f) scrolled = 0f          // the list is at its very top
+            offset = -scrolled.coerceAtMost(limit.coerceAtLeast(0f))
             return Offset.Zero
-        }
-        override suspend fun onPostFling(consumed: androidx.compose.ui.unit.Velocity, available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
-            if (available.y > 0f) offset = 0f      // flung all the way back to the top
-            return androidx.compose.ui.unit.Velocity.Zero
         }
     }
 

@@ -47,8 +47,8 @@ class FoodVision(private val c: AppContainer) {
         }
         if (!online) throw Offline(when {
             offlineError != null -> "You're offline and the offline brain couldn't read this photo ($offlineError). Try again, or search foods instead."
-            ai.models.installedFile() == null -> "You're offline. Download the offline brain once (Settings → Pip → Offline brain, about 2 GB) to recognise meals without internet — or search foods instead."
-            else -> "You're offline and the offline brain is switched off (Settings → Pip). Turn it on, or search foods instead."
+            ai.models.installedFile() == null -> "You're offline. Download the offline brain once (Me → Pip → Pip settings → Downloads, about 2 GB) to recognise meals without internet — or search foods instead."
+            else -> "You're offline and the offline brain is switched off (Pip settings → Downloads). Turn it on, or search foods instead."
         })
         // 2) cloud, within today's free allowance
         onDevice = false

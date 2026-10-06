@@ -1,5 +1,6 @@
 package com.myfit.tracker.reminders
 
+import com.myfit.tracker.notify.NKind as K
 import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationChannel
@@ -213,7 +214,18 @@ object Nudges {
             }
         }
         p.edit().putString("day", todayKey).putInt("count", count + 1).putLong("last_at", System.currentTimeMillis()).apply()
-        post(app, RC_BASE + s.id, msg.first, msg.second, water = s.type == Type.WATER)
+        val card = when (s.type) {
+            Type.WATER -> runCatching {
+                val (ml, target) = HabitActions.waterToday(c); val t = target ?: 2500.0
+                val l = { v: Double -> "%.1f".format(java.util.Locale.US, v / 1000.0) }
+                com.myfit.tracker.notify.NCard(K.DROP, msg.first, msg.second, value = l(ml) + " L", progress = (ml / t).toFloat(), progressLabel = "${l(ml)} of ${l(t)} L today")
+            }.getOrNull()
+            Type.MOVE -> com.myfit.tracker.notify.NCard(K.RUN, msg.first, msg.second)
+            Type.WORKOUT -> com.myfit.tracker.notify.NCard(K.LIFT, msg.first, msg.second)
+            Type.WIND_DOWN -> com.myfit.tracker.notify.NCard(K.MOON, msg.first, msg.second)
+            Type.WEIGH_IN -> com.myfit.tracker.notify.NCard(K.BELL, msg.first, msg.second)
+        } ?: com.myfit.tracker.notify.NCard(K.BELL, msg.first, msg.second)
+        post(app, RC_BASE + s.id, card, water = s.type == Type.WATER)
     }
 
     private fun <T> pick(l: List<T>): T = l[(System.currentTimeMillis() / 3_600_000L % l.size).toInt()]
@@ -229,15 +241,13 @@ object Nudges {
         })
     }
 
-    private fun post(c: Context, id: Int, title: String, text: String, water: Boolean) {
+    private fun post(c: Context, id: Int, card: com.myfit.tracker.notify.NCard, water: Boolean) {
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(c, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
         ensureChannel(c)
         val open = PendingIntent.getActivity(c, id, Intent(c, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val b = NotificationCompat.Builder(c, CHANNEL)
+        val b = com.myfit.tracker.notify.NotifKit.apply(c, NotificationCompat.Builder(c, CHANNEL), card)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title).setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true).setContentIntent(open)
             .setTimeoutAfter(3 * 3_600_000L)                         // stale nudges tidy themselves away

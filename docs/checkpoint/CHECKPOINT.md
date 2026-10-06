@@ -162,3 +162,15 @@ Answers: friend card = level & stars, rewards, this week, journeys · food butto
 9 ✅ 12-hour clock by default everywhere (domain/ClockFmt), You → Units → Clock 12/24; doctor report times follow it
 10 ✅ Icon: owner chose C1 (Studio). tools/appicon/r13/make.py --export writes adaptive layers (bg/fg/mono, 432px, mark scale 0.76) to app + wear drawable-nodpi; wear now uses @mipmap/ic_launcher (adaptive). Doctor report logo uses the same layers.
 OWNER after merge: re-publish firestore.rules (arenaProfile + glucose blocks).
+
+## Round 14 (6 Oct) — branch agent/r14 (PR to main)
+Answers: top bar moves 1:1 with the page · own photo + ready-made avatars · live = both (Android 16 Live Update by default, "Rich card" option) · chat-first Pip · rank by week steps · avatars: cast, sports, creatures, faces/food/icons · all notification groups.
+1 ✅ ChromeState: offset = -min(scrolled, limit), scrolled tracked from consumed scroll (no snapping)
+2 ✅ Glucose Low/Good/High tiles → Glass
+3 ✅ Friends rebuilt (ui/social/FriendsHome.kt): you card (avatar/rank/steps), requests banner, podium, race rows, challenges row, activity, global board sheet; settings sheet; add-friends sheet. Bug fixed: GlassSheets were inside a Column after a fillMaxSize list → zero height (friend tap + new challenge never showed)
+4 ✅ social/FriendsRepo.kt: cached snapshot (filesDir/friends_cache.json), parallel refresh on open / app start / HealthSyncWorker; friend-request notifications
+5 ✅ Avatars: assets/avatars (132: tools/avatars/make.py + chars.py), MyAvatar (prefs + my_avatar.jpg), users.avatar, arenaProfile.photo (128px base64, friends only); rules updated — OWNER must re-publish firestore.rules
+6 ✅ Notifications: notify/NotifKit.kt + tools/notif/make.py (12 frame-animated icons via ProgressBar indeterminate drawables, card layouts). LiveUpdates: Android 16 ProgressStyle (tracker icon, milestone points, promoted extras) or rich card; workout/rest/stopwatch/fasting richer. Reminders, nudges, weekly report, family glucose use cards. Now Bar test removed → "Live notifications: Now Bar / Rich card" in Me. NOTE: RemoteViews layouts must not contain plain View/Space.
+7 ✅ AI: BrainMode (auto/online/phone) in PipBrain; PipChatScreen top bar = brain chip + ⚙; mic (RecognizerIntent) when input empty; ui/pip/PipSettings.kt one sheet (personality, brain, voice, downloads, chat); Me shows one Pip card
+8 ⏳ Tall-display issues: waiting for owner's screenshots + phone model
+Test: FriendsNotifShotTest (friends parts + notification cards).

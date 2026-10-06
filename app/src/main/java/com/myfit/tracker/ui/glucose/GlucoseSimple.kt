@@ -134,11 +134,13 @@ fun MeaningStrip(cfg: GlucoseConfig) {
             Triple("Good", "${f(cfg.low.toDouble())}–${f(cfg.high.toDouble())}", TL_GREEN),
             Triple("High", "over ${f(cfg.high.toDouble())}", TL_AMBER),
         ).forEach { (w, r, c) ->
-            Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(c.copy(alpha = 0.16f)).padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(14.dp).clip(CircleShape).background(c))
-                Spacer(Modifier.height(4.dp))
-                Text(w, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = th.text)
-                Text(r, style = FitType.caption, color = th.textDim)
+            com.myfit.tracker.ui.theme.Glass(Modifier.weight(1f), shape = RoundedCornerShape(18.dp)) {
+                Column(Modifier.fillMaxWidth().background(c.copy(alpha = 0.12f)).padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.size(14.dp).clip(CircleShape).background(c))
+                    Spacer(Modifier.height(4.dp))
+                    Text(w, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = th.text, maxLines = 1)
+                    Text(r, style = FitType.caption, color = th.textDim, maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
             }
         }
     }
