@@ -160,5 +160,5 @@ Answers: friend card = level & stars, rewards, this week, journeys · food butto
 7 ✅ Add food: whole header scrolls · star on every food → Favourites tab (prefs food_favs)
 8 ✅ Check-in strip redesigned (prompt + emoji row / summary with mood·energy·stress bars)
 9 ✅ 12-hour clock by default everywhere (domain/ClockFmt), You → Units → Clock 12/24; doctor report times follow it
-10 ⏳ Icons: tools/appicon/r13/make.py → out/sheet_A/B/C.png (A1–A6, B1–B6, C1–C6). Waiting for owner's pick; then swap drawable-nodpi/ic_launcher_bg/fg (+ monochrome) and wear icon.
+10 ✅ Icon: owner chose C1 (Studio). tools/appicon/r13/make.py --export writes adaptive layers (bg/fg/mono, 432px, mark scale 0.76) to app + wear drawable-nodpi; wear now uses @mipmap/ic_launcher (adaptive). Doctor report logo uses the same layers.
 OWNER after merge: re-publish firestore.rules (arenaProfile + glucose blocks).

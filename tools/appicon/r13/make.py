@@ -188,5 +188,42 @@ def sheets():
             dr.text((x,ly), line.strip(), fill="#555", font=font(19))
         sh.save(f"{OUT}/sheet_{fam}.png")
 
-if __name__ == "__main__":
+if __name__ == "__main__" and "--export" not in sys.argv:
     render(); sheets(); print("done", len(I))
+
+
+# ---------------------------------------------------------------- export the chosen icon as Android adaptive layers
+CHOSEN = "c1"
+MARK_SCALE = 0.76   # mark ≈ 66% of the visible 72dp; stays inside the 66dp safe circle
+def export_layers(chosen=CHOSEN, size=432):
+    s = next(x[4] for x in I if x[0] == chosen)
+    import re
+    defs = re.search(r"<defs>(.*?)</defs>", s, re.S).group(1)
+    body = s[s.index("</defs>")+7 : s.rindex("</svg>")]
+    bgrect = '<rect width="1024" height="1024" fill="url(#bg)"/>'
+    mark = body.replace(bgrect, "").replace(GRAIN_USE, "")
+    g = f'<g transform="translate(512,512) scale({MARK_SCALE}) translate(-512,-512)">{{}}</g>'
+    mono_mark = (f'<path d="{arc()}" fill="none" stroke="#fff" stroke-width="124" stroke-linecap="round"/>'
+                 f'<path d="{pulse()}" fill="none" stroke="#fff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>')
+    out = {
+        "bg": svg(bgrect + GRAIN_USE, defs),
+        "fg": svg(g.format(mark), defs),
+        "mono": svg(g.format(mono_mark), ""),
+    }
+    res = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../app/src/main/res/drawable-nodpi"))
+    wres = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../wear/src/main/res/drawable-nodpi")); os.makedirs(wres, exist_ok=True)
+    with sync_playwright() as p:
+        br = p.chromium.launch(); pg = br.new_page(viewport={"width":1024,"height":1024})
+        for k, sv in out.items():
+            pg.set_content(f'<html><body style="margin:0;background:transparent">{sv}</body></html>'); pg.wait_for_timeout(60)
+            tmp = f"{OUT}/layer_{k}.png"
+            pg.screenshot(path=tmp, clip={"x":0,"y":0,"width":1024,"height":1024}, omit_background=True)
+            im = Image.open(tmp).convert("RGBA").resize((size, size), Image.LANCZOS)
+            for d in (res, wres): im.save(f"{d}/ic_launcher_{k}.png", optimize=True)
+        br.close()
+    # preview: composited + masked like a launcher would
+    bg = Image.open(f"{res}/ic_launcher_bg.png"); fg = Image.open(f"{res}/ic_launcher_fg.png")
+    comp = Image.alpha_composite(bg, fg); ins = int(size*18/108); comp.crop((ins, ins, size-ins, size-ins)).save(f"{OUT}/chosen_preview.png")
+
+if __name__ == "__main__" and "--export" in sys.argv:
+    export_layers()
