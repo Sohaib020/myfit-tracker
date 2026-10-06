@@ -48,7 +48,7 @@ object AppInfo {
     const val NAME = "MyFit Tracker"
     const val TAGLINE = "Private fitness & health logbook"
     const val SUPPORT = "myfitnesstrack.support@gmail.com"
-    val site get() = com.myfit.tracker.update.AppUpdater.SITE
+    val site get() = com.myfit.tracker.update.Store.appLink
     val version get() = BuildConfig.VERSION_NAME
 }
 
@@ -321,7 +321,7 @@ object DoctorReport {
             "This summary was created by the patient in ${AppInfo.NAME} (version ${AppInfo.version}).",
             "Data comes from readings they entered and from connected devices via Health Connect.",
             "It is a record, not a diagnosis, and gives no medical or dosing advice.",
-            "Download the app: ${AppInfo.site.removePrefix("https://")}",
+            "Get the app: " + if (com.myfit.tracker.update.Store.isStoreBuild) "search MyFit Tracker on ${com.myfit.tracker.update.Store.label}" else AppInfo.site.removePrefix("https://"),
             "Support: ${AppInfo.SUPPORT}",
         )
         about.forEachIndexed { i, t -> c.drawText(t, M + 16f, y + 70f + i * 13f, paint(8.5f, if (i >= 3) MINT_DARK else INK)) }

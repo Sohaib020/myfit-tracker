@@ -122,6 +122,15 @@ fun PipSettingsContent(container: AppContainer, onClearChat: () -> Unit) {
     SectionTitle(Duo.ArrowDownward, "Downloads", th.success)
     com.myfit.tracker.ui.settings.OfflineBrainCard()
 
+    val ctxP = LocalContext.current
+    if (com.myfit.tracker.ai.ondevice.RewardedAds.privacyOptionsRequired(ctxP)) {
+        SectionTitle(Duo.Lock, "Ad privacy", th.textDim)
+        GlassButton("Ad privacy options", {
+            (ctxP as? android.app.Activity ?: (ctxP as? android.content.ContextWrapper)?.baseContext as? android.app.Activity)
+                ?.let { com.myfit.tracker.ai.ondevice.RewardedAds.privacyOptions(it) }
+        }, Modifier.fillMaxWidth(), height = 46.dp)
+    }
+
     SectionTitle(Duo.ChatBubble, "Chat", th.textDim)
     var confirm by remember { mutableStateOf(false) }
     GlassButton(if (confirm) "Tap again to clear the conversation" else "Clear chat history", {

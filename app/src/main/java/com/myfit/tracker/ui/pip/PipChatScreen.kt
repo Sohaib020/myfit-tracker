@@ -192,7 +192,9 @@ fun PipChatScreen(container: AppContainer) {
             }
             items(suggestions) { sg -> GlassChip(sg, false, { send(sg) }) }
         }
-        Row(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
+        Text("AI answers can be wrong and aren't medical advice.", style = FitType.overline, color = th.textFaint,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp).navigationBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
             Glass(Modifier.weight(1f).heightIn(min = 54.dp), shape = RoundedCornerShape(27.dp)) {
                 Box(Modifier.padding(horizontal = 18.dp, vertical = 15.dp)) {
                     if (input.isEmpty()) Text("Message ${Buddy.name}…", style = FitType.body, color = th.textFaint)

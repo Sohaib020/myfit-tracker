@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Galaxy Store build: updates come only through Galaxy Store, so the self-installer is stripped out. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove" />
+    <application>
+        <receiver android:name=".update.InstallResultReceiver" tools:node="remove" />
+    </application>
+</manifest>

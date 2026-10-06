@@ -41,6 +41,10 @@ service cloud.firestore {
       match /private/{doc} {
         allow read, write: if isMe(uid);
       }
+      // people this user blocked (their requests are hidden and declined)
+      match /blocked/{bid} {
+        allow read, write: if isMe(uid);
+      }
       match /friends/{fid} {
         allow read: if isMe(uid);
         // you can add someone to your own list; they appear on yours only if you hold THEIR code
@@ -164,6 +168,16 @@ service cloud.firestore {
           && (!('activeMin' in request.resource.data) || (request.resource.data.activeMin >= 0 && request.resource.data.activeMin <= 43200))
           && (!('distanceM' in request.resource.data) || (request.resource.data.distanceM >= 0 && request.resource.data.distanceM <= 4500000));
       }
+    }
+
+    // reports about other users (picture, name, behaviour) — write-only for users; reviewed in the Firebase console
+    match /reports/{id} {
+      allow create: if signedIn() && request.resource.data.reporter == request.auth.uid
+        && request.resource.data.keys().hasOnly(['reporter', 'target', 'reason', 'details', 'at'])
+        && request.resource.data.target is string && request.resource.data.target.size() <= 128
+        && request.resource.data.reason is string && request.resource.data.reason.size() <= 40
+        && request.resource.data.details is string && request.resource.data.details.size() <= 500;
+      allow read, update, delete: if false;
     }
   }
 }

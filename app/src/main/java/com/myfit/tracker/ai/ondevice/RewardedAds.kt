@@ -76,5 +76,8 @@ object RewardedAds {
             com.google.android.ump.ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
     }.getOrDefault(false)
 
+    /** Store builds never show Google's test ads (only real ad units once the ADMOB_* secrets are set). */
+    val enabled: Boolean get() = !(usingTestAds && com.myfit.tracker.update.Store.isStoreBuild)
+
     val usingTestAds: Boolean get() = BuildConfig.ADMOB_REWARDED_ID.startsWith("ca-app-pub-3940256099942544")
 }

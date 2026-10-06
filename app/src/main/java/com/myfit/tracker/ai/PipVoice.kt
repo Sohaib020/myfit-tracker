@@ -66,6 +66,8 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
      * @param text what's shown (English or Roman Urdu)
      * @param ur same reply in Urdu script (speech only), [hi] in Devanagari (speech only)
      */
+    private val focus by lazy { com.myfit.tracker.ai.voice.Focus(context, transient = true) { stop() } }
+
     fun speak(text: String, ur: String? = null, hi: String? = null, force: Boolean = false) {
         stop()
         val en = clean(text)
@@ -73,6 +75,7 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
         job = scope.launch {
             val s = settings.settings.first()
             if (!s.pipVoice && !force) return@launch
+            if (!focus.request()) return@launch          // a call is in progress: stay quiet
             _speaking.value = true
             run {
                 val urdu = ur != null
@@ -111,10 +114,12 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
             }
             _speaking.value = false
             level.value = 0f
+            focus.abandon()
         }
     }
 
     fun stop() {
+        runCatching { focus.abandon() }
         job?.cancel(); job = null
         player?.abort(); player = null
         runCatching { tts?.stop() }

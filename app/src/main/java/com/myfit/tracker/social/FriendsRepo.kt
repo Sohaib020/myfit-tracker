@@ -120,7 +120,8 @@ class FriendsRepo(private val c: AppContainer) {
                 val week = c.social.weekKey()
                 val ids = db.collection("users").document(me).collection("friends").get().await().documents.map { it.id }
                 val cards = coroutineScope { (listOf(me) + ids).map { uid -> async { runCatching { card(db, week, uid, uid == me) }.getOrNull() } }.awaitAll() }.filterNotNull()
-                val reqDocs = runCatching { db.collection("users").document(me).collection("requests").get().await().documents }.getOrDefault(emptyList())
+                val bl = runCatching { c.social.blocked() }.getOrDefault(emptySet())
+                val reqDocs = runCatching { db.collection("users").document(me).collection("requests").get().await().documents }.getOrDefault(emptyList()).filter { it.id !in bl }
                 val reqs = reqDocs.size
                 runCatching { notifyNewRequests(reqDocs.map { it.id to (it.getString("name") ?: "Someone") }) }
                 val s = FriendsSnap(cards.firstOrNull { it.me }, cards.filter { !it.me }, reqs, System.currentTimeMillis())

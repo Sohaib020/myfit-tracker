@@ -238,7 +238,7 @@ fun FamilyCard(container: AppContainer) {
             Caption("Give this code to your family. They type it in their MyFit app under Blood sugar → Family.")
             Spacer(Modifier.height(10.dp))
             GlassButton("Send code on WhatsApp / SMS", {
-                val text = "Add me in MyFit to see my blood sugar: open Blood sugar → Family and enter code $code. Get MyFit: ${com.myfit.tracker.update.AppUpdater.SITE}"
+                val text = "Add me in MyFit to see my blood sugar: open Blood sugar → Family and enter code $code. Get MyFit: ${com.myfit.tracker.update.Store.appLink}"
                 ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, text), "Send family code"))
             }, Modifier.fillMaxWidth(), icon = Duo.Send, height = 50.dp)
             if (carers.isNotEmpty()) {

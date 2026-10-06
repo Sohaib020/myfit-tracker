@@ -16,7 +16,8 @@ enum class Ambient(val label: String) { RAIN("Rain"), OCEAN("Ocean"), HUM("Soft 
  * Procedurally generated ambient sound (no audio assets). Synthesis runs on its own background
  * thread and writes to a streaming [AudioTrack]. Call [stop] to fade out and release.
  */
-class AmbientPlayer {
+class AmbientPlayer(context: android.content.Context? = null) {
+    private val focus = context?.let { com.myfit.tracker.ai.voice.Focus(it, transient = false) { stop() } }
     @Volatile private var running = false
     @Volatile private var gen = 0
     @Volatile var volume: Float = 0.6f
@@ -26,6 +27,7 @@ class AmbientPlayer {
     fun play(k: Ambient) {
         if (k == Ambient.SILENCE) { stop(); current = k; return }
         if (running && k == current) return
+        if (focus != null && !focus.request()) return     // e.g. during a phone call
         current = k
         gen += 1
         val g = gen
@@ -38,6 +40,7 @@ class AmbientPlayer {
     fun stop() {
         running = false
         gen += 1
+        focus?.abandon()
     }
 
     private fun loop(k: Ambient, g: Int) {
@@ -146,7 +149,8 @@ class AmbientPlayer {
 /** Player tied to the composition: fades out and releases when the caller leaves. */
 @Composable
 fun rememberAmbientPlayer(): AmbientPlayer {
-    val p = remember { AmbientPlayer() }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val p = remember { AmbientPlayer(ctx) }
     DisposableEffect(p) { onDispose { p.stop() } }
     return p
 }

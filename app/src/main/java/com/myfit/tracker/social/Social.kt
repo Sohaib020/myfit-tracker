@@ -266,7 +266,8 @@ class Social(private val c: AppContainer) {
             val snap = db.collection("users").orderBy("username").startAt(h).endAt(h + "\uf8ff").limit(10).get().await()
             snap.documents.filter { it.id != u.uid && it.id !in out }.forEach { d -> out[d.id] = Found(toProfile(d.id, d.data ?: emptyMap()), false, d.id in friendIds) }
         }
-        return out.values.toList()
+        val bl = blocked()
+        return out.values.filter { it.profile.uid !in bl }
     }
 
     /** Asks [uid] to be friends (they see it under Friends → Requests). */
@@ -279,7 +280,10 @@ class Social(private val c: AppContainer) {
 
     suspend fun requests(): List<FriendRequest> {
         val u = auth.currentUser ?: return emptyList()
-        return db.collection("users").document(u.uid).collection("requests").get().await().documents.map {
+        val bl = blocked()
+        return db.collection("users").document(u.uid).collection("requests").get().await().documents.filter { d ->
+            if (d.id in bl) { runCatching { d.reference.delete() }; false } else true
+        }.map {
             FriendRequest(it.id, it.getString("name") ?: "Someone", it.getString("username").orEmpty())
         }
     }
@@ -305,6 +309,32 @@ class Social(private val c: AppContainer) {
         fun strs(k: String) = (d.get(k) as? List<Any?>)?.filterIsInstance<String>().orEmpty()
         return ArenaProfile(uid, d.getLong("level")?.toInt() ?: 1, d.getLong("stars")?.toInt() ?: 0, d.getString("mascot"), strs("rewards"), strs("journeys"),
             d.getLong("weekSteps") ?: 0L, d.getLong("weekActiveMin") ?: 0L, d.getLong("weekWorkouts")?.toInt() ?: 0)
+    }
+
+    // ------------------------------------------------------------------ safety: report + block
+
+    /** Sends a report about [uid] (reviewed by the MyFit team in the Firebase console). */
+    suspend fun report(uid: String, reason: String, details: String) {
+        val me = auth.currentUser?.uid ?: throw IllegalStateException("Sign in first")
+        db.collection("reports").add(mapOf("reporter" to me, "target" to uid, "reason" to reason.take(40), "details" to details.take(500),
+            "at" to FieldValue.serverTimestamp())).await()
+    }
+
+    /** Blocks [uid]: removes the friendship and hides / declines their friend requests from now on. */
+    suspend fun block(uid: String) {
+        val me = auth.currentUser?.uid ?: throw IllegalStateException("Sign in first")
+        db.collection("users").document(me).collection("blocked").document(uid).set(mapOf("at" to FieldValue.serverTimestamp())).await()
+        removeFriend(uid)
+        runCatching { declineRequest(uid) }
+        blockedCache = (blockedCache ?: emptySet()) + uid
+    }
+
+    @Volatile private var blockedCache: Set<String>? = null
+    suspend fun blocked(): Set<String> {
+        blockedCache?.let { return it }
+        val me = auth.currentUser?.uid ?: return emptySet()
+        return runCatching { db.collection("users").document(me).collection("blocked").get().await().documents.map { it.id }.toSet() }
+            .getOrDefault(emptySet()).also { blockedCache = it }
     }
 
     suspend fun removeFriend(uid: String) {

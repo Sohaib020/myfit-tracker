@@ -257,9 +257,9 @@ fun FriendsHome(container: AppContainer, bottomPad: Int = 40, showTopBar: Boolea
         }
         GlassSheet(visible = sheet == Sheet.PROFILE && openFriend != null, onDismiss = { sheet = Sheet.NONE }) {
             openFriend?.let { f ->
-                FriendProfileContent(container, f) {
+                FriendProfileContent(container, f, onRemove = {
                     scope.launch { runCatching { social.removeFriend(f.uid) }; sheet = Sheet.NONE; toaster.show("Removed ${f.name}"); refresh() }
-                }
+                }, onBlocked = { sheet = Sheet.NONE; refresh() })
             }
         }
         GlassSheet(visible = sheet == Sheet.ADD, onDismiss = { sheet = Sheet.NONE }) {
@@ -549,6 +549,8 @@ private fun ChallengeContent(container: AppContainer, ch: Challenge, people: Lis
 @Composable
 private fun GlobalBoardContent(container: AppContainer) {
     val th = LocalFitTheme.current
+    val scope = rememberCoroutineScope()
+    val toaster = LocalToaster.current
     var metric by remember { mutableStateOf(Metric.STEPS) }
     val board by produceState<List<BoardRow>?>(null, metric) { value = null; value = runCatching { container.social.globalBoard(metric) }.getOrDefault(emptyList()) }
     Text("Global leaderboard", style = FitType.title, color = th.text)
@@ -567,6 +569,13 @@ private fun GlobalBoardContent(container: AppContainer) {
                 Spacer(Modifier.width(10.dp))
                 Text(if (r.me) "${r.name} (you)" else r.name, style = FitType.label, color = th.text, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(formatMetric(metric, r.value), style = FitType.label, color = th.text)
+                if (!r.me) Icon(Duo.Flag, "Report ${r.name}", tint = th.textFaint, modifier = Modifier.padding(start = 8.dp).size(28.dp).clip(CircleShape).clickableNoRipple {
+                    scope.launch {
+                        runCatching { container.social.report(r.uid, "Offensive name (global board)", "") }
+                            .onSuccess { toaster.show("Reported ${r.name} — thanks, we'll review it") }
+                            .onFailure { toaster.show("Couldn't send — check your connection") }
+                    }
+                }.padding(5.dp))
             }
         }
     }

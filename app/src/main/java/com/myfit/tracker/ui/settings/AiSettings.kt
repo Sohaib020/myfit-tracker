@@ -238,7 +238,7 @@ fun AiCapSheetHost() {
             })
             error?.let { Spacer(Modifier.height(8.dp)); Caption(it, color = th.warning) }
             Spacer(Modifier.height(14.dp))
-            val canAd = allowance?.canWatchAd != false
+            val canAd = allowance?.canWatchAd != false && RewardedAds.enabled
             if (canAd) AccentButton(if (busy) "Loading ad…" else "Watch a short ad  ·  +${k.adGrant} ${k.many}", {
                 if (busy) return@AccentButton
                 val act = ctx.activity() ?: return@AccentButton
