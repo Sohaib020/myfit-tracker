@@ -52,7 +52,7 @@ fun BrainPicker(container: AppContainer, onPicked: () -> Unit = {}) {
     val mode by BrainMode.flow.collectAsState()
     val cur = mode ?: BrainMode.get(ctx)
     val ai = remember { com.myfit.tracker.ai.ondevice.OnDeviceAi.get(ctx) }
-    val installed = remember(cur) { ai.models.installedFile() != null }
+    val installed by androidx.compose.runtime.produceState(true, cur) { value = ai.models.installedFile() != null }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(
             Triple(BrainMode.AUTO, Duo.AutoAwesome, "Uses the on-phone brain when it's downloaded, otherwise the online AI. Best of both."),

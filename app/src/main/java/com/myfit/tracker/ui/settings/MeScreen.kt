@@ -672,7 +672,7 @@ private fun PipEntryCard(container: AppContainer) {
     val buddy by com.myfit.tracker.ui.pip.Buddy.active.collectAsState()
     val brain by com.myfit.tracker.ai.BrainMode.flow.collectAsState()
     val mode = brain ?: com.myfit.tracker.ai.BrainMode.get(ctx)
-    val installed = remember { com.myfit.tracker.ai.ondevice.OnDeviceAi.get(ctx).models.installedFile() != null }
+    val installed by androidx.compose.runtime.produceState(false) { value = com.myfit.tracker.ai.ondevice.OnDeviceAi.get(ctx).models.installedFile() != null }
     GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.PipChat) }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             com.myfit.tracker.ui.arena.CastImage(buddy, 64.dp)
