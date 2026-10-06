@@ -174,3 +174,13 @@ Answers: top bar moves 1:1 with the page · own photo + ready-made avatars · li
 7 ✅ AI: BrainMode (auto/online/phone) in PipBrain; PipChatScreen top bar = brain chip + ⚙; mic (RecognizerIntent) when input empty; ui/pip/PipSettings.kt one sheet (personality, brain, voice, downloads, chat); Me shows one Pip card
 8 ⏳ Tall-display issues: waiting for owner's screenshots + phone model
 Test: FriendsNotifShotTest (friends parts + notification cards).
+
+## Galaxy Store readiness (6 Oct) — branch agent/galaxy
+- New `galaxy` flavor (SELF_UPDATE=false, STORE/STORE_URL BuildConfig, manifest overlay removes REQUEST_INSTALL_PACKAGES + install receiver). update/Store.kt: store links instead of APK site in invites, family-glucose text, doctor report.
+- Workflow `.github/workflows/galaxy-release.yml` (manual): unit tests, signed APK (arm64+armv7) + AAB, lint summary + permission/badging check as notices, artifact "galaxy-store-1.0.N". versionCode = 100000+run, versionName 1.0.run.
+- Safety (UGC rule): report (Firestore `reports`, write-only) + block (users/{uid}/blocked, enforced in rules for friends/requests, filtered in lists/search/global board).
+- Store builds: no test ads (RewardedAds.enabled), no hidden developer menu; ad-privacy entry in Pip settings; AI disclaimer under chat input; audio focus (ai/voice/Focus.kt) for Pip voice + meditation sounds; MainActivity portrait.
+- Privacy policy: permissions, retention, safety/reports, rights, medical disclaimer, changes sections.
+- Review fixes: avatar uploads without Health Connect (Social.uploadAvatar), caches reset on account switch, photo decode sampling + EXIF, live-update error handler, ≤4 milestone dots.
+- Result (galaxy run 3): 19 unit tests pass, lint 0 errors / 177 warnings, APK 137 MB, target 36, no install permission.
+- OWNER: re-publish firestore.rules (reports + blocked); create a reviewer test account; ADMOB secrets not set → Galaxy build shows no ads.
