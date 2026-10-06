@@ -42,7 +42,7 @@
             android:layout_height="wrap_content" android:textSize="34sp" android:textStyle="bold" android:visibility="gone"/>
         <TextView android:id="@+id/n_value" style="@style/TextAppearance.Compat.Notification.Title" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:textSize="30sp" android:textStyle="bold" android:visibility="gone"/>
-        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
+        <FrameLayout android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
         <TextView android:id="@+id/n_chip" style="@style/TextAppearance.Compat.Notification.Info" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:background="@drawable/notif_chip_bg" android:paddingStart="10dp" android:paddingEnd="10dp"
             android:paddingTop="4dp" android:paddingBottom="4dp" android:layout_marginBottom="6dp" android:maxLines="1" android:visibility="gone"/>
