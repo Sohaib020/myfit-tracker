@@ -77,7 +77,10 @@ class Social(private val c: AppContainer) {
         if (!available || started) return
         started = true
         _user.value = auth.currentUser
-        auth.addAuthStateListener { _user.value = it.currentUser }
+        auth.addAuthStateListener {
+            if (_user.value?.uid != it.currentUser?.uid) { blockedCache = null; if (_user.value != null) runCatching { c.friendsRepo.clear() } }
+            _user.value = it.currentUser
+        }
     }
 
     // ------------------------------------------------------------------ sign-in
@@ -106,7 +109,7 @@ class Social(private val c: AppContainer) {
 
     suspend fun resetPassword(email: String) { auth.sendPasswordResetEmail(email.trim()).await() }
 
-    fun signOut() { auth.signOut(); runCatching { c.friendsRepo.clear() } }
+    fun signOut() { auth.signOut(); blockedCache = null; runCatching { c.friendsRepo.clear() } }
 
     /** Deletes your public data and account. */
     suspend fun deleteAccount() {
@@ -115,6 +118,8 @@ class Social(private val c: AppContainer) {
         if (System.currentTimeMillis() - last > 5 * 60_000L) throw IllegalStateException("For safety, sign out and sign in again, then delete within 5 minutes.")
         deleteCloudData()
         u.delete().await()
+        blockedCache = null
+        runCatching { c.friendsRepo.clear() }
     }
 
     /** Removes everything MyFit stored about you on the server (profile, totals, friends, feed). Keeps you signed in. */
@@ -132,6 +137,7 @@ class Social(private val c: AppContainer) {
         p?.username?.takeIf { it.isNotBlank() }?.let { runCatching { db.collection("usernames").document(it).delete().await() } }
         runCatching { db.collection("users").document(u.uid).collection("requests").get().await().documents.forEach { runCatching { it.reference.delete().await() } } }
         runCatching { db.collection("users").document(u.uid).collection("private").document("me").delete().await() }
+        runCatching { db.collection("users").document(u.uid).collection("blocked").get().await().documents.forEach { runCatching { it.reference.delete().await() } } }
         runCatching { db.collection("arenaProfile").document(u.uid).delete().await() }
         runCatching { db.collection("users").document(u.uid).delete().await() }
     }
@@ -311,6 +317,23 @@ class Social(private val c: AppContainer) {
             d.getLong("weekSteps") ?: 0L, d.getLong("weekActiveMin") ?: 0L, d.getLong("weekWorkouts")?.toInt() ?: 0)
     }
 
+    /**
+     * Your picture: the avatar id in your public profile, and (only for your own photo) the small copy in your
+     * friends-only Arena profile. Removing the photo deletes the online copy.
+     */
+    suspend fun uploadAvatar() {
+        val u = auth.currentUser ?: return
+        db.collection("users").document(u.uid).set(mapOf("avatar" to MyAvatar.id(ctx).take(40)), SetOptions.merge()).await()
+        val arena = db.collection("arenaProfile").document(u.uid)
+        val photo = MyAvatar.photoForUpload(ctx)
+        if (arena.get().await().exists()) arena.update("photo", photo ?: FieldValue.delete()).await()
+        else if (photo != null) {
+            val lvl = com.myfit.tracker.ui.arena.ArenaProgress.level(com.myfit.tracker.ui.arena.ArenaProgress.total(ctx)).n
+            arena.set(mapOf("level" to lvl, "stars" to 0, "rewards" to emptyList<String>(), "journeys" to emptyList<String>(),
+                "photo" to photo, "updatedAt" to FieldValue.serverTimestamp())).await()
+        }
+    }
+
     // ------------------------------------------------------------------ safety: report + block
 
     /** Sends a report about [uid] (reviewed by the MyFit team in the Firebase console). */
@@ -370,10 +393,11 @@ class Social(private val c: AppContainer) {
     /** Everyone who chose to appear publicly, this week (top 50). */
     suspend fun globalBoard(metric: Metric): List<BoardRow> {
         val me = auth.currentUser?.uid
+        val bl = blocked()
         return db.collection("weeklyPublic").document(weekKey()).collection("entries")
             .orderBy(metric.key, Query.Direction.DESCENDING).limit(50).get().await().documents.map { d ->
                 BoardRow(d.id, d.getString("name") ?: "Athlete", d.getLong("color") ?: 0xFF4C8DFFL, rowValue(d.data ?: emptyMap(), metric), d.id == me, d.getLong("level")?.toInt(), d.getString("mascot"))
-            }
+            }.filter { it.uid !in bl }
     }
 
     // ------------------------------------------------------------------ challenges
@@ -464,6 +488,7 @@ class Social(private val c: AppContainer) {
         val challenges = runCatching { myChallenges() }.getOrDefault(emptyList()).filter { !LocalDate.parse(it.end).isBefore(today.minusDays(1)) }
         val earliest = (challenges.map { LocalDate.parse(it.start) } + weekStart()).minOrNull() ?: weekStart()
         val days = hs.autoDays(earliest.coerceAtLeast(today.minusDays(40)), today)
+        runCatching { uploadAvatar() }          // the picture reaches friends even without Health Connect
         if (days.isEmpty()) { lastSync.value = "Health Connect isn't connected"; return lastSync.value }
         fun sum(from: LocalDate, to: LocalDate) = days.filter { !it.date.isBefore(from) && !it.date.isAfter(to) }
         val week = sum(weekStart(), today)
@@ -509,8 +534,7 @@ class Social(private val c: AppContainer) {
                 "updatedAt" to FieldValue.serverTimestamp(),
             ) + (MyAvatar.photoForUpload(ctx)?.let { mapOf("photo" to it) } ?: emptyMap())).await()
         }
-        // which picture to show (a ready-made avatar id, or "photo" = friends see the small photo above)
-        runCatching { db.collection("users").document(u.uid).set(mapOf("avatar" to MyAvatar.id(ctx).take(40)), SetOptions.merge()).await() }
+        runCatching { uploadAvatar() }
         // activity feed: a few milestones friends can see (idempotent ids — re-syncing never duplicates)
         runCatching {
             val todaySteps = days.firstOrNull { it.date == today }?.steps ?: 0L

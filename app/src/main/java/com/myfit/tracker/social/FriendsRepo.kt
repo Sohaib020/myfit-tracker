@@ -50,7 +50,14 @@ object MyAvatar {
                     if (scale < 1f) d.setTargetSize((s.width * scale).toInt(), (s.height * scale).toInt())
                     d.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE
                 }
-            else ctx.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it) }
+            else {
+                val b = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                ctx.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it, null, b) }
+                var sample = 1; while (maxOf(b.outWidth, b.outHeight) / (sample * 2) >= 1024) sample *= 2
+                val raw = ctx.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }!!
+                val deg = runCatching { ctx.contentResolver.openInputStream(uri).use { androidx.exifinterface.media.ExifInterface(it!!).rotationDegrees } }.getOrDefault(0)
+                if (deg == 0) raw else Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, android.graphics.Matrix().apply { postRotate(deg.toFloat()) }, true)
+            }
             val side = minOf(src.width, src.height)
             val sq = Bitmap.createBitmap(src, (src.width - side) / 2, (src.height - side) / 2, side, side)
             val out = Bitmap.createScaledBitmap(sq, 320, 320, true)
@@ -98,6 +105,9 @@ class FriendsRepo(private val c: AppContainer) {
     private val mutex = Mutex()
     @Volatile private var loaded = false
 
+    /** Loads the on-phone cache off the main thread. */
+    suspend fun load() = withContext(Dispatchers.IO) { ensureLoaded() }
+
     fun ensureLoaded() {
         if (loaded) return
         loaded = true
@@ -118,7 +128,8 @@ class FriendsRepo(private val c: AppContainer) {
             try {
                 val db = FirebaseFirestore.getInstance()
                 val week = c.social.weekKey()
-                val ids = db.collection("users").document(me).collection("friends").get().await().documents.map { it.id }
+                val blocked = runCatching { c.social.blocked() }.getOrDefault(emptySet())
+                val ids = db.collection("users").document(me).collection("friends").get().await().documents.map { it.id }.filter { it !in blocked }
                 val cards = coroutineScope { (listOf(me) + ids).map { uid -> async { runCatching { card(db, week, uid, uid == me) }.getOrNull() } }.awaitAll() }.filterNotNull()
                 val bl = runCatching { c.social.blocked() }.getOrDefault(emptySet())
                 val reqDocs = runCatching { db.collection("users").document(me).collection("requests").get().await().documents }.getOrDefault(emptyList()).filter { it.id !in bl }

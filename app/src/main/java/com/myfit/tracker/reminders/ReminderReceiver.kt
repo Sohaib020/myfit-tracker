@@ -84,7 +84,7 @@ class ReminderReceiver : BroadcastReceiver() {
         return when (type) {
             ReminderType.WATER -> {
                 val (ml, target) = HabitActions.waterToday(container)
-                val t = target ?: 2500.0
+                val t = target?.takeIf { it > 0 } ?: 2500.0
                 val l = { v: Double -> "%.1f".format(java.util.Locale.US, v / 1000.0) }
                 com.myfit.tracker.notify.NCard(K.DROP, title, text, value = l(ml) + " L", progress = (ml / t).toFloat(), progressLabel = "${l(ml)} of ${l(t)} L today")
             }

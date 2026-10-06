@@ -127,7 +127,9 @@ fun FindFriendsCard(social: Social, refreshKey: Int, onChanged: () -> Unit) {
                             Text(r.name, style = FitType.label, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             if (r.username.isNotBlank()) Caption("@${r.username}")
                         }
-                        Icon(com.myfit.tracker.ui.theme.Duo.Close, "Block ${r.name}", tint = th.textFaint, modifier = Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).clickableNoRipple {
+                        var armBlock by remember(r.uid) { mutableStateOf(false) }
+                        Icon(com.myfit.tracker.ui.theme.Duo.Close, "Block ${r.name}", tint = if (armBlock) th.danger else th.textFaint, modifier = Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).clickableNoRipple {
+                            if (!armBlock) { armBlock = true; toaster.show("Tap ✕ again to block ${r.name}"); return@clickableNoRipple }
                             scope.launch { runCatching { social.block(r.uid) }.onSuccess { toaster.show("${r.name} is blocked") }; requests = requests - r }
                         }.padding(6.dp))
                         Spacer(Modifier.width(4.dp))

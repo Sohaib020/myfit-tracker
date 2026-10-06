@@ -161,7 +161,7 @@ fun AvatarPickerContent(container: AppContainer, name: String, color: Long, onDo
         if (uri != null) scope.launch {
             if (MyAvatar.setPhoto(ctx, uri)) {
                 picked = MyAvatar.PHOTO
-                runCatching { container.social.uploadNow(0) }; runCatching { container.friendsRepo.refresh(0) }
+                runCatching { container.social.uploadAvatar() }; runCatching { container.friendsRepo.refresh(0) }
                 toaster.show("Photo set — friends see it after the next sync"); onDone()
             } else toaster.show("Couldn't open that photo")
         }
@@ -179,7 +179,7 @@ fun AvatarPickerContent(container: AppContainer, name: String, color: Long, onDo
             GlassButton("Use a photo", { photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, Modifier.weight(1f), icon = Duo.Images, height = 44.dp)
             GlassButton("Remove", {
                 MyAvatar.clear(ctx); picked = ""
-                scope.launch { runCatching { container.social.uploadNow(0) } }
+                scope.launch { runCatching { container.social.uploadAvatar() } }
             }, Modifier.weight(1f), icon = Duo.Close, height = 44.dp)
         }
         Spacer(Modifier.height(4.dp))
@@ -203,7 +203,7 @@ fun AvatarPickerContent(container: AppContainer, name: String, color: Long, onDo
         Spacer(Modifier.height(14.dp))
         AccentButton("Save", {
             if (AvatarCatalog.isPreset(picked)) MyAvatar.setPreset(ctx, picked)
-            scope.launch { runCatching { container.social.uploadNow(0) }; runCatching { container.friendsRepo.refresh(0) } }
+            scope.launch { runCatching { container.social.uploadAvatar() }; runCatching { container.friendsRepo.refresh(0) } }
             onDone()
         }, Modifier.fillMaxWidth(), icon = Duo.Check)
     }

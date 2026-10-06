@@ -33,6 +33,7 @@ service cloud.firestore {
       match /requests/{from} {
         allow read: if isMe(uid);
         allow create, update: if isMe(from) && from != uid
+          && !exists(/databases/$(database)/documents/users/$(uid)/blocked/$(from))
           && request.resource.data.keys().hasOnly(['name', 'username', 'at'])
           && request.resource.data.name is string && request.resource.data.name.size() <= 24
           && request.resource.data.username is string && request.resource.data.username.size() <= 20;
@@ -50,9 +51,11 @@ service cloud.firestore {
         // you can add someone to your own list; they appear on yours only if you hold THEIR code
         allow create: if isMe(uid)
           || (isMe(fid) && request.resource.data.code is string
-              && get(/databases/$(database)/documents/codes/$(request.resource.data.code)).data.uid == uid)
+              && get(/databases/$(database)/documents/codes/$(request.resource.data.code)).data.uid == uid
+              && !exists(/databases/$(database)/documents/users/$(uid)/blocked/$(fid)))
           // accepting a friend request: uid asked fid, so fid may add themselves to uid's list
-          || (isMe(fid) && exists(/databases/$(database)/documents/users/$(fid)/requests/$(uid)));
+          || (isMe(fid) && exists(/databases/$(database)/documents/users/$(fid)/requests/$(uid))
+              && !exists(/databases/$(database)/documents/users/$(uid)/blocked/$(fid)));
         allow delete: if isMe(uid) || isMe(fid);
       }
     }

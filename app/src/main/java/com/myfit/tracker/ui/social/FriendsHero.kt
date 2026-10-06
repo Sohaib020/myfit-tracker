@@ -71,7 +71,7 @@ fun FriendsHero(container: AppContainer, modifier: Modifier = Modifier, onOpenFr
     val social = container.social
     val user by social.user.collectAsState()
     var refresh by remember { mutableIntStateOf(0) }
-    remember { container.friendsRepo.ensureLoaded(); 0 }
+    LaunchedEffect(Unit) { container.friendsRepo.load() }
     val snap by container.friendsRepo.snap.collectAsState()
     LaunchedEffect(user, refresh) { if (user != null) runCatching { container.friendsRepo.refresh(if (refresh == 0) 120 else 0) } }
     val board = if (user != null && social.available) snap?.ranked else null
@@ -135,7 +135,7 @@ fun FriendsGlimpse(container: AppContainer, modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     val social = container.social
     val user by social.user.collectAsState()
-    remember { container.friendsRepo.ensureLoaded(); 0 }
+    LaunchedEffect(Unit) { container.friendsRepo.load() }
     val snap by container.friendsRepo.snap.collectAsState()
     LaunchedEffect(user) { if (user != null) runCatching { container.friendsRepo.refresh(120) } }
     val board = if (user != null && social.available) snap?.ranked else null

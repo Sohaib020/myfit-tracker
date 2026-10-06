@@ -97,7 +97,7 @@ fun FriendsHome(container: AppContainer, bottomPad: Int = 40, showTopBar: Boolea
     val scope = rememberCoroutineScope()
     val toaster = LocalToaster.current
     val ctx = LocalContext.current
-    remember { repo.ensureLoaded(); 0 }
+    LaunchedEffect(Unit) { repo.load() }
     val snap by repo.snap.collectAsState()
     val refreshing by repo.refreshing.collectAsState()
     var sheet by remember { mutableStateOf(Sheet.NONE) }

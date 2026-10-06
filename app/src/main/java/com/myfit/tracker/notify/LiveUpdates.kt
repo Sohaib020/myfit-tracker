@@ -46,7 +46,7 @@ object LiveUpdates {
     const val FASTING = 4302
     const val EXTRA_OPEN = "open"
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + kotlinx.coroutines.CoroutineExceptionHandler { _, e -> android.util.Log.w("LiveUpdates", e) })
     @Volatile private var started = false
 
     fun canPost(c: Context) = Build.VERSION.SDK_INT < 33 ||
@@ -83,6 +83,10 @@ object LiveUpdates {
         points: List<Float> = emptyList(), category: String = Notification.CATEGORY_PROGRESS,
     ) {
         if (!canPost(c)) return
+        runCatching { postNow(c, id, card, open, points, category) }.onFailure { android.util.Log.w("LiveUpdates", it) }
+    }
+
+    private fun postNow(c: Context, id: Int, card: NCard, open: String, points: List<Float>, category: String) {
         channel(c)
         val nm = c.getSystemService(NotificationManager::class.java) ?: return
         val n: Notification = if (nativeStyle(c)) nativeCard(c, card, open, points, category) else
@@ -103,7 +107,9 @@ object LiveUpdates {
         val style = Notification.ProgressStyle().setStyledByProgress(true)
             .setProgressTrackerIcon(android.graphics.drawable.Icon.createWithResource(c, card.kind.tracker))
         style.addProgressSegment(Notification.ProgressStyle.Segment(1000).setColor(card.kind.color))
-        points.forEach { f -> style.addProgressPoint(Notification.ProgressStyle.Point((f.coerceIn(0f, 1f) * 1000).toInt().coerceIn(1, 999)).setColor(card.kind.color)) }
+        // Android 16 draws at most a few milestone dots: keep up to 4, spread across the bar
+        val pts = if (points.size <= 4) points else (0 until 4).map { points[it * (points.size - 1) / 3] }
+        pts.forEach { f -> style.addProgressPoint(Notification.ProgressStyle.Point((f.coerceIn(0f, 1f) * 1000).toInt().coerceIn(1, 999)).setColor(card.kind.color)) }
         if (card.progress != null) style.setProgress((card.progress.coerceIn(0f, 1f) * 1000).toInt()) else style.setProgressIndeterminate(true)
         val text = listOfNotNull(card.text, card.progressLabel).joinToString(" · ")
         val b = Notification.Builder(c, CHANNEL)
