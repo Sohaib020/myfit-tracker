@@ -160,7 +160,7 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
 
     /** Image + prompt → text (food photos). */
     suspend fun vision(prompt: String, jpeg: ByteArray): String = run(120_000) { e ->
-        if (!hasVision) throw IllegalStateException("this offline model can't read photos — download the photo model (2.6 GB) in Settings → Pip → Offline brain")
+        if (!hasVision) throw IllegalStateException("this offline model can't read photos — download the photo model (2.6 GB) in Pip settings → Downloads")
         e.createConversation().use { conv -> conv.sendMessage(Contents.of(Content.ImageBytes(jpeg), Content.Text(prompt))).toString().trim() }
     }
 

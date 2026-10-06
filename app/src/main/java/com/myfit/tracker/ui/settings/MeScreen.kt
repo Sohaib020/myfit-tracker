@@ -207,8 +207,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         }
 
         // ---------- pip / AI
-        item { PipSettingsCard(container, dev = false) }
-        item { OfflineBrainCard() }
+        item { PipEntryCard(container) }
         item {
             GlassCard {
                 ToggleRow("Shariah & Health", "Prayer times, Qibla, fasting hub, dhikr, halal check", settings.muslim == "yes") { v -> container.write { container.settings.setMuslim(if (v) "yes" else "no") } }
@@ -217,7 +216,6 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         item {
             GlassButton("Replay Pip's tour", { container.write { container.settings.setTourDone(false) } }, Modifier.fillMaxWidth(), icon = Duo.AutoAwesome, height = 46.dp)
         }
-        item { VoiceSettingsCard(container, dev = false) }
 
         // ---------- gym mode
         item {
@@ -664,6 +662,34 @@ fun EditTargetsForm(c: AppContainer, close: () -> Unit) {
 }
 
 
+/** Me → Pip: who your buddy is, which brain answers, and one tap to chat or change settings (all in one sheet). */
+@Composable
+private fun PipEntryCard(container: AppContainer) {
+    val th = LocalFitTheme.current
+    val settings = LocalSettings.current
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
+    val ctx = LocalContext.current
+    val buddy by com.myfit.tracker.ui.pip.Buddy.active.collectAsState()
+    val brain by com.myfit.tracker.ai.BrainMode.flow.collectAsState()
+    val mode = brain ?: com.myfit.tracker.ai.BrainMode.get(ctx)
+    val installed = remember { com.myfit.tracker.ai.ondevice.OnDeviceAi.get(ctx).models.installedFile() != null }
+    GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.PipChat) }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            com.myfit.tracker.ui.arena.CastImage(buddy, 64.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("${buddy.label.substringBefore(' ')} · AI buddy", style = FitType.section, color = th.text)
+                Caption("Brain: ${com.myfit.tracker.ai.BrainMode.label(mode)} · voice ${if (settings.pipVoice) "on" else "off"} · on-phone brain ${if (installed) "downloaded" else "not downloaded"}")
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AccentButton("Chat", { nav.push(com.myfit.tracker.ui.nav.Overlay.PipChat) }, Modifier.weight(1f), icon = Duo.ChatBubble, height = 44.dp)
+            GlassButton("Pip settings", { com.myfit.tracker.ui.pip.PipChatLaunch.openSettings = true; nav.push(com.myfit.tracker.ui.nav.Overlay.PipChat) }, Modifier.weight(1f), icon = Duo.Gear, height = 44.dp)
+        }
+    }
+}
+
 @Composable
 private fun PipSettingsCard(container: AppContainer, dev: Boolean) {
     val th = LocalFitTheme.current
@@ -745,7 +771,7 @@ private fun GlassSlider(title: String, hint: String, value: Float, range: Closed
 }
 
 @Composable
-private fun VoiceSettingsCard(container: AppContainer, dev: Boolean) {
+internal fun VoiceSettingsCard(container: AppContainer, dev: Boolean) {
     val th = LocalFitTheme.current
     val settings = LocalSettings.current
     val toaster = LocalToaster.current

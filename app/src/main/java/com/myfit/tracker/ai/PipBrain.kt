@@ -52,7 +52,9 @@ class PipBrain(private val c: AppContainer) {
         val online = Net.online(c.app)
         var offlineError: String? = null
         val installed = ai.models.installedFile() != null
-        if (ai.llm.available()) {
+        val mode = BrainMode.get(c.app)
+        // "Online" skips the on-phone model (unless there's no internet); "On this phone" never goes online
+        if (ai.llm.available() && (mode != BrainMode.ONLINE || !online)) {
             try {
                 val summary = data.summaryFor(q).take(1800)
                 val system = "${com.myfit.tracker.ui.pip.Buddy.persona()} Be warm, practical and brief (under 100 words, at most 2 emoji). " +
@@ -77,10 +79,17 @@ class PipBrain(private val c: AppContainer) {
         // no internet: never try the cloud — explain what the offline brain can or can't do right now
         if (!online) {
             return Reply(when {
-                offlineError != null -> "I'm offline and my on-phone brain hit a problem ($offlineError). Open Settings → Pip → Offline brain → Test to check it. I can still answer questions about your own logs, like \"average sleep last week\"."
-                !installed -> "You're offline and my offline brain isn't downloaded yet. Download it once in Settings → Pip → Offline brain (about 2 GB, on Wi-Fi) and I'll answer anything without internet."
-                else -> "You're offline and the offline brain is switched off in Settings → Pip. Turn it on and I'll answer without internet."
+                offlineError != null -> "I'm offline and my on-phone brain hit a problem ($offlineError). Open Pip settings → Downloads → Test to check it. I can still answer questions about your own logs, like \"average sleep last week\"."
+                !installed -> "You're offline and my offline brain isn't downloaded yet. Download it once in Pip settings → Downloads (about 2 GB, on Wi-Fi) and I'll answer anything without internet."
+                else -> "You're offline and the offline brain is switched off in Pip settings → Downloads. Turn it on and I'll answer without internet."
             }, "local", PipMood.CONCERNED)
+        }
+        if (mode == BrainMode.PHONE) {
+            return Reply(when {
+                offlineError != null -> "My on-phone brain hit a problem ($offlineError). Open Pip settings → Downloads → Test, or switch the brain to Auto."
+                !installed -> "The brain is set to \"On this phone\" but it isn't downloaded yet. Open Pip settings → Downloads (about 2 GB, on Wi-Fi), or switch the brain to Auto."
+                else -> "The on-phone brain is turned off. Turn it on in Pip settings → Downloads, or switch the brain to Auto."
+            }, "local", PipMood.CURIOUS)
         }
         val chain = router.chain(s)
         if (chain.isNotEmpty() && s.onlineAi) {
@@ -90,8 +99,8 @@ class PipBrain(private val c: AppContainer) {
         if (chain.isEmpty() || !s.onlineAi) {
             return Reply(
                 if (chain.isEmpty()) "That one needs my online brain, which isn't set up yet 🌱 Add an AI key in Settings → AI. Offline I can answer things like \"How many times did I train legs this month?\", \"Average sleep last week\" or \"How much did my bench improve?\""
-                else if (offlineError != null) "My offline brain hit a problem ($offlineError) and online answers are switched off. Try Settings → Pip → Offline brain → Test, or turn online answers on."
-                else "Online answers are switched off, and that's not something I can work out from your logs alone. Download the offline brain or turn online answers on in Settings → Pip.",
+                else if (offlineError != null) "My offline brain hit a problem ($offlineError) and online answers are switched off. Try Pip settings → Downloads → Test, or switch the brain to Auto."
+                else "Online answers are switched off, and that's not something I can work out from your logs alone. Download the offline brain or switch the brain to Auto in Pip settings.",
                 "local", PipMood.CURIOUS,
             )
         }
@@ -215,4 +224,14 @@ class PipBrain(private val c: AppContainer) {
     }
 
     val certSha1: String get() = gemini.certSha1
+}
+
+
+/** Which brain answers general questions: Auto (on-phone first, then online), Online only, or On this phone only. */
+object BrainMode {
+    const val AUTO = "auto"; const val ONLINE = "online"; const val PHONE = "phone"
+    val flow = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    fun get(c: android.content.Context): String = flow.value ?: c.getSharedPreferences("pip_brain", android.content.Context.MODE_PRIVATE).getString("mode", AUTO)!!.also { flow.value = it }
+    fun set(c: android.content.Context, m: String) { c.getSharedPreferences("pip_brain", android.content.Context.MODE_PRIVATE).edit().putString("mode", m).apply(); flow.value = m }
+    fun label(m: String) = when (m) { ONLINE -> "Online"; PHONE -> "On this phone"; else -> "Auto" }
 }
