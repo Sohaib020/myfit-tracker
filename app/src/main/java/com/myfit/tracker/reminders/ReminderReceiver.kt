@@ -1,5 +1,6 @@
 package com.myfit.tracker.reminders
 
+import com.myfit.tracker.notify.NKind as K
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -80,7 +81,6 @@ class ReminderReceiver : BroadcastReceiver() {
 
     /** A richer card for reminders from the reminder list: water shows today's progress, the rest pick a matching animation. */
     private suspend fun cardFor(container: com.myfit.tracker.AppContainer, type: String, title: String, text: String): com.myfit.tracker.notify.NCard {
-        val K = com.myfit.tracker.notify.NKind
         return when (type) {
             ReminderType.WATER -> {
                 val (ml, target) = HabitActions.waterToday(container)

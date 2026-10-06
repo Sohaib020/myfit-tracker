@@ -1,5 +1,6 @@
 package com.myfit.tracker.reminders
 
+import com.myfit.tracker.notify.NKind as K
 import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationChannel
@@ -213,7 +214,6 @@ object Nudges {
             }
         }
         p.edit().putString("day", todayKey).putInt("count", count + 1).putLong("last_at", System.currentTimeMillis()).apply()
-        val K = com.myfit.tracker.notify.NKind
         val card = when (s.type) {
             Type.WATER -> runCatching {
                 val (ml, target) = HabitActions.waterToday(c); val t = target ?: 2500.0

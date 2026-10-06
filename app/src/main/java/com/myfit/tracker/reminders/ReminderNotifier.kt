@@ -1,5 +1,6 @@
 package com.myfit.tracker.reminders
 
+import com.myfit.tracker.notify.NKind as K
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -93,7 +94,6 @@ object ReminderNotifier {
 
     /** Picks an icon from what a reminder is about (used when the caller didn't build a card). */
     fun guessKind(title: String, text: String, discreet: Boolean = false): com.myfit.tracker.notify.NKind {
-        val K = com.myfit.tracker.notify.NKind
         if (discreet) return K.BELL
         val t = (title + " " + text).lowercase()
         return when {
