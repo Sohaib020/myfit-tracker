@@ -161,6 +161,7 @@ fun ExerciseBrowser(
     }
     val recent = remember(all, used) { all.filter { it.id in used }.sortedBy { it.name } }
     val pickMode = onToggle != null
+    var preview by remember { mutableStateOf<Exercise?>(null) }
 
     Box(Modifier.fillMaxSize()) {
         LazyVerticalGrid(
@@ -213,7 +214,30 @@ fun ExerciseBrowser(
                     selectedIndex = selected?.indexOf(ex.id)?.takeIf { it >= 0 },
                     onClick = { if (pickMode) onToggle!!(ex) else onOpen(ex) },
                     onAdd = if (pickMode) null else onAdd?.let { f -> { f(ex) } },
+                    onPreview = if (pickMode) ({ preview = ex }) else null,
                 )
+            }
+        }
+        // "How to": big looping demo + muscles + steps, without leaving the picker
+        com.myfit.tracker.ui.components.GlassSheet(visible = preview != null, onDismiss = { preview = null }) {
+            val ex = preview
+            if (ex != null) {
+                ExerciseImage(ex, Modifier.fillMaxWidth().aspectRatio(1.2f).clip(RoundedCornerShape(24.dp)), animate = true, periodMs = 900)
+                Spacer(Modifier.height(12.dp))
+                Text(ex.name, style = FitType.title, color = th.text)
+                Caption(listOfNotNull(ex.primaryMuscle, ex.secondaryMuscles.takeIf { it.isNotBlank() }?.let { "also $it" }, equipmentLabel(ex.equipment).takeIf { ex.equipment.isNotBlank() }).joinToString(" · "))
+                if (ex.instructions.isNotBlank()) {
+                    Spacer(Modifier.height(10.dp))
+                    ex.instructions.split('\n').map { it.trim() }.filter { it.isNotEmpty() }.take(8).forEachIndexed { i, step ->
+                        Row(Modifier.padding(vertical = 3.dp)) {
+                            Text("${i + 1}.", style = FitType.label, color = th.accentBright, modifier = Modifier.width(22.dp))
+                            Text(step, style = FitType.body, color = th.text)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
+                val sel = selected?.contains(ex.id) == true
+                AccentButton(if (sel) "Selected ✓ — tap to remove" else "Select this exercise", { onToggle?.invoke(ex); preview = null }, Modifier.fillMaxWidth(), icon = if (sel) Duo.Close else Duo.Check)
             }
         }
         if (pickMode && onConfirm != null) {
@@ -228,13 +252,15 @@ fun ExerciseBrowser(
 }
 
 @Composable
-fun ExerciseCard(ex: Exercise, logged: Boolean, selectedIndex: Int?, onClick: () -> Unit, onAdd: (() -> Unit)? = null) {
+fun ExerciseCard(ex: Exercise, logged: Boolean, selectedIndex: Int?, onClick: () -> Unit, onAdd: (() -> Unit)? = null, onPreview: (() -> Unit)? = null) {
     val th = LocalFitTheme.current
     val mc = muscleColor(ex.primaryMuscle)
     Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), onClick = onClick) {
         Column {
             Box {
-                ExerciseImage(ex, Modifier.fillMaxWidth().aspectRatio(1.35f).clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)))
+                // thumbnails play the movement (start ↔ end frame); cards are slightly out of step so the grid feels alive
+                ExerciseImage(ex, Modifier.fillMaxWidth().aspectRatio(1.35f).clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
+                    animate = true, periodMs = 950L + (ex.id % 5) * 110L)
                 if (selectedIndex != null) {
                     Box(Modifier.matchParentSize().drawBehind { drawRect(th.accent.copy(alpha = 0.45f)) })
                     Box(
@@ -249,6 +275,17 @@ fun ExerciseCard(ex: Exercise, logged: Boolean, selectedIndex: Int?, onClick: ()
                             .clickableNoRipple(onAdd),
                         contentAlignment = Alignment.Center,
                     ) { Icon(Duo.Add, "Add to workout", tint = th.onAccent, modifier = Modifier.size(20.dp)) }
+                }
+                if (onPreview != null) {
+                    Row(
+                        Modifier.align(Alignment.BottomStart).padding(8.dp).clip(RoundedCornerShape(12.dp))
+                            .drawBehind { drawRect(Color.Black.copy(alpha = 0.6f)) }.clickableNoRipple(onPreview).padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Duo.PlayArrow, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(3.dp))
+                        Text("How to", style = FitType.overline, color = Color.White)
+                    }
                 }
                 if (logged) {
                     Box(Modifier.align(Alignment.TopStart).padding(8.dp).clip(RoundedCornerShape(8.dp)).drawBehind { drawRect(Color.Black.copy(alpha = 0.55f)) }.padding(horizontal = 6.dp, vertical = 2.dp)) {
@@ -276,7 +313,7 @@ private fun MiniExerciseCard(ex: Exercise, selected: Boolean, onClick: () -> Uni
     Glass(Modifier.width(120.dp), shape = RoundedCornerShape(20.dp), onClick = onClick) {
         Column {
             Box {
-                ExerciseImage(ex, Modifier.fillMaxWidth().height(80.dp).clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)))
+                ExerciseImage(ex, Modifier.fillMaxWidth().height(80.dp).clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)), animate = true, periodMs = 1000L + (ex.id % 4) * 120L)
                 if (selected) Box(Modifier.matchParentSize().drawBehind { drawRect(th.accent.copy(alpha = 0.45f)) })
             }
             Text(ex.name, style = FitType.caption, color = th.text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(8.dp).height(30.dp))

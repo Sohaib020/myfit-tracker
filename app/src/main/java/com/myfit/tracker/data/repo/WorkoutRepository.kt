@@ -193,8 +193,11 @@ class WorkoutRepository(private val db: AppDatabase) {
     }
 
     /** Only removes an exercise that has no logged sets — logged sets are deleted individually. */
-    suspend fun removeExercise(weId: Long): Boolean = db.withTransaction {
-        if (dao.getSetsFor(weId).isNotEmpty()) return@withTransaction false
+    /** Removes an exercise from a workout. With logged sets it needs [withSets] (the screen asks first). */
+    suspend fun removeExercise(weId: Long, withSets: Boolean = false): Boolean = db.withTransaction {
+        val sets = dao.getSetsFor(weId)
+        if (sets.isNotEmpty() && !withSets) return@withTransaction false
+        sets.forEach { dao.deleteSet(it.id) }
         dao.deleteWorkoutExercise(weId); true
     }
 

@@ -201,8 +201,8 @@ class GymViewModel(private val c: AppContainer, val workoutId: Long) : ViewModel
 
     fun move(weId: Long, delta: Int) = c.write { c.workoutRepo.moveExercise(workoutId, weId, delta) }
 
-    fun remove(weId: Long, onResult: (Boolean) -> Unit) = viewModelScope.launch {
-        val ok = c.workoutRepo.removeExercise(weId)
+    fun remove(weId: Long, onResult: (Boolean) -> Unit, withSets: Boolean = false) = viewModelScope.launch {
+        val ok = c.workoutRepo.removeExercise(weId, withSets)
         if (ok && currentWeId == weId) currentWeId = null
         onResult(ok)
     }
