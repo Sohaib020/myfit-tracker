@@ -1,0 +1,27 @@
+name: Food icons pack
+# Re-runs only the pack step of a finished "Food icons" run (when its pack job didn't run).
+# Push to branch foodicon-pack; set SRC_RUN to the generation run id.
+on:
+  push:
+    branches: [ foodicon-pack ]
+permissions:
+  contents: write
+  actions: read
+env:
+  SRC_RUN: '37603064377'
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'raw-*', path: raw, merge-multiple: true, run-id: '${{ env.SRC_RUN }}', github-token: '${{ github.token }}' }
+      - run: pip install "rembg[cpu]" pillow || pip install rembg onnxruntime pillow
+      - run: ls raw | wc -l; python3 tools/foodicon/post.py
+      - name: Save to branch foodicon-assets-r6
+        run: |
+          python3 -c "import os;ids=[l.strip() for l in open('tools/foodicon/only.txt') if l.strip() and not l.startswith('#')];m=[i for i in ids if not os.path.exists('out/foodicon/'+i+'.webp')];print('::notice::MISSING',len(m),' '.join(m));open('out/missing.txt','w').write(chr(10).join(m))"
+          mkdir -p pub/foodicon pub/sheets && cp out/foodicon/*.webp pub/foodicon/ && cp out/sheet_*.jpg pub/sheets/ && cp out/missing.txt pub/
+          cd pub && git init -q && git checkout -q -b foodicon-assets-r6 && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "Food icons r6" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" foodicon-assets-r6
