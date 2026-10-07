@@ -3,77 +3,285 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MyFit Tracker — Download</title>
-<meta name="description" content="MyFit Tracker: private, offline-first fitness for Android with Pip, Arena challenges and more. Download the latest build.">
+<title>MyFit Tracker — fitness that speaks your language</title>
+<meta name="description" content="MyFit Tracker for Android: a pro trainer that counts your reps and fixes your form, a nutritionist for desi food, 1,000+ Pakistani dishes with 3D icons, health-aware plans, Pip and the Arena. Private by design.">
 <meta property="og:title" content="MyFit Tracker">
-<meta property="og:description" content="Train, track food, race friends in the Arena — with Pip.">
+<meta property="og:description" content="Pro trainer, desi nutritionist, 1,000+ Pakistani foods, Pip and the Arena — private by design.">
 <meta property="og:image" content="img/pip.webp">
+<meta name="theme-color" content="#07110f">
 <link rel="icon" href="img/pip.webp">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=Noto+Nastaliq+Urdu:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
-<div class="wrap">
-  <header><img src="img/pip.webp" alt=""><b>MyFit Tracker</b></header>
+<div class="cursor-glow" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
 
-  <div class="hero">
-    <div>
-      <h1>Your private fitness buddy, <span>with friends to race.</span></h1>
-      <p class="lead">Workouts, food, sleep, water and mindfulness — all on your phone. Pip coaches you, and the Arena turns your steps into stars, levels and races with friends.</p>
-      <div class="cta">
-        <a class="btn primary" id="dl" href="https://github.com/Sohaib020/myfit-tracker/releases/latest/download/MyFitTracker.apk">⬇ Download for Android</a>
-        <a class="btn ghost" href="#install">How to install</a>
+<!-- ============ NAV ============ -->
+<nav class="nav" id="nav">
+  <a class="brand" href="#top"><img src="img/pip.webp" alt=""><span>MyFit</span></a>
+  <div class="links">
+    <a href="#tour">Features</a><a href="#coaches">Coaches</a><a href="#characters">Characters</a><a href="#faq">FAQ</a>
+  </div>
+  <a class="btn btn-sm btn-glow" href="#download">Download</a>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero" id="top">
+  <canvas id="orb" aria-hidden="true"></canvas>
+  <div class="blob b1" data-speed="-0.25"></div><div class="blob b2" data-speed="0.18"></div><div class="blob b3" data-speed="-0.12"></div>
+  <div class="gridlines" aria-hidden="true"></div>
+
+  <div class="hero-in">
+    <div class="hero-copy">
+      <a class="pill reveal" href="#coaches"><span class="dot"></span>New · Pro trainer &amp; nutritionist</a>
+      <h1 class="reveal">Fitness that <span class="grad">speaks your language.</span></h1>
+      <p class="lead reveal">A pro trainer that counts your reps and fixes your form. A nutritionist who knows nihari from daal mash. 1,000+ Pakistani dishes, plans that respect your health — and it all stays on your phone.</p>
+      <div class="cta reveal">
+        <a class="btn btn-glow" href="#download"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 1 1 1.4-1.4L11 13.6V4a1 1 0 0 1 1-1zm-7 15a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1z"/></svg>Download APK</a>
+        <a class="btn btn-ghost" href="#tour">Take the tour</a>
       </div>
-      <p class="ver" id="ver">Always the latest build.</p>
+      <p class="ver reveal" id="ver">Android 8.0+ · free</p>
     </div>
-    <div>
-      <div class="stage"><img class="pip" src="img/pip_wave.webp" alt="Pip waving"></div>
-      <div class="cast">
-        <img src="img/zara.webp" alt="Zara the snow leopard"><img src="img/taj.webp" alt="Taj the markhor"><img src="img/kami.webp" alt="Kami the camel"><img src="img/shaheen.webp" alt="Shaheen the falcon"><img src="img/motu.webp" alt="Motu the panda">
+
+    <div class="hero-art" id="heroArt">
+      <div class="ring" data-depth="0.3">
+        <img src="img/food/nihari.webp" alt="" style="--i:0"><img src="img/food/chicken_biryani.webp" alt="" style="--i:1"><img src="img/food/chapli_kebab.webp" alt="" style="--i:2">
+        <img src="img/food/mango_lassi.webp" alt="" style="--i:3"><img src="img/food/halwa_puri.webp" alt="" style="--i:4"><img src="img/food/gol_gappay.webp" alt="" style="--i:5">
+        <img src="img/food/seekh_kebab.webp" alt="" style="--i:6"><img src="img/food/jalebi.webp" alt="" style="--i:7">
+      </div>
+      <div class="orb-card" data-depth="0.6"><img src="img/pip/dance.webp" alt="Pip dancing"></div>
+      <div class="chip c1" data-depth="1.1"><b>12</b> reps · form ✓</div>
+      <div class="chip c2" data-depth="0.9">“Chest up!” <span class="ur">سینہ اوپر</span></div>
+      <div class="chip c3" data-depth="1.3">🔥 1,840 kcal plan</div>
+    </div>
+  </div>
+  <a class="scroll-hint" href="#stats" aria-label="Scroll"><span></span></a>
+</header>
+
+<!-- ============ STATS MARQUEE ============ -->
+<section class="marquee" id="stats" aria-label="Highlights">
+  <div class="track">
+    <span><b data-count="1063">1,063</b> Pakistani foods</span><span><b data-count="876">876</b> exercises</span><span><b>EN + اردو</b> voice coach</span><span><b>On-device</b> AI &amp; camera</span><span><b data-count="55">55</b> health conditions</span><span><b>Prayer</b> times &amp; Qibla</span><span><b data-count="54">54</b> programs</span><span><b>Arena</b> races with friends</span>
+    <span aria-hidden="true"><b>1,063</b> Pakistani foods</span><span aria-hidden="true"><b>876</b> exercises</span><span aria-hidden="true"><b>EN + اردو</b> voice coach</span><span aria-hidden="true"><b>On-device</b> AI &amp; camera</span><span aria-hidden="true"><b>55</b> health conditions</span><span aria-hidden="true"><b>Prayer</b> times &amp; Qibla</span><span aria-hidden="true"><b>54</b> programs</span><span aria-hidden="true"><b>Arena</b> races with friends</span>
+  </div>
+</section>
+
+<!-- ============ FEATURE TOUR ============ -->
+<section class="tour" id="tour">
+  <div class="tour-head">
+    <p class="eyebrow">Feature tour</p>
+    <h2>Everything you need. <span class="grad">Nothing you don't.</span></h2>
+  </div>
+  <div class="tour-pin">
+    <div class="tour-track">
+
+      <article class="panel">
+        <div class="panel-copy">
+          <span class="tag">01 · Train</span>
+          <h3>A trainer that actually watches your form</h3>
+          <p>Turn on the camera and your coach counts every rep, measures the angle at your knees and elbows, and tells you — out loud — when to go deeper, keep your hips in line or slow down. Camera off? It paces each rep with voice and tempo instead.</p>
+          <ul><li>Squats, push-ups, curls, presses, raises, lunges, rows, planks</li><li>Pushes you on the last reps · saves the set for you</li><li>Frames are processed on the phone — never recorded</li></ul>
+        </div>
+        <div class="phone"><div class="screen s-train">
+          <div class="cam"><svg viewBox="0 0 200 260" class="skeleton"><g stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"><path d="M100 50 L100 120" /><path d="M100 70 L70 100 L60 140" /><path d="M100 70 L130 100 L140 140"/><path class="hot" d="M100 120 L80 175 L95 230" /><path class="hot" d="M100 120 L125 175 L110 230"/></g><circle cx="100" cy="35" r="14" fill="#fff"/><circle class="j" cx="80" cy="175" r="7"/><circle class="j" cx="125" cy="175" r="7"/></svg><span class="deg">92°</span></div>
+          <div class="counter"><b class="repcount">8</b><span>/ 12</span><em>DOWN</em></div>
+          <div class="bubble">“Two more — chest up!”</div>
+        </div></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-copy">
+          <span class="tag">02 · Food</span>
+          <h3>1,063 Pakistani dishes, each with its own 3D icon</h3>
+          <p>From Burns Road nihari and Lahori chikar cholay to Sindhi saag, Balochi sajji, Peshawari chapli and Hunza diram fitti — plus lassi, sharbat, qehwa and shakes. Search in Roman Urdu, snap a photo, or log a whole meal plan in one tap.</p>
+          <ul><li>Lahori, Karachi, Sindh, Balochistan, KP, GB &amp; Kashmir</li><li>Household units: roti, katori, cup, glass</li><li>Strictly Pakistani 7-day meal plans</li></ul>
+        </div>
+        <div class="phone"><div class="screen s-food">
+          <div class="search">🔍 nihari</div>
+          <div class="foodgrid">
+            <img src="img/food/nihari.webp" alt="Nihari"><img src="img/food/chicken_karahi.webp" alt="Chicken karahi"><img src="img/food/haleem.webp" alt="Haleem"><img src="img/food/daal_chawal.webp" alt="Daal chawal">
+            <img src="img/food/kebab_roll.webp" alt="Kebab roll"><img src="img/food/paratha_plain.webp" alt="Paratha"><img src="img/food/lassi_sweet.webp" alt="Lassi"><img src="img/food/kheer.webp" alt="Kheer">
+            <img src="img/food/tea_sugar.webp" alt="Chai"><img src="img/food/jalebi.webp" alt="Jalebi"><img src="img/food/seekh_kebab.webp" alt="Seekh kebab"><img src="img/food/gol_gappay.webp" alt="Gol gappay">
+          </div>
+        </div></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-copy">
+          <span class="tag">03 · Health</span>
+          <h3>Plans that respect your body</h3>
+          <p>Tell MyFit about diets, intolerances, conditions, injuries or life stages — or type your own and it works out the rules. Foods and exercises that don't suit you are flagged with a reason and a safer swap. Want to see them anyway? One tap.</p>
+          <ul><li>Diabetes, PCOS, hypertension, lactose, gluten, knee &amp; back pain, pregnancy…</li><li>Meal plans and workouts adapt automatically</li><li>Your health profile never leaves your phone</li></ul>
+        </div>
+        <div class="phone"><div class="screen s-health">
+          <div class="chips"><span class="on">Diabetes</span><span>Lactose-free</span><span class="on">Knee pain</span><span>PCOS</span><span>Vegetarian</span><span>Pregnancy</span><span>Gluten-free</span><span>High BP</span></div>
+          <div class="warn"><b>Limit:</b> high sugar<br><small>Try instead: Kheer (sugar-free) · Guava · Dahi</small></div>
+          <div class="warn ok"><b>Swapped</b> Squat jumps → Glute bridge</div>
+        </div></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-copy">
+          <span class="tag">04 · Pip &amp; AI</span>
+          <h3>Pip, your chat-first buddy</h3>
+          <p>Ask anything about your own logs, get a nudge when you're off track, or just chat. Pip answers offline from your data first and only goes online when it needs to — in English or Urdu.</p>
+          <ul><li>Offline brain option · daily free AI answers</li><li>Snap-a-meal food recognition</li><li>Voices in English and Urdu</li></ul>
+        </div>
+        <div class="phone"><div class="screen s-pip">
+          <img src="img/pip/flex.webp" alt="Pip flexing" class="pipimg">
+          <div class="msg me">How much protein today?</div>
+          <div class="msg">96 g so far — 34 g to go. A katori of daal and 2 eggs gets you there 💪</div>
+        </div></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-copy">
+          <span class="tag">05 · Arena</span>
+          <h3>Race your friends, not strangers</h3>
+          <p>Weekly challenges at your level, scenic tracks with checkpoints, stars, 30 levels and friendly duels. Friends see your name, picture and weekly totals — nothing else.</p>
+          <ul><li>Global &amp; friends leaderboards</li><li>Profile pictures and character avatars</li><li>Report and block built in</li></ul>
+        </div>
+        <div class="phone"><div class="screen s-arena">
+          <div class="row"><img src="img/cast/zara.webp" alt=""><span>Ayesha</span><b>58,210</b></div>
+          <div class="row me"><img src="img/pip.webp" alt=""><span>You</span><b>54,980</b></div>
+          <div class="row"><img src="img/cast/taj.webp" alt=""><span>Hamza</span><b>51,400</b></div>
+          <div class="row"><img src="img/cast/shaheen.webp" alt=""><span>Sana</span><b>47,035</b></div>
+        </div></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-copy">
+          <span class="tag">06 · Shariah &amp; Health</span>
+          <h3>For those who want it</h3>
+          <p>Switch on Muslim mode and get prayer times, the Qibla compass, halal-only foods, Ramadan sehri &amp; iftar tools and the Shariah &amp; Health hub. Off by default — your choice.</p>
+          <ul><li>Accurate local prayer times</li><li>Halal filter across foods and plans</li><li>Fasting timer that adapts your goals</li></ul>
+        </div>
+        <div class="phone"><div class="screen s-deen">
+          <div class="compass"><div class="needle"></div><span>Qibla 258°</span></div>
+          <div class="times"><span>Fajr <b>4:52</b></span><span>Zuhr <b>12:08</b></span><span class="on">Asr <b>3:41</b></span><span>Maghrib <b>5:58</b></span><span>Isha <b>7:16</b></span></div>
+        </div></div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ COACHES ============ -->
+<section class="coaches" id="coaches">
+  <p class="eyebrow reveal">Your pro team</p>
+  <h2 class="reveal">Two experts in your pocket. <span class="grad">You pick their names.</span></h2>
+  <p class="sub reveal">Realistic 3D characters — male or female — with fictional names you can change any time. They speak English or Urdu.</p>
+  <div class="coach-grid">
+    <div class="coach-card tilt reveal">
+      <div class="coach-img"><img src="img/coach/m_stand.webp" alt="Coach Zarak" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'silhouette',textContent:'🏋️'}))"></div>
+      <div class="coach-body">
+        <span class="tag">Pro trainer</span>
+        <h3>Coach Zarak <small>or Coach Inaya</small></h3>
+        <ul><li>Explains setup &amp; joint angles before each set</li><li>3-2-1 count-in, tempo for every rep, counts aloud</li><li>Camera form-check with live skeleton</li><li>Pushes you on the last reps · coaches your rest</li></ul>
+        <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <p class="ur" lang="ur">تین، دو، ایک، شروع!</p>
+      </div>
+    </div>
+    <div class="coach-card tilt reveal">
+      <div class="coach-img"><img src="img/coach/nf_plate.webp" alt="Areesha the nutritionist" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'silhouette',textContent:'🥗'}))"></div>
+      <div class="coach-body">
+        <span class="tag">Pro nutritionist</span>
+        <h3>Areesha <small>or Faraz</small></h3>
+        <ul><li>Daily coaching against your calorie &amp; protein goals</li><li>Grades every meal and suggests a desi swap</li><li>Weekly plan with a grocery list in kg, litres &amp; dozens</li><li>Chat any time — health-profile aware</li></ul>
+        <div class="grocery"><span>Atta <b>1.5 kg</b></span><span>Chicken <b>1.3 kg</b></span><span>Dahi <b>2 kg</b></span><span>Anday <b>14</b></span></div>
       </div>
     </div>
   </div>
+</section>
 
-  <section>
-    <h2>What's inside</h2>
-    <div class="grid">
-      <div class="card"><div class="emoji">🏆</div><h3>Arena</h3><p>Weekly &amp; monthly challenges set to your level, scenic tracks with checkpoints, stars, 30 levels and friendly duels.</p></div>
-      <div class="card"><div class="emoji">🍛</div><h3>Pakistani food</h3><p>560+ dishes with 3D icons — from nihari to chapshoro — plus snap-a-meal.</p></div>
-      <div class="card"><div class="emoji">🏋️</div><h3>Train</h3><p>Templates, a huge exercise library and gym mode with rest timers.</p></div>
-      <div class="card"><div class="emoji">🕌</div><h3>Shariah &amp; Health</h3><p>Prayer times, Qibla, fasting hub and dhikr — for those who opt in.</p></div>
-      <div class="card"><div class="emoji">🔒</div><h3>Private</h3><p>Your logs stay on your phone. Friends only see your name and weekly totals.</p></div>
-      <div class="card"><div class="emoji">🔄</div><h3>Self-updating</h3><p>The app finds new builds by itself and asks you to tap Install.</p></div>
+<!-- ============ CHARACTERS ============ -->
+<section class="chars" id="characters">
+  <p class="eyebrow reveal">Character gallery</p>
+  <h2 class="reveal">Meet Pip <span class="grad">and the Arena cast.</span></h2>
+  <p class="sub reveal">Original characters inspired by Pakistan's wildlife — pick one as your buddy or your profile picture.</p>
+  <div class="pip-row">
+    <figure class="tilt reveal"><img src="img/pip/dance.webp" alt="Pip dancing" loading="lazy"><figcaption>Dance</figcaption></figure>
+    <figure class="tilt reveal"><img src="img/pip/flex.webp" alt="Pip flexing" loading="lazy"><figcaption>Flex</figcaption></figure>
+    <figure class="tilt reveal"><img src="img/pip/jog.webp" alt="Pip jogging" loading="lazy"><figcaption>Jog</figcaption></figure>
+    <figure class="tilt reveal"><img src="img/pip/meditate.webp" alt="Pip meditating" loading="lazy"><figcaption>Meditate</figcaption></figure>
+  </div>
+  <div class="cast-grid" id="castGrid"></div>
+</section>
+
+<!-- ============ PRIVACY ============ -->
+<section class="privacy-sec" id="privacy">
+  <p class="eyebrow reveal">Private by design</p>
+  <h2 class="reveal">Your data lives <span class="grad">on your phone.</span></h2>
+  <div class="bento">
+    <div class="bcard reveal big"><h3>🔒 On-device first</h3><p>Workouts, food, sleep, cycle and health profile are stored locally. Camera form-check and food detection run on the phone.</p></div>
+    <div class="bcard reveal"><h3>👥 Friends see little</h3><p>Name, picture and weekly totals — that's it.</p></div>
+    <div class="bcard reveal"><h3>🧠 AI only when needed</h3><p>Only the question goes online, never your history.</p></div>
+    <div class="bcard reveal"><h3>💾 Your backups</h3><p>Export everything any time.</p></div>
+    <div class="bcard reveal"><h3>🚫 No selling data</h3><p>Ever. <a href="privacy.html">Read the privacy policy</a>.</p></div>
+  </div>
+</section>
+
+<!-- ============ DOWNLOAD ============ -->
+<section class="download" id="download">
+  <div class="dl-card reveal">
+    <div class="dl-left">
+      <p class="eyebrow">Download</p>
+      <h2>Get MyFit for Android</h2>
+      <p class="sub">Free APK, always the latest build. Updates arrive inside the app.</p>
+      <a class="btn btn-glow btn-lg" id="dl" href="https://github.com/Sohaib020/myfit-tracker/releases/latest/download/MyFitTracker.apk">Download APK</a>
+      <p class="ver" id="ver2">Android 8.0 or newer</p>
+      <ol class="steps">
+        <li><b>Download</b> — your browser may warn about apps outside a store. Tap “Download anyway”.</li>
+        <li><b>Allow installing</b> — if Android asks, allow your browser to install unknown apps (once).</li>
+        <li><b>Open MyFit</b> — meet Pip, set your goals and you're in.</li>
+      </ol>
     </div>
-  </section>
-
-  <section id="install">
-    <h2>Install in 3 steps</h2>
-    <div class="steps">
-      <div class="card"><div><h3>Download the APK</h3><p>Tap the green button on your Android phone. Your browser may say the file "can be harmful" — that's normal for apps outside the Play Store. Tap Download anyway.</p></div></div>
-      <div class="card"><div><h3>Allow installing</h3><p>Open the file. If Android asks, allow your browser to "Install unknown apps" (one time only).</p></div></div>
-      <div class="card"><div><h3>Open MyFit &amp; meet Pip</h3><p>Sign in, set your goals and you're in. Future updates arrive inside the app.</p></div></div>
+    <div class="dl-right">
+      <div class="qr"><div id="qr"></div><span>On a computer? Scan with your phone.</span></div>
+      <pre class="notes" id="notes"></pre>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section>
-    <h2>On a computer? Scan to get it on your phone</h2>
-    <div class="qrbox"><div id="qr"></div><p class="notes" id="notes"></p></div>
-  </section>
+<!-- ============ FAQ ============ -->
+<section class="faq" id="faq">
+  <p class="eyebrow reveal">FAQ</p>
+  <h2 class="reveal">Questions, answered.</h2>
+  <div class="faq-list">
+    <details class="reveal"><summary>Is MyFit free?</summary><p>Yes. Core tracking is free. Online AI has a generous daily free allowance; you can watch a short ad for more or use the offline brain.</p></details>
+    <details class="reveal"><summary>Why an APK and not the Play Store?</summary><p>Store listings are on the way. Until then the APK on this page is the official build, signed by us, and updates itself inside the app.</p></details>
+    <details class="reveal"><summary>Does the camera record me?</summary><p>No. Frames are analysed on your phone to find body landmarks for rep counting and form cues, then thrown away. Nothing is saved or uploaded.</p></details>
+    <details class="reveal"><summary>Are the trainer and nutritionist real people?</summary><p>No — they're fictional characters powered by MyFit's on-phone logic and AI. Their advice is general guidance, not medical advice. Rename them however you like.</p></details>
+    <details class="reveal"><summary>I have diabetes / an injury. Is it safe?</summary><p>Add it to your health profile and MyFit avoids foods and exercises that don't suit you and suggests swaps. It never calculates insulin or medication doses — always follow your doctor.</p></details>
+    <details class="reveal"><summary>Does it work in Urdu?</summary><p>Pip and the trainer speak Urdu, and food search understands Roman Urdu (anda, kardi, nehari…). More Urdu screens are coming.</p></details>
+    <details class="reveal"><summary>Which phones are supported?</summary><p>Android 8.0 and newer, including tall and narrow screens. A Wear OS companion and widgets are included.</p></details>
+  </div>
+</section>
 
-  <footer>MyFit Tracker · Android 8.0+ · Pip and the Arena cast are original characters.</footer>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>
-  try { new QRCode(document.getElementById('qr'), { text: location.origin + location.pathname, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M }); } catch (e) {}
-  fetch('https://api.github.com/repos/Sohaib020/myfit-tracker/releases/latest').then(r => r.json()).then(j => {
-    const build = (j.tag_name || '').replace('build-', '');
-    const a = (j.assets || []).find(x => x.name === 'MyFitTracker.apk') || (j.assets || []).find(x => x.name.endsWith('.apk'));
-    const mb = a ? ' · ' + Math.round(a.size / 1048576) + ' MB' : '';
-    const d = (j.published_at || '').slice(0, 10);
-    document.getElementById('ver').innerHTML = 'Latest: <b>build ' + build + '</b>' + mb + (d ? ' · ' + d : '');
-    const notes = (j.body || '').split('\n').filter(l => l && !/^(Co-Authored-By|Claude-Session)/.test(l)).slice(0, 6).join('\n');
-    if (notes) document.getElementById('notes').textContent = "What's new:\n" + notes;
-  }).catch(() => {});
-</script>
+<!-- ============ SUPPORT ============ -->
+<section class="support" id="support">
+  <div class="sup-card reveal">
+    <img src="img/pip/meditate.webp" alt="" loading="lazy">
+    <div>
+      <h2>Need help?</h2>
+      <p class="sub">Found a bug, have an idea, or want your data deleted? Write to us — a real person reads every message.</p>
+      <div class="cta"><a class="btn btn-glow" href="mailto:myfitnesstrack.support@gmail.com">Email support</a><a class="btn btn-ghost" href="privacy.html">Privacy policy</a></div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="brand"><img src="img/pip.webp" alt=""><span>MyFit Tracker</span></div>
+  <p>Pip, the Arena cast and the coaches are original, fictional characters. Nutrition values are typical estimates; guidance is not medical advice.</p>
+  <p><a href="privacy.html">Privacy</a> · <a href="mailto:myfitnesstrack.support@gmail.com">Support</a> · © <span id="yr"></span> MyFit</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+<script src="assets/site.js" defer></script>
 </body>
 </html>
