@@ -254,6 +254,7 @@ fun CoachSetOverlay(cur: WorkoutExerciseView, list: List<WorkoutExerciseView>, v
 
             // main visual
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp)) {
+                val wide = maxWidth > 300.dp
                 val showCam = useCam && hasCamPerm && (stage == Stage.WORK || stage == Stage.COUNTDOWN || stage == Stage.INTRO)
                 Glass(Modifier.fillMaxSize(), shape = RoundedCornerShape(28.dp)) {
                     if (showCam) {
@@ -288,7 +289,7 @@ fun CoachSetOverlay(cur: WorkoutExerciseView, list: List<WorkoutExerciseView>, v
                         Stage.DONE -> CoachFigure(cp.look.id, "cheer", Modifier.fillMaxSize().padding(top = 8.dp))
                         Stage.INTRO -> Row(Modifier.fillMaxSize()) {
                             CoachFigure(cp.look.id, if (speaking) "demo" else "stand", Modifier.weight(1f).fillMaxSize().padding(top = 8.dp))
-                            if (maxWidth > 300.dp) ExerciseImage(ex, Modifier.weight(0.8f).align(Alignment.CenterVertically).aspectRatio(1f).padding(10.dp).clip(RoundedCornerShape(20.dp)), animate = true, periodMs = 1000)
+                            if (wide) ExerciseImage(ex, Modifier.weight(0.8f).align(Alignment.CenterVertically).aspectRatio(1f).padding(10.dp).clip(RoundedCornerShape(20.dp)), animate = true, periodMs = 1000)
                         }
                         else -> CoachFigure(cp.look.id, "stand", Modifier.fillMaxSize().padding(top = 8.dp))
                     }
