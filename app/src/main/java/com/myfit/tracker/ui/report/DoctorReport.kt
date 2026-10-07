@@ -309,6 +309,16 @@ object DoctorReport {
                 })
         }
 
+        // ================= health profile (what the app adapts to)
+        com.myfit.tracker.domain.HealthProfile.load(ctx)
+        val hp = com.myfit.tracker.domain.HealthProfile.active
+        section("Health profile", "Diets, conditions, injuries and life stages the patient entered — the app avoids unsuitable foods and exercises")
+        if (hp.isEmpty()) note("Nothing entered.")
+        else table(listOf("Item", "Group", "App avoids / limits"), listOf(0.3f, 0.2f, 0.5f), hp.map { c ->
+            val rules = (c.avoid + c.avoidEx).map { com.myfit.tracker.domain.HealthProfile.tagLabel(it).lowercase() } + (c.limit + c.limitEx).map { "less " + com.myfit.tracker.domain.HealthProfile.tagLabel(it).lowercase() }
+            listOf(c.label + if (c.custom) " (own entry)" else "", c.group.label, rules.take(5).joinToString(", ").ifEmpty { "—" })
+        })
+
         // ================= about
         room(170f)
         y += 14f
