@@ -120,6 +120,7 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
     var showPicker by remember { mutableStateOf(false) }
     var editSet by remember { mutableStateOf<Pair<SetRow, WorkoutExerciseView>?>(null) }
     var celebrate by remember { mutableStateOf<String?>(null) }
+    var coach by remember { mutableStateOf(false) }
 
     // keep the screen awake while training
     val hostView = LocalView.current
@@ -200,6 +201,7 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
                 ExerciseHeaderCard(cur, list, vm, container, now, onRemoved = { ok -> if (ok) toaster.show("Exercise removed") })
                 PreviousCard(cur, vm, u)
                 TodaySets(cur, u, vm.history[cur.exercise.id]) { row -> editSet = row to cur }
+                CoachEntry { coach = true }
                 CurrentSetCard(cur, list, vm, container, now) { res ->
                     res.error?.let { toaster.show(it) }
                     res.beatBest?.let { celebrate = it }
@@ -237,6 +239,29 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
         GlassSheet(visible = editSet != null, onDismiss = { editSet = null }) {
             val es = editSet
             if (es != null) EditSetContent(es.first, es.second, vm, u, s.weightStepKg) { editSet = null }
+        }
+
+        // ---------------- pro trainer
+        if (coach && cur != null) com.myfit.tracker.ui.coach.CoachSetOverlay(cur, list, vm, container) { coach = false }
+    }
+}
+
+/** Opens the pro trainer for this exercise. */
+@Composable
+private fun CoachEntry(onOpen: () -> Unit) {
+    val th = LocalFitTheme.current
+    val ctx = LocalContext.current
+    remember { com.myfit.tracker.domain.Coach.load(ctx); 0 }
+    val cp by com.myfit.tracker.domain.Coach.prefs.collectAsState()
+    Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), onClick = onOpen) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.myfit.tracker.ui.coach.CoachPortrait(cp.look.id, false, 48.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Train this with ${cp.name}", style = FitType.label, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Caption(if (cp.camera) "Camera form-check · voice counting" else "Voice, tempo and form cues")
+            }
+            Icon(Duo.KeyboardArrowRight, null, tint = th.accentBright)
         }
     }
 }

@@ -60,7 +60,7 @@ data class PlanMeal(val type: String, val items: List<PlanItem>, val kcal: Int, 
 data class PlanDay(val name: String, val meals: List<PlanMeal>, val kcal: Int, val p: Double)
 data class MealPlans(val note: String, val bands: Map<Int, List<PlanDay>>)
 
-private object MealPlanData {
+internal object MealPlanData {
     @Volatile private var cache: MealPlans? = null
     fun load(c: Context): MealPlans = cache ?: run {
         val o = JSONObject(c.assets.open("meal_plans.json").bufferedReader().use { it.readText() })

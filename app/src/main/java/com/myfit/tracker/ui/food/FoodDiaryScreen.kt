@@ -64,6 +64,7 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
     val th = LocalFitTheme.current
     val nav = LocalNav.current
     val toaster = LocalToaster.current
+    val ctxN = androidx.compose.ui.platform.LocalContext.current
     var date by remember { mutableStateOf(startDate?.let { LocalDate.parse(it) } ?: Clock.today()) }
     val items by remember(date) { container.nutritionRepo.itemsOn(date) }.collectAsState(initial = emptyList())
     val meals by remember(date) { container.nutritionRepo.mealsOn(date) }.collectAsState(initial = emptyList())
@@ -128,6 +129,21 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
                         Column(Modifier.weight(1f)) {
                             Text("Pakistani meal plans", style = FitType.section, color = th.text)
                             Caption("7 days of desi meals in roti, katori and cups — log a meal in one tap")
+                        }
+                        Icon(Duo.KeyboardArrowRight, null, tint = th.textDim)
+                    }
+                }
+            }
+            item {
+                remember { com.myfit.tracker.domain.Coach.load(ctxN); 0 }
+                val cpN by com.myfit.tracker.domain.Coach.prefs.collectAsState()
+                com.myfit.tracker.ui.theme.Glass(Modifier.fillMaxWidth(), onClick = { nav.push(Overlay.Nutritionist) }) {
+                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        com.myfit.tracker.ui.coach.CoachPortrait(cpN.nLook.id, false, 44.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("${cpN.nName} · your nutritionist", style = FitType.section, color = th.text, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            Caption("Today's coaching, meal reviews, weekly plan & grocery list, chat")
                         }
                         Icon(Duo.KeyboardArrowRight, null, tint = th.textDim)
                     }

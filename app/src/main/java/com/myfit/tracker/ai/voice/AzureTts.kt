@@ -17,11 +17,11 @@ class AzureTts {
         val quota get() = code == 429
     }
 
-    suspend fun stream(key: String, region: String, text: String, urdu: Boolean, onChunk: (ByteArray, Int) -> Unit) = withContext(Dispatchers.IO) {
-        val voice = if (urdu) "ur-PK-UzmaNeural" else "en-US-AnaNeural"
+    suspend fun stream(key: String, region: String, text: String, urdu: Boolean, voiceName: String? = null, onChunk: (ByteArray, Int) -> Unit) = withContext(Dispatchers.IO) {
+        val voice = voiceName ?: if (urdu) "ur-PK-UzmaNeural" else "en-US-AnaNeural"
         val lang = if (urdu) "ur-PK" else "en-US"
         val esc = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        val prosody = if (urdu) "<prosody rate=\"+4%\" pitch=\"+8%\">$esc</prosody>" else "<prosody rate=\"+2%\">$esc</prosody>"
+        val prosody = if (voiceName != null) "<prosody rate=\"+6%\">$esc</prosody>" else if (urdu) "<prosody rate=\"+4%\" pitch=\"+8%\">$esc</prosody>" else "<prosody rate=\"+2%\">$esc</prosody>"
         val ssml = "<speak version=\"1.0\" xml:lang=\"$lang\"><voice name=\"$voice\">$prosody</voice></speak>"
         val proxy = com.myfit.tracker.ai.AiProxy.isProxy(key)
         val endpoint = if (proxy) com.myfit.tracker.ai.AiProxy.url("azure", "/cognitiveservices/v1")
