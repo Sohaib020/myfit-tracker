@@ -207,6 +207,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         }
 
         // ---------- pip / AI
+        item { com.myfit.tracker.ui.settings.HealthProfileCard(container) }
         item { PipEntryCard(container) }
         item {
             GlassCard {

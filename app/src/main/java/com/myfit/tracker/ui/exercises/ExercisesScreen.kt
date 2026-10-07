@@ -155,10 +155,19 @@ fun ExerciseBrowser(
     var query by rememberSaveable { mutableStateOf("") }
     var muscle by rememberSaveable { mutableStateOf<String?>(null) }
     var equipment by rememberSaveable { mutableStateOf<String?>(null) }
-    val filtered = remember(all, query, muscle, equipment) {
+    val ctxH = androidx.compose.ui.platform.LocalContext.current
+    remember { com.myfit.tracker.domain.HealthProfile.load(ctxH); 0 }
+    val showUnsuitable by com.myfit.tracker.domain.HealthProfile.showUnsuitable.collectAsState()
+    val healthSel by com.myfit.tracker.domain.HealthProfile.selected.collectAsState()
+    val allMatches = remember(all, query, muscle, equipment) {
         all.filter { (muscle == null || it.primaryMuscle == muscle) && (equipment == null || it.equipment == equipment) && it.matches(query) }
             .sortedWith(compareByDescending<Exercise> { it.isCustom }.thenBy { it.name })
     }
+    // exercises that don't suit your health profile are hidden unless you choose to see them (with a warning)
+    val filtered = remember(allMatches, showUnsuitable, healthSel) {
+        if (showUnsuitable) allMatches else allMatches.filter { it.judge().verdict != com.myfit.tracker.domain.HealthProfile.Verdict.AVOID }
+    }
+    val hiddenCount = allMatches.size - filtered.size
     val recent = remember(all, used) { all.filter { it.id in used }.sortedBy { it.name } }
     val pickMode = onToggle != null
     var preview by remember { mutableStateOf<Exercise?>(null) }
@@ -207,7 +216,14 @@ fun ExerciseBrowser(
                     }
                 }
             }
-            item(span = { GridItemSpan(2) }) { Caption("${filtered.size} exercises") }
+            item(span = { GridItemSpan(2) }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Caption("${filtered.size} exercises", Modifier.weight(1f))
+                    if (hiddenCount > 0 || (showUnsuitable && com.myfit.tracker.domain.HealthProfile.active.isNotEmpty()))
+                        Text(if (showUnsuitable) "Hide ones that don't suit me" else "$hiddenCount hidden for your health · Show", style = FitType.caption, color = th.accentBright,
+                            modifier = Modifier.clickableNoRipple { com.myfit.tracker.domain.HealthProfile.setShowUnsuitable(ctxH, !showUnsuitable) }.padding(4.dp))
+                }
+            }
             items(filtered, key = { it.id }) { ex ->
                 ExerciseCard(
                     ex, logged = ex.id in used,
@@ -295,6 +311,8 @@ fun ExerciseCard(ex: Exercise, logged: Boolean, selectedIndex: Int?, onClick: ()
             }
             Column(Modifier.padding(12.dp)) {
                 Text(ex.name, style = FitType.label, color = th.text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.height(34.dp))
+                val hj = ex.judge()
+                if (!hj.ok) com.myfit.tracker.ui.food.HealthBadge(hj)
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(8.dp).clip(CircleShape).drawBehind { drawCircle(mc) })
@@ -320,3 +338,8 @@ private fun MiniExerciseCard(ex: Exercise, selected: Boolean, onClick: () -> Uni
         }
     }
 }
+
+
+/** Does this exercise suit the user's health profile (knee pain, pregnancy, back pain…)? */
+fun Exercise.judge(): com.myfit.tracker.domain.HealthProfile.Judgement =
+    com.myfit.tracker.domain.HealthProfile.judgeExercise(com.myfit.tracker.domain.ExerciseTags.of(name, primaryMuscle, equipment, category, level, mechanic))

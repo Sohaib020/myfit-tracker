@@ -301,9 +301,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
             if (settings.diabetesType == "unset" && !settings.diabetesAsked && !settings.glucoseEnabled) {
                 item(key = "personalise", span = full) { Box(Modifier.animateItem()) { PersonaliseCard(container) } }
             }
-            if (settings.muslim == "unset") {
-                item(key = "deenask", span = full) { Box(Modifier.animateItem()) { DeenAskCard(container) } }
-            }
+
             order.forEach { c ->
                 if (!visible(c)) return@forEach
                 val small = c in smallSet

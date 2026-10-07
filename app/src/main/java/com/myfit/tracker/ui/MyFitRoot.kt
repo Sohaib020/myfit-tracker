@@ -414,6 +414,8 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 }
                 PipTour(steps) { container.write { container.settings.setTourDone(true) } }
             }
+            // right after the tour: the optional Shariah & Health question (no longer part of onboarding)
+            com.myfit.tracker.ui.deen.DeenPopup(container, visible = s.tourDone && s.muslim == "unset" && top == null)
             LaunchedEffect(Unit) { com.myfit.tracker.domain.BadgeEngine.refresh(container, force = true) }
             // self-update from GitHub releases (checks on launch; downloads on Wi-Fi; user taps Install)
             LaunchedEffect(Unit) { runCatching { com.myfit.tracker.update.AppUpdater.autoRun(container.app) } }

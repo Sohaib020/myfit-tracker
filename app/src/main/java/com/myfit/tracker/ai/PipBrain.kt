@@ -44,6 +44,15 @@ class PipBrain(private val c: AppContainer) {
         return r
     }
 
+    /** The user's diets / conditions / injuries, so suggestions never conflict with them (empty when none). */
+    private fun healthNote(): String {
+        com.myfit.tracker.domain.HealthProfile.load(c.app)
+        val h = com.myfit.tracker.domain.HealthProfile.summary()
+        val halal = runCatching { kotlinx.coroutines.runBlocking { c.settings.settings.first().muslim == "yes" } }.getOrDefault(false)
+        return (if (h.isBlank()) "" else " The user's health profile: $h. Never suggest foods or exercises that conflict with it; when relevant, offer a safer swap.") +
+            (if (halal) " The user eats halal only." else "")
+    }
+
     private suspend fun answer(q: String): Reply {
         data.answer(q)?.let { return Reply(it.text, "data", it.mood) }
         val s = c.settings.settings.first()
@@ -59,7 +68,7 @@ class PipBrain(private val c: AppContainer) {
                 val summary = data.summaryFor(q).take(1800)
                 val system = "${com.myfit.tracker.ui.pip.Buddy.persona()} Be warm, practical and brief (under 100 words, at most 2 emoji). " +
                     "For the user's own numbers use ONLY the User data block; if it lacks something, say so. No medical diagnoses. " +
-                    "Units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}."
+                    "Units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}." + healthNote()
                 val history = c.healthRepo.lastChat(5).dropLast(1).filter { it.source != "local" && it.source != "error" }
                     .takeLast(2).map { (if (it.role == "user") "user" else "model") to it.text.take(400) }
                 val out = ai.llm.chat(system, history + ("user" to "User data (only what's relevant; may be incomplete):\n$summary\n\nQuestion: $q"))
@@ -110,7 +119,7 @@ class PipBrain(private val c: AppContainer) {
             .filter { it.source != "local" && it.source != "error" }
             .takeLast(8).map { (if (it.role == "user") "user" else "model") to it.text }
         val turn = history + ("user" to "User data (only what's relevant; may be incomplete):\n$summary\n\nQuestion: $q")
-        val system = Gemini.systemPrompt("Use the user's units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}.")
+        val system = Gemini.systemPrompt("Use the user's units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}." + healthNote())
         var firstError: PipError? = null
         var text: String? = null
         for (p in chain) {
