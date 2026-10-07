@@ -502,8 +502,6 @@ class Social(private val c: AppContainer) {
         val week = sum(weekStart(), today)
         val entry = mapOf(
             "name" to p.name, "color" to p.color,
-            // picture for leaderboards: a ready-made avatar id and/or the Google account photo (never your own uploaded photo)
-            "avatar" to MyAvatar.id(ctx).takeIf { it != MyAvatar.PHOTO }.orEmpty().take(40), "gphoto" to googlePhoto().orEmpty(),
             "steps" to week.sumOf { it.steps }, "activeMin" to week.sumOf { it.activeMin },
             "distanceM" to week.sumOf { it.distanceM }.let { Math.round(it).toDouble() },
             "days" to week.size, "updatedAt" to FieldValue.serverTimestamp(),
@@ -519,7 +517,9 @@ class Social(private val c: AppContainer) {
         if (p.isPublic) pub.set(entry).await() else runCatching { pub.delete().await() }
         // Arena level + partner (separate write: harmless if the server rules haven't been updated yet)
         val arena = mapOf("level" to com.myfit.tracker.ui.arena.ArenaProgress.level(com.myfit.tracker.ui.arena.ArenaProgress.total(ctx)).n,
-            "mascot" to com.myfit.tracker.ui.arena.ArenaPrefs.partner(ctx).id)
+            "mascot" to com.myfit.tracker.ui.arena.ArenaPrefs.partner(ctx).id,
+            // picture for leaderboards: a ready-made avatar id and/or the Google account photo (never your own uploaded photo)
+            "avatar" to MyAvatar.id(ctx).takeIf { it != MyAvatar.PHOTO }.orEmpty().take(40), "gphoto" to googlePhoto().orEmpty())
         runCatching { db.collection("weekly").document(weekKey()).collection("entries").document(u.uid).set(arena, com.google.firebase.firestore.SetOptions.merge()).await() }
         if (p.isPublic) runCatching { pub.set(arena, com.google.firebase.firestore.SetOptions.merge()).await() }
         challenges.forEach { ch ->
