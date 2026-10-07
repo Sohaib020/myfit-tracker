@@ -46,7 +46,7 @@ private fun rememberCoachImage(look: String, pose: String): ImageBitmap? {
     val ctx = LocalContext.current
     val img by produceState<ImageBitmap?>(null, look, pose) {
         value = withContext(Dispatchers.IO) {
-            (Coach.art(ctx, look, pose) ?: Coach.art(ctx, look, "portrait"))?.let { CoachBitmaps.load(ctx, it) }
+            (Coach.art(ctx, look, pose) ?: Coach.art(ctx, look, "stand") ?: Coach.art(ctx, look, "portrait"))?.let { CoachBitmaps.load(ctx, it) }
         }
     }
     return img
