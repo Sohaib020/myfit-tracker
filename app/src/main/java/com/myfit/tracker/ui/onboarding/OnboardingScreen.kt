@@ -170,7 +170,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
         3 -> s.sex != null
         4 -> s.diabetes != null && (s.diabetes == "none" || (s.treatment.isNotEmpty() && s.cgm != null &&
             (s.low.toIntOrNull() ?: 0) in 50..120 && (s.high.toIntOrNull() ?: 0) in 120..300 && (s.low.toIntOrNull() ?: 0) < (s.high.toIntOrNull() ?: 0)))
-        5 -> s.muslim != null
+        5 -> true
         9 -> s.goals.isNotEmpty()
         13 -> listOf(s.waterL, s.steps, s.calories, s.protein, s.sleepH).all { it.toDoubleOrNull() != null && it.toDouble() > 0 }
         else -> true
@@ -194,7 +194,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                StepBody(st, s)
+                StepBody(st, s, container)
                 Spacer(Modifier.height(24.dp))
             }
         }
@@ -235,7 +235,8 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                                 treatment = s.treatment, cgm = s.cgm == true, setupDone = true))
                         }
                         if (s.sex == Sex.FEMALE) container.settings.setCycle(true)
-                        container.settings.setMuslim(if (s.muslim == "yes") "yes" else "no")
+                        // Shariah & Health is asked in a popup after Pip's tour (stays "unset" until then)
+                        if (d != "none") { com.myfit.tracker.domain.HealthProfile.load(ctx0); if ("diabetes" !in com.myfit.tracker.domain.HealthProfile.selected.value) com.myfit.tracker.domain.HealthProfile.toggle(ctx0, "diabetes") }
                         container.settings.setUnits(UnitPrefs(weight = s.weightUnit, length = s.lengthUnit, volume = units.volume, distance = units.distance))
                         OnboardingVersion.markDone(ctx0)   // before the profile exists, so no catch-up flashes
                         ctx0.getSharedPreferences("onboarding", android.content.Context.MODE_PRIVATE).edit().putBoolean("perms_v3", true).apply()
@@ -251,7 +252,7 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ColumnScope.StepBody(st: Int, s: SetupState) {
+private fun ColumnScope.StepBody(st: Int, s: SetupState, container: AppContainer) {
     val th = LocalFitTheme.current
     when (st) {
         0 -> Welcome()
@@ -338,8 +339,8 @@ private fun ColumnScope.StepBody(st: Int, s: SetupState) {
             }
         }
         5 -> {
-            Header("Are you Muslim?", "If yes, you'll get Shariah & Health: prayer times, Qibla, fasting hub, dhikr and halal checks. Asked only to show the right features.")
-            listOf("yes" to "Yes", "no" to "No", "skip" to "Prefer not to say").forEach { (k, v) -> OptionRow(v, s.muslim == k) { s.muslim = k }; Spacer(Modifier.height(8.dp)) }
+            Header("Anything about your health or diet?", "Pick all that apply — or skip. Meal plans, workouts, your trainer and nutritionist adapt to it. Stays on this phone.")
+            Column(Modifier.fillMaxWidth()) { com.myfit.tracker.ui.settings.HealthProfilePicker(container, compact = true) }
         }
         6 -> {
             Header("What's your height?", "Used for better progress tracking.")
@@ -475,8 +476,8 @@ private fun ColumnScope.StepBody(st: Int, s: SetupState) {
  * step numbers under it in [ADDED]; existing users are asked just those, once, on the first launch after updating.
  */
 object OnboardingVersion {
-    const val CURRENT = 2
-    private val ADDED = mapOf(2 to listOf(2, 11, 12))   // v2: date of birth, training days, your week
+    const val CURRENT = 3
+    private val ADDED = mapOf(2 to listOf(2, 11, 12), 3 to listOf(5))   // v2: date of birth, training days, your week · v3: health & diet
     private fun prefs(c: android.content.Context) = c.getSharedPreferences("onboarding", android.content.Context.MODE_PRIVATE)
     /** Profiles created before versioning existed count as v1. */
     fun stored(c: android.content.Context) = prefs(c).getInt("version", 1)
@@ -528,7 +529,7 @@ fun OnboardingCatchUp(container: AppContainer, profile: UserProfile, units: Unit
                     Text("A few new questions", style = FitType.display, color = th.text, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(10.dp))
                     Caption("This update improves your plan. ${steps.size} quick question${if (steps.size == 1) "" else "s"} and you're back in.", Modifier.padding(horizontal = 12.dp))
-                } else StepBody(steps[k], s)
+                } else StepBody(steps[k], s, container)
                 Spacer(Modifier.height(24.dp))
             }
         }

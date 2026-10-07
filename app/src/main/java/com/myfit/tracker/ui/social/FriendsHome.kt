@@ -97,7 +97,7 @@ fun FriendsHome(container: AppContainer, bottomPad: Int = 40, showTopBar: Boolea
     val scope = rememberCoroutineScope()
     val toaster = LocalToaster.current
     val ctx = LocalContext.current
-    remember { repo.ensureLoaded(); 0 }
+    LaunchedEffect(Unit) { repo.load() }
     val snap by repo.snap.collectAsState()
     val refreshing by repo.refreshing.collectAsState()
     var sheet by remember { mutableStateOf(Sheet.NONE) }
@@ -257,9 +257,9 @@ fun FriendsHome(container: AppContainer, bottomPad: Int = 40, showTopBar: Boolea
         }
         GlassSheet(visible = sheet == Sheet.PROFILE && openFriend != null, onDismiss = { sheet = Sheet.NONE }) {
             openFriend?.let { f ->
-                FriendProfileContent(container, f) {
+                FriendProfileContent(container, f, onRemove = {
                     scope.launch { runCatching { social.removeFriend(f.uid) }; sheet = Sheet.NONE; toaster.show("Removed ${f.name}"); refresh() }
-                }
+                }, onBlocked = { sheet = Sheet.NONE; refresh() })
             }
         }
         GlassSheet(visible = sheet == Sheet.ADD, onDismiss = { sheet = Sheet.NONE }) {
@@ -301,7 +301,7 @@ internal fun Podium(top: List<FriendCard>, onOpen: (FriendCard) -> Unit) {
                 val size = if (place == 1) 76.dp else 60.dp
                 Column(Modifier.weight(1f).clickableNoRipple { onOpen(f) }, horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(contentAlignment = Alignment.BottomCenter) {
-                        UserAvatar(f.avatar, f.photo, f.name, f.color, size, Modifier.padding(bottom = 10.dp), ring = medal)
+                        UserAvatar(f.avatar, f.photo, f.name, f.color, size, Modifier.padding(bottom = 10.dp), ring = medal, gphoto = f.gphoto, seed = f.uid)
                         Box(Modifier.size(24.dp).clip(CircleShape).background(medal), contentAlignment = Alignment.Center) {
                             Text("$place", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
                         }
@@ -326,7 +326,7 @@ internal fun RaceRow(rank: Int, f: FriendCard, frac: Float, onClick: () -> Unit)
     Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), onClick = onClick) {
         Row(Modifier.then(if (f.me) Modifier.background(th.accent.copy(alpha = 0.12f)) else Modifier).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("$rank", style = FitType.label, color = medal ?: th.textDim, modifier = Modifier.widthIn(min = 22.dp))
-            UserAvatar(f.avatar, f.photo, f.name, f.color, 42.dp)
+            UserAvatar(f.avatar, f.photo, f.name, f.color, 42.dp, gphoto = f.gphoto, seed = f.uid)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -379,7 +379,7 @@ private fun ActivityStrip(container: AppContainer, people: List<FriendCard>, key
                 else -> l.take(5).forEach { f ->
                     val p = byId[f.uid]
                     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        UserAvatar(p?.avatar, p?.photo, f.name, p?.color ?: 0xFF4C8DFFL, 34.dp)
+                        UserAvatar(p?.avatar, p?.photo, f.name, p?.color ?: 0xFF4C8DFFL, 34.dp, gphoto = p?.gphoto, seed = f.uid)
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text((if (f.me) "You " else f.name + " ") + f.text, style = FitType.body, color = th.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -490,7 +490,7 @@ private fun NewChallengeContent(container: AppContainer, friends: List<FriendCar
             val sel = f.uid in picked
             Column(Modifier.width(64.dp).clickableNoRipple { if (sel) picked.remove(f.uid) else picked.add(f.uid) }, horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(contentAlignment = Alignment.BottomEnd) {
-                    UserAvatar(f.avatar, f.photo, f.name, f.color, 52.dp, ring = if (sel) th.accentBright else null)
+                    UserAvatar(f.avatar, f.photo, f.name, f.color, 52.dp, ring = if (sel) th.accentBright else null, gphoto = f.gphoto, seed = f.uid)
                     if (sel) Box(Modifier.size(18.dp).clip(CircleShape).background(th.accentBright), contentAlignment = Alignment.Center) { Icon(Duo.Check, null, tint = Color(0xFF14161B), modifier = Modifier.size(12.dp)) }
                 }
                 Text(f.name.substringBefore(' '), style = FitType.caption, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -525,7 +525,7 @@ private fun ChallengeContent(container: AppContainer, ch: Challenge, people: Lis
             val p = byId[row.uid]
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("${i + 1}", style = FitType.label, color = when (i) { 0 -> GOLD; 1 -> SILVER; 2 -> BRONZE; else -> th.textDim }, modifier = Modifier.width(22.dp))
-                UserAvatar(p?.avatar, p?.photo, row.name, p?.color ?: 0xFF4C8DFFL, 38.dp)
+                UserAvatar(p?.avatar, p?.photo, row.name, p?.color ?: 0xFF4C8DFFL, 38.dp, gphoto = p?.gphoto, seed = row.uid)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(if (row.me) "You" else row.name, style = FitType.label, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -549,6 +549,8 @@ private fun ChallengeContent(container: AppContainer, ch: Challenge, people: Lis
 @Composable
 private fun GlobalBoardContent(container: AppContainer) {
     val th = LocalFitTheme.current
+    val scope = rememberCoroutineScope()
+    val toaster = LocalToaster.current
     var metric by remember { mutableStateOf(Metric.STEPS) }
     val board by produceState<List<BoardRow>?>(null, metric) { value = null; value = runCatching { container.social.globalBoard(metric) }.getOrDefault(emptyList()) }
     Text("Global leaderboard", style = FitType.title, color = th.text)
@@ -563,10 +565,17 @@ private fun GlobalBoardContent(container: AppContainer) {
         else -> b.take(50).forEachIndexed { i, r ->
             Row(Modifier.fillMaxWidth().then(if (r.me) Modifier.clip(RoundedCornerShape(14.dp)).background(th.accent.copy(alpha = 0.12f)) else Modifier).padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("${i + 1}", style = FitType.label, color = when (i) { 0 -> GOLD; 1 -> SILVER; 2 -> BRONZE; else -> th.textDim }, modifier = Modifier.width(28.dp))
-                UserAvatar(null, null, r.name, r.color, 34.dp)
+                UserAvatar(r.avatar, null, r.name, r.color, 34.dp, gphoto = r.gphoto, seed = r.uid)
                 Spacer(Modifier.width(10.dp))
                 Text(if (r.me) "${r.name} (you)" else r.name, style = FitType.label, color = th.text, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(formatMetric(metric, r.value), style = FitType.label, color = th.text)
+                if (!r.me) Icon(Duo.Flag, "Report ${r.name}", tint = th.textFaint, modifier = Modifier.padding(start = 8.dp).size(28.dp).clip(CircleShape).clickableNoRipple {
+                    scope.launch {
+                        runCatching { container.social.report(r.uid, "Offensive name (global board)", "") }
+                            .onSuccess { toaster.show("Reported ${r.name} — thanks, we'll review it") }
+                            .onFailure { toaster.show("Couldn't send — check your connection") }
+                    }
+                }.padding(5.dp))
             }
         }
     }

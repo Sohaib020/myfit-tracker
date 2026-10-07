@@ -120,6 +120,7 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
     var showPicker by remember { mutableStateOf(false) }
     var editSet by remember { mutableStateOf<Pair<SetRow, WorkoutExerciseView>?>(null) }
     var celebrate by remember { mutableStateOf<String?>(null) }
+    var coach by remember { mutableStateOf(false) }
 
     // keep the screen awake while training
     val hostView = LocalView.current
@@ -197,9 +198,10 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
                 Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).animateContentSize(),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                ExerciseHeaderCard(cur, list, vm, container, now, onRemoved = { ok -> if (!ok) toaster.show("Delete its sets first — logged sets are never removed silently") })
+                ExerciseHeaderCard(cur, list, vm, container, now, onRemoved = { ok -> if (ok) toaster.show("Exercise removed") })
                 PreviousCard(cur, vm, u)
                 TodaySets(cur, u, vm.history[cur.exercise.id]) { row -> editSet = row to cur }
+                CoachEntry { coach = true }
                 CurrentSetCard(cur, list, vm, container, now) { res ->
                     res.error?.let { toaster.show(it) }
                     res.beatBest?.let { celebrate = it }
@@ -237,6 +239,29 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
         GlassSheet(visible = editSet != null, onDismiss = { editSet = null }) {
             val es = editSet
             if (es != null) EditSetContent(es.first, es.second, vm, u, s.weightStepKg) { editSet = null }
+        }
+
+        // ---------------- pro trainer
+        if (coach && cur != null) com.myfit.tracker.ui.coach.CoachSetOverlay(cur, list, vm, container) { coach = false }
+    }
+}
+
+/** Opens the pro trainer for this exercise. */
+@Composable
+private fun CoachEntry(onOpen: () -> Unit) {
+    val th = LocalFitTheme.current
+    val ctx = LocalContext.current
+    remember { com.myfit.tracker.domain.Coach.load(ctx); 0 }
+    val cp by com.myfit.tracker.domain.Coach.prefs.collectAsState()
+    Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), onClick = onOpen) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.myfit.tracker.ui.coach.CoachPortrait(cp.look.id, false, 48.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Train this with ${cp.name}", style = FitType.label, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Caption(if (cp.camera) "Camera form-check · voice counting" else "Voice, tempo and form cues")
+            }
+            Icon(Duo.KeyboardArrowRight, null, tint = th.accentBright)
         }
     }
 }
@@ -287,6 +312,7 @@ private fun ExerciseStrip(list: List<WorkoutExerciseView>, current: Long?, vm: G
 
 @Composable
 private fun ExerciseHeaderCard(cur: WorkoutExerciseView, list: List<WorkoutExerciseView>, vm: GymViewModel, container: AppContainer, now: Long, onRemoved: (Boolean) -> Unit) {
+    var confirmRemove by remember { mutableStateOf(false) }
     val th = LocalFitTheme.current
     val nav = LocalNav.current
     val settings = LocalSettings.current
@@ -331,10 +357,26 @@ private fun ExerciseHeaderCard(cur: WorkoutExerciseView, list: List<WorkoutExerc
                         leadingIcon = { Icon(if (cur.we.supersetGroup != null) Duo.LinkOff else Duo.Link, null) },
                     )
                     DropdownMenuItem({ Text("Start rest timer") }, { menu = false; vm.startRest(cur, settings) }, leadingIcon = { Icon(Duo.Timer, null) })
-                    DropdownMenuItem({ Text("Remove exercise") }, { menu = false; vm.remove(cur.we.id, onRemoved) }, leadingIcon = { Icon(Duo.DeleteOutline, null) })
+                    DropdownMenuItem({ Text("Remove exercise", color = th.danger) }, {
+                        menu = false
+                        if (cur.sets.isEmpty()) vm.remove(cur.we.id, onRemoved) else confirmRemove = true
+                    }, leadingIcon = { Icon(Duo.DeleteOutline, null, tint = th.danger) })
                 }
             }
         }
+        // added by mistake? a visible way out (logged sets are only removed after asking)
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), horizontalArrangement = Arrangement.End) {
+            Text("Remove this exercise", style = FitType.caption, color = th.danger, modifier = Modifier.clickableNoRipple {
+                if (cur.sets.isEmpty()) vm.remove(cur.we.id, onRemoved) else confirmRemove = true
+            }.padding(vertical = 4.dp))
+        }
+        if (confirmRemove) androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmRemove = false },
+            title = { Text("Remove ${cur.exercise.name}?") },
+            text = { Text("It has ${cur.sets.size} logged set${if (cur.sets.size == 1) "" else "s"}. They'll be removed from this workout too.") },
+            confirmButton = { androidx.compose.material3.TextButton({ confirmRemove = false; vm.remove(cur.we.id, onRemoved, withSets = true) }) { Text("Remove", color = th.danger) } },
+            dismissButton = { androidx.compose.material3.TextButton({ confirmRemove = false }) { Text("Keep") } },
+        )
         // sticky note: stays with the exercise across every workout (seat height, grip, cues…)
         if (editNote) Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
             com.myfit.tracker.ui.entries.NotesField(note, { note = it.take(300) }, "e.g. seat on 4, narrow grip, keep elbows in")

@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import org.json.JSONArray
 import java.time.LocalDate
 import java.time.ZoneId
@@ -29,7 +30,7 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
     private val dao = db.nutritionDao()
 
     /** Extra info for built-in foods: category, search aliases, 3D icon (asset id) and how solid the numbers are. */
-    data class FoodMeta(val category: String, val aliases: List<String>, val photo: String?, val reference: Boolean)
+    data class FoodMeta(val category: String, val aliases: List<String>, val photo: String?, val reference: Boolean, val tags: List<String> = emptyList())
 
     /** Ids that have a generated 3D icon in assets/foodicon. */
     private val icons: Set<String> by lazy { runCatching { context.assets.list("foodicon")?.filter { it.endsWith(".webp") }?.map { it.removeSuffix(".webp") }?.toSet() }.getOrNull() ?: emptySet() }
@@ -43,7 +44,8 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
             val al = o.optJSONArray("aliases")?.let { a -> (0 until a.length()).map { a.getString(it).lowercase() } } ?: emptyList()
             val icon = id.takeIf { it in icons }
             if (icon != null) iconByName[o.optString("name").lowercase()] = icon
-            ("pkfood:$id") to FoodMeta(o.optString("category", "Basics"), al, icon, o.optString("basis") == "reference")
+            val tg = o.optJSONArray("tags")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList()
+            ("pkfood:$id") to FoodMeta(o.optString("category", "Basics"), al, icon, o.optString("basis") == "reference", tg)
         }
     }
 
@@ -51,7 +53,24 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
     fun iconForName(name: String): String? { metaMap.size; return iconByName[name.lowercase()] }
 
     fun meta(f: Food): FoodMeta? = metaMap[f.uuid]
-    val categories: List<String> get() = listOf("Breakfast", "Breads", "Rice", "Curries", "Daal & Beans", "BBQ & Kebabs", "Vegetables", "Street food", "Fast food", "Restaurant", "Indian", "Regional", "Sweets", "Drinks", "Fruit", "Dairy & Eggs", "Meat & Fish", "Snacks & Nuts", "Basics")
+
+    /** What a food contains / is high in (dairy, gluten, high sugar…), for health-profile checks. */
+    fun tags(f: Food): Set<String> {
+        val m = metaMap[f.uuid]
+        return com.myfit.tracker.domain.FoodTags.of(f.name, m?.category.orEmpty(), f.calories, f.carbsG, f.fatG, extra = m?.tags.orEmpty())
+    }
+
+    /** OK / limit / avoid for this user (health profile + halal when Shariah & Health is on). */
+    fun judge(f: Food, muslim: Boolean): com.myfit.tracker.domain.HealthProfile.Judgement =
+        com.myfit.tracker.domain.HealthProfile.judgeFood(tags(f), muslim)
+
+    /** Up to [n] built-in foods from the same category that suit the user, closest in calories — "try instead". */
+    suspend fun swaps(f: Food, muslim: Boolean, n: Int = 3): List<Food> {
+        val cat = metaMap[f.uuid]?.category ?: return emptyList()
+        return dao.builtIn().first().filter { it.id != f.id && metaMap[it.uuid]?.category == cat && judge(it, muslim).ok }
+            .sortedBy { kotlin.math.abs(it.calories - f.calories) }.take(n)
+    }
+    val categories: List<String> get() = listOf("Breakfast", "Breads", "Rice", "Curries", "Daal & Beans", "BBQ & Kebabs", "Vegetables", "Street food", "Fast food", "Restaurant", "Regional", "Sweets", "Drinks", "Fruit", "Dairy & Eggs", "Meat & Fish", "Snacks & Nuts", "Basics", "Indian")
 
     /** Name/brand search plus Roman-Urdu aliases ("kardi", "nehari", "anda"). */
     fun search(q: String): kotlinx.coroutines.flow.Flow<List<Food>> {

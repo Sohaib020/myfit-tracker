@@ -174,3 +174,29 @@ Answers: top bar moves 1:1 with the page · own photo + ready-made avatars · li
 7 ✅ AI: BrainMode (auto/online/phone) in PipBrain; PipChatScreen top bar = brain chip + ⚙; mic (RecognizerIntent) when input empty; ui/pip/PipSettings.kt one sheet (personality, brain, voice, downloads, chat); Me shows one Pip card
 8 ⏳ Tall-display issues: waiting for owner's screenshots + phone model
 Test: FriendsNotifShotTest (friends parts + notification cards).
+
+## Galaxy Store readiness (6 Oct) — branch agent/galaxy
+- New `galaxy` flavor (SELF_UPDATE=false, STORE/STORE_URL BuildConfig, manifest overlay removes REQUEST_INSTALL_PACKAGES + install receiver). update/Store.kt: store links instead of APK site in invites, family-glucose text, doctor report.
+- Workflow `.github/workflows/galaxy-release.yml` (manual): unit tests, signed APK (arm64+armv7) + AAB, lint summary + permission/badging check as notices, artifact "galaxy-store-1.0.N". versionCode = 100000+run, versionName 1.0.run.
+- Safety (UGC rule): report (Firestore `reports`, write-only) + block (users/{uid}/blocked, enforced in rules for friends/requests, filtered in lists/search/global board).
+- Store builds: no test ads (RewardedAds.enabled), no hidden developer menu; ad-privacy entry in Pip settings; AI disclaimer under chat input; audio focus (ai/voice/Focus.kt) for Pip voice + meditation sounds; MainActivity portrait.
+- Privacy policy: permissions, retention, safety/reports, rights, medical disclaimer, changes sections.
+- Review fixes: avatar uploads without Health Connect (Social.uploadAvatar), caches reset on account switch, photo decode sampling + EXIF, live-update error handler, ≤4 milestone dots.
+- Result (galaxy run 3): 19 unit tests pass, lint 0 errors / 177 warnings, APK 137 MB, target 36, no install permission.
+- OWNER: re-publish firestore.rules (reports + blocked); create a reviewer test account; ADMOB secrets not set → Galaxy build shows no ads.
+
+## Round 15 (7 Oct) — branch agent/r15 (includes agent/galaxy)
+Answers: health strictness = warn + safe swaps + "show anyway" · all condition groups · realistic 3D coach M/F, fictional editable names · camera on/off + voice/timing/demo · nutritionist: daily coaching, meal review, weekly plan + groceries, chat · 500+ foods · website: all sections, parallax/3D/scroll animations · APK only · default DP = abstract gradient · EN + Urdu · custom condition = on-phone list + AI · Muslim popup enables all 4 features.
+1 ✅ Infinix Note 10 fixes: ResumeCard (full-width actions, stale >4h "STILL OPEN"), TemplateCard fit-count avatars, PipSmall sizing
+2 ✅ Remove exercise from a workout (confirm when it has sets) · animated thumbnails + "How to" preview sheet in pick mode
+3 ✅ Health profile (domain/HealthProfile.kt, ~55 conditions + own entries via detect()/AI) replaces the "Are you Muslim" onboarding step (OnboardingVersion 3); food & exercise lists hide AVOID items with "Show", badges + HealthWarningCard swaps; WorkoutPlanner skips AVOID; Pip prompts include it; Me → Health & diet card
+4 ✅ Muslim mode → Settings toggle + DeenPopup after the Pip tour
+5 ✅ Profile pictures in global board + Friends (own photo → preset → Google photo → GradientAvatar); rules: users.gphoto, weekly avatar/gphoto — OWNER re-publish firestore.rules
+6 ✅ +501 foods (Lahori, Karachi/Sindh/Balochistan, KP/GB/Kashmir, home-style, drinks/sweets) → foods_pk.json = 1,066 (504 new after merging 9 spelling duplicates, +12 extra dishes); descs in tools/foodicon/desc.json, ids in only.txt; icons generating on foodicon-run → foodicon-assets-r5 (copy into assets/foodicon when done). "Indian" category moved last (not removed — ask owner).
+7 ✅ Meal plans strictly Pakistani (tools/mealplans/gen.py rewritten), 3D icons per item, flagged items → tap for safe swaps (logged with the swap)
+8 ✅ Pro trainer: domain/Coach.kt (looks m/f/fh, names, EN/UR, push level, camera, voice), domain/FormGuide.kt (patterns, tempo, cues with angles, ML Kit pose rule-based rep counter + form fixes), ui/coach/CoachSetOverlay.kt (intro → 3-2-1 → tempo or camera → save set → coached rest), PoseCamera.kt (pose-detection 18.0.0-beta5, on-device), PipVoice.Persona (Azure Andrew/Ava/Asad/Uzma, phone-voice fallback). Entry: "Train this with Coach …" card in gym mode.
+9 ✅ Pro nutritionist: ui/coach/NutritionistScreen.kt (Overlay.Nutritionist; entry in Food diary + Me card): Today tips (domain/Nutritionist.kt), meal grades + AI detailed review, week plan with health swaps + grocery list (local units, share), chat (AI quota CHAT).
+10 ✅ Coach art: tools/coachart + coachart.yml (FLUX). Picked variant 3 for m/f/fh and 2 for nf/nm → assets/coach + site/img/coach (f has no demo pose — falls back to stand). Icons for all new foods in assets/foodicon (4 older foods still lack icons: firni, cheesecake, tandoori_paratha, shakarpara).
+11 ✅ Website rebuilt (site/index.html + assets/site.css/js): three.js shader blob hero, mouse/scroll parallax, GSAP pinned horizontal tour, coaches, character gallery, privacy bento, APK download + QR, FAQ, support. Deploys from main.
+12 ✅ Doctor report: Health profile section. Privacy: health profile, nutritionist AI, camera form-check.
+PR #9 (agent/r15 → main) supersedes #8. OWNER: merge, re-publish firestore.rules; decide on the Indian category.

@@ -301,9 +301,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
             if (settings.diabetesType == "unset" && !settings.diabetesAsked && !settings.glucoseEnabled) {
                 item(key = "personalise", span = full) { Box(Modifier.animateItem()) { PersonaliseCard(container) } }
             }
-            if (settings.muslim == "unset") {
-                item(key = "deenask", span = full) { Box(Modifier.animateItem()) { DeenAskCard(container) } }
-            }
+
             order.forEach { c ->
                 if (!visible(c)) return@forEach
                 val small = c in smallSet
@@ -597,7 +595,10 @@ private fun PipSmall(s: DashState) {
             Icon(Duo.ChatBubble, "Chat", tint = th.textDim, modifier = Modifier.size(15.dp))
         }
         // the buddy stays inside its tile (clipped) and the button label is short enough for half-width tiles
-        Box(Modifier.fillMaxWidth().weight(1f).clipToBounds(), contentAlignment = Alignment.Center) { Pip(mood, size = 70.dp, interactive = false) }
+        // sized to the space the tile really has (short on tall/narrow phones), so the buddy is never cut off
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth().weight(1f).clipToBounds(), contentAlignment = Alignment.Center) {
+            Pip(mood, size = minOf(maxHeight, maxWidth, 84.dp).coerceAtLeast(36.dp), interactive = false)
+        }
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             CompactPill("Chat", Duo.ChatBubble, { nav.push(Overlay.PipChat) }, height = 34.dp)
         }
@@ -694,7 +695,7 @@ private fun RingsSmall(s: DashState, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     GlassCard(Modifier.height(TileHeight), onClick = onClick, padding = 12.dp) {
         Text("TODAY", style = FitType.overline, color = th.textDim)
-        BoxWithConstraints(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+        BoxWithConstraints(Modifier.fillMaxWidth().weight(1f).clipToBounds(), contentAlignment = Alignment.Center) {
             TripleRings(s, minOf(maxWidth, maxHeight).coerceAtMost(112.dp))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {

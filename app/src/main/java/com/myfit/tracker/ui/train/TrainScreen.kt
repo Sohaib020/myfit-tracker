@@ -72,6 +72,7 @@ import com.myfit.tracker.ui.theme.LocalFitTheme
 import com.myfit.tracker.ui.theme.LocalSettings
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.draw.clipToBounds
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -157,6 +158,7 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
         }
 
         item(key = "progress") { ProgressStrip(recent) { nav.push(Overlay.TrainProgress) } }
+        item(key = "coach") { ProTrainerTeaser(active != null) { active?.let { nav.push(Overlay.Gym(it.id)) } } }
 
         item(key = "daysHead") {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -261,26 +263,49 @@ private fun ProgressStrip(recent: List<WorkoutView>, onOpen: () -> Unit) {
 @Composable
 private fun ResumeCard(container: AppContainer, workoutId: Long, onResume: () -> Unit) {
     val th = LocalFitTheme.current
+    val nav = LocalNav.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val v by remember(workoutId) { container.workoutRepo.workoutView(workoutId) }.collectAsState(null)
     val now by produceState(Clock.now()) { while (true) { androidx.compose.runtime.withFrameMillis { }; value = Clock.now(); delay(1000) } }
     val w = v ?: return
+    val elapsed = now - w.workout.startedAt
+    // left open for hours (forgot to finish): offer to save it at the last set, or discard it
+    val stale = elapsed > 4 * 3_600_000L
     Glass(Modifier.fillMaxWidth(), onClick = onResume) {
         Box(Modifier.matchParentSize().drawBehind { drawRect(Brush.horizontalGradient(listOf(th.accent.copy(alpha = 0.55f), th.accent.copy(alpha = 0.1f)))) })
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(52.dp).clip(CircleShape).drawBehind { drawCircle(th.accentBright) }, contentAlignment = Alignment.Center) {
-                Icon(Duo.FitnessCenter, null, tint = th.onAccent)
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(48.dp).clip(CircleShape).drawBehind { drawCircle(th.accentBright) }, contentAlignment = Alignment.Center) {
+                    Icon(Duo.FitnessCenter, null, tint = th.onAccent)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(if (stale) "STILL OPEN" else "IN PROGRESS", style = FitType.overline, color = th.text)
+                    Text(w.workout.name, style = FitType.title, color = th.text, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    Caption("${mmss(elapsed / 1000)} · ${w.totals.sets} sets · ${w.exercises.size} exercises", color = th.text)
+                }
             }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text("IN PROGRESS", style = FitType.overline, color = th.text)
-                Text(w.workout.name, style = FitType.title, color = th.text)
-                Caption("${mmss((now - w.workout.startedAt) / 1000)} · ${w.totals.sets} sets · ${w.exercises.size} exercises", color = th.text)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                AccentButton("Resume", onResume, height = 44.dp)
-                Spacer(Modifier.height(6.dp))
-                val nav = LocalNav.current
-                GlassButton("Add exercise", { nav.push(Overlay.PickExercises(workoutId = workoutId)) }, icon = Duo.Add, height = 36.dp)
+            Spacer(Modifier.height(12.dp))
+            if (stale) {
+                Caption("This workout has been open for ${elapsed / 3_600_000} hours. Did you forget to finish it?", color = th.text)
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AccentButton("Save it", {
+                        scope.launch {
+                            val last = w.exercises.flatMap { it.sets }.maxOfOrNull { it.completedAt }
+                            container.workoutRepo.finish(workoutId, w.workout.name, w.workout.notes)
+                            // end time = the last set (not hours later), so duration and calories stay right
+                            val end = (last ?: w.workout.startedAt) + 5 * 60_000L
+                            runCatching { container.workoutRepo.updateWorkoutMeta(workoutId, w.workout.name, w.workout.notes, w.workout.startedAt, minOf(end, now)) }
+                        }
+                    }, Modifier.weight(1f), icon = Duo.Check, height = 44.dp)
+                    GlassButton("Discard", { scope.launch { container.workoutRepo.discard(workoutId) } }, Modifier.weight(1f), icon = Duo.DeleteOutline, height = 44.dp)
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Keep going instead", style = FitType.label, color = th.accentBright, modifier = Modifier.clickableNoRipple(onResume).padding(vertical = 4.dp))
+            } else Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AccentButton("Resume", onResume, Modifier.weight(1f), icon = Duo.PlayArrow, height = 44.dp)
+                GlassButton("Add exercise", { nav.push(Overlay.PickExercises(workoutId = workoutId)) }, Modifier.weight(1f), icon = Duo.Add, height = 44.dp)
             }
         }
     }
@@ -309,12 +334,16 @@ private fun TemplateCard(t: TemplateView, onStart: () -> Unit, onEdit: () -> Uni
             }
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f).height(48.dp)) {
-                    t.items.take(5).forEachIndexed { i, (_, ex) ->
+                androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).height(48.dp).clipToBounds()) {
+                    // as many faces as fit in the space left of Start (each overlaps the last by 14 dp), then "+N"
+                    val fit = (((maxWidth - 48.dp - 30.dp) / 34.dp).toInt() + 1).coerceIn(1, 5)
+                    val shown = t.items.take(fit)
+                    shown.forEachIndexed { i, (_, ex) ->
                         ExerciseImage(ex, Modifier.offset(x = (i * 34).dp).size(48.dp).clip(CircleShape))
                     }
-                    if (t.items.size > 5) Caption("+${t.items.size - 5}", Modifier.offset(x = (5 * 34 + 6).dp).align(Alignment.CenterStart))
+                    if (t.items.size > shown.size) Caption("+${t.items.size - shown.size}", Modifier.offset(x = ((shown.size - 1) * 34 + 54).dp).align(Alignment.CenterStart))
                 }
+                Spacer(Modifier.width(8.dp))
                 AccentButton("Start", onStart, icon = Duo.PlayArrow, height = 46.dp)
             }
             Spacer(Modifier.height(8.dp))
@@ -329,7 +358,7 @@ private fun TemplateCard(t: TemplateView, onStart: () -> Unit, onEdit: () -> Uni
                         ExerciseImage(ex, Modifier.size(36.dp).clip(CircleShape))
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(ex.name, style = FitType.label, color = th.text, maxLines = 1)
+                            Text(ex.name, style = FitType.label, color = th.text)
                             Caption("${item.targetSets} sets" + (item.targetRepsMin?.let { mn -> " · $mn" + (item.targetRepsMax?.takeIf { it != mn }?.let { "–$it" } ?: "") + " reps" } ?: ""))
                         }
                         GlassIconButton(Duo.Close, { onRemoveItem(item.id) }, size = 34.dp, tint = th.danger)
@@ -364,6 +393,26 @@ fun HistoryRow(w: WorkoutView, onOpen: () -> Unit, onRepeat: () -> Unit) {
                 Caption(w.exercises.joinToString(", ") { it.exercise.name }, color = th.textFaint)
             }
             GlassButton("Repeat", onRepeat, height = 38.dp)
+        }
+    }
+}
+
+
+/** Pro trainer teaser: who your coach is and how to start a coached set. */
+@Composable
+private fun ProTrainerTeaser(live: Boolean, onOpen: () -> Unit) {
+    val th = LocalFitTheme.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.remember { com.myfit.tracker.domain.Coach.load(ctx); 0 }
+    val cp by com.myfit.tracker.domain.Coach.prefs.collectAsState()
+    com.myfit.tracker.ui.theme.Glass(Modifier.fillMaxWidth(), onClick = if (live) onOpen else null) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.myfit.tracker.ui.coach.CoachPortrait(cp.look.id, false, 52.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("${cp.name} · pro trainer", style = FitType.section, color = th.text, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Caption(if (live) "Open your workout and tap \"Train this with ${cp.name}\"" else "Start any workout, then tap \"Train this with ${cp.name}\" for voice, tempo and camera form-check.")
+            }
         }
     }
 }

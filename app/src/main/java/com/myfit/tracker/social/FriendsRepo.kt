@@ -50,7 +50,14 @@ object MyAvatar {
                     if (scale < 1f) d.setTargetSize((s.width * scale).toInt(), (s.height * scale).toInt())
                     d.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE
                 }
-            else ctx.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it) }
+            else {
+                val b = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                ctx.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it, null, b) }
+                var sample = 1; while (maxOf(b.outWidth, b.outHeight) / (sample * 2) >= 1024) sample *= 2
+                val raw = ctx.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }!!
+                val deg = runCatching { ctx.contentResolver.openInputStream(uri).use { androidx.exifinterface.media.ExifInterface(it!!).rotationDegrees } }.getOrDefault(0)
+                if (deg == 0) raw else Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, android.graphics.Matrix().apply { postRotate(deg.toFloat()) }, true)
+            }
             val side = minOf(src.width, src.height)
             val sq = Bitmap.createBitmap(src, (src.width - side) / 2, (src.height - side) / 2, side, side)
             val out = Bitmap.createScaledBitmap(sq, 320, 320, true)
@@ -79,6 +86,7 @@ data class FriendCard(
     val uid: String, val name: String, val username: String, val color: Long, val avatar: String, val photo: String?,
     val level: Int?, val stars: Int?, val mascot: String?, val weekSteps: Long, val weekActiveMin: Long, val weekWorkouts: Int,
     val journeys: List<String>, val rewards: List<String>, val me: Boolean, val updatedAt: Long,
+    val gphoto: String? = null,
 )
 
 data class FriendsSnap(val me: FriendCard?, val friends: List<FriendCard>, val requests: Int, val fetchedAt: Long) {
@@ -97,6 +105,9 @@ class FriendsRepo(private val c: AppContainer) {
     val refreshing = MutableStateFlow(false)
     private val mutex = Mutex()
     @Volatile private var loaded = false
+
+    /** Loads the on-phone cache off the main thread. */
+    suspend fun load() = withContext(Dispatchers.IO) { ensureLoaded() }
 
     fun ensureLoaded() {
         if (loaded) return
@@ -118,9 +129,11 @@ class FriendsRepo(private val c: AppContainer) {
             try {
                 val db = FirebaseFirestore.getInstance()
                 val week = c.social.weekKey()
-                val ids = db.collection("users").document(me).collection("friends").get().await().documents.map { it.id }
+                val blocked = runCatching { c.social.blocked() }.getOrDefault(emptySet())
+                val ids = db.collection("users").document(me).collection("friends").get().await().documents.map { it.id }.filter { it !in blocked }
                 val cards = coroutineScope { (listOf(me) + ids).map { uid -> async { runCatching { card(db, week, uid, uid == me) }.getOrNull() } }.awaitAll() }.filterNotNull()
-                val reqDocs = runCatching { db.collection("users").document(me).collection("requests").get().await().documents }.getOrDefault(emptyList())
+                val bl = runCatching { c.social.blocked() }.getOrDefault(emptySet())
+                val reqDocs = runCatching { db.collection("users").document(me).collection("requests").get().await().documents }.getOrDefault(emptyList()).filter { it.id !in bl }
                 val reqs = reqDocs.size
                 runCatching { notifyNewRequests(reqDocs.map { it.id to (it.getString("name") ?: "Someone") }) }
                 val s = FriendsSnap(cards.firstOrNull { it.me }, cards.filter { !it.me }, reqs, System.currentTimeMillis())
@@ -145,6 +158,7 @@ class FriendsRepo(private val c: AppContainer) {
             (ad?.getLong("level") ?: wd?.getLong("level"))?.toInt(), ad?.getLong("stars")?.toInt(), ad?.getString("mascot") ?: wd?.getString("mascot"),
             wd?.getLong("steps") ?: ad?.getLong("weekSteps") ?: 0L, wd?.getLong("activeMin") ?: ad?.getLong("weekActiveMin") ?: 0L,
             ad?.getLong("weekWorkouts")?.toInt() ?: 0, strs("journeys"), strs("rewards"), me, upd,
+            ud.getString("gphoto")?.ifBlank { null },
         )
     }
 
@@ -180,7 +194,7 @@ class FriendsRepo(private val c: AppContainer) {
         put("uid", f.uid); put("name", f.name); put("username", f.username); put("color", f.color); put("avatar", f.avatar)
         f.photo?.let { put("photo", it) }; f.level?.let { put("level", it) }; f.stars?.let { put("stars", it) }; f.mascot?.let { put("mascot", it) }
         put("steps", f.weekSteps); put("active", f.weekActiveMin); put("workouts", f.weekWorkouts)
-        put("journeys", JSONArray(f.journeys)); put("rewards", JSONArray(f.rewards)); put("me", f.me); put("upd", f.updatedAt)
+        put("journeys", JSONArray(f.journeys)); put("rewards", JSONArray(f.rewards)); put("me", f.me); put("upd", f.updatedAt); f.gphoto?.let { put("gphoto", it) }
     }
     private fun fromJson(o: JSONObject): FriendsSnap {
         fun card(j: JSONObject): FriendCard {
@@ -188,7 +202,7 @@ class FriendsRepo(private val c: AppContainer) {
             return FriendCard(j.getString("uid"), j.optString("name", "Friend"), j.optString("username"), j.optLong("color", 0xFF4C8DFFL), j.optString("avatar"),
                 j.optString("photo").ifBlank { null }, if (j.has("level")) j.getInt("level") else null, if (j.has("stars")) j.getInt("stars") else null,
                 j.optString("mascot").ifBlank { null }, j.optLong("steps"), j.optLong("active"), j.optInt("workouts"), list("journeys"), list("rewards"),
-                j.optBoolean("me"), j.optLong("upd"))
+                j.optBoolean("me"), j.optLong("upd"), j.optString("gphoto").ifBlank { null })
         }
         val fs = o.optJSONArray("friends")?.let { a -> (0 until a.length()).map { card(a.getJSONObject(it)) } }.orEmpty()
         return FriendsSnap(o.optJSONObject("me")?.let(::card), fs, o.optInt("requests"), o.optLong("at"))

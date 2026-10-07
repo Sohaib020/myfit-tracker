@@ -1,0 +1,90 @@
+name: Galaxy Store release
+# Builds the Samsung Galaxy Store version: no self-updater, no install-packages permission, no APK download
+# links. Produces a signed universal APK (arm64 + 32-bit ARM) and an AAB, runs the unit tests and Android lint,
+# and uploads everything as a downloadable artifact. Run it from the Actions tab when you're ready to upload.
+on:
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  galaxy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version
+        run: |
+          echo "MYFIT_VERSION_CODE=$((100000 + ${{ github.run_number }}))" >> "$GITHUB_ENV"
+          echo "MYFIT_VERSION_NAME=1.0.${{ github.run_number }}" >> "$GITHUB_ENV"
+      - name: Fetch sherpa-onnx AAR
+        run: mkdir -p app/libs && curl -fsSL --retry 4 -o app/libs/sherpa-onnx.aar https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-static-link-onnxruntime-1.13.8.aar
+      - name: Firebase config
+        env: { GOOGLE_SERVICES_JSON: "${{ secrets.GOOGLE_SERVICES_JSON }}" }
+        run: if [ -n "$GOOGLE_SERVICES_JSON" ]; then printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json; else echo "::warning::GOOGLE_SERVICES_JSON missing — online features would be off"; fi
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.11.1' }
+      - name: Signing key
+        env: { KS_B64: "${{ secrets.MYFIT_KEYSTORE_B64 }}" }
+        run: |
+          [ -n "$KS_B64" ] || { echo "::error::MYFIT_KEYSTORE_B64 secret missing"; exit 1; }
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/myfit.jks"; echo "MYFIT_KEYSTORE_FILE=$RUNNER_TEMP/myfit.jks" >> "$GITHUB_ENV"
+      - name: Check ad + AI secrets
+        env: { A: "${{ secrets.ADMOB_REWARDED_ID }}", P: "${{ secrets.AI_PROXY_URL }}" }
+        run: |
+          [ -n "$A" ] || echo "::warning::ADMOB_REWARDED_ID not set — the Galaxy build hides ads (no test ads in store builds)"
+          [ -n "$P" ] || echo "::warning::AI_PROXY_URL not set — online AI would be unavailable"
+      - name: Unit tests
+        run: |
+          gradle :app:testGalaxyDebugUnitTest --stacktrace
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          t = f = s = 0
+          for p in glob.glob('app/build/test-results/testGalaxyDebugUnitTest/*.xml'):
+              r = ET.parse(p).getroot(); t += int(r.get('tests', 0)); f += int(r.get('failures', 0)) + int(r.get('errors', 0)); s += int(r.get('skipped', 0))
+          print(f"::notice title=Unit tests::{t} run, {f} failed, {s} skipped")
+          PY
+      - name: Build APK + AAB
+        env:
+          MYFIT_KEYSTORE_PASSWORD: ${{ secrets.MYFIT_KEYSTORE_PASSWORD }}
+          AI_PROXY_URL: ${{ secrets.AI_PROXY_URL }}
+          ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
+          ADMOB_REWARDED_ID: ${{ secrets.ADMOB_REWARDED_ID }}
+          MYFIT_ABIS: arm64-v8a,armeabi-v7a
+        run: gradle :app:assembleGalaxyRelease :app:bundleGalaxyRelease --stacktrace
+      - name: Lint (release)
+        run: gradle :app:lintGalaxyRelease --stacktrace || true
+      - name: Lint summary
+        run: |
+          f=$(ls app/build/reports/lint-results-galaxyRelease.xml 2>/dev/null || true)
+          [ -n "$f" ] && python3 - "$f" <<'PY' || true
+          import sys, xml.etree.ElementTree as ET, collections
+          r = ET.parse(sys.argv[1]).getroot(); c = collections.Counter(); errs = []
+          for i in r.iter('issue'):
+              c[(i.get('severity'), i.get('id'))] += 1
+              if i.get('severity') in ('Error', 'Fatal'):
+                  loc = i.find('location'); errs.append(f"{i.get('id')}: {i.get('message')} @ {loc.get('file') if loc is not None else '?'}:{loc.get('line') if loc is not None else ''}")
+          tot = collections.Counter(sev for (sev, _), n in c.items() for _ in range(n))
+          print("::notice title=Lint totals::" + ", ".join(f"{k}: {v}" for k, v in sorted(tot.items())))
+          warn = sorted(((n, id_) for (sev, id_), n in c.items() if sev == 'Warning'), reverse=True)[:25]
+          print("::notice title=Top lint warnings::" + "; ".join(f"{id_} x{n}" for n, id_ in warn))
+          for e in errs[:60]: print("::error::LINT " + e[:400])
+          PY
+      - name: Manifest check (no self-update)
+        run: |
+          apk=$(ls app/build/outputs/apk/galaxy/release/*.apk | head -1)
+          aapt=$(ls $ANDROID_HOME/build-tools/*/aapt2 | tail -1)
+          $aapt dump permissions "$apk" | tee perms.txt
+          if grep -q REQUEST_INSTALL_PACKAGES perms.txt; then echo "::error::REQUEST_INSTALL_PACKAGES is still in the Galaxy APK"; exit 1; fi
+          echo "::notice title=Permissions::$(grep -o "name='[^']*'" perms.txt | sed "s/name='//;s/'//" | tr '\n' ' ')"
+          echo "::notice title=Badging::$($aapt dump badging "$apk" | grep -E "^package:|^sdkVersion|^targetSdkVersion|^native-code|application-debuggable" | tr '\n' ' ')"
+          echo "::notice title=APK size::$(du -h "$apk" | cut -f1) $(basename "$apk")"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: galaxy-store-${{ env.MYFIT_VERSION_NAME }}
+          path: |
+            app/build/outputs/apk/galaxy/release/*.apk
+            app/build/outputs/bundle/galaxyRelease/*.aab
+            app/build/outputs/mapping/galaxyRelease/mapping.txt
+            app/build/reports/lint-results-galaxyRelease.html
+            perms.txt

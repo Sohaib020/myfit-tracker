@@ -298,9 +298,9 @@ internal fun InviteCard(profile: Profile?) {
             }, Modifier.weight(1f), icon = Duo.ContentCopy, height = 44.dp)
         }
         Spacer(Modifier.height(6.dp))
-        Text("Share just the app download link", style = FitType.label, color = th.accentBright, modifier = Modifier.clickableNoRipple {
+        Text("Share the app link", style = FitType.label, color = th.accentBright, modifier = Modifier.clickableNoRipple {
             ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
-                .putExtra(Intent.EXTRA_TEXT, "Get MyFit Tracker (always the latest version): ${com.myfit.tracker.update.AppUpdater.SITE}"), "Share download link"))
+                .putExtra(Intent.EXTRA_TEXT, "Get MyFit Tracker: ${com.myfit.tracker.update.Store.appLink}"), "Share download link"))
         }.padding(vertical = 6.dp))
     }
 }

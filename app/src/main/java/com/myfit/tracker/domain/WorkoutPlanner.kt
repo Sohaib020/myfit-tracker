@@ -176,7 +176,10 @@ object WorkoutPlanner {
     private fun candidates(m: Muscle, equip: Equip, level: Level): List<P> {
         val order = when (equip) { Equip.GYM -> listOf(Equip.GYM, Equip.DUMBBELLS, Equip.BODYWEIGHT); Equip.DUMBBELLS -> listOf(Equip.DUMBBELLS, Equip.BODYWEIGHT); Equip.BODYWEIGHT -> listOf(Equip.BODYWEIGHT) }
         val all = order.flatMap { LIB[m]?.get(it).orEmpty() }.distinctBy { it.key }
-        return if (level == Level.BEGINNER) all.filter { it.key !in ADVANCED_ONLY } else all
+        val byLevel = if (level == Level.BEGINNER) all.filter { it.key !in ADVANCED_ONLY } else all
+        // health profile (knee pain, pregnancy, back pain…): planned days skip exercises that don't suit you
+        val safe = byLevel.filter { HealthProfile.judgeExercise(ExerciseTags.of(it.key.replace('_', ' '))).verdict != HealthProfile.Verdict.AVOID }
+        return safe.ifEmpty { byLevel }
     }
 
     /** Other exercises that train the same muscle as [key] with this equipment (for the "Swap" button). */

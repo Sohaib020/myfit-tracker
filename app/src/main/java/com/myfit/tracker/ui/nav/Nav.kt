@@ -52,6 +52,8 @@ sealed interface Overlay {
     data object WeeklyReport : Overlay
     data object Backup : Overlay
     data object MealPlans : Overlay
+    /** Pro nutritionist: coaching, meal review, week plan + groceries, chat. */
+    data object Nutritionist : Overlay
     data class PickExercises(val templateId: Long? = null, val workoutId: Long? = null) : Overlay
     data class Food(val date: String? = null) : Overlay
     data class FoodAdd(val mealType: String, val date: String, val tab: Int) : Overlay

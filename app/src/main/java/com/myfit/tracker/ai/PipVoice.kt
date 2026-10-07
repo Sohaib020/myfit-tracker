@@ -66,15 +66,39 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
      * @param text what's shown (English or Roman Urdu)
      * @param ur same reply in Urdu script (speech only), [hi] in Devanagari (speech only)
      */
-    fun speak(text: String, ur: String? = null, hi: String? = null, force: Boolean = false) {
+    private val focus by lazy { com.myfit.tracker.ai.voice.Focus(context, transient = true) { stop() } }
+
+    /** A human voice other than Pip's (the trainer / nutritionist): Azure neural voice, else the phone's voice. */
+    data class Persona(val male: Boolean) {
+        fun azure(urdu: Boolean) = when {
+            urdu && male -> "ur-PK-AsadNeural"
+            urdu -> "ur-PK-UzmaNeural"
+            male -> "en-US-AndrewNeural"
+            else -> "en-US-AvaNeural"
+        }
+    }
+
+    fun speak(text: String, ur: String? = null, hi: String? = null, force: Boolean = false, persona: Persona? = null) {
         stop()
         val en = clean(text)
         if (en.isBlank()) return
         job = scope.launch {
             val s = settings.settings.first()
             if (!s.pipVoice && !force) return@launch
+            if (!focus.request()) return@launch          // a call is in progress: stay quiet
             _speaking.value = true
-            run {
+            if (persona != null) {
+                val urdu = ur != null
+                val t = if (urdu) clean(ur!!) else en
+                var done = false
+                if (s.azureKeyEff.isNotBlank() && s.azureRegionEff.isNotBlank() && !azureOff)
+                    done = runCatching { viaAzure(s.azureKeyEff, s.azureRegionEff, t, urdu, persona.azure(urdu)) }.getOrElse { e ->
+                        if (e is java.net.UnknownHostException) azureOff = true
+                        if (e is com.myfit.tracker.ai.voice.AzureTts.Failure && (e.permanent || e.quota)) azureOff = true
+                        false
+                    }
+                if (!done && isActive) { viaPhone(t, urdu, persona); return@launch }
+            } else run {
                 val urdu = ur != null
                 var done = false
                 if (s.voiceEngine == 0 && s.elevenKeyEff.isNotBlank() && !elevenOff) {
@@ -111,10 +135,12 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
             }
             _speaking.value = false
             level.value = 0f
+            focus.abandon()
         }
     }
 
     fun stop() {
+        runCatching { focus.abandon() }
         job?.cancel(); job = null
         player?.abort(); player = null
         runCatching { tts?.stop() }
@@ -138,11 +164,11 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
         return true
     }
 
-    private suspend fun viaAzure(key: String, region: String, text: String, urdu: Boolean): Boolean {
+    private suspend fun viaAzure(key: String, region: String, text: String, urdu: Boolean, voiceName: String? = null): Boolean {
         val p = PcmPlayer(com.myfit.tracker.ai.voice.AzureTts.RATE, level).also { player = it }
         var got = 0
         try {
-            azure.stream(key, region, text.take(1500), urdu) { buf, n -> got += n; p.writeBytes(buf, n) }
+            azure.stream(key, region, text.take(1500), urdu, voiceName) { buf, n -> got += n; p.writeBytes(buf, n) }
         } catch (e: Throwable) {
             if (got == 0) { p.abort(); throw e }
         }
@@ -177,9 +203,9 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
         return true
     }
 
-    private fun viaPhone(text: String, urdu: Boolean) {
+    private fun viaPhone(text: String, urdu: Boolean, persona: Persona? = null) {
         val engine = tts
-        if (engine != null && ttsReady) { say(engine, text, urdu); return }
+        if (engine != null && ttsReady) { say(engine, text, urdu, persona); return }
         tts = TextToSpeech(context) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
             val e = tts ?: return@TextToSpeech
@@ -190,12 +216,27 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
                 override fun onDone(id: String?) { if (id?.startsWith("last") == true) { _speaking.value = false; level.value = 0f } }
                 @Deprecated("Deprecated in Java") override fun onError(id: String?) { _speaking.value = false; level.value = 0f }
             })
-            say(e, text, urdu)
+            say(e, text, urdu, persona)
         }
     }
 
-    private fun say(e: TextToSpeech, text: String, urdu: Boolean) {
+    private fun say(e: TextToSpeech, text: String, urdu: Boolean, persona: Persona? = null) {
         runCatching {
+            if (persona != null) {
+                e.setPitch(if (persona.male) 0.95f else 1.05f); e.setSpeechRate(1.05f)
+                val loc = if (urdu) Locale("ur", "PK") else Locale.US
+                if (e.isLanguageAvailable(loc) >= TextToSpeech.LANG_AVAILABLE) e.language = loc else e.language = Locale.US
+                val want = if (persona.male) "male" else "female"
+                e.voices?.filter { it.locale.language == e.language.language && !it.isNetworkConnectionRequired }
+                    ?.maxByOrNull { v -> val n = v.name.lowercase(); (if (want in n && !(want == "male" && "female" in n)) 5 else 0) + v.quality / 100 }
+                    ?.let { e.voice = it }
+                _speaking.value = true
+                val parts = sentences(text)
+                parts.forEachIndexed { i, p -> e.speak(p, if (i == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, if (i == parts.lastIndex) "last$i" else "pip$i") }
+                lastEngine.value = "Phone voice"
+                return
+            }
+            e.setPitch(1.2f); e.setSpeechRate(1.02f)
             val loc = if (urdu) Locale("ur", "PK") else Locale.US
             if (e.isLanguageAvailable(loc) >= TextToSpeech.LANG_AVAILABLE) e.language = loc else e.language = Locale.US
             if (!urdu) e.voices?.filter { it.locale.language == "en" && !it.isNetworkConnectionRequired }

@@ -71,7 +71,7 @@ fun FriendsHero(container: AppContainer, modifier: Modifier = Modifier, onOpenFr
     val social = container.social
     val user by social.user.collectAsState()
     var refresh by remember { mutableIntStateOf(0) }
-    remember { container.friendsRepo.ensureLoaded(); 0 }
+    LaunchedEffect(Unit) { container.friendsRepo.load() }
     val snap by container.friendsRepo.snap.collectAsState()
     LaunchedEffect(user, refresh) { if (user != null) runCatching { container.friendsRepo.refresh(if (refresh == 0) 120 else 0) } }
     val board = if (user != null && social.available) snap?.ranked else null
@@ -104,7 +104,7 @@ fun FriendsHero(container: AppContainer, modifier: Modifier = Modifier, onOpenFr
                 b.take(3).forEachIndexed { i, r ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("${i + 1}", style = FitType.label, color = if (i == 0) Color(0xFFFFC83D) else th.textDim, modifier = Modifier.width(20.dp))
-                        UserAvatar(r.avatar, r.photo, r.name, r.color, 30.dp)
+                        UserAvatar(r.avatar, r.photo, r.name, r.color, 30.dp, gphoto = r.gphoto, seed = r.uid)
                         Spacer(Modifier.width(8.dp))
                         Text(if (r.me) "You" else r.name, style = FitType.body, color = th.text, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         r.level?.let { LevelChip(it) }
@@ -135,7 +135,7 @@ fun FriendsGlimpse(container: AppContainer, modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     val social = container.social
     val user by social.user.collectAsState()
-    remember { container.friendsRepo.ensureLoaded(); 0 }
+    LaunchedEffect(Unit) { container.friendsRepo.load() }
     val snap by container.friendsRepo.snap.collectAsState()
     LaunchedEffect(user) { if (user != null) runCatching { container.friendsRepo.refresh(120) } }
     val board = if (user != null && social.available) snap?.ranked else null
@@ -145,7 +145,7 @@ fun FriendsGlimpse(container: AppContainer, modifier: Modifier = Modifier) {
             Box(Modifier.width((28 + 20 * (b.take(4).size - 1).coerceAtLeast(0)).dp).height(32.dp)) {
                 if (b.isEmpty()) Box(Modifier.size(32.dp).clip(CircleShape).background(th.accentBright.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
                     Icon(Duo.Person, null, tint = th.accentBright, modifier = Modifier.size(18.dp))
-                } else b.take(4).forEachIndexed { i, r -> Box(Modifier.offset(x = (i * 20).dp)) { UserAvatar(r.avatar, r.photo, r.name, r.color, 30.dp) } }
+                } else b.take(4).forEachIndexed { i, r -> Box(Modifier.offset(x = (i * 20).dp)) { UserAvatar(r.avatar, r.photo, r.name, r.color, 30.dp, gphoto = r.gphoto, seed = r.uid) } }
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {

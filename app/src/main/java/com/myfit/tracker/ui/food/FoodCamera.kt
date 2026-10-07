@@ -161,7 +161,7 @@ fun FoodCamera(
             val (luma, grid) = lumaStats(proxy)
             val motion = prevGrid?.let { p -> grid.indices.sumOf { i -> abs(grid[i] - p[i]).toDouble() } / grid.size } ?: 0.0
             prevGrid = grid
-            val media = proxy.image
+            @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class) val media = proxy.image
             if (media == null) { proxy.close(); return@setAnalyzer }
             busy.set(true)
             labeler.process(InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees))

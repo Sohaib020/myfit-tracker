@@ -22,7 +22,7 @@
       <div class="code" id="code">······</div>
       <div class="cta">
         <a class="btn primary" id="open" href="#">Open in MyFit</a>
-        <a class="btn ghost" href="https://github.com/Sohaib020/myfit-tracker/releases/latest/download/MyFitTracker.apk">⬇ Get the app</a>
+        <a class="btn ghost" id="get" href="https://github.com/Sohaib020/myfit-tracker/releases/latest/download/MyFitTracker.apk">⬇ Get the app</a>
       </div>
       <p class="ver" id="ver"></p>
     </div>
@@ -53,6 +53,11 @@
   if (name) document.getElementById('who').textContent = name;
   if (code) document.getElementById('code').textContent = code;
   document.getElementById('open').href = 'myfit://invite?c=' + encodeURIComponent(code);
+  // invites from store builds send new people to that store instead of the APK
+  var store = new URLSearchParams(location.search).get('s');
+  var get = document.getElementById('get');
+  if (store === 'galaxy') { get.href = 'https://galaxystore.samsung.com/detail/com.myfit.tracker'; get.textContent = 'Get it on Galaxy Store'; }
+  else if (store === 'play') { get.href = 'https://play.google.com/store/apps/details?id=com.myfit.tracker'; get.textContent = 'Get it on Google Play'; }
   try { new QRCode(document.getElementById('qr'), { text: location.href, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M }); } catch (e) {}
   fetch('https://api.github.com/repos/Sohaib020/myfit-tracker/releases/latest').then(r => r.json()).then(j => {
     document.getElementById('ver').textContent = 'Latest version: build ' + (j.tag_name || '').replace('build-', '');

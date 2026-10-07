@@ -207,6 +207,8 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         }
 
         // ---------- pip / AI
+        item { com.myfit.tracker.ui.settings.HealthProfileCard(container) }
+        item { com.myfit.tracker.ui.coach.ProTeamCard(container) }
         item { PipEntryCard(container) }
         item {
             GlassCard {
@@ -297,6 +299,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 var taps by remember { mutableIntStateOf(0) }
                 val toasterV = LocalToaster.current
                 Caption("Version ${BuildConfig.VERSION_NAME}", Modifier.clickableNoRipple {
+                    if (com.myfit.tracker.update.Store.isStoreBuild) return@clickableNoRipple   // store builds have no hidden menus
                     if (settings.devMode) { toasterV.show("Developer options are already on"); return@clickableNoRipple }
                     taps++
                     if (taps >= 7) { container.write { container.settings.setDevMode(true) }; toasterV.show("Developer options unlocked") }
@@ -317,7 +320,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 LiveNotifRow()
             }
         }
-        if (settings.devMode) item {
+        if (settings.devMode && !com.myfit.tracker.update.Store.isStoreBuild) item {
             val navD = com.myfit.tracker.ui.nav.LocalNav.current
             GlassCard(onClick = { navD.push(com.myfit.tracker.ui.nav.Overlay.DevSettings) }) {
                 CardHeader(Duo.Tune, "Developer options", th.textDim) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }

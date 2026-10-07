@@ -1,5 +1,9 @@
 package com.myfit.tracker.ui.social
 
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import com.myfit.tracker.ui.components.clickableNoRipple
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -123,6 +127,12 @@ fun FindFriendsCard(social: Social, refreshKey: Int, onChanged: () -> Unit) {
                             Text(r.name, style = FitType.label, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             if (r.username.isNotBlank()) Caption("@${r.username}")
                         }
+                        var armBlock by remember(r.uid) { mutableStateOf(false) }
+                        Icon(com.myfit.tracker.ui.theme.Duo.Close, "Block ${r.name}", tint = if (armBlock) th.danger else th.textFaint, modifier = Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).clickableNoRipple {
+                            if (!armBlock) { armBlock = true; toaster.show("Tap ✕ again to block ${r.name}"); return@clickableNoRipple }
+                            scope.launch { runCatching { social.block(r.uid) }.onSuccess { toaster.show("${r.name} is blocked") }; requests = requests - r }
+                        }.padding(6.dp))
+                        Spacer(Modifier.width(4.dp))
                         GlassButton("Decline", { scope.launch { runCatching { social.declineRequest(r.uid) }; requests = requests - r } }, height = 36.dp)
                         Spacer(Modifier.width(6.dp))
                         AccentButton("Accept", {

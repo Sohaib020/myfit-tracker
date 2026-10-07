@@ -9,6 +9,7 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.myfit.tracker.update.AppUpdater
+import com.myfit.tracker.update.Store
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
@@ -20,7 +21,8 @@ object Invite {
     val pending = MutableStateFlow<String?>(null)
 
     fun link(code: String, name: String): String =
-        AppUpdater.SITE + "invite.html?c=" + Uri.encode(code) + "&n=" + Uri.encode(name.take(24))
+        AppUpdater.SITE + "invite.html?c=" + Uri.encode(code) + "&n=" + Uri.encode(name.take(24)) +
+            (if (Store.isStoreBuild) "&s=" + Store.name else "")
 
     /** Pulls a friend code out of a myfit:// or invite-page link, or a bare code. */
     fun parse(raw: String?): String? {

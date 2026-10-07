@@ -31,6 +31,7 @@ import com.myfit.tracker.ui.arena.Journeys
 import com.myfit.tracker.ui.arena.Mascot
 import com.myfit.tracker.ui.components.Caption
 import com.myfit.tracker.ui.components.clickableNoRipple
+import kotlinx.coroutines.launch
 import com.myfit.tracker.ui.theme.FitType
 import com.myfit.tracker.ui.theme.LocalFitTheme
 
@@ -40,7 +41,7 @@ import com.myfit.tracker.ui.theme.LocalFitTheme
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun FriendProfileContent(container: AppContainer, f: com.myfit.tracker.social.FriendCard, onRemove: (() -> Unit)? = null) {
+fun FriendProfileContent(container: AppContainer, f: com.myfit.tracker.social.FriendCard, onRemove: (() -> Unit)? = null, onBlocked: (() -> Unit)? = null) {
     val th = LocalFitTheme.current
     val fresh by produceState<ArenaProfile?>(null, f.uid) { value = runCatching { container.social.arenaProfile(f.uid) }.getOrNull() }
     val level = fresh?.level ?: f.level
@@ -52,7 +53,7 @@ fun FriendProfileContent(container: AppContainer, f: com.myfit.tracker.social.Fr
     val rewards = fresh?.rewards ?: f.rewards
     val mascot = fresh?.mascot ?: f.mascot
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        UserAvatar(f.avatar, f.photo, f.name, f.color, 96.dp, ring = th.accentBright)
+        UserAvatar(f.avatar, f.photo, f.name, f.color, 96.dp, ring = th.accentBright, gphoto = f.gphoto, seed = f.uid)
         Spacer(Modifier.height(10.dp))
         Text(f.name, style = FitType.title, color = th.text, maxLines = 1)
         if (f.username.isNotBlank()) Caption("@${f.username}")
@@ -103,5 +104,53 @@ fun FriendProfileContent(container: AppContainer, f: com.myfit.tracker.social.Fr
         Text(if (confirm) "Tap again to remove ${f.name}" else "Remove friend", style = FitType.label, color = th.danger,
             modifier = Modifier.padding(top = 10.dp).clickableNoRipple { if (confirm) onRemove() else confirm = true }.padding(vertical = 8.dp))
     }
+    SafetyActions(container, f, onBlocked)
     Spacer(Modifier.height(10.dp))
+}
+
+
+/** Report (offensive picture / name, spam, impersonation…) and Block — required for any social feature. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SafetyActions(container: AppContainer, f: com.myfit.tracker.social.FriendCard, onBlocked: (() -> Unit)?) {
+    val th = LocalFitTheme.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val toaster = com.myfit.tracker.ui.components.LocalToaster.current
+    var reporting by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var reason by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    var details by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var confirmBlock by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+        com.myfit.tracker.ui.theme.GlassButton("Report", { reporting = !reporting }, Modifier.weight(1f), icon = com.myfit.tracker.ui.theme.Duo.Flag, height = 42.dp)
+        com.myfit.tracker.ui.theme.GlassButton(if (confirmBlock) "Tap to confirm" else "Block", {
+            if (!confirmBlock) { confirmBlock = true; return@GlassButton }
+            scope.launch {
+                runCatching { container.social.block(f.uid) }
+                    .onSuccess { toaster.show("${f.name} is blocked"); onBlocked?.invoke() }
+                    .onFailure { toaster.show(it.message ?: "Couldn't block — check your connection") }
+            }
+        }, Modifier.weight(1f), icon = com.myfit.tracker.ui.theme.Duo.Close, height = 42.dp)
+    }
+    if (reporting) {
+        Spacer(Modifier.height(10.dp))
+        Text("What's wrong?", style = FitType.label, color = th.textDim)
+        Spacer(Modifier.height(6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Offensive picture", "Offensive name", "Spam or fake", "Pretending to be someone", "Bullying", "Other").forEach { r ->
+                com.myfit.tracker.ui.theme.GlassChip(r, reason == r, { reason = r })
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        com.myfit.tracker.ui.social.Field(details, { details = it.take(500) }, "Anything else? (optional)")
+        Spacer(Modifier.height(8.dp))
+        com.myfit.tracker.ui.theme.AccentButton("Send report", {
+            val r = reason ?: run { toaster.show("Pick a reason"); return@AccentButton }
+            scope.launch {
+                runCatching { container.social.report(f.uid, r, details) }
+                    .onSuccess { toaster.show("Thanks — we'll review it. You can also block ${f.name}."); reporting = false; reason = null; details = "" }
+                    .onFailure { toaster.show(it.message ?: "Couldn't send — check your connection") }
+            }
+        }, Modifier.fillMaxWidth(), height = 44.dp)
+        Caption("Reports go to the MyFit team. ${f.name} isn't told who reported them.", Modifier.padding(top = 6.dp), color = th.textFaint)
+    }
 }

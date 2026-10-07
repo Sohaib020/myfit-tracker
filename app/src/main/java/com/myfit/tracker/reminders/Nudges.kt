@@ -216,7 +216,7 @@ object Nudges {
         p.edit().putString("day", todayKey).putInt("count", count + 1).putLong("last_at", System.currentTimeMillis()).apply()
         val card = when (s.type) {
             Type.WATER -> runCatching {
-                val (ml, target) = HabitActions.waterToday(c); val t = target ?: 2500.0
+                val (ml, target) = HabitActions.waterToday(c); val t = target?.takeIf { it > 0 } ?: 2500.0
                 val l = { v: Double -> "%.1f".format(java.util.Locale.US, v / 1000.0) }
                 com.myfit.tracker.notify.NCard(K.DROP, msg.first, msg.second, value = l(ml) + " L", progress = (ml / t).toFloat(), progressLabel = "${l(ml)} of ${l(t)} L today")
             }.getOrNull()

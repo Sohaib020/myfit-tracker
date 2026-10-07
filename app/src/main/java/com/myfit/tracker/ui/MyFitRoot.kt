@@ -384,6 +384,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.WeeklyReport -> com.myfit.tracker.ui.report.WeeklyReportScreen(container)
                         Overlay.Backup -> com.myfit.tracker.ui.settings.BackupScreen(container)
                         Overlay.MealPlans -> com.myfit.tracker.ui.food.MealPlansScreen(container)
+                        Overlay.Nutritionist -> com.myfit.tracker.ui.coach.NutritionistScreen(container)
                         is Overlay.PickExercises -> com.myfit.tracker.ui.train.PickExercisesScreen(container, o.templateId, o.workoutId)
                         is Overlay.ProgramDetail -> com.myfit.tracker.ui.programs.ProgramDetailScreen(container, o.id)
                         Overlay.Deen -> com.myfit.tracker.ui.deen.DeenScreen(container)
@@ -414,6 +415,8 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 }
                 PipTour(steps) { container.write { container.settings.setTourDone(true) } }
             }
+            // right after the tour: the optional Shariah & Health question (no longer part of onboarding)
+            com.myfit.tracker.ui.deen.DeenPopup(container, visible = s.tourDone && s.muslim == "unset" && top == null)
             LaunchedEffect(Unit) { com.myfit.tracker.domain.BadgeEngine.refresh(container, force = true) }
             // self-update from GitHub releases (checks on launch; downloads on Wi-Fi; user taps Install)
             LaunchedEffect(Unit) { runCatching { com.myfit.tracker.update.AppUpdater.autoRun(container.app) } }

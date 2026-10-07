@@ -19,8 +19,9 @@ android {
         applicationId = "com.myfit.tracker"
         minSdk = 26
         targetSdk = 36
-        versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
-        versionName = "0.1." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
+        // store builds pass their own numbers (MYFIT_VERSION_CODE / _NAME); GitHub builds use the run number
+        versionCode = System.getenv("MYFIT_VERSION_CODE")?.toIntOrNull() ?: (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
+        versionName = System.getenv("MYFIT_VERSION_NAME") ?: ("0.1." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0"))
         vectorDrawables { useSupportLibrary = true }
         // No AI provider keys are compiled in (they could be extracted from the APK). Online AI goes through
         // MyFit's proxy (server/ai-proxy) which holds the keys as server secrets; users may also add their own key.
@@ -57,17 +58,28 @@ android {
         // the screenshot test runs in its own workflow (ui-shots.yml), not in every APK build
         if (!project.hasProperty("shots")) t.exclude("**/*ShotTest*")
     } } }
-    // Two stores: "github" (sideloaded, self-updating — what CI publishes) and "play" (no self-updater, no
-    // REQUEST_INSTALL_PACKAGES — Google Play forbids apps that update themselves outside Play).
+    // Stores: "github" (sideloaded, self-updating — what CI publishes), "play" and "galaxy" (no self-updater, no
+    // REQUEST_INSTALL_PACKAGES — both stores forbid apps that update themselves or offer app downloads).
     flavorDimensions += "store"
     productFlavors {
         create("github") {
             dimension = "store"
             buildConfigField("boolean", "SELF_UPDATE", "true")
+            buildConfigField("String", "STORE", "\"github\"")
+            buildConfigField("String", "STORE_URL", "\"\"")
         }
         create("play") {
             dimension = "store"
             buildConfigField("boolean", "SELF_UPDATE", "false")
+            buildConfigField("String", "STORE", "\"play\"")
+            buildConfigField("String", "STORE_URL", "\"https://play.google.com/store/apps/details?id=com.myfit.tracker\"")
+        }
+        // Samsung Galaxy Store: like Play — no self-updater, no install-packages permission, no APK download links
+        create("galaxy") {
+            dimension = "store"
+            buildConfigField("boolean", "SELF_UPDATE", "false")
+            buildConfigField("String", "STORE", "\"galaxy\"")
+            buildConfigField("String", "STORE_URL", "\"https://galaxystore.samsung.com/detail/com.myfit.tracker\"")
         }
     }
     buildTypes {
@@ -122,6 +134,7 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
     implementation("androidx.activity:activity-compose:1.9.2")
@@ -159,6 +172,8 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$camerax")
     implementation("androidx.camera:camera-view:$camerax")
     implementation("com.google.mlkit:image-labeling:17.0.9")
+    // pro trainer camera mode: on-device body landmarks for rep counting and form checks (no images leave the phone)
+    implementation("com.google.mlkit:pose-detection:18.0.0-beta5")
     // accounts, friends & leaderboards
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth")

@@ -53,6 +53,9 @@ class AdaptiveShotTest {
     private val pairs = listOf(
         "Build my day" to "Empty workout", "Start now" to "Save to My workout days", "Back up now" to "Restore from Drive",
         "Save to a file" to "Restore from file", "Accept" to "Decline", "Build a day" to "Start from scratch",
+        // R15: pro trainer, nutritionist, health profile
+        "Start set 1" to "Form tip", "Finish set" to "Pause", "Save set" to "Redo", "Skip rest" to "+15 s",
+        "Hear Zarak" to "Open Areesha", "Add it" to "Cancel",
     )
 
     @OptIn(ExperimentalLayoutApi::class)
@@ -72,6 +75,7 @@ class AdaptiveShotTest {
                         }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             QUICK_DAYS.forEach { (l, _) -> GlassChip(l, l == "Chest & Biceps", {}) }
+                            listOf("Voice & tempo", "Camera", "Today", "Meal review", "Week & groceries", "Chat", "Female coach (hijab)").forEach { GlassChip(it, it == "Camera", {}) }
                         }
                     }
                 }

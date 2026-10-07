@@ -8,6 +8,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.foundation.shape.CircleShape
 import com.myfit.tracker.ui.components.fadeEdges
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -99,6 +100,10 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
     var picked by remember { mutableStateOf<Food?>(null) }
     var custom by remember { mutableStateOf<String?>(null) }   // non-null = open custom form (value = barcode or "")
     var busy by remember { mutableStateOf<String?>(null) }
+    remember { com.myfit.tracker.domain.HealthProfile.load(ctx); 0 }
+    val showUnsuitable by com.myfit.tracker.domain.HealthProfile.showUnsuitable.collectAsState()
+    val healthSel by com.myfit.tracker.domain.HealthProfile.selected.collectAsState()
+    val muslim = com.myfit.tracker.ui.theme.LocalSettings.current.muslim == "yes"
     val favVer by FoodFavs.version.collectAsState()
     val favIds = remember(favVer) { FoodFavs.ids(ctx) }
     val favFoods by androidx.compose.runtime.produceState(emptyList<Food>(), favIds) { value = favIds.mapNotNull { container.nutritionRepo.food(it) }.sortedBy { it.name } }
@@ -171,7 +176,7 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
             }
             if (tab == 3) {
                 if (favFoods.isEmpty()) item { Caption("Tap the ☆ on any food to keep it here for one-tap logging.") }
-                items(favFoods, key = { "fav" + it.id }) { f -> FoodRow(f, container.nutritionRepo.meta(f)?.photo, f.id in favIds, { toggleFav(f) }) { picked = f } }
+                items(favFoods, key = { "fav" + it.id }) { f -> FoodRow(f, container.nutritionRepo.meta(f)?.photo, f.id in favIds, { toggleFav(f) }, container.nutritionRepo.judge(f, muslim)) { picked = f } }
             } else if (tab == 0) {
                 val list = when {
                     query.isNotBlank() -> results
@@ -179,7 +184,15 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
                     else -> recent.ifEmpty { results }
                 }
                 item { Text(when { query.isNotBlank() -> "RESULTS"; cat != null -> cat!!.uppercase() + " · ${list.size}"; recent.isNotEmpty() -> "RECENT"; else -> "FOODS" }, style = FitType.overline, color = th.textDim) }
-                items(list, key = { "f" + it.id }) { f -> FoodRow(f, container.nutritionRepo.meta(f)?.photo, f.id in favIds, { toggleFav(f) }) { picked = f } }
+                // foods that don't suit your health profile are hidden (or shown with a warning if you choose)
+                val shown = if (showUnsuitable) list else list.filter { container.nutritionRepo.judge(it, muslim).verdict != com.myfit.tracker.domain.HealthProfile.Verdict.AVOID }
+                items(shown, key = { "f" + it.id }) { f -> FoodRow(f, container.nutritionRepo.meta(f)?.photo, f.id in favIds, { toggleFav(f) }, container.nutritionRepo.judge(f, muslim)) { picked = f } }
+                val hidden = list.size - shown.size
+                if (hidden > 0 || (showUnsuitable && com.myfit.tracker.domain.HealthProfile.active.isNotEmpty())) item {
+                    Text(if (showUnsuitable) "Hide foods that don't suit me" else "$hidden food${if (hidden == 1) "" else "s"} hidden for your health profile · Show",
+                        style = FitType.label, color = th.accentBright,
+                        modifier = Modifier.clickableNoRipple { com.myfit.tracker.domain.HealthProfile.setShowUnsuitable(ctx, !showUnsuitable) }.padding(vertical = 8.dp))
+                }
                 if (query.isNotBlank() && results.isEmpty()) item {
                     Caption("No match. Try another spelling, snap a photo, or add it as a custom food.")
                 }
@@ -226,6 +239,12 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
             }
             Caption(listOfNotNull(f.brand, "${Fmt.int(f.calories)} ${com.myfit.tracker.domain.EnergyUnit.label} per ${Fmt.trim(f.servingSize, 1)} ${f.servingUnit}" + (f.servingGrams?.takeIf { !byWeight }?.let { " (~${Fmt.int(it)} g)" } ?: "")).joinToString(" · "))
             if (f.source == NutritionSource.DATABASE) Caption(f.sourceRef ?: "Typical values — recipes and portions vary.", color = th.textFaint)
+            val jd = container.nutritionRepo.judge(f, muslim)
+            if (!jd.ok) {
+                Spacer(Modifier.height(10.dp))
+                val swaps by androidx.compose.runtime.produceState(emptyList<Food>(), f.id, healthSel) { value = container.nutritionRepo.swaps(f, muslim) }
+                HealthWarningCard(jd, swaps.map { it.name }) { name -> swaps.firstOrNull { it.name == name }?.let { picked = it } }
+            }
             Spacer(Modifier.height(12.dp))
             NumberInput(amount, { amount = it }, if (byWeight) f.servingUnit else "servings")
             Spacer(Modifier.height(10.dp))
@@ -289,7 +308,7 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
 }
 
 @Composable
-private fun FoodRow(f: Food, photo: String?, fav: Boolean, onFav: () -> Unit, onClick: () -> Unit) {
+private fun FoodRow(f: Food, photo: String?, fav: Boolean, onFav: () -> Unit, judge: com.myfit.tracker.domain.HealthProfile.Judgement? = null, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), onClick = onClick) {
         Row(Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -298,6 +317,7 @@ private fun FoodRow(f: Food, photo: String?, fav: Boolean, onFav: () -> Unit, on
             Column(Modifier.weight(1f)) {
                 Text(f.name, style = FitType.body, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Caption(listOfNotNull(f.brand, "${Fmt.trim(f.servingSize, 1)} ${f.servingUnit}", "P ${Fmt.int(f.proteinG)} · C ${Fmt.int(f.carbsG)} · F ${Fmt.int(f.fatG)}").joinToString(" · "))
+                if (judge != null && !judge.ok) HealthBadge(judge)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(Fmt.int(f.calories), style = FitType.section, color = th.text)
@@ -318,6 +338,44 @@ private fun ActionTile(label: String, icon: androidx.compose.ui.graphics.vector.
             com.myfit.tracker.ui.components.IconBubble(icon, color, 34.dp)
             Spacer(Modifier.height(6.dp))
             Text(label, style = FitType.caption, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+
+/** Small amber / red line under a food or exercise that doesn't suit the user's health profile. */
+@Composable
+fun HealthBadge(j: com.myfit.tracker.domain.HealthProfile.Judgement) {
+    val th = LocalFitTheme.current
+    val avoid = j.verdict == com.myfit.tracker.domain.HealthProfile.Verdict.AVOID
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 3.dp)) {
+        Icon(Duo.Info, null, tint = if (avoid) th.danger else th.warning, modifier = Modifier.size(13.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(j.reasons.firstOrNull().orEmpty(), style = FitType.caption, color = if (avoid) th.danger else th.warning, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Warning card with every reason and up to three safer swaps (tap one to switch to it). */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+fun HealthWarningCard(j: com.myfit.tracker.domain.HealthProfile.Judgement, swaps: List<String>, onSwap: (String) -> Unit) {
+    val th = LocalFitTheme.current
+    val avoid = j.verdict == com.myfit.tracker.domain.HealthProfile.Verdict.AVOID
+    val c = if (avoid) th.danger else th.warning
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(c.copy(alpha = 0.12f)).padding(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Duo.Info, null, tint = c, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(if (avoid) "Doesn't suit your health profile" else "Have a smaller portion", style = FitType.label, color = c)
+        }
+        j.reasons.forEach { Caption("• $it", color = th.text) }
+        if (swaps.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text("Try instead", style = FitType.caption, color = th.textDim)
+            Spacer(Modifier.height(4.dp))
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                swaps.forEach { s -> GlassChip(s, false, { onSwap(s) }) }
+            }
         }
     }
 }
