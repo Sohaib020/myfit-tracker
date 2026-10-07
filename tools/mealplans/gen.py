@@ -13,47 +13,47 @@ def I(i, q, step=0, lo=None, hi=None): return [i, q, step, q if lo is None else 
 
 DAYS = [
   {"name": "Day 1", "meals": {
-    "BREAKFAST": [I("oats", 1, 0.5, 0.5, 3), I("milk_low", 1), I("banana", 1, 1, 0, 1), I("egg_boiled", 2, 1, 1, 3)],
+    "BREAKFAST": [I("omelette", 1), I("roti", 1, 1, 1, 3), I("tea_sugar", 1)],
     "LUNCH": [I("daal_masoor", 1, 0.5, 0.5, 1.5), I("roti", 2, 1, 1, 6), I("salad", 1), I("raita", 1)],
-    "SNACK": [I("apple", 1), I("almonds", 0.5, 0.5, 0, 1.5), I("protein_shake", 0, 1, 0, 1)],
-    "DINNER": [I("chicken_jalfrezi", 1, 0.5, 0.5, 1.5), I("roti", 1, 1, 1, 5), I("salad", 1)]}},
+    "SNACK": [I("guava", 1), I("ublay_chanay", 0.5, 0.5, 0, 1), I("kachi_lassi", 1)],
+    "DINNER": [I("chicken_karahi", 0.5, 0.5, 0.5, 1.5), I("roti", 1, 1, 1, 5), I("salad", 1)]}},
   {"name": "Day 2", "meals": {
-    "BREAKFAST": [I("omelette", 1), I("bread_brown", 2, 1, 1, 3), I("tea_sugar", 1)],
+    "BREAKFAST": [I("anda_channay", 0.5, 0.5, 0.5, 1), I("roti", 1, 1, 1, 3), I("tea_sugar", 1)],
     "LUNCH": [I("chana_masala", 1, 0.5, 0.5, 1.5), I("rice_white", 1, 0.5, 0.5, 3), I("salad", 1)],
-    "SNACK": [I("yogurt", 1), I("dates", 1, 1, 0, 2), I("peanut_butter", 0, 0.5, 0, 1), I("bread_brown", 0, 1, 0, 2)],
-    "DINNER": [I("fish_curry", 1, 0.5, 0.5, 1.5), I("phulka", 2, 1, 1, 6), I("aloo_gobi", 0.5, 0.5, 0, 1)]}},
+    "SNACK": [I("yogurt", 1), I("dates", 1, 1, 0, 2), I("peanuts", 0, 0.5, 0, 1.5)],
+    "DINNER": [I("fish_curry", 1, 0.5, 0.5, 1.5), I("phulka", 2, 1, 1, 6), I("bhindi", 0.5, 0.5, 0, 1)]}},
   {"name": "Day 3", "meals": {
     "BREAKFAST": [I("daliya", 1, 0.5, 0.5, 1.5), I("egg_boiled", 1, 1, 1, 3), I("guava", 1)],
     "LUNCH": [I("chicken_handi", 0.5, 0.5, 0.5, 1.5), I("roti", 2, 1, 1, 6), I("salad", 1)],
-    "SNACK": [I("chaat", 0.5, 0.5, 0.5, 1), I("protein_shake", 0, 1, 0, 1)],
-    "DINNER": [I("daal_moong", 1, 0.5, 0.5, 1.5), I("mix_sabzi", 0.5, 0.5, 0, 1), I("roti", 1, 1, 1, 5), I("raita", 1)]}},
+    "SNACK": [I("chaat", 0.5, 0.5, 0.5, 1), I("lassi_salty", 0, 1, 0, 1)],
+    "DINNER": [I("daal_moong", 1, 0.5, 0.5, 1.5), I("lauki", 0.5, 0.5, 0, 1), I("roti", 1, 1, 1, 5), I("raita", 1)]}},
   {"name": "Day 4", "meals": {
     "BREAKFAST": [I("paratha_plain", 0.5, 0.5, 0.5, 1), I("omelette", 1), I("tea_sugar", 1)],
-    "LUNCH": [I("lobia", 1, 0.5, 0.5, 1.5), I("rice_brown", 1, 0.5, 0.5, 3), I("salad", 1)],
+    "LUNCH": [I("lobia", 1, 0.5, 0.5, 1.5), I("rice_white", 1, 0.5, 0.5, 3), I("salad", 1)],
     "SNACK": [I("orange", 1), I("peanuts", 0.5, 0.5, 0, 1.5), I("milk_whole", 0, 1, 0, 1)],
     "DINNER": [I("chicken_tikka", 1, 1, 1, 2), I("roti", 1, 1, 1, 5), I("raita", 1), I("salad", 1)]}},
   {"name": "Day 5", "meals": {
-    "BREAKFAST": [I("greek_yogurt", 1), I("oats", 0.5, 0.5, 0.5, 1.5), I("mango", 1, 0.5, 0.5, 1), I("honey", 0.5)],
+    "BREAKFAST": [I("yogurt", 1), I("egg_boiled", 2, 1, 1, 3), I("roti", 1, 1, 1, 2), I("tea_sugar", 1)],
     "LUNCH": [I("keema_matar", 1, 0.5, 0.5, 1.5), I("roti", 2, 1, 1, 6), I("salad", 1)],
-    "SNACK": [I("lassi_salty", 1), I("almonds", 0, 0.5, 0, 1), I("banana", 0, 1, 0, 1)],
-    "DINNER": [I("palak", 0.5, 0.5, 0.5, 1), I("daal_mash", 0.5, 0.5, 0.5, 1), I("phulka", 2, 1, 1, 6)]}},
+    "SNACK": [I("sattu", 1), I("almonds", 0, 0.5, 0, 1), I("banana", 0, 1, 0, 1)],
+    "DINNER": [I("saag", 0.5, 0.5, 0.5, 1), I("daal_mash", 0.5, 0.5, 0.5, 1), I("phulka", 2, 1, 1, 6)]}},
   {"name": "Day 6", "meals": {
-    "BREAKFAST": [I("egg_boiled", 2, 1, 2, 3), I("bread_brown", 2, 1, 1, 3), I("milk_low", 1)],
+    "BREAKFAST": [I("egg_boiled", 2, 1, 2, 3), I("roti", 1, 1, 1, 3), I("milk_low", 1)],
     "LUNCH": [I("chana_pulao", 1, 0.5, 0.5, 1.5), I("raita", 1), I("salad", 1)],
-    "SNACK": [I("banana", 1), I("almonds", 0.5, 0.5, 0, 1.5), I("protein_shake", 0, 1, 0, 1)],
+    "SNACK": [I("banana", 1), I("almonds", 0.5, 0.5, 0, 1.5), I("lassi_salty", 0, 1, 0, 1)],
     "DINNER": [I("chicken_boti", 1, 0.5, 1, 2), I("roti", 1, 1, 1, 5), I("salad", 1)]}},
   {"name": "Day 7", "meals": {
     "BREAKFAST": [I("anda_paratha", 0.5, 0.5, 0.5, 1), I("tea_sugar", 1)],
     "LUNCH": [I("chicken_biryani", 0.5, 0.5, 0.5, 1.5), I("raita", 1), I("salad", 1)],
-    "SNACK": [I("guava", 1), I("yogurt", 1), I("peanut_butter", 0, 0.5, 0, 1), I("bread_brown", 0, 1, 0, 2)],
+    "SNACK": [I("guava", 1), I("yogurt", 1), I("gur_chanay", 0, 0.5, 0, 1)],
     "DINNER": [I("daal_chana", 1, 0.5, 0.5, 1.5), I("baingan_bharta", 0.5, 0.5, 0, 1), I("roti", 1, 1, 1, 5)]}},
 ]
 BANDS = [1400, 1600, 1800, 2000, 2200, 2500, 2800, 3200]
 # when adding, prefer carbs/protein portions; when trimming, prefer extras first
-ADD_ORDER = ["roti", "phulka", "rice_white", "rice_brown", "oats", "chicken_jalfrezi", "chicken_handi", "chicken_tikka", "chicken_boti", "fish_curry",
-             "keema_matar", "daal_masoor", "daal_moong", "daal_chana", "chana_masala", "lobia", "egg_boiled", "bread_brown", "almonds", "peanuts",
-             "dates", "banana", "paratha_plain", "anda_paratha", "chana_pulao", "chicken_biryani", "daliya", "mango", "palak", "daal_mash", "mix_sabzi",
-             "aloo_gobi", "baingan_bharta", "chaat", "milk_whole", "peanut_butter", "protein_shake"]
+ADD_ORDER = ["roti", "phulka", "rice_white", "chicken_karahi", "chicken_handi", "chicken_tikka", "chicken_boti", "fish_curry",
+             "keema_matar", "daal_masoor", "daal_moong", "daal_chana", "chana_masala", "lobia", "egg_boiled", "almonds", "peanuts",
+             "dates", "banana", "ublay_chanay", "paratha_plain", "anda_paratha", "anda_channay", "chana_pulao", "chicken_biryani", "daliya", "saag", "daal_mash", "lauki",
+             "bhindi", "baingan_bharta", "chaat", "milk_whole", "lassi_salty", "gur_chanay"]
 
 def kcal(items): return sum(F[i]['kcal'] * q for i, q, *_ in items)
 def prot(items): return sum(F[i]['p'] * q for i, q, *_ in items)
@@ -76,7 +76,7 @@ def fit(day, target):
         ADD_ORDER.append(ADD_ORDER.pop(ADD_ORDER.index(best[0]))) if up and best[0] in ADD_ORDER else None
     return meals
 
-UNIT = {"piece": ("", ""), "bowl": ("katori", "katori"), "cup": ("cup", "cups"), "plate": ("plate", "plates"), "glass": ("glass", "glasses"),
+UNIT = {"piece": ("", ""), "bowl": ("katori", "katori"), "katori": ("katori", "katori"), "skewer": ("seekh", "seekhs"), "cup": ("cup", "cups"), "plate": ("plate", "plates"), "glass": ("glass", "glasses"),
         "medium": ("", ""), "large": ("", ""), "serving": ("serving", "servings"), "slice": ("slice", "slices"), "tbsp": ("tbsp", "tbsp"), "scoop": ("scoop", "scoops")}
 
 def qty_text(q):
