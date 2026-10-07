@@ -70,7 +70,7 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
         return dao.builtIn().first().filter { it.id != f.id && metaMap[it.uuid]?.category == cat && judge(it, muslim).ok }
             .sortedBy { kotlin.math.abs(it.calories - f.calories) }.take(n)
     }
-    val categories: List<String> get() = listOf("Breakfast", "Breads", "Rice", "Curries", "Daal & Beans", "BBQ & Kebabs", "Vegetables", "Street food", "Fast food", "Restaurant", "Indian", "Regional", "Sweets", "Drinks", "Fruit", "Dairy & Eggs", "Meat & Fish", "Snacks & Nuts", "Basics")
+    val categories: List<String> get() = listOf("Breakfast", "Breads", "Rice", "Curries", "Daal & Beans", "BBQ & Kebabs", "Vegetables", "Street food", "Fast food", "Restaurant", "Regional", "Sweets", "Drinks", "Fruit", "Dairy & Eggs", "Meat & Fish", "Snacks & Nuts", "Basics", "Indian")
 
     /** Name/brand search plus Roman-Urdu aliases ("kardi", "nehari", "anda"). */
     fun search(q: String): kotlinx.coroutines.flow.Flow<List<Food>> {
