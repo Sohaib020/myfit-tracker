@@ -109,8 +109,9 @@ fun HealthProfilePicker(container: AppContainer, compact: Boolean = false) {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(th.accent.copy(alpha = 0.12f)).padding(14.dp)) {
             Text("\"${p.label}\" — here's what MyFit will do", style = FitType.label, color = th.text)
             Spacer(Modifier.height(6.dp))
-            fun line(t: String, s: Set<String>) { if (s.isNotEmpty()) Caption("$t: " + s.joinToString { HealthProfile.tagLabel(it).lowercase() }, color = th.text) }
-            line("Avoid foods", p.avoid); line("Limit foods", p.limit); line("Avoid exercises", p.avoidEx); line("Careful with", p.limitEx)
+            listOf("Avoid foods" to p.avoid, "Limit foods" to p.limit, "Avoid exercises" to p.avoidEx, "Careful with" to p.limitEx).forEach { (t, set) ->
+                if (set.isNotEmpty()) Caption("$t: " + set.joinToString { HealthProfile.tagLabel(it).lowercase() }, color = th.text)
+            }
             if (p.tip.isNotBlank()) Caption("Tip: ${p.tip}", color = th.textDim)
             if (p.avoid.isEmpty() && p.limit.isEmpty() && p.avoidEx.isEmpty() && p.limitEx.isEmpty()) Caption("No special food or exercise rules — it's kept as a note for your trainer and nutritionist.", color = th.textDim)
             Spacer(Modifier.height(10.dp))

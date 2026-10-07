@@ -476,8 +476,8 @@ private fun ColumnScope.StepBody(st: Int, s: SetupState, container: AppContainer
  * step numbers under it in [ADDED]; existing users are asked just those, once, on the first launch after updating.
  */
 object OnboardingVersion {
-    const val CURRENT = 2
-    private val ADDED = mapOf(2 to listOf(2, 11, 12))   // v2: date of birth, training days, your week
+    const val CURRENT = 3
+    private val ADDED = mapOf(2 to listOf(2, 11, 12), 3 to listOf(5))   // v2: date of birth, training days, your week · v3: health & diet
     private fun prefs(c: android.content.Context) = c.getSharedPreferences("onboarding", android.content.Context.MODE_PRIVATE)
     /** Profiles created before versioning existed count as v1. */
     fun stored(c: android.content.Context) = prefs(c).getInt("version", 1)
@@ -529,7 +529,7 @@ fun OnboardingCatchUp(container: AppContainer, profile: UserProfile, units: Unit
                     Text("A few new questions", style = FitType.display, color = th.text, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(10.dp))
                     Caption("This update improves your plan. ${steps.size} quick question${if (steps.size == 1) "" else "s"} and you're back in.", Modifier.padding(horizontal = 12.dp))
-                } else StepBody(steps[k], s)
+                } else StepBody(steps[k], s, container)
                 Spacer(Modifier.height(24.dp))
             }
         }
