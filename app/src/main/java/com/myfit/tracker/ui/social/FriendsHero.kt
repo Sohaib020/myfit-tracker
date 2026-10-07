@@ -104,7 +104,7 @@ fun FriendsHero(container: AppContainer, modifier: Modifier = Modifier, onOpenFr
                 b.take(3).forEachIndexed { i, r ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("${i + 1}", style = FitType.label, color = if (i == 0) Color(0xFFFFC83D) else th.textDim, modifier = Modifier.width(20.dp))
-                        UserAvatar(r.avatar, r.photo, r.name, r.color, 30.dp)
+                        UserAvatar(r.avatar, r.photo, r.name, r.color, 30.dp, gphoto = r.gphoto, seed = r.uid)
                         Spacer(Modifier.width(8.dp))
                         Text(if (r.me) "You" else r.name, style = FitType.body, color = th.text, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         r.level?.let { LevelChip(it) }
@@ -145,7 +145,7 @@ fun FriendsGlimpse(container: AppContainer, modifier: Modifier = Modifier) {
             Box(Modifier.width((28 + 20 * (b.take(4).size - 1).coerceAtLeast(0)).dp).height(32.dp)) {
                 if (b.isEmpty()) Box(Modifier.size(32.dp).clip(CircleShape).background(th.accentBright.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
                     Icon(Duo.Person, null, tint = th.accentBright, modifier = Modifier.size(18.dp))
-                } else b.take(4).forEachIndexed { i, r -> Box(Modifier.offset(x = (i * 20).dp)) { UserAvatar(r.avatar, r.photo, r.name, r.color, 30.dp) } }
+                } else b.take(4).forEachIndexed { i, r -> Box(Modifier.offset(x = (i * 20).dp)) { UserAvatar(r.avatar, r.photo, r.name, r.color, 30.dp, gphoto = r.gphoto, seed = r.uid) } }
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {

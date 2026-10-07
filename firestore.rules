@@ -15,7 +15,9 @@ service cloud.firestore {
         && d.name is string && d.name.size() <= 24
         && (!('level' in d) || (d.level is int && d.level >= 1 && d.level <= 60))
         && (!('mascot' in d) || (d.mascot is string && d.mascot.size() <= 12))
-        && d.keys().hasOnly(['name', 'color', 'steps', 'activeMin', 'distanceM', 'days', 'updatedAt', 'level', 'mascot']);
+        && (!('avatar' in d) || (d.avatar is string && d.avatar.size() <= 40))
+        && (!('gphoto' in d) || (d.gphoto is string && d.gphoto.size() <= 300))
+        && d.keys().hasOnly(['name', 'color', 'steps', 'activeMin', 'distanceM', 'days', 'updatedAt', 'level', 'mascot', 'avatar', 'gphoto']);
     }
     function isDate(v) { return v is string && v.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'); }
 
@@ -23,7 +25,8 @@ service cloud.firestore {
       // public profile: display name, colour and whether you appear on the global board — nothing else
       allow read: if signedIn();
       allow create, update: if isMe(uid) && request.resource.data.name is string && request.resource.data.name.size() <= 24
-        && request.resource.data.keys().hasOnly(['name', 'public', 'color', 'createdAt', 'username', 'avatar'])
+        && request.resource.data.keys().hasOnly(['name', 'public', 'color', 'createdAt', 'username', 'avatar', 'gphoto'])
+        && (!('gphoto' in request.resource.data) || (request.resource.data.gphoto is string && request.resource.data.gphoto.size() <= 300))
         && (!('avatar' in request.resource.data) || (request.resource.data.avatar is string && request.resource.data.avatar.size() <= 40))
         // a username must be one you own in /usernames (claimed in the same transaction)
         && (!('username' in request.resource.data) || (resource != null && request.resource.data.username == resource.data.get('username', ''))
