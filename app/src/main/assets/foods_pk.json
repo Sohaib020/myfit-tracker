@@ -10921,30 +10921,6 @@
   ]
  },
  {
-  "id": "piyaz_paratha",
-  "name": "Piyaz paratha (onion)",
-  "category": "Breads",
-  "serving": 1,
-  "unit": "piece",
-  "grams": 140,
-  "kcal": 365,
-  "p": 7,
-  "c": 48,
-  "f": 16,
-  "fiber": 4,
-  "wiki": "",
-  "aliases": [
-   "pyaz paratha",
-   "onion paratha",
-   "piaz wala paratha",
-   "ganday wala paratha"
-  ],
-  "basis": "typical",
-  "tags": [
-   "gluten"
-  ]
- },
- {
   "id": "shakar_paratha",
   "name": "Shakkar / gur paratha",
   "category": "Breakfast",
@@ -11772,7 +11748,11 @@
    "desi murgi shorba",
    "desi chicken salan",
    "desi kukkar shorba",
-   "murgh shorba desi"
+   "murgh shorba desi",
+   "desi chicken shorba",
+   "desi murgh salan",
+   "country chicken curry",
+   "desi kukkar"
   ],
   "basis": "typical"
  },
@@ -11913,27 +11893,6 @@
   "basis": "typical"
  },
  {
-  "id": "gobi_gosht",
-  "name": "Gobi gosht",
-  "category": "Curries",
-  "serving": 1,
-  "unit": "katori",
-  "grams": 250,
-  "kcal": 350,
-  "p": 22,
-  "c": 12,
-  "f": 24,
-  "fiber": 4,
-  "wiki": "",
-  "aliases": [
-   "gobhi gosht",
-   "phool gobi gosht",
-   "cauliflower gosht",
-   "gobi wala gosht"
-  ],
-  "basis": "typical"
- },
- {
   "id": "lobia_gosht",
   "name": "Lobia gosht",
   "category": "Curries",
@@ -11951,27 +11910,6 @@
    "lobiya gosht",
    "rawan gosht",
    "black eyed beans gosht"
-  ],
-  "basis": "typical"
- },
- {
-  "id": "tinday_gosht",
-  "name": "Tinday gosht",
-  "category": "Curries",
-  "serving": 1,
-  "unit": "katori",
-  "grams": 250,
-  "kcal": 320,
-  "p": 20,
-  "c": 10,
-  "f": 22,
-  "fiber": 3,
-  "wiki": "",
-  "aliases": [
-   "tinda gosht",
-   "tinday gosht",
-   "tinde gosht",
-   "round gourd gosht"
   ],
   "basis": "typical"
  },
@@ -12150,30 +12088,6 @@
   ]
  },
  {
-  "id": "band_gobi_keema",
-  "name": "Band gobi keema",
-  "category": "Curries",
-  "serving": 1,
-  "unit": "katori",
-  "grams": 200,
-  "kcal": 290,
-  "p": 18,
-  "c": 10,
-  "f": 20,
-  "fiber": 3,
-  "wiki": "",
-  "aliases": [
-   "band gobhi qeema",
-   "cabbage keema",
-   "bandgobi keema",
-   "patta gobi keema"
-  ],
-  "basis": "typical",
-  "tags": [
-   "beef"
-  ]
- },
- {
   "id": "chana_daal_chicken",
   "name": "Chana daal murgh",
   "category": "Curries",
@@ -12236,27 +12150,6 @@
    "wadiyan aloo",
    "alu wadi",
    "wari aloo"
-  ],
-  "basis": "typical"
- },
- {
-  "id": "shaljam_sabzi",
-  "name": "Shaljam (turnip) sabzi",
-  "category": "Vegetables",
-  "serving": 1,
-  "unit": "katori",
-  "grams": 200,
-  "kcal": 160,
-  "p": 3,
-  "c": 14,
-  "f": 10,
-  "fiber": 4,
-  "wiki": "",
-  "aliases": [
-   "shalgam ki sabzi",
-   "gonglu",
-   "shaljam bhujia",
-   "turnip sabzi"
   ],
   "basis": "typical"
  },
@@ -12385,7 +12278,11 @@
    "aloo da bharta",
    "alu bharta",
    "aloo chokha",
-   "mashed aloo masala"
+   "mashed aloo masala",
+   "aloo bharta",
+   "aaloo ka bharta",
+   "mashed potato bharta",
+   "aloo ka bharta"
   ],
   "basis": "typical"
  },
@@ -12654,31 +12551,6 @@
   "basis": "typical",
   "tags": [
    "gluten"
-  ]
- },
- {
-  "id": "muttanjan",
-  "name": "Muttanjan (shadi sweet rice)",
-  "category": "Sweets",
-  "serving": 1,
-  "unit": "plate",
-  "grams": 200,
-  "kcal": 545,
-  "p": 5,
-  "c": 95,
-  "f": 16,
-  "fiber": 1,
-  "wiki": "",
-  "aliases": [
-   "mutanjan",
-   "mutunjan",
-   "muttanjan zarda",
-   "rangeen zarda"
-  ],
-  "basis": "typical",
-  "tags": [
-   "high_sugar",
-   "nuts"
   ]
  },
  {
@@ -13869,30 +13741,6 @@
    "country chicken pulao"
   ],
   "basis": "typical"
- },
- {
-  "id": "bharwan_karelay",
-  "name": "Bharwan karelay (keema stuffed)",
-  "category": "Vegetables",
-  "serving": 1,
-  "unit": "serving",
-  "grams": 200,
-  "kcal": 320,
-  "p": 16,
-  "c": 14,
-  "f": 22,
-  "fiber": 5,
-  "wiki": "",
-  "aliases": [
-   "bharay karelay",
-   "stuffed karela",
-   "keema bharay karelay",
-   "bharwan karela"
-  ],
-  "basis": "typical",
-  "tags": [
-   "beef"
-  ]
  },
  {
   "id": "chana_daal_roti_plate",
@@ -15218,30 +15066,6 @@
   "tags": [
    "dairy",
    "egg"
-  ]
- },
- {
-  "id": "aloo_ka_bharta",
-  "name": "Aloo ka bharta",
-  "category": "Vegetables",
-  "serving": 1,
-  "unit": "katori",
-  "grams": 180,
-  "kcal": 196,
-  "p": 3,
-  "c": 28,
-  "f": 8,
-  "fiber": 3,
-  "wiki": "",
-  "aliases": [
-   "aloo bharta",
-   "aaloo ka bharta",
-   "mashed potato bharta",
-   "aloo chokha"
-  ],
-  "basis": "typical",
-  "tags": [
-   "spicy"
   ]
  },
  {
@@ -17884,7 +17708,10 @@
    "stuffed karela",
    "qeema bhare karele",
    "bharay karelay",
-   "karela keema bharwan"
+   "karela keema bharwan",
+   "keema bharay karelay",
+   "bharwan karela",
+   "bharwan karelay"
   ],
   "basis": "typical",
   "tags": [
@@ -17932,7 +17759,9 @@
    "tinday gosht",
    "tinde gosht",
    "tinda meat",
-   "gosht tinday"
+   "gosht tinday",
+   "tinda gosht",
+   "round gourd gosht"
   ],
   "basis": "typical"
  },
@@ -17974,7 +17803,9 @@
    "phool gobi gosht",
    "gobi gosht",
    "cauliflower gosht",
-   "gosht gobhi"
+   "gosht gobhi",
+   "gobhi gosht",
+   "gobi wala gosht"
   ],
   "basis": "typical"
  },
@@ -17995,7 +17826,9 @@
    "shalgam bhujia",
    "shaljam sabzi",
    "turnip sabzi",
-   "gonglu"
+   "gonglu",
+   "shalgam ki sabzi",
+   "shaljam bhujia"
   ],
   "basis": "typical"
  },
@@ -18458,27 +18291,6 @@
   ]
  },
  {
-  "id": "desi_murgi_shorba",
-  "name": "Desi murgi shorba",
-  "category": "Curries",
-  "serving": 1,
-  "unit": "plate",
-  "grams": 300,
-  "kcal": 296,
-  "p": 30,
-  "c": 8,
-  "f": 16,
-  "fiber": 1.5,
-  "wiki": "",
-  "aliases": [
-   "desi chicken shorba",
-   "desi murgh salan",
-   "country chicken curry",
-   "desi kukkar"
-  ],
-  "basis": "typical"
- },
- {
   "id": "beef_handi",
   "name": "Beef handi",
   "category": "Curries",
@@ -18544,7 +18356,10 @@
    "patta gobi keema",
    "cabbage keema",
    "keema band gobi",
-   "band gobi qeema"
+   "band gobi qeema",
+   "band gobhi qeema",
+   "bandgobi keema",
+   "band gobi keema"
   ],
   "basis": "typical",
   "tags": [
@@ -19392,7 +19207,11 @@
    "onion paratha",
    "pyaaz paratha",
    "piyaz wala paratha",
-   "onion stuffed paratha"
+   "onion stuffed paratha",
+   "pyaz paratha",
+   "piaz wala paratha",
+   "ganday wala paratha",
+   "piyaz paratha"
   ],
   "basis": "typical",
   "tags": [
@@ -22014,7 +21833,11 @@
    "mutanjan",
    "rang birangay chawal",
    "shahi zarda",
-   "multi colour zarda"
+   "multi colour zarda",
+   "mutunjan",
+   "muttanjan zarda",
+   "rangeen zarda",
+   "muttanjan"
   ],
   "basis": "typical",
   "tags": [
@@ -22875,6 +22698,296 @@
    "egg",
    "gluten",
    "high_sugar"
+  ]
+ },
+ {
+  "id": "gajar_murabba",
+  "name": "Gajar ka murabba",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 30,
+  "kcal": 75,
+  "p": 0.2,
+  "c": 19,
+  "f": 0,
+  "fiber": 0.5,
+  "wiki": "",
+  "aliases": [
+   "gajar murabba",
+   "carrot murabba",
+   "carrot preserve"
+  ],
+  "basis": "typical",
+  "tags": [
+   "high_sugar"
+  ]
+ },
+ {
+  "id": "imli_sharbat",
+  "name": "Imli sharbat (tamarind)",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 250,
+  "kcal": 140,
+  "p": 0.5,
+  "c": 35,
+  "f": 0.2,
+  "fiber": 1,
+  "wiki": "",
+  "aliases": [
+   "imli ka sharbat",
+   "tamarind sharbat",
+   "imli aloo bukhara"
+  ],
+  "basis": "typical",
+  "tags": [
+   "high_sugar"
+  ]
+ },
+ {
+  "id": "peshawari_ice_cream",
+  "name": "Peshawari ice cream",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 120,
+  "kcal": 230,
+  "p": 4,
+  "c": 30,
+  "f": 10.5,
+  "fiber": 0,
+  "wiki": "",
+  "aliases": [
+   "peshawari kulfi ice cream",
+   "qissa khwani ice cream",
+   "hand-churned ice cream"
+  ],
+  "basis": "typical",
+  "tags": [
+   "dairy",
+   "high_sugar",
+   "nuts"
+  ]
+ },
+ {
+  "id": "dahi_gosht",
+  "name": "Dahi gosht",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 430,
+  "p": 30,
+  "c": 10,
+  "f": 30,
+  "fiber": 1,
+  "wiki": "",
+  "aliases": [
+   "dahi wala gosht",
+   "yogurt mutton curry",
+   "mutton in yogurt"
+  ],
+  "basis": "typical",
+  "tags": [
+   "dairy",
+   "spicy"
+  ]
+ },
+ {
+  "id": "shab_deg",
+  "name": "Shab deg (Kashmiri)",
+  "category": "Curries",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 380,
+  "p": 26,
+  "c": 14,
+  "f": 25,
+  "fiber": 3,
+  "wiki": "",
+  "aliases": [
+   "shab degh",
+   "turnip mutton slow cooked",
+   "shabdeg"
+  ],
+  "basis": "typical",
+  "tags": []
+ },
+ {
+  "id": "khajoor_halwa",
+  "name": "Khajoor ka halwa",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "katori",
+  "grams": 100,
+  "kcal": 360,
+  "p": 5,
+  "c": 55,
+  "f": 13.5,
+  "fiber": 5,
+  "wiki": "",
+  "aliases": [
+   "date halwa",
+   "khajoor halwa",
+   "dates halwa"
+  ],
+  "basis": "typical",
+  "tags": [
+   "dairy",
+   "high_sugar",
+   "nuts"
+  ]
+ },
+ {
+  "id": "moong_daal_halwa",
+  "name": "Moong daal halwa",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "katori",
+  "grams": 120,
+  "kcal": 460,
+  "p": 10,
+  "c": 52,
+  "f": 23.5,
+  "fiber": 3,
+  "wiki": "",
+  "aliases": [
+   "moong dal halwa",
+   "moong ki daal ka halwa",
+   "daal ka halwa"
+  ],
+  "basis": "typical",
+  "tags": [
+   "dairy",
+   "high_sugar",
+   "nuts"
+  ]
+ },
+ {
+  "id": "pulao_kebab",
+  "name": "Pulao kebab (Lahori plate)",
+  "category": "Rice",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 780,
+  "p": 38,
+  "c": 88,
+  "f": 30,
+  "fiber": 4,
+  "wiki": "",
+  "aliases": [
+   "pulao kabab",
+   "kebab pulao plate",
+   "lahori pulao kebab"
+  ],
+  "basis": "typical",
+  "tags": [
+   "beef"
+  ]
+ },
+ {
+  "id": "sohan_papdi",
+  "name": "Sohan papdi (patisa)",
+  "category": "Sweets",
+  "serving": 2,
+  "unit": "pieces",
+  "grams": 40,
+  "kcal": 210,
+  "p": 3,
+  "c": 25,
+  "f": 11,
+  "fiber": 0.5,
+  "wiki": "",
+  "aliases": [
+   "patisa",
+   "pateesa",
+   "soan papdi",
+   "son papdi"
+  ],
+  "basis": "typical",
+  "tags": [
+   "dairy",
+   "high_sugar",
+   "nuts",
+   "gluten"
+  ]
+ },
+ {
+  "id": "badam_sharbat",
+  "name": "Badam sharbat (almond milk)",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 250,
+  "kcal": 220,
+  "p": 6,
+  "c": 30,
+  "f": 8.5,
+  "fiber": 1,
+  "wiki": "",
+  "aliases": [
+   "badam doodh sharbat",
+   "almond sharbat",
+   "badam milk sharbat"
+  ],
+  "basis": "typical",
+  "tags": [
+   "dairy",
+   "high_sugar",
+   "nuts"
+  ]
+ },
+ {
+  "id": "chicken_cheese_naan",
+  "name": "Chicken cheese naan",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 220,
+  "kcal": 640,
+  "p": 30,
+  "c": 70,
+  "f": 26,
+  "fiber": 2.5,
+  "wiki": "",
+  "aliases": [
+   "cheese naan",
+   "chicken cheese wala naan",
+   "stuffed cheese naan"
+  ],
+  "basis": "typical",
+  "tags": [
+   "dairy",
+   "gluten"
+  ]
+ },
+ {
+  "id": "meethi_tikiyan",
+  "name": "Meethi tikiyan (gur)",
+  "category": "Sweets",
+  "serving": 2,
+  "unit": "pieces",
+  "grams": 60,
+  "kcal": 260,
+  "p": 3.5,
+  "c": 35,
+  "f": 12,
+  "fiber": 1,
+  "wiki": "",
+  "aliases": [
+   "gur ki tikiyan",
+   "meethi tikki",
+   "gur wali tikiyan"
+  ],
+  "basis": "typical",
+  "tags": [
+   "gluten",
+   "high_sugar",
+   "fried"
   ]
  }
 ]
