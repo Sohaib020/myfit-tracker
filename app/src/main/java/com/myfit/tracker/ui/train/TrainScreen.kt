@@ -158,6 +158,7 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
         }
 
         item(key = "progress") { ProgressStrip(recent) { nav.push(Overlay.TrainProgress) } }
+        item(key = "coach") { ProTrainerTeaser(active != null) { active?.let { nav.push(Overlay.Gym(it.id)) } } }
 
         item(key = "daysHead") {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -392,6 +393,26 @@ fun HistoryRow(w: WorkoutView, onOpen: () -> Unit, onRepeat: () -> Unit) {
                 Caption(w.exercises.joinToString(", ") { it.exercise.name }, color = th.textFaint)
             }
             GlassButton("Repeat", onRepeat, height = 38.dp)
+        }
+    }
+}
+
+
+/** Pro trainer teaser: who your coach is and how to start a coached set. */
+@Composable
+private fun ProTrainerTeaser(live: Boolean, onOpen: () -> Unit) {
+    val th = LocalFitTheme.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.remember { com.myfit.tracker.domain.Coach.load(ctx); 0 }
+    val cp by com.myfit.tracker.domain.Coach.prefs.collectAsState()
+    com.myfit.tracker.ui.theme.Glass(Modifier.fillMaxWidth(), onClick = if (live) onOpen else null) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.myfit.tracker.ui.coach.CoachPortrait(cp.look.id, false, 52.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("${cp.name} · pro trainer", style = FitType.section, color = th.text, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Caption(if (live) "Open your workout and tap \"Train this with ${cp.name}\"" else "Start any workout, then tap \"Train this with ${cp.name}\" for voice, tempo and camera form-check.")
+            }
         }
     }
 }
