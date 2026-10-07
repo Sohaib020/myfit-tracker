@@ -53,7 +53,7 @@ fun FriendProfileContent(container: AppContainer, f: com.myfit.tracker.social.Fr
     val rewards = fresh?.rewards ?: f.rewards
     val mascot = fresh?.mascot ?: f.mascot
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        UserAvatar(f.avatar, f.photo, f.name, f.color, 96.dp, ring = th.accentBright)
+        UserAvatar(f.avatar, f.photo, f.name, f.color, 96.dp, ring = th.accentBright, gphoto = f.gphoto, seed = f.uid)
         Spacer(Modifier.height(10.dp))
         Text(f.name, style = FitType.title, color = th.text, maxLines = 1)
         if (f.username.isNotBlank()) Caption("@${f.username}")

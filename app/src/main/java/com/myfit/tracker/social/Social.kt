@@ -43,7 +43,8 @@ data class ArenaProfile(
     val uid: String, val level: Int, val stars: Int, val mascot: String?, val rewards: List<String>, val journeys: List<String>,
     val weekSteps: Long, val weekActiveMin: Long, val weekWorkouts: Int,
 )
-data class BoardRow(val uid: String, val name: String, val color: Long, val value: Double, val me: Boolean, val level: Int? = null, val mascot: String? = null)
+data class BoardRow(val uid: String, val name: String, val color: Long, val value: Double, val me: Boolean, val level: Int? = null, val mascot: String? = null,
+    val avatar: String = "", val gphoto: String? = null)
 data class Challenge(
     val id: String, val title: String, val metric: Metric, val start: String, val end: String,
     val creator: String, val members: List<String>,
@@ -321,9 +322,14 @@ class Social(private val c: AppContainer) {
      * Your picture: the avatar id in your public profile, and (only for your own photo) the small copy in your
      * friends-only Arena profile. Removing the photo deletes the online copy.
      */
+    /** The Google account photo (128 px), only from Google's own photo host. */
+    fun googlePhoto(): String? = auth.currentUser?.photoUrl?.toString()
+        ?.takeIf { it.startsWith("https://lh") && ".googleusercontent.com/" in it }
+        ?.replace(Regex("=s\\d+(-c)?$"), "")?.let { "$it=s128-c" }?.take(300)
+
     suspend fun uploadAvatar() {
         val u = auth.currentUser ?: return
-        db.collection("users").document(u.uid).set(mapOf("avatar" to MyAvatar.id(ctx).take(40)), SetOptions.merge()).await()
+        db.collection("users").document(u.uid).set(mapOf("avatar" to MyAvatar.id(ctx).take(40), "gphoto" to googlePhoto().orEmpty()), SetOptions.merge()).await()
         val arena = db.collection("arenaProfile").document(u.uid)
         val photo = MyAvatar.photoForUpload(ctx)
         if (arena.get().await().exists()) arena.update("photo", photo ?: FieldValue.delete()).await()
@@ -386,7 +392,8 @@ class Social(private val c: AppContainer) {
         val col = db.collection("weekly").document(weekKey()).collection("entries")
         return people.map { p ->
             val m = runCatching { col.document(p.uid).get().await().data }.getOrNull()
-            BoardRow(p.uid, p.name, p.color, m?.let { rowValue(it, metric) } ?: 0.0, p.uid == me, (m?.get("level") as? Number)?.toInt(), m?.get("mascot") as? String)
+            BoardRow(p.uid, p.name, p.color, m?.let { rowValue(it, metric) } ?: 0.0, p.uid == me, (m?.get("level") as? Number)?.toInt(), m?.get("mascot") as? String,
+                (m?.get("avatar") as? String).orEmpty(), (m?.get("gphoto") as? String)?.ifBlank { null })
         }.sortedByDescending { it.value }
     }
 
@@ -396,7 +403,8 @@ class Social(private val c: AppContainer) {
         val bl = blocked()
         return db.collection("weeklyPublic").document(weekKey()).collection("entries")
             .orderBy(metric.key, Query.Direction.DESCENDING).limit(50).get().await().documents.map { d ->
-                BoardRow(d.id, d.getString("name") ?: "Athlete", d.getLong("color") ?: 0xFF4C8DFFL, rowValue(d.data ?: emptyMap(), metric), d.id == me, d.getLong("level")?.toInt(), d.getString("mascot"))
+                BoardRow(d.id, d.getString("name") ?: "Athlete", d.getLong("color") ?: 0xFF4C8DFFL, rowValue(d.data ?: emptyMap(), metric), d.id == me, d.getLong("level")?.toInt(), d.getString("mascot"),
+                    d.getString("avatar").orEmpty(), d.getString("gphoto")?.ifBlank { null })
             }.filter { it.uid !in bl }
     }
 
@@ -494,6 +502,8 @@ class Social(private val c: AppContainer) {
         val week = sum(weekStart(), today)
         val entry = mapOf(
             "name" to p.name, "color" to p.color,
+            // picture for leaderboards: a ready-made avatar id and/or the Google account photo (never your own uploaded photo)
+            "avatar" to MyAvatar.id(ctx).takeIf { it != MyAvatar.PHOTO }.orEmpty().take(40), "gphoto" to googlePhoto().orEmpty(),
             "steps" to week.sumOf { it.steps }, "activeMin" to week.sumOf { it.activeMin },
             "distanceM" to week.sumOf { it.distanceM }.let { Math.round(it).toDouble() },
             "days" to week.size, "updatedAt" to FieldValue.serverTimestamp(),

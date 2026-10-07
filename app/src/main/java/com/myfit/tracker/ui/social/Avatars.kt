@@ -108,14 +108,73 @@ private fun rememberBase64(data: String?): ImageBitmap? {
  * [ring] draws a thin coloured outline (used for "you" and podium places).
  */
 @Composable
-fun UserAvatar(avatar: String?, photo: String?, name: String, color: Long, size: Dp, modifier: Modifier = Modifier, ring: Color? = null) {
+fun UserAvatar(avatar: String?, photo: String?, name: String, color: Long, size: Dp, modifier: Modifier = Modifier, ring: Color? = null,
+               gphoto: String? = null, seed: String = name) {
+    // order: their own photo (friends only) → ready-made avatar → Google account photo → a unique gradient
     val preset = rememberPreset(avatar.orEmpty())
     val ph = if (avatar == MyAvatar.PHOTO) rememberBase64(photo) else null
-    val img = ph ?: preset
-    Box(modifier.size(size).clip(CircleShape).then(if (ring != null) Modifier.border(size * 0.05f, ring, CircleShape) else Modifier).background(Color(color)), contentAlignment = Alignment.Center) {
+    val g = if (ph == null && preset == null) rememberUrlPhoto(gphoto) else null
+    val img = ph ?: preset ?: g
+    Box(modifier.size(size).clip(CircleShape).then(if (ring != null) Modifier.border(size * 0.05f, ring, CircleShape) else Modifier), contentAlignment = Alignment.Center) {
         if (img != null) Image(img, name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        else Text(name.trim().take(1).uppercase().ifBlank { "?" }, fontSize = (size.value * 0.42f).sp, fontWeight = FontWeight.Bold, color = Color.White)
+        else GradientAvatar(seed, Modifier.fillMaxSize())
     }
+}
+
+/**
+ * Default picture for people who haven't chosen one: soft abstract shapes whose colours and layout come from
+ * their id, so everyone gets a different one (and always the same one).
+ */
+@Composable
+fun GradientAvatar(seed: String, modifier: Modifier = Modifier) {
+    val h = remember(seed) { seed.fold(1125899906842597L) { a, c -> 31 * a + c.code } }
+    val palettes = remember {
+        listOf(
+            listOf(0xFF7F5AF0, 0xFF2CB1BC, 0xFFFFD166), listOf(0xFFFF6B6B, 0xFFFFA45B, 0xFFFFE066), listOf(0xFF06D6A0, 0xFF118AB2, 0xFF073B4C),
+            listOf(0xFFEF476F, 0xFF8338EC, 0xFF3A86FF), listOf(0xFF2EC4B6, 0xFFCBF3F0, 0xFFFF9F1C), listOf(0xFF4361EE, 0xFF4CC9F0, 0xFFF72585),
+            listOf(0xFF52B788, 0xFFB7E4C7, 0xFF1B4332), listOf(0xFFF15BB5, 0xFFFEE440, 0xFF00BBF9), listOf(0xFFE76F51, 0xFFF4A261, 0xFF2A9D8F),
+            listOf(0xFF6D597A, 0xFFB56576, 0xFFEAAC8B), listOf(0xFF3D5A80, 0xFF98C1D9, 0xFFEE6C4D), listOf(0xFF9B5DE5, 0xFF00F5D4, 0xFFFEE440),
+        ).map { p -> p.map { Color(it) } }
+    }
+    val pal = palettes[((h ushr 3) % palettes.size).toInt().let { if (it < 0) -it else it } % palettes.size]
+    fun r(k: Int): Float = (((h ushr (k * 5)) and 0xFF).toFloat() / 255f)
+    androidx.compose.foundation.Canvas(modifier) {
+        val w = size.width; val ht = size.height
+        drawRect(androidx.compose.ui.graphics.Brush.linearGradient(listOf(pal[0], pal[1]),
+            androidx.compose.ui.geometry.Offset(w * r(1), 0f), androidx.compose.ui.geometry.Offset(w * (1 - r(2)), ht)))
+        // three overlapping blobs
+        for (i in 0 until 3) {
+            val c = pal[(i + 1) % 3].copy(alpha = 0.55f + 0.3f * r(i + 4))
+            val cx = w * (0.15f + 0.7f * r(i + 7)); val cy = ht * (0.15f + 0.7f * r(i + 10))
+            val rad = w * (0.22f + 0.25f * r(i + 13))
+            drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(c, c.copy(alpha = 0f)), androidx.compose.ui.geometry.Offset(cx, cy), rad), rad,
+                androidx.compose.ui.geometry.Offset(cx, cy))
+        }
+        // a soft light sweep for depth
+        drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.18f), Color.Transparent, Color.Black.copy(alpha = 0.12f))))
+    }
+}
+
+/** Downloads a small profile photo once (Google photo host only) and keeps it on the phone. */
+@Composable
+fun rememberUrlPhoto(url: String?): ImageBitmap? {
+    val ctx = LocalContext.current
+    val ok = url != null && url.startsWith("https://lh") && ".googleusercontent.com/" in url
+    val key = if (ok) "url:" + url.hashCode() else null
+    val b by produceState(key?.let { AvatarBitmaps.lru.get(it) }, key) {
+        if (value == null && key != null) value = withContext(Dispatchers.IO) {
+            runCatching {
+                val dir = java.io.File(ctx.cacheDir, "gphoto").apply { mkdirs() }
+                val f = java.io.File(dir, key.substringAfter(':') + ".jpg")
+                if (!f.exists() || f.length() < 100) {
+                    val c = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply { connectTimeout = 8000; readTimeout = 10000 }
+                    try { if (c.responseCode in 200..299) c.inputStream.use { i -> f.outputStream().use { i.copyTo(it) } } } finally { c.disconnect() }
+                }
+                BitmapFactory.decodeFile(f.absolutePath)?.asImageBitmap()
+            }.getOrNull()
+        }?.also { AvatarBitmaps.lru.put(key, it) }
+    }
+    return b
 }
 
 /** Your own picture (works offline): photo file, ready-made avatar or initial. */
@@ -131,7 +190,11 @@ fun MyAvatarImage(name: String, color: Long, size: Dp, modifier: Modifier = Modi
     val img = photo ?: preset
     Box(modifier.size(size).clip(CircleShape).then(if (ring != null) Modifier.border(size * 0.05f, ring, CircleShape) else Modifier).background(Color(color)), contentAlignment = Alignment.Center) {
         if (img != null) Image(img, "Your picture", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        else Text(name.trim().take(1).uppercase().ifBlank { "?" }, fontSize = (size.value * 0.42f).sp, fontWeight = FontWeight.Bold, color = Color.White)
+        else {
+            val gp = rememberUrlPhoto(remember { runCatching { com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.photoUrl?.toString() }.getOrNull() })
+            if (gp != null) Image(gp, "Your picture", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            else GradientAvatar(remember { runCatching { com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid }.getOrNull() ?: name }, Modifier.fillMaxSize())
+        }
     }
 }
 

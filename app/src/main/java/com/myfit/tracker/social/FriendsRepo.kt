@@ -86,6 +86,7 @@ data class FriendCard(
     val uid: String, val name: String, val username: String, val color: Long, val avatar: String, val photo: String?,
     val level: Int?, val stars: Int?, val mascot: String?, val weekSteps: Long, val weekActiveMin: Long, val weekWorkouts: Int,
     val journeys: List<String>, val rewards: List<String>, val me: Boolean, val updatedAt: Long,
+    val gphoto: String? = null,
 )
 
 data class FriendsSnap(val me: FriendCard?, val friends: List<FriendCard>, val requests: Int, val fetchedAt: Long) {
@@ -157,6 +158,7 @@ class FriendsRepo(private val c: AppContainer) {
             (ad?.getLong("level") ?: wd?.getLong("level"))?.toInt(), ad?.getLong("stars")?.toInt(), ad?.getString("mascot") ?: wd?.getString("mascot"),
             wd?.getLong("steps") ?: ad?.getLong("weekSteps") ?: 0L, wd?.getLong("activeMin") ?: ad?.getLong("weekActiveMin") ?: 0L,
             ad?.getLong("weekWorkouts")?.toInt() ?: 0, strs("journeys"), strs("rewards"), me, upd,
+            ud.getString("gphoto")?.ifBlank { null },
         )
     }
 
@@ -192,7 +194,7 @@ class FriendsRepo(private val c: AppContainer) {
         put("uid", f.uid); put("name", f.name); put("username", f.username); put("color", f.color); put("avatar", f.avatar)
         f.photo?.let { put("photo", it) }; f.level?.let { put("level", it) }; f.stars?.let { put("stars", it) }; f.mascot?.let { put("mascot", it) }
         put("steps", f.weekSteps); put("active", f.weekActiveMin); put("workouts", f.weekWorkouts)
-        put("journeys", JSONArray(f.journeys)); put("rewards", JSONArray(f.rewards)); put("me", f.me); put("upd", f.updatedAt)
+        put("journeys", JSONArray(f.journeys)); put("rewards", JSONArray(f.rewards)); put("me", f.me); put("upd", f.updatedAt); f.gphoto?.let { put("gphoto", it) }
     }
     private fun fromJson(o: JSONObject): FriendsSnap {
         fun card(j: JSONObject): FriendCard {
@@ -200,7 +202,7 @@ class FriendsRepo(private val c: AppContainer) {
             return FriendCard(j.getString("uid"), j.optString("name", "Friend"), j.optString("username"), j.optLong("color", 0xFF4C8DFFL), j.optString("avatar"),
                 j.optString("photo").ifBlank { null }, if (j.has("level")) j.getInt("level") else null, if (j.has("stars")) j.getInt("stars") else null,
                 j.optString("mascot").ifBlank { null }, j.optLong("steps"), j.optLong("active"), j.optInt("workouts"), list("journeys"), list("rewards"),
-                j.optBoolean("me"), j.optLong("upd"))
+                j.optBoolean("me"), j.optLong("upd"), j.optString("gphoto").ifBlank { null })
         }
         val fs = o.optJSONArray("friends")?.let { a -> (0 until a.length()).map { card(a.getJSONObject(it)) } }.orEmpty()
         return FriendsSnap(o.optJSONObject("me")?.let(::card), fs, o.optInt("requests"), o.optLong("at"))
