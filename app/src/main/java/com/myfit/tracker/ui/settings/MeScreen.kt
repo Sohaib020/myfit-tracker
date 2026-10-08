@@ -1005,18 +1005,18 @@ private fun AiProvidersCard(container: AppContainer) {
 }
 
 
-/** Live notifications: Android 16 system Live Update (Now Bar) or MyFit's animated card. */
+/** Live notifications are automatic (Now Bar on Android 16 phones that allow it, else MyFit's live card) + daily goals card toggle. */
 @androidx.compose.runtime.Composable
 private fun LiveNotifRow() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val th = com.myfit.tracker.ui.theme.LocalFitTheme.current
-    if (android.os.Build.VERSION.SDK_INT < 36) return
-    var native by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.myfit.tracker.notify.LiveUpdates.nativeStyle(ctx)) }
+    val native = androidx.compose.runtime.remember { com.myfit.tracker.notify.LiveUpdates.nativeStyle(ctx) }
+    var daily by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.myfit.tracker.notify.LiveUpdates.dailyOn(ctx)) }
     androidx.compose.material3.Text("Live notifications", style = com.myfit.tracker.ui.theme.FitType.label, color = th.text)
-    com.myfit.tracker.ui.components.Caption(if (native) "Workouts, rest, activity and fasting show as a live progress bar in the Now Bar and on the lock screen."
-        else "Workouts, rest, activity and fasting show as MyFit's animated card in the notification shade (not in the Now Bar).")
-    Spacer(Modifier.height(8.dp))
-    com.myfit.tracker.ui.components.GlassSegmented(listOf(true, false), native, { if (it) "Now Bar" else "Rich card" }, { v ->
-        native = v; com.myfit.tracker.notify.LiveUpdates.setRichStyle(ctx, !v)
-    }, Modifier.fillMaxWidth())
+    com.myfit.tracker.ui.components.Caption(if (native) "Automatic: this phone shows workouts, rest, runs and fasts live in the Now Bar and on the lock screen."
+        else "Automatic: this phone shows workouts, rest, runs and fasts as a live card with a moving progress track.")
+    Spacer(Modifier.height(6.dp))
+    ToggleRow("Daily goals card", "A quiet card with today's steps, water and calories. Swipe it away any time.", daily) { v ->
+        daily = v; com.myfit.tracker.notify.LiveUpdates.setDailyOn(ctx, v)
+    }
 }
