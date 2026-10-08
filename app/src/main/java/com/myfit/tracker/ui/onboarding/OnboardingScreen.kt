@@ -463,7 +463,7 @@ private fun ColumnScope.StepBody(st: Int, s: SetupState, container: AppContainer
         14 -> {
             Header("Make it yours", "Pick a design style and a theme. You can change both any time in Settings.")
             val settings = com.myfit.tracker.ui.theme.LocalSettings.current
-            com.myfit.tracker.ui.settings.ThemePicker(container, settings, tileWidth = 84)
+            Column(Modifier.fillMaxWidth()) { com.myfit.tracker.ui.settings.ThemePicker(container, settings, tileWidth = 84) }
         }
         15 -> {
             Spacer(Modifier.height(40.dp))
