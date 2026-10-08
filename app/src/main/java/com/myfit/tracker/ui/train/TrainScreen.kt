@@ -127,9 +127,7 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
                 TileSpec("Build a workout", "Pick muscles, done", Duo.AutoAwesome, th.accent) { nav.push(Overlay.DayBuilder()) },
                 TileSpec("Quick start", "Empty workout", Duo.PlayArrow, th.protein) { start { container.workoutRepo.startEmpty() } },
                 TileSpec("Run · walk · ride", "Activity timer", Duo.DirectionsRun, th.steps) { nav.push(Overlay.Stopwatch) },
-                TileSpec(coach.name, "Voice & camera coach", Duo.SportsGymnastics, th.fat) {
-                    if (a != null) nav.push(Overlay.Gym(a.id)) else { toaster.show("Build or start a workout, then tap \"Train this with ${coach.name}\""); nav.push(Overlay.DayBuilder()) }
-                },
+                TileSpec(coach.name, "Voice & camera coach", Duo.SportsGymnastics, th.fat) { nav.push(Overlay.CoachHub) },
                 TileSpec("Programs", if (p != null) "Following ${p.name}" else "Plans that progress", Duo.CalendarMonth, th.water) { onTab(1) },
                 TileSpec("Exercises", "876 with animations", Duo.FitnessCenter, th.carbs) { onTab(2) },
                 TileSpec("Weight & BMI", "Graphs and body", Duo.MonitorWeight, th.sleep) { onTab(3) },
