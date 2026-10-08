@@ -58,7 +58,15 @@ class Gemini(private val context: Context) {
      * "flash-latest" alias → other flash/lite → anything Gemini. Nothing is hardcoded, so retired
      * models drop out automatically.
      */
-    suspend fun rankedModels(key: String): List<String> = withContext(Dispatchers.IO) {
+    @Volatile private var rankedCache: Triple<String, Long, List<String>>? = null
+
+    /** Cached for 6 hours per key — listing models costs a network round trip on every photo otherwise. */
+    suspend fun rankedModels(key: String): List<String> {
+        rankedCache?.let { (k, at, l) -> if (k == key && System.currentTimeMillis() - at < 6 * 3_600_000L && l.isNotEmpty()) return l }
+        return rankedModelsFresh(key).also { rankedCache = Triple(key, System.currentTimeMillis(), it) }
+    }
+
+    private suspend fun rankedModelsFresh(key: String): List<String> = withContext(Dispatchers.IO) {
         val c = open("$base/models?pageSize=300", key, "GET")
         val (code, body) = readBody(c)
         if (code !in 200..299) throw ApiError(code, errorMessage(body))

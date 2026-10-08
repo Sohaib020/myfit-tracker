@@ -221,7 +221,11 @@ class AiRouter(private val c: AppContainer) {
     }
 
     private suspend fun geminiVision(key: String, saved: String, prompt: String, jpeg: ByteArray, fast: Boolean): String {
-        val models = buildList { if (saved.isNotBlank()) add(saved); addAll(gemini.rankedModels(key)) }.distinct().take(if (fast) 1 else 3)
+        val ranked = gemini.rankedModels(key)
+        // quick pass: the lightest stable Flash-Lite answers fastest; accuracy pass: the user's model, then the best Flash
+        val lite = ranked.firstOrNull { "flash-lite" in it && "preview" !in it && "exp" !in it }
+        val models = if (fast) listOfNotNull(lite ?: saved.takeIf { it.isNotBlank() } ?: ranked.firstOrNull())
+            else buildList { if (saved.isNotBlank()) add(saved); addAll(ranked) }.distinct().take(3)
         var last: Exception? = null
         for (m in models) {
             try { return gemini.generateVision(key, m, prompt, jpeg) } catch (e: Gemini.ApiError) {
