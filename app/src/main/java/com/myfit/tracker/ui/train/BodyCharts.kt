@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.drawText
@@ -188,7 +189,7 @@ private fun WeightChart(pts: List<Pair<LocalDate, Double>>, goal: Double?, color
         val p = pts.map { Offset(x(it.first), y(it.second)) }
         val line = smooth(p)
         val clipW = left + (right - left) * reveal.value
-        androidx.compose.ui.graphics.drawscope.clipRect(right = clipW) {
+        clipRect(right = clipW) {
             val area = Path().apply { addPath(line); lineTo(p.last().x, bottom); lineTo(p.first().x, bottom); close() }
             drawPath(area, Brush.verticalGradient(listOf(color.copy(alpha = 0.32f), color.copy(alpha = 0.02f)), top, bottom))
             drawPath(smooth(avg.map { Offset(x(it.first), y(it.second)) }), th.text.copy(alpha = 0.35f), style = Stroke(1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f))))
