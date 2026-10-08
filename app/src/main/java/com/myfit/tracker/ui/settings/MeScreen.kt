@@ -135,40 +135,11 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         // ---------- appearance
         item {
             GlassCard {
-                CardHeader(Duo.Palette, "Theme", th.fat)
-                Spacer(Modifier.height(14.dp))
-                Caption("${Themes.all.size} themes · all still images, zero battery cost. Tap one to apply.")
+                CardHeader(Duo.Palette, "Theme & style", th.fat)
                 Spacer(Modifier.height(10.dp))
-                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(Themes.all.size, key = { Themes.all[it].id }) { idx ->
-                        val t = Themes.all[idx]
-                        val sel = t.id == settings.themeId
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(
-                                Modifier.size(width = 92.dp, height = 150.dp).clip(RoundedCornerShape(20.dp))
-                                    .border(if (sel) 3.dp else 1.dp, if (sel) t.accent else Color.White.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
-                                    .clickableNoRipple { container.write { container.settings.setTheme(t.id) } }
-                            ) {
-                                Canvas(Modifier.fillMaxSize()) {
-                                    // live miniature of the real backdrop art
-                                    val full = backdrop.rootSize
-                                    if (full.width > 0) {
-                                        val s = size.width / full.width
-                                        scale(s, s, pivot = androidx.compose.ui.geometry.Offset.Zero) {
-                                            drawBackdrop(t, null, t.stillT, full.width, full.height)
-                                        }
-                                    }
-                                    drawRoundRect(t.glassFallback.copy(alpha = 0.55f), topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.1f, size.height * 0.62f),
-                                        size = androidx.compose.ui.geometry.Size(size.width * 0.8f, size.height * 0.14f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(20f))
-                                    drawRoundRect(t.accent, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.1f, size.height * 0.8f),
-                                        size = androidx.compose.ui.geometry.Size(size.width * 0.8f, size.height * 0.1f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(40f))
-                                }
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            Text(t.name, style = FitType.caption, color = if (sel) th.text else th.textDim)
-                        }
-                    }
-                }
+                Caption("${Themes.all.size} themes in 6 families · every theme works as Glass or Flat. Tap to apply.")
+                Spacer(Modifier.height(12.dp))
+                ThemePicker(container, settings)
             }
         }
 

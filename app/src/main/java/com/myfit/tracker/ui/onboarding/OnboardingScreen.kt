@@ -148,7 +148,7 @@ private class SetupState(units: UnitPrefs) {
     val targetKg get() = if (hasTarget) Units.toKg(targetDisplay, weightUnit) else null
 }
 
-private const val STEPS = 14
+private const val STEPS = 15
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -461,6 +461,11 @@ private fun ColumnScope.StepBody(st: Int, s: SetupState, container: AppContainer
             TargetField("Sleep", s.sleepH, "hours") { s.sleepH = it }
         }
         14 -> {
+            Header("Make it yours", "Pick a design style and a theme. You can change both any time in Settings.")
+            val settings = com.myfit.tracker.ui.theme.LocalSettings.current
+            com.myfit.tracker.ui.settings.ThemePicker(container, settings, tileWidth = 84)
+        }
+        15 -> {
             Spacer(Modifier.height(40.dp))
             Pip(PipMood.EXCITED, size = 150.dp)
             Spacer(Modifier.height(16.dp))
@@ -476,8 +481,8 @@ private fun ColumnScope.StepBody(st: Int, s: SetupState, container: AppContainer
  * step numbers under it in [ADDED]; existing users are asked just those, once, on the first launch after updating.
  */
 object OnboardingVersion {
-    const val CURRENT = 3
-    private val ADDED = mapOf(2 to listOf(2, 11, 12), 3 to listOf(5))   // v2: date of birth, training days, your week · v3: health & diet
+    const val CURRENT = 4
+    private val ADDED = mapOf(2 to listOf(2, 11, 12), 3 to listOf(5), 4 to listOf(14))   // v2: date of birth, training days, your week · v3: health & diet · v4: design style & theme
     private fun prefs(c: android.content.Context) = c.getSharedPreferences("onboarding", android.content.Context.MODE_PRIVATE)
     /** Profiles created before versioning existed count as v1. */
     fun stored(c: android.content.Context) = prefs(c).getInt("version", 1)

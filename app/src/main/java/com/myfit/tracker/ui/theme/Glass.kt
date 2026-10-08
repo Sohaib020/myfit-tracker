@@ -60,6 +60,24 @@ val lowFx: Boolean get() = Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2 || 
 
 val realBlurSupported: Boolean get() = !lowFx
 
+/** Flat design system on/off (mirrors the setting so non-composable drawing — backdrop, baker — can read it). */
+object UiStyle { @Volatile var flat: Boolean = false }
+
+/**
+ * The role colour of the card being drawn (set by [com.myfit.tracker.ui.components.CardHeader]) — Flat style tints
+ * each card by what it shows: food warm, water blue, sleep indigo, training in the accent…
+ */
+val LocalCardAccent = androidx.compose.runtime.compositionLocalOf<androidx.compose.runtime.MutableState<Color?>?> { null }
+
+/** Flat card fill: the surface lifted from the background with a quiet wash of the card's role colour. */
+fun FitTheme.flatSurface(role: Color?): Color {
+    val base = if (isLight) Color.White else Color(
+        bgBottom.red + (1f - bgBottom.red) * 0.07f, bgBottom.green + (1f - bgBottom.green) * 0.07f, bgBottom.blue + (1f - bgBottom.blue) * 0.07f, 1f)
+    val r = role ?: return base
+    val k = if (isLight) 0.07f else 0.12f
+    return Color(base.red + (r.red - base.red) * k, base.green + (r.green - base.green) * k, base.blue + (r.blue - base.blue) * k, 1f)
+}
+
 /** Solid card colour for low-effects mode: the theme's frosted fill laid over its background. */
 fun FitTheme.opaqueSurface(): Color = glassFallback.copy(alpha = 1f).let { f ->
     val a = glassFallback.alpha
@@ -106,10 +124,15 @@ fun Glass(
     // Everything samples a backdrop that was blurred ONCE per frame at low resolution:
     // cards use the shared card blur, the dock (`seeContent`) uses its own dock-blur layer.
     // The per-panel refraction shader only runs in "Smooth" motion — it costs one extra GPU pass per panel.
+    val flat = st.uiStyle == 1
+    val role = remember { mutableStateOf<Color?>(null) }
     val refr = st.refraction
-    val lens = st.motion == 0 && LiquidGlass.supported && refr > 0.01f && !com.myfit.tracker.CrashGuard.safeMode
+    val lens = !flat && st.motion == 0 && LiquidGlass.supported && refr > 0.01f && !com.myfit.tracker.CrashGuard.safeMode
     val shader = remember(lens) { if (lens) LiquidGlass.newShader() else null }
     val fill = when {
+        flat -> th.flatSurface(role.value).let { base ->
+            if (tint == null) base else Color(tint.red * tint.alpha + base.red * (1 - tint.alpha), tint.green * tint.alpha + base.green * (1 - tint.alpha), tint.blue * tint.alpha + base.blue * (1 - tint.alpha), 1f)
+        }
         lowFx -> th.opaqueSurface().let { base ->          // solid on Android 12 and older; a custom tint is mixed in, never see-through
             if (tint == null) base else Color(tint.red * tint.alpha + base.red * (1 - tint.alpha), tint.green * tint.alpha + base.green * (1 - tint.alpha), tint.blue * tint.alpha + base.blue * (1 - tint.alpha), 1f)
         }
@@ -127,7 +150,7 @@ fun Glass(
                 else Modifier
             )
     ) {
-        if (realBlurSupported) {
+        if (realBlurSupported && !flat) {
             Box(
                 Modifier
                     .matchParentSize()
@@ -168,6 +191,12 @@ fun Glass(
                 .drawBehind {
                     val outline = shape.createOutline(size, layoutDirection, this)
                     drawOutline(outline, fill)
+                    if (flat) {
+                        // flat: a crisp hairline in the role colour, no sheen
+                        val edge = role.value ?: th.text
+                        drawOutline(outline, edge.copy(alpha = if (th.isLight) 0.16f else 0.20f + glow * 0.2f), style = Stroke(width = 1.dp.toPx()))
+                        return@drawBehind
+                    }
                     // soft specular sheen across the top
                     drawOutline(
                         outline,
@@ -187,7 +216,7 @@ fun Glass(
                     )
                 }
         )
-        content()
+        androidx.compose.runtime.CompositionLocalProvider(LocalCardAccent provides role) { content() }
     }
 }
 

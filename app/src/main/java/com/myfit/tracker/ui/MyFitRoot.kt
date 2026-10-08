@@ -133,6 +133,7 @@ fun MyFitRoot(container: AppContainer) {
 
     val s = settings ?: return          // settings load in a few ms; draw nothing until then
     val theme = Themes.byId(s.themeId)
+    com.myfit.tracker.ui.theme.UiStyle.flat = s.uiStyle == 1
     val backdrop = remember { Backdrop() }
     backdrop.theme = theme
     LaunchedEffect(theme.id) { com.myfit.tracker.ui.theme.ThemeShaders.prewarm(theme.id) }
@@ -170,7 +171,7 @@ fun MyFitRoot(container: AppContainer) {
                 val blurOk = !com.myfit.tracker.ui.theme.lowFx     // Android 12 and older: no blurred layers at all
                 val gfx = androidx.compose.ui.platform.LocalGraphicsContext.current
                 // ---- still path: bake three small bitmaps (theme, card blur, dock blur)
-                LaunchedEffect(theme.id, backdrop.image, backdrop.rootSize, cardBlurPx, dockBlurPx, blurOk) {
+                LaunchedEffect(theme.id, backdrop.image, backdrop.rootSize, cardBlurPx, dockBlurPx, blurOk, s.uiStyle) {
                     val full = backdrop.rootSize
                     if (full.width < 2f || full.height < 2f) return@LaunchedEffect
                     runCatching { com.myfit.tracker.ui.theme.BackdropBaker.bake(gfx, dens, theme, backdrop.image, full, cardBlurPx, dockBlurPx, blurOk) }
