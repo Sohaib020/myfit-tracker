@@ -200,3 +200,7 @@ Answers: health strictness = warn + safe swaps + "show anyway" · all condition 
 11 ✅ Website rebuilt (site/index.html + assets/site.css/js): three.js shader blob hero, mouse/scroll parallax, GSAP pinned horizontal tour, coaches, character gallery, privacy bento, APK download + QR, FAQ, support. Deploys from main.
 12 ✅ Doctor report: Health profile section. Privacy: health profile, nutritionist AI, camera form-check.
 PR #9 (agent/r15 → main) supersedes #8. OWNER: merge, re-publish firestore.rules; decide on the Indian category.
+
+## Round 16 (8 Oct) — branch agent/r16 (from main after PR #9 merged)
+Requests: website with real screenshots + heavy marketing/animation · Train tab revamp (hub + tiles, live workout focus/list switchable, weight graph + BMI) · trainer/nutritionist as stylised cartoon humans (no real faces), names Coach Bolt & Chef Zest, better camera detection (more exercises, accurate model, per-rep form score, setup helper) · fast + accurate snap-a-meal (instant guess then refine, accuracy pass, faster/better offline brain) · themes: trim to essentials + hero-mood (original names, no Marvel/DC), cars & bikes, nature, dark/AMOLED; any theme × Glass/Flat; theme step in onboarding · auto Now Bar/live vs rich card (remove setting) · notifications redesign (text + emoji; Uber-style live: workout, run/walk, fasting/Ramadan, daily goals).
+Order: 1 notifications → 2 food scan → 3 themes + onboarding → 4 Train + weight/BMI → 5 trainer/nutritionist + camera → 6 website (render screenshots in CI; owner may send better ones).
