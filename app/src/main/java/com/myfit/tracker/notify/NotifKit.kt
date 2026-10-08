@@ -155,11 +155,11 @@ object NotifKit {
         val f = progress.coerceIn(0f, 1f)
         val x = left + (right - left) * f
         // track
-        p.color = (kind.color and 0x00FFFFFF) or 0x38000000
+        p.color = (kind.color and 0x00FFFFFF) or 0x26000000
         cv.drawRoundRect(RectF(left, cy - barH / 2, right, cy + barH / 2), barH, barH, p)
         // fill
         if (x > left + 1) {
-            p.shader = LinearGradient(left, 0f, x, 0f, (kind.color and 0x00FFFFFF) or 0x99000000.toInt(), kind.color, Shader.TileMode.CLAMP)
+            p.shader = LinearGradient(left, 0f, x, 0f, (kind.color and 0x00FFFFFF) or 0xCC000000.toInt(), kind.color, Shader.TileMode.CLAMP)
             cv.drawRoundRect(RectF(left, cy - barH / 2, x, cy + barH / 2), barH, barH, p)
             p.shader = null
         }

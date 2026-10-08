@@ -117,7 +117,7 @@ private fun compute(rows: List<SetRow>, ex: Map<Long, Exercise>, span: Span): St
 }
 
 @Composable
-fun TrainProgressScreen(container: AppContainer) {
+fun TrainProgressScreen(container: AppContainer, embedded: Boolean = false, bottomPad: Int = 40, header: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {}) {
     val th = LocalFitTheme.current
     val nav = LocalNav.current
     val u = LocalSettings.current.units
@@ -132,9 +132,12 @@ fun TrainProgressScreen(container: AppContainer) {
     }
 
     Column(Modifier.fillMaxSize()) {
-        OverlayTopBar("Training progress", { nav.pop() }, "From your logged sets only")
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 40.dp),
+        if (!embedded) OverlayTopBar("Training progress", { nav.pop() }, "From your logged sets only")
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp,
+            top = if (embedded) 8.dp + com.myfit.tracker.ui.components.LocalTopInset.current else 4.dp, bottom = bottomPad.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            header()
+            if (embedded) item { com.myfit.tracker.ui.components.SectionTitle("Training") }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Span.entries.forEachIndexed { i, s -> GlassChip(s.label, i == spanI, { spanI = i }, Modifier.weight(1f)) }
