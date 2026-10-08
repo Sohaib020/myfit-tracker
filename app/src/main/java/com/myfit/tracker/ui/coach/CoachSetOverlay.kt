@@ -364,11 +364,8 @@ fun CoachSetOverlay(cur: WorkoutExerciseView, list: List<WorkoutExerciseView>, v
                             BigCounter(stage, reps, goalReps, timed, elapsed, goalSec, restLeft, phaseIdx, pattern, phaseProg.value, cp.urdu)
                         }
                     }
-                    AnimatedVisibility(stage == Stage.WORK && lastScore != null, Modifier.align(Alignment.TopStart).padding(12.dp),
-                        enter = scaleIn(spring(0.5f, 500f)) + fadeIn(), exit = scaleOut() + fadeOut()) {
-                        lastScore?.let { RepScoreChip(it) }
-                    }
-                    AnimatedVisibility(stage == Stage.COUNTDOWN, Modifier.align(Alignment.Center), enter = fadeIn(), exit = fadeOut()) { CountdownNumbers() }
+                    Pop(stage == Stage.WORK && lastScore != null, Modifier.align(Alignment.TopStart).padding(12.dp)) { lastScore?.let { RepScoreChip(it) } }
+                    Pop(stage == Stage.COUNTDOWN, Modifier.align(Alignment.Center)) { CountdownNumbers() }
                     if (paused) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)), contentAlignment = Alignment.Center) {
                         Text(if (cp.urdu) "رکا ہوا" else "PAUSED", style = FitType.hero, color = Color.White)
                     }
@@ -431,6 +428,12 @@ fun CoachSetOverlay(cur: WorkoutExerciseView, list: List<WorkoutExerciseView>, v
             }
         }
     }
+}
+
+/** Springy show/hide (kept outside any Column/Row scope). */
+@Composable
+private fun Pop(visible: Boolean, modifier: Modifier, content: @Composable () -> Unit) {
+    AnimatedVisibility(visible, modifier, enter = scaleIn(spring(0.5f, 500f)) + fadeIn(), exit = scaleOut() + fadeOut()) { content() }
 }
 
 /** Comic-style speech bubble with a tail pointing up at the coach. */
