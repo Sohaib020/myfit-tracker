@@ -26,6 +26,8 @@ data class LogLine(
     val source: String, val foodId: Long? = null,
 )
 
+private val STOP = setOf("with", "and", "the", "of", "a", "ka", "ki", "ke", "wala", "wali", "plate", "bowl", "cup", "glass", "piece", "pieces", "serving", "homemade", "home", "style", "fresh")
+
 class NutritionRepository(private val db: AppDatabase, private val context: Context) {
     private val dao = db.nutritionDao()
 
@@ -70,6 +72,37 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
         return dao.builtIn().first().filter { it.id != f.id && metaMap[it.uuid]?.category == cat && judge(it, muslim).ok }
             .sortedBy { kotlin.math.abs(it.calories - f.calories) }.take(n)
     }
+    // ---------------------------------------------------------------- dish matching (photo results → catalog)
+    private data class Cand(val food: Food, val names: List<Set<String>>, val full: List<String>)
+    @Volatile private var cands: List<Cand>? = null
+    private fun words(s: String): Set<String> = s.lowercase().replace(Regex("\\(.*?\\)"), " ").replace(Regex("[^a-z0-9 ]"), " ")
+        .split(' ').filter { it.length > 1 && it !in STOP }.map { it.removeSuffix("s").ifEmpty { it } }.toSet()
+
+    /**
+     * Best built-in food for a dish name from the photo AI ("chicken karahi", "chana daal"), or null when nothing is
+     * close. Uses names and Roman-Urdu aliases; exact alias hits win, then word overlap.
+     */
+    suspend fun matchDish(name: String): Food? {
+        val list = cands ?: dao.builtIn().first().map { f ->
+            val m = metaMap[f.uuid]
+            val all = listOf(f.name) + (m?.aliases ?: emptyList())
+            Cand(f, all.map { words(it) }.filter { it.isNotEmpty() }, all.map { it.lowercase().replace(Regex("\\(.*?\\)"), "").trim() })
+        }.also { cands = it }
+        val q = name.lowercase().replace(Regex("\\(.*?\\)"), "").trim()
+        list.firstOrNull { c -> c.full.any { it == q } }?.let { return it.food }
+        val qw = words(name)
+        if (qw.isEmpty()) return null
+        var best: Food? = null; var bestScore = 0.0
+        for (c in list) for (n in c.names) {
+            val inter = n.intersect(qw).size
+            if (inter == 0) continue
+            // reward covering the query, penalise extra words in the candidate a little
+            val score = inter.toDouble() / qw.size * 0.75 + inter.toDouble() / n.size * 0.25
+            if (score > bestScore) { bestScore = score; best = c.food }
+        }
+        return if (bestScore >= 0.6) best else null
+    }
+
     val categories: List<String> get() = listOf("Breakfast", "Breads", "Rice", "Curries", "Daal & Beans", "BBQ & Kebabs", "Vegetables", "Street food", "Fast food", "Restaurant", "Regional", "Sweets", "Drinks", "Fruit", "Dairy & Eggs", "Meat & Fish", "Snacks & Nuts", "Basics", "Indian")
 
     /** Name/brand search plus Roman-Urdu aliases ("kardi", "nehari", "anda"). */
