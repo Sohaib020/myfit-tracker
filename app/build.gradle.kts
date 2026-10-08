@@ -173,7 +173,7 @@ dependencies {
     implementation("androidx.camera:camera-view:$camerax")
     implementation("com.google.mlkit:image-labeling:17.0.9")
     // pro trainer camera mode: on-device body landmarks for rep counting and form checks (no images leave the phone)
-    implementation("com.google.mlkit:pose-detection:18.0.0-beta5")
+    implementation("com.google.mlkit:pose-detection-accurate:18.0.0-beta5")
     // accounts, friends & leaderboards
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth")

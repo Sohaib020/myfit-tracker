@@ -16,7 +16,8 @@ data class Say(val en: String, val ur: String) {
  * Joint angles are guidance for typical healthy adults, not medical advice.
  */
 object FormGuide {
-    enum class Pattern { SQUAT, HINGE, LUNGE, PUSHUP, BENCH, OVERHEAD, ROW, PULLUP, CURL, TRICEP, RAISE, PLANK, CRUNCH, CARDIO, OTHER }
+    enum class Pattern { SQUAT, HINGE, LUNGE, PUSHUP, BENCH, OVERHEAD, ROW, PULLUP, CURL, TRICEP, RAISE, PLANK, CRUNCH, CARDIO, OTHER,
+        JUMPING_JACK, HIGH_KNEES, GLUTE_BRIDGE, SITUP, MOUNTAIN_CLIMBER, WALL_SIT, SIDE_PLANK, CALF_RAISE, BURPEE }
 
     /** A tempo phase: what to do and for how long (seconds). */
     data class Phase(val word: Say, val sec: Float)
@@ -25,11 +26,20 @@ object FormGuide {
         val n = name.lowercase()
         fun has(vararg k: String) = k.any { it in n }
         return when {
-            has("plank", "hollow hold", "wall sit", "dead hang") -> Pattern.PLANK
-            has("run", "jog", "walk", "cycl", "bike", "rowing machine", "elliptical", "skipping", "jump rope", "stair", "treadmill", "burpee", "jumping jack", "high knee", "mountain climber") -> Pattern.CARDIO
+            has("side plank") -> Pattern.SIDE_PLANK
+            has("wall sit") -> Pattern.WALL_SIT
+            has("plank", "hollow hold", "dead hang") -> Pattern.PLANK
+            has("jumping jack", "star jump") -> Pattern.JUMPING_JACK
+            has("high knee") -> Pattern.HIGH_KNEES
+            has("mountain climber") -> Pattern.MOUNTAIN_CLIMBER
+            has("burpee") -> Pattern.BURPEE
+            has("calf raise", "heel raise") -> Pattern.CALF_RAISE
+            has("glute bridge", "hip bridge", "hip thrust") -> Pattern.GLUTE_BRIDGE
+            has("sit-up", "sit up", "situp") -> Pattern.SITUP
+            has("run", "jog", "walk", "cycl", "bike", "rowing machine", "elliptical", "skipping", "jump rope", "stair", "treadmill") -> Pattern.CARDIO
             has("lunge", "split squat", "step up", "step-up") -> Pattern.LUNGE
             has("squat", "leg press", "hack") -> Pattern.SQUAT
-            has("deadlift", "romanian", "rdl", "good morning", "hip thrust", "glute bridge", "kettlebell swing", "hyperextension", "back extension") -> Pattern.HINGE
+            has("deadlift", "romanian", "rdl", "good morning", "kettlebell swing", "hyperextension", "back extension") -> Pattern.HINGE
             has("push-up", "push up", "pushup", "press-up", "dip") -> Pattern.PUSHUP
             has("bench", "chest press", "fly", "flye", "pec deck", "floor press") -> Pattern.BENCH
             has("overhead", "shoulder press", "military", "arnold", "push press", "pike") -> Pattern.OVERHEAD
@@ -38,7 +48,7 @@ object FormGuide {
             has("curl") && !has("leg curl", "hamstring curl") -> Pattern.CURL
             has("tricep", "triceps", "pushdown", "skull", "kickback", "extension") && !has("leg extension", "back extension") -> Pattern.TRICEP
             has("lateral raise", "front raise", "side raise", "rear delt", "reverse fly", "upright row", "y raise") -> Pattern.RAISE
-            has("crunch", "sit-up", "sit up", "leg raise", "russian twist", "v-up", "bicycle", "ab ", "abs", "toe touch") -> Pattern.CRUNCH
+            has("crunch", "leg raise", "russian twist", "v-up", "bicycle", "ab ", "abs", "toe touch") -> Pattern.CRUNCH
             measurement.contains("DURATION") || measurement.contains("DISTANCE") -> Pattern.CARDIO
             primaryMuscle.equals("QUADS", true) || primaryMuscle.equals("LEGS", true) || primaryMuscle.equals("GLUTES", true) -> Pattern.SQUAT
             primaryMuscle.equals("BICEPS", true) -> Pattern.CURL
@@ -66,6 +76,9 @@ object FormGuide {
         Pattern.CRUNCH -> listOf(Phase(UP, 1f), Phase(SQUEEZE, 0.5f), Phase(DOWN, 1.5f))
         Pattern.PLANK, Pattern.CARDIO -> emptyList()
         Pattern.OTHER -> listOf(Phase(UP, 1.2f), Phase(DOWN, 2f), Phase(BREATHE, 0.4f))
+        Pattern.GLUTE_BRIDGE, Pattern.CALF_RAISE -> listOf(Phase(UP, 1f), Phase(SQUEEZE, 1f), Phase(DOWN, 1.5f))
+        Pattern.SITUP -> listOf(Phase(UP, 1.2f), Phase(DOWN, 1.8f))
+        Pattern.JUMPING_JACK, Pattern.HIGH_KNEES, Pattern.MOUNTAIN_CLIMBER, Pattern.BURPEE, Pattern.WALL_SIT, Pattern.SIDE_PLANK -> emptyList()
     }
 
     /** Setup + form cues with joint angles, said before and during the set. */
@@ -125,6 +138,34 @@ object FormGuide {
         Pattern.CARDIO -> listOf(
             Say("Find a pace you can keep. You should still be able to talk.", "ایسی رفتار رکھیں کہ آپ بات کر سکیں۔"),
             Say("Relax your shoulders and breathe steadily.", "کندھے ڈھیلے، سانس برابر۔"))
+        Pattern.JUMPING_JACK -> listOf(
+            Say("Jump your feet wide and swing your arms all the way overhead.", "پاؤں کھول کر چھلانگ لگائیں اور بازو پورے سر کے اوپر لے جائیں۔"),
+            Say("Land softly on the balls of your feet.", "پنجوں پر نرمی سے اتریں۔"))
+        Pattern.HIGH_KNEES -> listOf(
+            Say("Drive each knee up to hip height, about 90 degrees.", "ہر گھٹنا کولہے کی اونچائی تک، تقریباً 90 ڈگری۔"),
+            Say("Stay tall and pump your arms.", "جسم سیدھا رکھیں اور بازو چلائیں۔"))
+        Pattern.GLUTE_BRIDGE -> listOf(
+            Say("Feet flat, knees bent, arms by your sides.", "پاؤں زمین پر، گھٹنے مڑے، بازو ساتھ۔"),
+            Say("Push through your heels until your body makes a straight line from shoulders to knees.", "ایڑیوں سے زور لگائیں جب تک کندھوں سے گھٹنوں تک جسم سیدھا نہ ہو جائے۔"),
+            Say("Squeeze your glutes at the top.", "اوپر جا کر کولہے دبائیں۔"))
+        Pattern.SITUP -> listOf(
+            Say("Knees bent, feet flat, hands across your chest.", "گھٹنے مڑے، پاؤں زمین پر، ہاتھ سینے پر۔"),
+            Say("Curl up until your chest is close to your knees, then lower slowly.", "اوپر آئیں جب تک سینہ گھٹنوں کے قریب نہ ہو، پھر آہستہ نیچے جائیں۔"))
+        Pattern.MOUNTAIN_CLIMBER -> listOf(
+            Say("Start in a high plank, hands under shoulders.", "ہائی پلانک میں، ہاتھ کندھوں کے نیچے۔"),
+            Say("Drive your knees towards your chest one at a time, hips low.", "گھٹنے باری باری سینے کی طرف لائیں، کولہے نیچے۔"))
+        Pattern.WALL_SIT -> listOf(
+            Say("Back flat on the wall, slide down until your knees are at 90 degrees.", "کمر دیوار سے لگا کر نیچے آئیں جب تک گھٹنے 90 ڈگری پر نہ ہوں۔"),
+            Say("Knees over ankles, keep breathing.", "گھٹنے ٹخنوں کے اوپر، سانس لیتے رہیں۔"))
+        Pattern.SIDE_PLANK -> listOf(
+            Say("Elbow under your shoulder, body in one straight line.", "کہنی کندھے کے نیچے، جسم ایک سیدھی لائن میں۔"),
+            Say("Lift your hips and don't let them sag.", "کولہے اوپر رکھیں، نیچے نہ گرنے دیں۔"))
+        Pattern.CALF_RAISE -> listOf(
+            Say("Rise up high onto the balls of your feet.", "پنجوں کے بل اونچا اٹھیں۔"),
+            Say("Pause at the top, then lower all the way down.", "اوپر رکیں، پھر پورا نیچے لائیں۔"))
+        Pattern.BURPEE -> listOf(
+            Say("Squat, hands down, jump your feet back to a plank.", "بیٹھیں، ہاتھ زمین پر، پاؤں پیچھے پلانک میں۔"),
+            Say("Jump your feet in and explode up with a jump.", "پاؤں آگے لائیں اور چھلانگ لگا کر اوپر آئیں۔"))
         Pattern.OTHER -> listOf(
             Say("Move slowly and with control.", "آہستہ اور کنٹرول سے حرکت کریں۔"),
             Say("Use the full range and breathe out on the effort.", "پوری رینج استعمال کریں، زور لگاتے وقت سانس باہر۔"))
@@ -167,10 +208,14 @@ object FormGuide {
         fun cheer(i: Int, hard: Boolean) = if (hard && i % 2 == 1) HARD[(i / 2) % HARD.size] else CHEER[i % CHEER.size]
     }
 
+
     // ------------------------------------------------------------------ camera
     /** Things the camera can tell you, mid-set. */
     enum class Fix(val say: Say) {
         STEP_BACK(Say("Step back so I can see your whole body.", "تھوڑا پیچھے ہٹیں تاکہ پورا جسم نظر آئے۔")),
+        COME_CLOSER(Say("Come a little closer.", "تھوڑا قریب آئیں۔")),
+        TURN_SIDE(Say("Turn sideways to the camera for this one.", "اس ورزش کے لیے کیمرے کی طرف سائیڈ سے کھڑے ہوں۔")),
+        FACE_CAMERA(Say("Face the camera for this one.", "اس ورزش کے لیے کیمرے کی طرف منہ کریں۔")),
         CHEST_UP(Say("Chest up!", "سینہ اوپر!")),
         DEEPER(Say("A little deeper.", "تھوڑا اور نیچے۔")),
         HIPS_UP(Say("Lift your hips a little.", "کولہے تھوڑے اوپر کریں۔")),
@@ -181,31 +226,18 @@ object FormGuide {
         TOO_HIGH(Say("Stop at shoulder height.", "کندھے کی اونچائی پر رکیں۔")),
         STAY_TALL(Say("Stay tall.", "سیدھے رہیں۔")),
         SLOW(Say("Slow down, control it.", "آہستہ، کنٹرول کے ساتھ۔")),
+        ARMS_UP(Say("Arms all the way up.", "بازو پورے اوپر۔")),
+        KNEES_UP(Say("Knees up to hip height.", "گھٹنے کولہے کی اونچائی تک۔")),
+        HIPS_HIGHER(Say("Squeeze and push your hips higher.", "کولہے دبا کر اور اوپر کریں۔")),
+        CURL_HIGHER(Say("Curl up a bit higher.", "تھوڑا اور اوپر آئیں۔")),
+        KNEE_90(Say("Slide down to 90 degrees.", "نیچے آئیں، 90 ڈگری تک۔")),
+        HEELS_HIGHER(Say("Rise higher on your toes.", "پنجوں پر اور اونچا اٹھیں۔")),
     }
 
-    /** Rep rule: a joint angle (landmark indices a-b-c) travels from a start zone to a target zone and back. */
-    data class Rule(val a: Int, val b: Int, val c: Int, val startHigh: Boolean, val start: Float, val target: Float, val partial: Float, val partialFix: Fix)
+    enum class View { SIDE, FRONT, ANY }
 
-    // ML Kit landmark indices (left side; right = +1)
-    private const val SH = 11; private const val EL = 13; private const val WR = 15; private const val HIP = 23; private const val KN = 25; private const val AN = 27
-
-    fun rule(p: Pattern): Rule? = when (p) {
-        Pattern.SQUAT -> Rule(HIP, KN, AN, true, 160f, 105f, 130f, Fix.DEEPER)
-        Pattern.LUNGE -> Rule(HIP, KN, AN, true, 160f, 110f, 135f, Fix.DEEPER)
-        Pattern.HINGE -> Rule(SH, HIP, KN, true, 160f, 125f, 145f, Fix.DEEPER)
-        Pattern.PUSHUP -> Rule(SH, EL, WR, true, 150f, 100f, 125f, Fix.DEEPER)
-        Pattern.CURL -> Rule(SH, EL, WR, true, 140f, 65f, 95f, Fix.FULL)
-        Pattern.OVERHEAD -> Rule(SH, EL, WR, false, 105f, 155f, 135f, Fix.LOCKOUT)
-        Pattern.TRICEP -> Rule(SH, EL, WR, false, 100f, 150f, 130f, Fix.LOCKOUT)
-        Pattern.RAISE -> Rule(HIP, SH, EL, false, 30f, 70f, 50f, Fix.FULL)
-        Pattern.ROW -> Rule(SH, EL, WR, true, 145f, 100f, 120f, Fix.FULL)
-        else -> null
-    }
-    fun cameraCounts(p: Pattern) = rule(p) != null
-    fun cameraHolds(p: Pattern) = p == Pattern.PLANK
-
-    /** 33 landmarks as x,y,likelihood triples in upright image pixels. */
-    class Pose(val pts: FloatArray) {
+    /** 33 landmarks as x,y,likelihood triples in upright image pixels, plus the image size. */
+    class Pose(val pts: FloatArray, val w: Int = 0, val h: Int = 0) {
         fun x(i: Int) = pts[i * 3]; fun y(i: Int) = pts[i * 3 + 1]; fun ok(i: Int) = pts[i * 3 + 2] > 0.5f
         fun angle(a: Int, b: Int, c: Int): Float {
             val v1x = x(a) - x(b); val v1y = y(a) - y(b); val v2x = x(c) - x(b); val v2y = y(c) - y(b)
@@ -215,57 +247,180 @@ object FormGuide {
         }
         /** Lean of the segment a→b from vertical, degrees. */
         fun lean(a: Int, b: Int) = abs(Math.toDegrees(atan2((x(b) - x(a)).toDouble(), (y(a) - y(b)).toDouble()))).toFloat().let { if (it > 90) 180 - it else it }
+        fun dist(a: Int, b: Int) = sqrt((x(a) - x(b)) * (x(a) - x(b)) + (y(a) - y(b)) * (y(a) - y(b)))
+        /** 0 = left side, 1 = right side: whichever the camera sees better. */
         fun side(vararg idx: Int): Int {
             val l = idx.sumOf { pts[it * 3 + 2].toDouble() }; val r = idx.sumOf { pts[(it + 1) * 3 + 2].toDouble() }
             return if (r > l) 1 else 0
         }
+        /** FRONT when the shoulders look wide compared with the torso, SIDE when they look narrow. */
+        fun view(): View? {
+            if (!(ok(11) && ok(12) && (ok(23) || ok(24)))) return null
+            val sw = dist(11, 12)
+            val hy = if (ok(23) && ok(24)) (y(23) + y(24)) / 2 else if (ok(23)) y(23) else y(24)
+            val torso = abs(hy - (y(11) + y(12)) / 2).coerceAtLeast(1f)
+            val r = sw / torso
+            return if (r > 0.5f) View.FRONT else if (r < 0.32f) View.SIDE else View.ANY
+        }
     }
 
     /**
-     * Counts reps from a stream of poses and spots form slips. Feed every frame to [feed];
-     * it returns events to show/say. Thresholds are generous so people with less mobility still get counted.
+     * How a rep is read from the body. [signal] gives one number per frame (a joint angle or a ratio); a rep starts
+     * when it crosses [enter], reaches [target] for a full rep, and ends when it comes back past [start] — the gap
+     * between [start] and [enter] is the hysteresis that stops wobble from double-counting.
+     */
+    class Rule(
+        val joints: Set<Int>, val view: View, val startHigh: Boolean,
+        val start: Float, val enter: Float, val target: Float, val partial: Float, val partialFix: Fix,
+        val signal: (Pose) -> Float?,
+    )
+
+    private const val NOSE = 0; private const val SH = 11; private const val EL = 13; private const val WR = 15; private const val HIP = 23
+    private const val KN = 25; private const val AN = 27; private const val HEEL = 29; private const val TOE = 31
+
+    /** Angle a-b-c on the side the camera sees best (null when those joints aren't clearly visible). */
+    private fun sideAngle(p: Pose, a: Int, b: Int, c: Int): Float? {
+        val s = p.side(a, b, c)
+        return if (p.ok(a + s) && p.ok(b + s) && p.ok(c + s)) p.angle(a + s, b + s, c + s) else null
+    }
+    /** The more-bent of the two sides (for alternating moves). */
+    private fun minAngle(p: Pose, a: Int, b: Int, c: Int): Float? {
+        val l = if (p.ok(a) && p.ok(b) && p.ok(c)) p.angle(a, b, c) else null
+        val r = if (p.ok(a + 1) && p.ok(b + 1) && p.ok(c + 1)) p.angle(a + 1, b + 1, c + 1) else null
+        return listOfNotNull(l, r).minOrNull()
+    }
+
+    fun rule(p: Pattern): Rule? = when (p) {
+        Pattern.SQUAT -> Rule(setOf(HIP, KN, AN), View.ANY, true, 158f, 140f, 105f, 128f, Fix.DEEPER) { sideAngle(it, HIP, KN, AN) }
+        Pattern.LUNGE -> Rule(setOf(HIP, KN, AN), View.SIDE, true, 158f, 140f, 110f, 132f, Fix.DEEPER) { minAngle(it, HIP, KN, AN) }
+        Pattern.HINGE -> Rule(setOf(SH, HIP, KN), View.SIDE, true, 160f, 148f, 125f, 142f, Fix.DEEPER) { sideAngle(it, SH, HIP, KN) }
+        Pattern.PUSHUP -> Rule(setOf(SH, EL, WR), View.SIDE, true, 150f, 135f, 100f, 122f, Fix.DEEPER) { sideAngle(it, SH, EL, WR) }
+        Pattern.CURL -> Rule(setOf(SH, EL, WR), View.ANY, true, 140f, 120f, 65f, 95f, Fix.FULL) { sideAngle(it, SH, EL, WR) }
+        Pattern.OVERHEAD -> Rule(setOf(SH, EL, WR), View.FRONT, false, 105f, 125f, 155f, 138f, Fix.LOCKOUT) { sideAngle(it, SH, EL, WR) }
+        Pattern.TRICEP -> Rule(setOf(SH, EL, WR), View.ANY, false, 100f, 118f, 150f, 132f, Fix.LOCKOUT) { sideAngle(it, SH, EL, WR) }
+        Pattern.RAISE -> Rule(setOf(HIP, SH, EL), View.FRONT, false, 30f, 45f, 72f, 55f, Fix.FULL) { sideAngle(it, HIP, SH, EL) }
+        Pattern.ROW -> Rule(setOf(SH, EL, WR), View.SIDE, true, 145f, 128f, 100f, 118f, Fix.FULL) { sideAngle(it, SH, EL, WR) }
+        Pattern.JUMPING_JACK -> Rule(setOf(SH, HIP, WR), View.FRONT, false, 45f, 85f, 140f, 110f, Fix.ARMS_UP) { pp ->
+            val l = if (pp.ok(HIP) && pp.ok(SH) && pp.ok(WR)) pp.angle(HIP, SH, WR) else null
+            val r = if (pp.ok(HIP + 1) && pp.ok(SH + 1) && pp.ok(WR + 1)) pp.angle(HIP + 1, SH + 1, WR + 1) else null
+            listOfNotNull(l, r).takeIf { it.isNotEmpty() }?.average()?.toFloat()
+        }
+        Pattern.HIGH_KNEES -> Rule(setOf(SH, HIP, KN), View.ANY, true, 150f, 135f, 108f, 122f, Fix.KNEES_UP) { minAngle(it, SH, HIP, KN) }
+        Pattern.GLUTE_BRIDGE -> Rule(setOf(SH, HIP, KN), View.SIDE, false, 145f, 155f, 167f, 160f, Fix.HIPS_HIGHER) { sideAngle(it, SH, HIP, KN) }
+        Pattern.SITUP, Pattern.CRUNCH -> Rule(setOf(SH, HIP, KN), View.SIDE, true, 120f, 105f, 75f, 92f, Fix.CURL_HIGHER) { sideAngle(it, SH, HIP, KN) }
+        Pattern.MOUNTAIN_CLIMBER -> Rule(setOf(SH, HIP, KN), View.SIDE, true, 150f, 128f, 95f, 112f, Fix.KNEES_UP) { minAngle(it, SH, HIP, KN) }
+        Pattern.CALF_RAISE -> Rule(setOf(HEEL, TOE, AN), View.SIDE, false, 0.04f, 0.065f, 0.10f, 0.08f, Fix.HEELS_HIGHER) { pp ->
+            val s = pp.side(HEEL, TOE, HIP, AN)
+            if (!(pp.ok(HEEL + s) && pp.ok(TOE + s) && pp.ok(HIP + s) && pp.ok(AN + s))) null
+            else (pp.y(TOE + s) - pp.y(HEEL + s)) / pp.dist(HIP + s, AN + s).coerceAtLeast(1f)
+        }
+        Pattern.BURPEE -> Rule(setOf(SH, HIP), View.ANY, false, 25f, 45f, 65f, 55f, Fix.FULL) { pp ->
+            val s = pp.side(SH, HIP)
+            if (pp.ok(SH + s) && pp.ok(HIP + s)) pp.lean(HIP + s, SH + s) else null
+        }
+        else -> null
+    }
+
+    /** Holds the camera can watch (time-based sets). */
+    fun holdView(p: Pattern): View? = when (p) { Pattern.PLANK, Pattern.WALL_SIT -> View.SIDE; Pattern.SIDE_PLANK -> View.FRONT; else -> null }
+    fun cameraCounts(p: Pattern) = rule(p) != null
+    fun cameraHolds(p: Pattern) = holdView(p) != null
+    fun requiredView(p: Pattern): View = rule(p)?.view ?: holdView(p) ?: View.ANY
+    /** Exercises the camera can follow, for the coach's "what I can watch" list. */
+    val cameraList: List<Pair<Pattern, String>> = listOf(
+        Pattern.SQUAT to "Squats", Pattern.LUNGE to "Lunges", Pattern.PUSHUP to "Push-ups", Pattern.HINGE to "Deadlifts & RDLs",
+        Pattern.CURL to "Curls", Pattern.OVERHEAD to "Shoulder press", Pattern.TRICEP to "Triceps", Pattern.RAISE to "Lateral raises",
+        Pattern.ROW to "Rows", Pattern.JUMPING_JACK to "Jumping jacks", Pattern.HIGH_KNEES to "High knees", Pattern.GLUTE_BRIDGE to "Glute bridges",
+        Pattern.SITUP to "Sit-ups & crunches", Pattern.MOUNTAIN_CLIMBER to "Mountain climbers", Pattern.CALF_RAISE to "Calf raises",
+        Pattern.BURPEE to "Burpees", Pattern.PLANK to "Plank", Pattern.SIDE_PLANK to "Side plank", Pattern.WALL_SIT to "Wall sit",
+    )
+
+    /** Before the set: is the whole body in view, at a good distance, from the right angle? */
+    data class Setup(val ready: Boolean, val visible: Boolean, val distanceOk: Boolean, val viewOk: Boolean, val fix: Fix?)
+
+    fun setup(pose: Pose, pattern: Pattern): Setup {
+        val need = listOf(SH, HIP, KN, AN)
+        val vis = need.all { pose.ok(it) || pose.ok(it + 1) } && (pose.ok(NOSE) || pose.ok(SH) || pose.ok(SH + 1))
+        if (!vis) return Setup(false, false, false, false, Fix.STEP_BACK)
+        val ys = (0 until 33).filter { pose.ok(it) }.map { pose.y(it) }
+        val xs = (0 until 33).filter { pose.ok(it) }.map { pose.x(it) }
+        val span = if (pose.h > 0) maxOf((ys.max() - ys.min()) / pose.h, (xs.max() - xs.min()) / maxOf(pose.w, 1)) else 0.7f
+        val distOk = span in 0.4f..0.97f
+        val v = pose.view()
+        val want = requiredView(pattern)
+        val viewOk = want == View.ANY || v == null || v == View.ANY || v == want
+        val fix = when {
+            span > 0.97f -> Fix.STEP_BACK
+            span < 0.4f -> Fix.COME_CLOSER
+            !viewOk -> if (want == View.SIDE) Fix.TURN_SIDE else Fix.FACE_CAMERA
+            else -> null
+        }
+        return Setup(distOk && viewOk, true, distOk, viewOk, fix)
+    }
+
+    /**
+     * Counts reps from a stream of poses, scores each rep (depth, tempo, alignment) and spots form slips.
+     * The signal is smoothed (exponential moving average), gated on landmark confidence, and counted with
+     * enter/exit hysteresis and a minimum rep time, so jitter doesn't create phantom reps.
      */
     class Counter(private val pattern: Pattern) {
-        sealed interface Event { data class Rep(val n: Int, val sec: Float) : Event; data class Cue(val fix: FormGuide.Fix) : Event; data class Angle(val deg: Float) : Event }
+        data class RepScore(val n: Int, val score: Int, val sec: Float, val depth: Float, val fault: Fix?)
+        sealed interface Event {
+            data class Rep(val n: Int, val sec: Float, val score: Int, val fault: FormGuide.Fix?) : Event
+            data class Cue(val fix: FormGuide.Fix) : Event
+            data class Angle(val deg: Float) : Event
+        }
         private val r = rule(pattern)
         var reps = 0; private set
+        val scores = ArrayList<RepScore>()
         private var moving = false
         private var extreme = 0f
         private var repStart = 0L
+        private var lastRepEnd = 0L
+        private var ema: Float? = null
         private val times = ArrayList<Float>()
         private var lastFix = 0L
-        private var formBad = 0
         private var unseen = 0
+        private var frames = 0; private var faultFrames = 0
+        private val faultCounts = HashMap<Fix, Int>()
 
         fun feed(p: Pose, now: Long): List<Event> {
             val out = mutableListOf<Event>()
-            if (pattern == Pattern.PLANK) return plank(p, now)
-            val rr = r ?: return out
-            val s = p.side(rr.a, rr.b, rr.c)
-            val a = rr.a + s; val b = rr.b + s; val c = rr.c + s
-            if (!(p.ok(a) && p.ok(b) && p.ok(c))) {
+            if (r == null) return hold(p, now)
+            val raw = r.signal(p)
+            if (raw == null) {
                 if (++unseen == 25) fix(out, Fix.STEP_BACK, now, force = true)
                 return out
             }
             unseen = 0
-            val ang = p.angle(a, b, c)
-            out += Event.Angle(ang)
-            val inStart = if (rr.startHigh) ang >= rr.start else ang <= rr.start
-            val past = { v: Float, t: Float -> if (rr.startHigh) v <= t else v >= t }
+            val v = ema?.let { it + 0.45f * (raw - it) } ?: raw
+            ema = v
+            out += Event.Angle(v)
+            val past = { x: Float, t: Float -> if (r.startHigh) x <= t else x >= t }
+            val backToStart = if (r.startHigh) v >= r.start else v <= r.start
             if (!moving) {
-                if (!inStart && past(ang, (rr.start + rr.partial) / 2f)) { moving = true; extreme = ang; repStart = now }
+                if (past(v, r.enter) && now - lastRepEnd > 250) { moving = true; extreme = v; repStart = now; frames = 0; faultFrames = 0; faultCounts.clear() }
             } else {
-                extreme = if (rr.startHigh) minOf(extreme, ang) else maxOf(extreme, ang)
-                formChecks(p, s, ang, now, out)
-                if (inStart) {
+                extreme = if (r.startHigh) minOf(extreme, v) else maxOf(extreme, v)
+                frames++
+                formChecks(p, v, now, out)
+                if (backToStart) {
                     moving = false
-                    if (past(extreme, rr.target)) {
+                    lastRepEnd = now
+                    val sec = (now - repStart) / 1000f
+                    if (sec < 0.35f) return out                       // too fast to be real: jitter
+                    if (past(extreme, r.target) || past(extreme, (r.target + r.partial) / 2f)) {
                         reps++
-                        val sec = (now - repStart) / 1000f
                         times += sec
-                        out += Event.Rep(reps, sec)
-                        if (sec < 0.7f) fix(out, Fix.SLOW, now)
-                    } else if (past(extreme, rr.partial)) fix(out, rr.partialFix, now, force = true)
+                        val depth = ((if (r.startHigh) r.start - extreme else extreme - r.start) / abs(r.start - r.target)).coerceIn(0f, 1.2f)
+                        val tempo = when { sec < 0.6f -> 0.35f; sec < 1.0f -> 0.75f; sec <= 5f -> 1f; else -> 0.8f }
+                        val align = if (frames == 0) 1f else 1f - faultFrames.toFloat() / frames
+                        val score = ((depth.coerceAtMost(1f) * 0.5f + tempo * 0.25f + align * 0.25f) * 100).toInt().coerceIn(0, 100)
+                        val worst = faultCounts.maxByOrNull { it.value }?.key ?: if (sec < 0.6f) Fix.SLOW else null
+                        scores += RepScore(reps, score, sec, depth, worst)
+                        out += Event.Rep(reps, sec, score, worst)
+                        if (sec < 0.6f) fix(out, Fix.SLOW, now)
+                    } else if (past(extreme, r.partial)) fix(out, r.partialFix, now, force = true)
                 }
             }
             return out
@@ -273,32 +428,40 @@ object FormGuide {
 
         /** True when the last rep took much longer than the first ones — time to push. */
         fun slowing(): Boolean = times.size >= 4 && times.last() > 1.6f * times.take(3).average()
+        fun average(): Int = if (scores.isEmpty()) 0 else scores.map { it.score }.average().toInt()
+        fun topFault(): Fix? = scores.mapNotNull { it.fault }.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
 
-        private fun formChecks(p: Pose, s: Int, ang: Float, now: Long, out: MutableList<Event>) {
-            val sh = SH + s; val hip = HIP + s; val kn = KN + s; val an = AN + s; val el = EL + s
-            when (pattern) {
-                Pattern.SQUAT -> if (p.ok(sh) && p.ok(hip) && p.lean(hip, sh) > 55f) bad(out, Fix.CHEST_UP, now)
-                Pattern.LUNGE -> if (p.ok(sh) && p.ok(hip) && p.lean(hip, sh) > 30f) bad(out, Fix.STAY_TALL, now)
-                Pattern.PUSHUP -> if (p.ok(sh) && p.ok(hip) && p.ok(an)) {
-                    if (p.angle(sh, hip, an) < 150f) bad(out, if (hipAbove(p, sh, hip, an)) Fix.HIPS_DOWN else Fix.HIPS_UP, now)
-                }
-                Pattern.CURL -> if (p.ok(sh) && p.ok(el) && p.ok(hip) && p.angle(hip, sh, el) > 35f) bad(out, Fix.ELBOWS, now)
-                Pattern.RAISE -> if (ang > 110f) bad(out, Fix.TOO_HIGH, now)
-                else -> {}
+        private fun formChecks(p: Pose, v: Float, now: Long, out: MutableList<Event>) {
+            val s = p.side(SH, HIP, AN)
+            val sh = SH + s; val hip = HIP + s; val an = AN + s; val el = EL + s
+            val f: Fix? = when (pattern) {
+                Pattern.SQUAT -> if (p.ok(sh) && p.ok(hip) && p.lean(hip, sh) > 55f) Fix.CHEST_UP else null
+                Pattern.LUNGE -> if (p.ok(sh) && p.ok(hip) && p.lean(hip, sh) > 30f) Fix.STAY_TALL else null
+                Pattern.PUSHUP, Pattern.MOUNTAIN_CLIMBER -> if (p.ok(sh) && p.ok(hip) && p.ok(an) && p.angle(sh, hip, an) < 150f) {
+                    if (hipAbove(p, sh, hip, an)) Fix.HIPS_DOWN else Fix.HIPS_UP } else null
+                Pattern.CURL -> if (p.ok(sh) && p.ok(el) && p.ok(hip) && p.angle(hip, sh, el) > 35f) Fix.ELBOWS else null
+                Pattern.RAISE -> if (v > 110f) Fix.TOO_HIGH else null
+                else -> null
             }
+            if (f != null) { faultFrames++; faultCounts[f] = (faultCounts[f] ?: 0) + 1; if (faultCounts[f] == 4) fix(out, f, now) }
         }
 
         private var holdBadSince = 0L
-        private fun plank(p: Pose, now: Long): List<Event> {
+        private fun hold(p: Pose, now: Long): List<Event> {
             val out = mutableListOf<Event>()
-            val s = p.side(SH, HIP, AN); val sh = SH + s; val hip = HIP + s; val an = AN + s
+            val s = p.side(SH, HIP, AN); val sh = SH + s; val hip = HIP + s; val an = AN + s; val kn = KN + s
             if (!(p.ok(sh) && p.ok(hip) && p.ok(an))) { if (++unseen == 25) fix(out, Fix.STEP_BACK, now, force = true); return out }
             unseen = 0
-            val line = p.angle(sh, hip, an)
-            out += Event.Angle(line)
-            if (line < 160f) {
+            val bad: Fix? = when (pattern) {
+                Pattern.WALL_SIT -> if (p.ok(kn)) p.angle(hip, kn, an).also { out += Event.Angle(it) }.let { if (it > 112f) Fix.KNEE_90 else null } else null
+                else -> {
+                    val line = p.angle(sh, hip, an); out += Event.Angle(line)
+                    if (line < 160f) { if (hipAbove(p, sh, hip, an)) Fix.HIPS_DOWN else Fix.HIPS_UP } else null
+                }
+            }
+            if (bad != null) {
                 if (holdBadSince == 0L) holdBadSince = now
-                if (now - holdBadSince > 1200) { fix(out, if (hipAbove(p, sh, hip, an)) Fix.HIPS_DOWN else Fix.HIPS_UP, now); holdBadSince = now }
+                if (now - holdBadSince > 1200) { fix(out, bad, now); holdBadSince = now }
             } else holdBadSince = 0L
             return out
         }
@@ -310,7 +473,6 @@ object FormGuide {
             return p.y(hip) < lineY
         }
 
-        private fun bad(out: MutableList<Event>, f: Fix, now: Long) { if (++formBad >= 4) { fix(out, f, now); formBad = 0 } }
         private fun fix(out: MutableList<Event>, f: Fix, now: Long, force: Boolean = false) {
             if (!force && now - lastFix < 3500) return
             if (force && now - lastFix < 1500) return
