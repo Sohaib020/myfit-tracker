@@ -274,7 +274,7 @@ object LiveUpdates {
                 val water = d.water.sumOf { it.amountMl }
                 val steps = (h.daily?.steps ?: h.phoneSteps)
                 val kcal = food.sumOf { it.caloriesPerServing * it.quantity }
-                listOf(water.toDouble(), steps.toDouble(), kcal) to tg
+                listOf(water.toDouble(), (steps ?: 0L).toDouble(), kcal) to tg
             }.distinctUntilChanged().collectLatest { (v, tg) ->
                 delay(800)
                 com.myfit.tracker.widget.Widgets.refresh(app); WearSync.push(app)
