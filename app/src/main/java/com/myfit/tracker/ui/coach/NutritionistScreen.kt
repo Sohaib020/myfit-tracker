@@ -2,6 +2,8 @@ package com.myfit.tracker.ui.coach
 
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -89,6 +91,40 @@ private val DINNERS = listOf(
     listOf("chana_masala" to 1.0, "rice_white" to 0.5, "salad" to 1.0),
 )
 
+/** Calories ring + protein / carbs / fat bars for today. */
+@Composable
+private fun MacroRings(t: Nutritionist.Totals, g: Nutritionist.Goals, modifier: Modifier) {
+    val th = LocalFitTheme.current
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        val kf = g.kcal?.let { (t.kcal / it).toFloat() } ?: 0f
+        Box(Modifier.size(78.dp), contentAlignment = Alignment.Center) {
+            androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                val st = 9.dp.toPx()
+                drawArc(th.protein.copy(alpha = 0.18f), 0f, 360f, false, androidx.compose.ui.geometry.Offset(st / 2, st / 2), androidx.compose.ui.geometry.Size(size.width - st, size.height - st), style = androidx.compose.ui.graphics.drawscope.Stroke(st))
+                drawArc(if (kf > 1.08f) th.warning else th.protein, -90f, 360f * kf.coerceIn(0f, 1f), false, androidx.compose.ui.geometry.Offset(st / 2, st / 2), androidx.compose.ui.geometry.Size(size.width - st, size.height - st),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(st, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("${t.kcal.toInt()}", style = FitType.label, color = th.text)
+                Text(g.kcal?.let { "of ${it.toInt()}" } ?: "kcal", style = FitType.caption, color = th.textDim)
+            }
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(Triple("Protein", t.p to g.p, th.protein), Triple("Carbs", t.c to g.c, th.carbs), Triple("Fat", t.f to g.f, th.fat)).forEach { (label, v, c) ->
+                val f = v.second?.let { (v.first / it).toFloat() } ?: 0f
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, style = FitType.caption, color = th.textDim, modifier = Modifier.width(56.dp))
+                    Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)).background(c.copy(alpha = 0.18f))) {
+                        Box(Modifier.fillMaxWidth(f.coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(c))
+                    }
+                    Text(" ${v.first.toInt()}" + (v.second?.let { "/${it.toInt()}" } ?: "") + " g", style = FitType.caption, color = th.text, modifier = Modifier.width(72.dp))
+                }
+            }
+        }
+    }
+}
+
 private data class Msg(val mine: Boolean, val text: String)
 private val chatLog = mutableStateListOf<Msg>()   // kept for this app session only
 
@@ -142,37 +178,42 @@ fun NutritionistScreen(container: AppContainer) {
     fun speak(text: String) { if (speaking) voice.stop() else voice.speak(text, force = true, persona = persona) }
 
     Column(Modifier.fillMaxSize()) {
-        OverlayTopBar(cp.nName, { voice.stop(); nav.pop() }, "Your nutritionist")
-        // header
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(84.dp).clip(CircleShape)) { CoachPortrait(cp.nLook.id, speaking, 84.dp) }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Hi, I'm ${cp.nName}.", style = FitType.section, color = th.text)
-                Caption("I plan desi meals around your goals" + (if (health.isNotEmpty()) " and your health profile" else "") + ". Typical values — not medical advice.")
+        OverlayTopBar(cp.nName, { voice.stop(); nav.pop() }, "Your nutrition coach")
+        // ---------------- hero: the character on a stage with today's headline in a speech bubble
+        val headline = tips.firstOrNull()
+        val npose = when (tab) { 0 -> if (headline?.good == true) "thumbs" else "stand"; 1 -> "think"; 2 -> "cart"; else -> "portrait" }
+        Box(Modifier.fillMaxWidth().height(210.dp).padding(horizontal = 16.dp).clip(RoundedCornerShape(30.dp))
+            .background(Brush.linearGradient(listOf(th.success.copy(alpha = 0.22f), th.accent.copy(alpha = 0.06f))))) {
+            Row(Modifier.fillMaxSize()) {
+                CoachFigure(cp.nLook.id, npose, Modifier.weight(0.9f).fillMaxSize().padding(top = 10.dp), voice.level)
+                Column(Modifier.weight(1.1f).fillMaxSize().padding(top = 16.dp, end = 14.dp, bottom = 12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                    Column(Modifier.clip(RoundedCornerShape(18.dp)).background(th.text.copy(alpha = 0.08f)).padding(12.dp)) {
+                        Text(headline?.title ?: "Hi, I'm ${cp.nName}!", style = FitType.label, color = th.text, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Caption(headline?.body ?: "Log a meal and I'll coach you through the day.", color = th.textDim, modifier = Modifier.height(48.dp))
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        GlassIconButton(if (speaking) Duo.Stop else Duo.VolumeUp, { headline?.let { speak("${it.title}. ${it.body}") } }, size = 40.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Caption(if (health.isNotEmpty()) "Planned around your health profile" else "Desi food, your goals", color = th.textFaint)
+                    }
+                }
             }
         }
         Spacer(Modifier.height(10.dp))
+        MacroRings(totals, goals, Modifier.padding(horizontal = 16.dp))
+        Spacer(Modifier.height(10.dp))
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            itemsIndexed(listOf("Today", "Meal review", "Week & groceries", "Chat")) { i, t -> GlassChip(t, tab == i, { tab = i }) }
+            itemsIndexed(listOf("Today", "Meal review", "Week & groceries", "Chat")) { i, t -> GlassChip(t, tab == i, { tab = i },
+                icon = listOf(Duo.AutoAwesome, Duo.Plate, Duo.CalendarMonth, Duo.ChatBubble)[i]) }
         }
         Spacer(Modifier.height(8.dp))
         when (tab) {
             0 -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 40.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                item {
-                    Glass(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text("Today so far", style = FitType.label, color = th.textDim)
-                            Text("${totals.kcal.toInt()}" + (goals.kcal?.let { " / ${it.toInt()}" } ?: "") + " kcal", style = FitType.title, color = th.text)
-                            Caption("Protein ${totals.p.toInt()}" + (goals.p?.let { "/${it.toInt()}" } ?: "") + " g · Carbs ${totals.c.toInt()} g · Fat ${totals.f.toInt()} g · Fibre ${totals.fiber.toInt()} g")
-                        }
-                    }
-                }
                 items(tips) { t ->
                     Glass(Modifier.fillMaxWidth()) {
                         Row(Modifier.padding(14.dp)) {
-                            Icon(if (t.good) Duo.CheckCircle else Duo.AutoAwesome, null, tint = if (t.good) th.success else th.accentBright, modifier = Modifier.size(22.dp))
-                            Spacer(Modifier.width(10.dp))
+                            com.myfit.tracker.ui.components.IconBubble(if (t.good) Duo.CheckCircle else Duo.AutoAwesome, if (t.good) th.success else th.protein, 36.dp)
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(t.title, style = FitType.label, color = th.text)
                                 Caption(t.body, color = th.textDim)
@@ -195,10 +236,15 @@ fun NutritionistScreen(container: AppContainer) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(mealLabel(meal.mealType), style = FitType.section, color = th.text, modifier = Modifier.weight(1f))
                                 val gc = when (r.grade) { "A" -> th.success; "B" -> th.accentBright; "C" -> th.warning; else -> th.danger }
-                                Box(Modifier.size(36.dp).clip(CircleShape).background(gc.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) { Text(r.grade, style = FitType.title, color = gc) }
+                                Box(Modifier.size(46.dp).clip(CircleShape).background(gc.copy(alpha = 0.2f)).border(2.dp, gc, CircleShape), contentAlignment = Alignment.Center) { Text(r.grade, style = FitType.title, color = gc) }
                             }
-                            Caption(its.joinToString(" · ") { it.foodName.substringBefore(" (") }, color = th.textDim)
-                            Spacer(Modifier.height(4.dp))
+                            Caption(java.time.Instant.ofEpochMilli(meal.eatenAt).atZone(java.time.ZoneId.systemDefault()).let { com.myfit.tracker.domain.ClockFmt.f().format(it) } + " · " +
+                                its.joinToString(" · ") { it.foodName.substringBefore(" (") }, color = th.textDim)
+                            Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                its.take(6).forEach { it2 -> FoodThumb(container.nutritionRepo.iconForName(it2.foodName), 38.dp, 10.dp) }
+                            }
+                            Spacer(Modifier.height(8.dp))
                             Text(r.comment, style = FitType.body, color = th.text)
                             r.fix?.let { Caption("Try: $it", color = th.accentBright) }
                             aiNote?.let { Spacer(Modifier.height(6.dp)); Text(it, style = FitType.body, color = th.text) }
@@ -218,7 +264,7 @@ fun NutritionistScreen(container: AppContainer) {
                 }
             }
             2 -> WeekTab(container, goals.kcal, muslim)
-            else -> ChatTab(container, cp.nName, systemPrompt(cp.nName, totals, goals, muslim), persona)
+            else -> ChatTab(container, cp.nName, systemPrompt(cp.nName, totals, goals, muslim), persona, cp.nLook.id)
         }
     }
 }
@@ -315,7 +361,7 @@ private fun WeekTab(container: AppContainer, kcal: Double?, muslim: Boolean) {
 }
 
 @Composable
-private fun ChatTab(container: AppContainer, name: String, system: String, persona: PipVoice.Persona) {
+private fun ChatTab(container: AppContainer, name: String, system: String, persona: PipVoice.Persona, look: String) {
     val th = LocalFitTheme.current
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
@@ -341,7 +387,8 @@ private fun ChatTab(container: AppContainer, name: String, system: String, perso
                 }
             }
             items(chatLog) { m ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = if (m.mine) Arrangement.End else Arrangement.Start) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = if (m.mine) Arrangement.End else Arrangement.Start, verticalAlignment = Alignment.Bottom) {
+                    if (!m.mine) { CoachPortrait(look, false, 34.dp); Spacer(Modifier.width(6.dp)) }
                     Column(Modifier.fillMaxWidth(0.86f).clip(RoundedCornerShape(18.dp)).background(if (m.mine) th.accent.copy(alpha = 0.22f) else th.text.copy(alpha = 0.06f)).padding(12.dp)) {
                         Text(m.text, style = FitType.body, color = th.text)
                         if (!m.mine) Icon(Duo.VolumeUp, "Read aloud", tint = th.textDim, modifier = Modifier.align(Alignment.End).size(28.dp).clickableNoRipple { container.pipVoice.speak(m.text, force = true, persona = persona) }.padding(4.dp))
