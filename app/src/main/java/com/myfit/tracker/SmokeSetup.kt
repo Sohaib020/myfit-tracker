@@ -46,6 +46,8 @@ object DemoData {
         )
         c.settings.setTourDone(true)
         c.settings.setMuslim("yes")
+        com.myfit.tracker.ui.onboarding.OnboardingVersion.markDone(c.app)
+        c.app.getSharedPreferences("onboarding", android.content.Context.MODE_PRIVATE).edit().putBoolean("perms_v3", true).apply()
         c.nutritionRepo.seedIfNeeded()
         val day = 86_400_000L
         val now = System.currentTimeMillis()
