@@ -437,6 +437,25 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                     "report" -> if (nav.stack.lastOrNull() != Overlay.WeeklyReport) nav.push(Overlay.WeeklyReport)
                     "glucose" -> if (nav.stack.lastOrNull() != Overlay.Glucose) nav.push(Overlay.Glucose)
                     "friends" -> if (nav.stack.lastOrNull() != Overlay.Social) nav.push(Overlay.Social)
+                    else -> if (com.myfit.tracker.BuildConfig.DEBUG && o.startsWith("shot:")) {
+                        // debug-only routes for the website screenshots
+                        nav.popTo { false }
+                        when (o.removePrefix("shot:")) {
+                            "home" -> tab = 0
+                            "train" -> { tab = 1; com.myfit.tracker.ui.nav.Launch.trainSeg.value = 0 }
+                            "progress" -> { tab = 1; com.myfit.tracker.ui.nav.Launch.trainSeg.value = 3 }
+                            "exercises" -> { tab = 1; com.myfit.tracker.ui.nav.Launch.trainSeg.value = 2 }
+                            "food" -> tab = 2
+                            "arena" -> tab = 3
+                            "settings" -> tab = 4
+                            "nutritionist" -> nav.push(Overlay.Nutritionist)
+                            "coach" -> nav.push(Overlay.CoachHub)
+                            "mealplans" -> nav.push(Overlay.MealPlans)
+                            "body" -> nav.push(Overlay.Body)
+                            "deen" -> nav.push(Overlay.Deen)
+                            "pip" -> nav.push(Overlay.PipChat)
+                        }
+                    }
                 }
             }
             // friend invite links (myfit://invite?c=CODE): add the friend once signed in, then show Arena → Friends

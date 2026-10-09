@@ -77,6 +77,8 @@ val LocalNav = staticCompositionLocalOf { Nav() }
 
 /** One-shot requests for a screen to jump straight to an action when it opens (set by Home card buttons). */
 object Launch {
+    /** Train tab segment to show (set by debug screenshot routes). */
+    val trainSeg = kotlinx.coroutines.flow.MutableStateFlow<Int?>(null)
     @Volatile var mind: String? = null
     @Volatile var cycle: String? = null
     fun takeMind(): String? = mind.also { mind = null }

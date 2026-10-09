@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
         com.myfit.tracker.ui.pip.Buddy.init(this)
         com.myfit.tracker.ui.programs.ProgramEngine.init(this)
         if (BuildConfig.DEBUG && intent?.getBooleanExtra("smoke", false) == true) SmokeSetup.ensureProfile(container)
+        if (BuildConfig.DEBUG && intent?.getBooleanExtra("demo", false) == true) runCatching { DemoData.seed(container) }
         val crash = CrashGuard.lastCrash(this)
         setContent {
             var report by remember { mutableStateOf(crash) }
