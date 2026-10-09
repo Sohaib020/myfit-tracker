@@ -61,7 +61,7 @@ data class AppSettings(
     val restDefaultSec: Int = 90,
     val restSound: Boolean = true,
     val restVibrate: Boolean = true,
-    val weightStepKg: Double = 2.5,
+    val weightStepKg: Double = 1.0,
     val keepScreenOn: Boolean = true,
     val lastHealthSync: Long? = null,
     val lastHealthSyncMsg: String = "",
@@ -127,7 +127,7 @@ class SettingsStore(private val context: Context) {
         val restSec = intPreferencesKey("rest_sec")
         val restSound = booleanPreferencesKey("rest_sound")
         val restVib = booleanPreferencesKey("rest_vibrate")
-        val wStep = doublePreferencesKey("weight_step_kg")
+        val wStep = doublePreferencesKey("weight_step_kg_v2")   // R17: new default 1 kg (old key held 2.5)
         val screenOn = booleanPreferencesKey("keep_screen_on")
         val hcSync = longPreferencesKey("hc_last_sync")
         val hcMsg = stringPreferencesKey("hc_last_msg")
@@ -189,7 +189,7 @@ class SettingsStore(private val context: Context) {
             restDefaultSec = p[K.restSec] ?: 90,
             restSound = p[K.restSound] ?: true,
             restVibrate = p[K.restVib] ?: true,
-            weightStepKg = p[K.wStep] ?: 2.5,
+            weightStepKg = p[K.wStep] ?: 1.0,
             keepScreenOn = p[K.screenOn] ?: true,
             lastHealthSync = p[K.hcSync],
             lastHealthSyncMsg = p[K.hcMsg] ?: "",

@@ -42,6 +42,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -103,7 +110,7 @@ fun SetInputs(m: String, d: Draft, onChange: (Draft) -> Unit, u: UnitPrefs, step
 }
 
 @Composable
-private fun BigStepper(label: String, value: String, unit: String?, onMinus: () -> Unit, onPlus: () -> Unit, onTapValue: () -> Unit, height: Dp = 84.dp) {
+private fun BigStepper(label: String, value: String, unit: String?, onMinus: () -> Unit, onPlus: () -> Unit, onTapValue: () -> Unit, height: Dp = 84.dp, sub: String? = null) {
     val th = LocalFitTheme.current
     val tick = rememberTick()
     Column {
@@ -112,6 +119,7 @@ private fun BigStepper(label: String, value: String, unit: String?, onMinus: () 
             Row(Modifier.fillMaxSize().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 StepButton(Duo.Remove) { tick(); onMinus() }
                 Box(Modifier.weight(1f).fillMaxSize().clickableNoRipple(onTapValue), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(verticalAlignment = Alignment.Bottom) {
                         AnimatedContent(value, transitionSpec = {
                             (slideInVertically(spring(0.7f, 600f)) { -it / 2 } + fadeIn()).togetherWith(slideOutVertically { it / 2 } + fadeOut())
@@ -123,6 +131,8 @@ private fun BigStepper(label: String, value: String, unit: String?, onMinus: () 
                             Text(unit, style = FitType.section, color = th.textDim, modifier = Modifier.padding(bottom = 6.dp))
                         }
                     }
+                    if (sub != null) Text(sub, style = FitType.label, color = th.textFaint)
+                    }
                 }
                 StepButton(Duo.Add) { tick(); onPlus() }
             }
@@ -132,15 +142,38 @@ private fun BigStepper(label: String, value: String, unit: String?, onMinus: () 
 
 @Composable
 private fun StepButton(icon: ImageVector, onClick: () -> Unit) {
-    Glass(Modifier.size(64.dp), shape = CircleShape, onClick = onClick, pressScale = 0.85f) {
-        Icon(icon, null, tint = LocalFitTheme.current.text, modifier = Modifier.align(Alignment.Center).size(30.dp))
+    val th = LocalFitTheme.current
+    val cb = androidx.compose.runtime.rememberUpdatedState(onClick)
+    var pressed by remember { mutableStateOf(false) }
+    val scale by androidx.compose.animation.core.animateFloatAsState(if (pressed) 0.85f else 1f, spring(0.5f, 700f), label = "stepPress")
+    // tap = one step; hold = repeats, getting faster the longer it's held
+    Glass(Modifier.size(64.dp).graphicsLayerScale(scale).pointerInput(Unit) {
+        coroutineScope {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                pressed = true
+                cb.value()
+                val job = launch {
+                    delay(420)
+                    var gap = 170L
+                    while (true) { cb.value(); delay(gap); gap = (gap * 0.86).toLong().coerceAtLeast(45L) }
+                }
+                waitForUpOrCancellation()
+                job.cancel(); pressed = false
+            }
+        }
+    }, shape = CircleShape) {
+        Icon(icon, null, tint = th.text, modifier = Modifier.align(Alignment.Center).size(30.dp))
     }
 }
+
+private fun Modifier.graphicsLayerScale(s: Float) = this.then(androidx.compose.ui.Modifier.graphicsLayer { scaleX = s; scaleY = s })
 
 /** Weight in canonical kg; steps snap to plate increments in the display unit. */
 @Composable
 fun WeightField(label: String, kg: Double?, u: UnitPrefs, stepKg: Double, allowEmpty: Boolean = false, onChange: (Double?) -> Unit) {
     var typing by remember { mutableStateOf(false) }
+    // kg: the chosen step (1 kg by default); lb: 5 lb, a common plate jump. Typing still accepts decimals (22.5).
     val step = if (u.weight == WeightUnit.KG) stepKg else 5.0
     val display = kg?.let { Units.kgTo(it, u.weight) }
     fun snap(dir: Int) {
@@ -148,7 +181,10 @@ fun WeightField(label: String, kg: Double?, u: UnitPrefs, stepKg: Double, allowE
         val next = ((floor(cur / step + 1e-9) + if (dir > 0) 1 else if (cur % step > 1e-6) 0 else -1) * step).coerceAtLeast(0.0)
         onChange(if (allowEmpty && next == 0.0) null else Units.toKg(next, u.weight))
     }
-    BigStepper(label, display?.let { Fmt.trim(it, 2) } ?: "—", u.weight.label, { snap(-1) }, { snap(1) }, { typing = true })
+    // the other unit, small underneath (lb ↔ kg)
+    val other = if (u.weight == WeightUnit.KG) WeightUnit.entries.firstOrNull { it != WeightUnit.KG } else WeightUnit.KG
+    val sub = if (kg != null && kg > 0 && other != null) "≈ ${Fmt.trim(Units.kgTo(kg, other), 1)} ${other.label}" else null
+    BigStepper(label, display?.let { Fmt.trim(it, 2) } ?: "—", u.weight.label, { snap(-1) }, { snap(1) }, { typing = true }, sub = sub)
     if (typing) NumberPadDialog(label, display?.let { Fmt.trim(it, 2) } ?: "", u.weight.label, true, onDismiss = { typing = false }) { s ->
         onChange(s.toDoubleOrNull()?.let { Units.toKg(it, u.weight) }); typing = false
     }
