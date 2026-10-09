@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
         com.myfit.tracker.ui.programs.ProgramEngine.init(this)
         if (BuildConfig.DEBUG && intent?.getBooleanExtra("smoke", false) == true) SmokeSetup.ensureProfile(container)
         if (BuildConfig.DEBUG && intent?.getBooleanExtra("demo", false) == true) runCatching { DemoData.seed(container) }
+        if (BuildConfig.DEBUG && getSharedPreferences("demo", MODE_PRIVATE).getBoolean("seeded", false)) com.myfit.tracker.domain.BadgeEngine.quiet = true
         val crash = CrashGuard.lastCrash(this)
         setContent {
             var report by remember { mutableStateOf(crash) }

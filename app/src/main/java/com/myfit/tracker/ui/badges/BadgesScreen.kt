@@ -180,6 +180,7 @@ fun StreaksTile(container: AppContainer, onClick: () -> Unit) {
 /** Shown once per newly earned badge (e.g. from MainShell). */
 @Composable
 fun BadgeCelebration(container: AppContainer) {
+    if (com.myfit.tracker.domain.BadgeEngine.quiet) return
     val th = LocalFitTheme.current
     val state by BadgeEngine.state.collectAsState()
     val list = state?.celebrate.orEmpty()

@@ -46,6 +46,10 @@ object DemoData {
         )
         c.settings.setTourDone(true)
         c.settings.setPermsAsked(true)
+        c.settings.setDiabetesAsked(true)
+        c.app.getSharedPreferences("first_week", android.content.Context.MODE_PRIVATE).edit().putBoolean("dismissed", true).apply()
+        // the setup weight is logged "now" at 84 kg — drop it so the demo chart ends on the real trend
+        c.logRepo.weightsAll().first().filter { it.note.startsWith("Starting weight") }.forEach { c.logRepo.deleteWeight(it.id) }
         c.settings.setMuslim("yes")
         com.myfit.tracker.ui.onboarding.OnboardingVersion.markDone(c.app)
         c.app.getSharedPreferences("onboarding", android.content.Context.MODE_PRIVATE).edit().putBoolean("perms_v3", true).apply()
