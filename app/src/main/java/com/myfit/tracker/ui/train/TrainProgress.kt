@@ -74,9 +74,10 @@ private data class Lift(val ex: Exercise, val now: Double, val before: Double?, 
 private data class Stats(
     val workouts: Int, val sets: Int, val volume: Double, val pWorkouts: Int, val pSets: Int, val pVolume: Double,
     val bars: List<Pair<String, Double>>, val muscles: List<Pair<String, Double>>, val lifts: List<Lift>, val weeks: Double,
+    val kcal: Double = 0.0, val pKcal: Double = 0.0, val minutes: Long = 0, val pMinutes: Long = 0,
 )
 
-private fun compute(rows: List<SetRow>, ex: Map<Long, Exercise>, span: Span): Stats {
+private fun compute(rows: List<SetRow>, ex: Map<Long, Exercise>, span: Span, workouts: Map<Long, com.myfit.tracker.data.db.Workout> = emptyMap(), bodyKg: Double = 70.0): Stats {
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now()
     val start = today.minusDays(span.days - 1)
@@ -112,8 +113,21 @@ private fun compute(rows: List<SetRow>, ex: Map<Long, Exercise>, span: Span): St
             val now = best(l) ?: return@mapNotNull null
             Lift(e, now, best(prev.filter { it.exerciseId == id }), l.map { it.workoutId }.distinct().size)
         }.sortedByDescending { it.sessions }.take(6)
+    // estimated burn + time trained, per finished workout (all sets of that workout, warm-ups included in time)
+    fun burn(l: List<SetRow>): Pair<Double, Long> {
+        var kcal = 0.0; var sec = 0L
+        rows.filter { r -> l.any { it.workoutId == r.workoutId } }.groupBy { it.workoutId }.forEach { (id, sets) ->
+            val w = workouts[id] ?: return@forEach
+            val end = w.endedAt ?: return@forEach
+            val d = ((end - w.startedAt) / 1000).coerceIn(0L, 4 * 3600L)
+            val data = sets.map { r -> WorkoutCalc.SetData(r.exerciseId, ex[r.exerciseId]?.measurementType ?: MeasurementType.WEIGHT_REPS, r.setType, r.weightKg, r.reps, r.durationSec, r.distanceM, null) }
+            kcal += com.myfit.tracker.domain.WorkoutBurn.estimate(d, data, bodyKg).kcal; sec += d
+        }
+        return kcal to sec
+    }
+    val (kNow, sNow) = burn(cur); val (kPrev, sPrev) = burn(prev)
     return Stats(cur.map { it.workoutId }.distinct().size, cur.size, vol(cur), prev.map { it.workoutId }.distinct().size, prev.size, vol(prev),
-        bars, muscle.entries.map { it.key to it.value / weeks }.sortedByDescending { it.second }, lifts, weeks)
+        bars, muscle.entries.map { it.key to it.value / weeks }.sortedByDescending { it.second }, lifts, weeks, kNow, kPrev, sNow / 60, sPrev / 60)
 }
 
 @Composable
@@ -125,10 +139,13 @@ fun TrainProgressScreen(container: AppContainer, embedded: Boolean = false, bott
     val span = Span.entries[spanI]
     val rows by remember { container.workoutRepo.allHistory() }.collectAsState(initial = null)
     val exList by container.exerciseRepo.everything.collectAsState(initial = emptyList())
-    val stats by produceState<Stats?>(null, rows, exList, span) {
+    val from = remember(span) { LocalDate.now().minusDays(span.days * 2 - 1).toString() }
+    val ws by remember(from) { container.workoutRepo.completedRange(from, LocalDate.now().toString()) }.collectAsState(initial = emptyList())
+    val bodyW by remember { container.logRepo.latestWeight() }.collectAsState(initial = null)
+    val stats by produceState<Stats?>(null, rows, exList, span, ws, bodyW) {
         val r = rows ?: return@produceState
         val m = exList.associateBy { it.id }
-        value = withContext(Dispatchers.Default) { compute(r, m, span) }
+        value = withContext(Dispatchers.Default) { compute(r, m, span, ws.associateBy { it.id }, bodyW?.weightKg ?: 70.0) }
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -153,19 +170,17 @@ fun TrainProgressScreen(container: AppContainer, embedded: Boolean = false, bott
                     }
                 }
             }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Metric("Workouts", "${s.workouts}", delta(s.workouts.toDouble(), s.pWorkouts.toDouble()), Modifier.weight(1f))
-                    Metric("Working sets", "${s.sets}", delta(s.sets.toDouble(), s.pSets.toDouble()), Modifier.weight(1f))
-                    Metric("Volume", if (s.volume > 0) Fmt.weight(s.volume, u.weight, 0) else "—", delta(s.volume, s.pVolume), Modifier.weight(1.2f))
-                }
-            }
-            item { Caption("Compared with the ${span.label.lowercase()} before. Volume = weight × reps, warm-ups excluded.", Modifier.padding(horizontal = 6.dp)) }
-            item {
-                Glass(Modifier.fillMaxWidth()) {
+            item(key = "bento") { StatBento(s, u) }
+            item { Caption("Compared with the ${span.label.lowercase()} before. Volume = weight × reps, warm-ups excluded. Calories are estimates.", Modifier.padding(horizontal = 6.dp)) }
+            item(key = "vol") {
+                com.myfit.tracker.ui.components.NeonTile(com.myfit.tracker.ui.components.Neon.Lime, Modifier.fillMaxWidth(), glowAt = androidx.compose.ui.Alignment.TopStart) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("Volume " + if (span.bucketDays == 1L) "per day" else "per week", style = FitType.label, color = th.text)
-                        Spacer(Modifier.height(10.dp))
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            com.myfit.tracker.ui.components.IconOrb(com.myfit.tracker.ui.theme.Duo.Insights, com.myfit.tracker.ui.components.Neon.Lime, 34.dp, float = false)
+                            Spacer(Modifier.width(10.dp))
+                            Text("Volume " + if (span.bucketDays == 1L) "per day" else "per week", style = FitType.section, color = th.text)
+                        }
+                        Spacer(Modifier.height(12.dp))
                         Bars(s.bars)
                     }
                 }
@@ -173,15 +188,18 @@ fun TrainProgressScreen(container: AppContainer, embedded: Boolean = false, bott
             if (s.muscles.isNotEmpty()) {
                 item { SectionTitle("Sets per muscle · weekly average") }
                 item {
-                    Glass(Modifier.fillMaxWidth()) {
+                    com.myfit.tracker.ui.components.NeonTile(com.myfit.tracker.ui.components.Neon.Violet, Modifier.fillMaxWidth(), glowAt = androidx.compose.ui.Alignment.BottomEnd, phase = 0.3f) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             val max = (s.muscles.maxOf { it.second }).coerceAtLeast(20.0)
                             s.muscles.forEach { (m, v) ->
                                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                     Text(m, style = FitType.label, color = th.text, modifier = Modifier.width(92.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    val grow = remember { androidx.compose.animation.core.Animatable(0f) }
+                                    androidx.compose.runtime.LaunchedEffect(v) { grow.animateTo((v / max).toFloat().coerceIn(0.02f, 1f), androidx.compose.animation.core.tween(900)) }
+                                    val nv = com.myfit.tracker.ui.components.Neon.Violet
                                     Box(Modifier.weight(1f).height(10.dp).clip(CircleShape).background(th.text.copy(alpha = 0.08f))) {
-                                        Box(Modifier.fillMaxHeight().fillMaxWidth((v / max).toFloat().coerceIn(0.02f, 1f)).clip(CircleShape)
-                                            .background(if (v >= 10) th.accentBright else th.accent.copy(alpha = 0.6f)))
+                                        Box(Modifier.fillMaxHeight().fillMaxWidth(grow.value.coerceAtLeast(0.02f)).clip(CircleShape)
+                                            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(if (v >= 10) listOf(nv.b, nv.a) else listOf(nv.b.copy(alpha = 0.6f), nv.a.copy(alpha = 0.6f)))))
                                     }
                                     Spacer(Modifier.width(10.dp))
                                     Text(Fmt.trim(v, 1), style = FitType.label, color = th.textDim, modifier = Modifier.width(36.dp))
@@ -195,8 +213,10 @@ fun TrainProgressScreen(container: AppContainer, embedded: Boolean = false, bott
             if (s.lifts.isNotEmpty()) {
                 item { SectionTitle("Strength · estimated 1-rep max") }
                 items(s.lifts, key = { it.ex.id }) { l ->
-                    Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), onClick = { nav.push(Overlay.ExerciseDetail(l.ex.id)) }) {
+                    com.myfit.tracker.ui.components.NeonTile(com.myfit.tracker.ui.components.Neon.Amber, Modifier.fillMaxWidth(), { nav.push(Overlay.ExerciseDetail(l.ex.id)) }, corner = 22.dp, phase = (l.ex.id % 7) / 7f) {
                         Row(Modifier.padding(14.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            com.myfit.tracker.ui.components.IconOrb(com.myfit.tracker.ui.theme.Duo.FitnessCenter, com.myfit.tracker.ui.components.Neon.Amber, 38.dp, phase = (l.ex.id % 5) / 5f)
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(l.ex.name, style = FitType.label, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Caption("${l.sessions} session${if (l.sessions == 1) "" else "s"} · est. from your best set")
@@ -217,16 +237,20 @@ fun TrainProgressScreen(container: AppContainer, embedded: Boolean = false, bott
                 item { Caption("Estimates (Epley formula) from sets of 1–12 reps — not a weight you've actually lifted.", Modifier.padding(horizontal = 6.dp)) }
             }
             item {
-                Glass(Modifier.fillMaxWidth(), onClick = { nav.push(Overlay.WeeklyReport) }) {
+                com.myfit.tracker.ui.components.NeonTile(com.myfit.tracker.ui.components.Neon.Cyan, Modifier.fillMaxWidth(), { nav.push(Overlay.WeeklyReport) }, corner = 22.dp, phase = 0.5f) {
                     Row(Modifier.padding(14.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        com.myfit.tracker.ui.components.IconOrb(com.myfit.tracker.ui.theme.Duo.Insights, com.myfit.tracker.ui.components.Neon.Cyan, 36.dp, float = false)
+                        Spacer(Modifier.width(12.dp))
                         Text("Your week · shareable report", style = FitType.label, color = th.text, modifier = Modifier.weight(1f))
                         androidx.compose.material3.Icon(com.myfit.tracker.ui.theme.Duo.KeyboardArrowRight, null, tint = th.textDim)
                     }
                 }
             }
             item {
-                Glass(Modifier.fillMaxWidth(), onClick = { nav.push(Overlay.Records) }) {
+                com.myfit.tracker.ui.components.NeonTile(com.myfit.tracker.ui.components.Neon.Pink, Modifier.fillMaxWidth(), { nav.push(Overlay.Records) }, corner = 22.dp, phase = 0.8f) {
                     Row(Modifier.padding(14.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        com.myfit.tracker.ui.components.IconOrb(com.myfit.tracker.ui.theme.Duo.EmojiEvents, com.myfit.tracker.ui.components.Neon.Pink, 36.dp, float = false)
+                        Spacer(Modifier.width(12.dp))
                         Text("All personal records", style = FitType.label, color = th.text, modifier = Modifier.weight(1f))
                         androidx.compose.material3.Icon(com.myfit.tracker.ui.theme.Duo.KeyboardArrowRight, null, tint = th.textDim)
                     }
@@ -242,14 +266,47 @@ private fun delta(now: Double, before: Double): Pair<String, Boolean?>? = when {
     else -> ((now - before) / before * 100).roundToInt().let { p -> (if (p > 0) "▲ $p%" else if (p < 0) "▼ ${-p}%" else "same") to (if (p > 0) true else if (p < 0) false else null) }
 }
 
+/** Headline numbers as a neon bento: workouts · sets · volume · calories · time, each vs. the period before. */
 @Composable
-private fun Metric(label: String, value: String, d: Pair<String, Boolean?>?, modifier: Modifier) {
+private fun StatBento(s: Stats, u: com.myfit.tracker.domain.UnitPrefs) {
+    val N = com.myfit.tracker.ui.components.Neon
+    val D = com.myfit.tracker.ui.theme.Duo
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatTile("Calories burned", s.kcal, { Fmt.int(it.toLong()) }, com.myfit.tracker.domain.EnergyUnit.label, delta(s.kcal, s.pKcal), D.Flame, N.Crimson, Modifier.weight(1.25f), tall = true, phase = 0f)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                StatTile("Workouts", s.workouts.toDouble(), { it.toInt().toString() }, null, delta(s.workouts.toDouble(), s.pWorkouts.toDouble()), D.FitnessCenter, N.Violet, Modifier.fillMaxWidth(), phase = 0.3f)
+                StatTile("Working sets", s.sets.toDouble(), { it.toInt().toString() }, null, delta(s.sets.toDouble(), s.pSets.toDouble()), D.LinearScale, N.Cyan, Modifier.fillMaxWidth(), phase = 0.6f)
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatTile("Volume", s.volume, { if (it > 0) Fmt.weight(it, u.weight, 0) else "—" }, null, delta(s.volume, s.pVolume), D.Insights, N.Lime, Modifier.weight(1.25f), phase = 0.15f)
+            StatTile("Time trained", s.minutes.toDouble(), { val m = it.toLong(); if (m >= 60) "${m / 60}h ${m % 60}m" else "${m}m" }, null, delta(s.minutes.toDouble(), s.pMinutes.toDouble()), D.Timer, N.Amber, Modifier.weight(1f), phase = 0.45f)
+        }
+    }
+}
+
+@Composable
+private fun StatTile(label: String, value: Double, fmt: (Double) -> String, unit: String?, d: Pair<String, Boolean?>?, icon: androidx.compose.ui.graphics.vector.ImageVector,
+                     neon: com.myfit.tracker.ui.components.Neon, modifier: Modifier, tall: Boolean = false, phase: Float = 0f) {
     val th = LocalFitTheme.current
-    Glass(modifier, shape = RoundedCornerShape(22.dp)) {
-        Column(Modifier.padding(12.dp)) {
-            Caption(label)
-            com.myfit.tracker.ui.components.FitText(value, FitType.title, th.text)
-            if (d != null) Caption(d.first, color = when (d.second) { true -> th.success; false -> th.warning; null -> null })
+    com.myfit.tracker.ui.components.NeonTile(neon, modifier.height(if (tall) 214.dp else 102.dp), phase = phase) {
+        Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                com.myfit.tracker.ui.components.IconOrb(icon, neon, if (tall) 44.dp else 30.dp, float = tall, phase = phase)
+                Spacer(Modifier.width(8.dp))
+                com.myfit.tracker.ui.components.TileLabel(label, Modifier.weight(1f))
+            }
+            Column {
+                Row(verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
+                    com.myfit.tracker.ui.components.CountUp(value, fmt, if (tall) FitType.display else FitType.title, th.text)
+                    if (unit != null) { Spacer(Modifier.width(4.dp)); Caption(unit) }
+                }
+                if (d != null) {
+                    val c = when (d.second) { true -> th.success; false -> th.warning; null -> th.textDim }
+                    Text(d.first, style = FitType.overline, color = c, modifier = Modifier.clip(CircleShape).background(c.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 3.dp))
+                }
+            }
         }
     }
 }
@@ -258,13 +315,18 @@ private fun Metric(label: String, value: String, d: Pair<String, Boolean?>?, mod
 private fun Bars(bars: List<Pair<String, Double>>) {
     val th = LocalFitTheme.current
     val max = (bars.maxOfOrNull { it.second } ?: 0.0).coerceAtLeast(1.0)
+    val grow = remember { androidx.compose.animation.core.Animatable(0f) }
+    androidx.compose.runtime.LaunchedEffect(bars) { grow.snapTo(0f); grow.animateTo(1f, androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
     Canvas(Modifier.fillMaxWidth().height(120.dp)) {
         val n = bars.size
         val gap = size.width / n * 0.28f
         val w = size.width / n - gap
         bars.forEachIndexed { i, (_, v) ->
             val h = (v / max * size.height).toFloat().coerceAtLeast(if (v > 0) 4f else 2f)
-            drawRoundRect(if (v > 0) th.accentBright else th.text.copy(alpha = 0.1f), Offset(i * (w + gap) + gap / 2, size.height - h), Size(w, h), CornerRadius(w / 3, w / 3))
+            val hh = h * grow.value
+            val nl = com.myfit.tracker.ui.components.Neon.Lime
+            if (v > 0) drawRoundRect(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(nl.a, nl.b), size.height - hh, size.height), Offset(i * (w + gap) + gap / 2, size.height - hh), Size(w, hh), CornerRadius(w / 3, w / 3))
+            else drawRoundRect(th.text.copy(alpha = 0.1f), Offset(i * (w + gap) + gap / 2, size.height - 2f), Size(w, 2f), CornerRadius(w / 3, w / 3))
         }
     }
     Spacer(Modifier.height(6.dp))
