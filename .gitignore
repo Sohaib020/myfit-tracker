@@ -13,3 +13,4 @@ app/libs/
 app/google-services.json
 .claude/
 __pycache__/
+app/src/main/assets/pose/

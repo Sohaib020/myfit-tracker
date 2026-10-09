@@ -112,6 +112,8 @@ android {
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     }
+    // MediaPipe memory-maps its .task models straight from the APK
+    androidResources { noCompress += "task" }
     lint {
         checkReleaseBuilds = false
         abortOnError = false
@@ -121,6 +123,30 @@ android {
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
+
+// R17: MediaPipe models (~30 MB pose heavy + ~4 MB face) are downloaded into assets/pose at build time (not committed).
+val fetchPoseModels by tasks.registering {
+    val dir = file("src/main/assets/pose")
+    val models = mapOf(
+        "pose_landmarker_heavy.task" to "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task",
+        "face_landmarker.task" to "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+    )
+    outputs.files(models.keys.map { File(dir, it) })
+    doLast {
+        dir.mkdirs()
+        models.forEach { (name, url) ->
+            val f = File(dir, name)
+            if (f.exists() && f.length() > 100_000) return@forEach
+            runCatching {
+                val tmp = File(dir, "$name.part")
+                java.net.URI(url).toURL().openStream().use { input -> tmp.outputStream().use { input.copyTo(it) } }
+                tmp.renameTo(f)
+                logger.lifecycle("Fetched $name (${f.length() / 1024} KB)")
+            }.onFailure { logger.warn("Could not fetch $name — the camera coach will fall back to ML Kit: ${it.message}") }
+        }
+    }
+}
+tasks.named("preBuild") { dependsOn(fetchPoseModels) }
 
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.09.02")
@@ -173,7 +199,9 @@ dependencies {
     implementation("androidx.camera:camera-view:$camerax")
     implementation("com.google.mlkit:image-labeling:17.0.9")
     // pro trainer camera mode: on-device body landmarks for rep counting and form checks (no images leave the phone)
-    implementation("com.google.mlkit:pose-detection-accurate:18.0.0-beta5")
+    implementation("com.google.mlkit:pose-detection-accurate:18.0.0-beta5")   // fallback tracker
+    // R17 camera coach: MediaPipe Pose Landmarker (heavy) + Face Landmarker for head pose — models fetched at build time
+    implementation("com.google.mediapipe:tasks-vision:0.10.14")
     // accounts, friends & leaderboards
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth")
