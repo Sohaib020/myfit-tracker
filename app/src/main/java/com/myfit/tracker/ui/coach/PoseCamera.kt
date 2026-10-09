@@ -106,7 +106,7 @@ private class MediaPipeTracker(ctx: Context) : Tracker {
             pts[i * 3 + 2] = l.visibility().orElse(0f).let { v -> if (l.x() in -0.05f..1.05f && l.y() in -0.05f..1.05f) v else 0f }
         }
         if (wantFace && face != null) {
-            val fr = runCatching { face.detectForVideo(img, tsMs) }.getOrNull()
+            val fr = runCatching { face?.detectForVideo(img, tsMs) }.getOrNull()
             val f = fr?.faceLandmarks()?.firstOrNull()
             if (f != null && f.size >= 468) {
                 fun px(i: Int) = f[i].x() * w
