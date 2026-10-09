@@ -58,7 +58,7 @@ private fun rememberCoachImage(look: String, pose: String): ImageBitmap? {
     val ctx = LocalContext.current
     val img by produceState<ImageBitmap?>(null, look, pose) {
         value = withContext(Dispatchers.IO) {
-            (Coach.art(ctx, look, pose) ?: Coach.art(ctx, look, "stand") ?: Coach.art(ctx, look, "portrait"))?.let { CoachBitmaps.load(ctx, it) }
+            (Coach.art(ctx, look, pose) ?: (if (pose == "face") Coach.art(ctx, look, "portrait") else null) ?: Coach.art(ctx, look, "stand") ?: Coach.art(ctx, look, "portrait"))?.let { CoachBitmaps.load(ctx, it) }
         }
     }
     return img
@@ -68,7 +68,7 @@ private fun rememberCoachImage(look: String, pose: String): ImageBitmap? {
 @Composable
 fun CoachPortrait(look: String, speaking: Boolean, size: Dp, modifier: Modifier = Modifier, level: MutableStateFlow<Float>? = null) {
     val th = LocalFitTheme.current
-    val img = rememberCoachImage(look, "portrait")
+    val img = rememberCoachImage(look, "face")
     val lv by (level ?: remember0).collectAsState()
     val t = rememberInfiniteTransition(label = "coach")
     val pulse by t.animateFloat(0f, 1f, infiniteRepeatable(tween(520), RepeatMode.Reverse), label = "p")
