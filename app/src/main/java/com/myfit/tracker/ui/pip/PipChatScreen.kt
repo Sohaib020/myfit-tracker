@@ -162,10 +162,12 @@ fun PipChatScreen(container: AppContainer) {
             GlassIconButton(Duo.Gear, { showSettings = true })
         }
         // ---- welcome: big Pip. Once chatting, Pip floats in the corner so the chat gets the whole screen.
-        if (messages.isEmpty()) Box(Modifier.fillMaxWidth().height(250.dp), contentAlignment = Alignment.Center) {
-            Pip(mood, size = 230.dp, talking = speaking || typing, idleActions = !thinking, level = if (speaking) voiceLevel else -1f)
+        // with the keyboard up (small phones) the welcome shrinks so the input row is never pushed under the keyboard
+        val welcomeH by androidx.compose.animation.core.animateDpAsState(if (imeOpen) 120.dp else 250.dp, label = "welcomeH")
+        if (messages.isEmpty()) Box(Modifier.fillMaxWidth().height(welcomeH), contentAlignment = Alignment.Center) {
+            Pip(mood, size = welcomeH - 20.dp, talking = speaking || typing, idleActions = !thinking, level = if (speaking) voiceLevel else -1f)
         }
-        if (messages.isEmpty()) {
+        if (messages.isEmpty() && !imeOpen) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Hi! I'm ${com.myfit.tracker.ui.pip.Buddy.name} " + (if (Buddy.active.collectAsState().value == com.myfit.tracker.ui.arena.Mascot.PIP) "🌱" else "👋"), style = FitType.title, color = th.text)
                 Spacer(Modifier.height(6.dp))

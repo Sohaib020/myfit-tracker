@@ -460,9 +460,17 @@ private fun PipBody(
                 drawImage(talkF[idx], dstOffset = IntOffset.Zero, dstSize = IntSize(w, h))
             } else {
                 val d = drawable
-                if (d != null) {
+                if (d != null && w > 0 && h > 0) {
                     d.setBounds(0, 0, w, h)
-                    drawIntoCanvas { d.draw(it.nativeCanvas) }
+                    if (SoftClip.needed) {
+                        // Android 11 and older (seen on MediaTek, e.g. Infinix Note 10): an animated drawable recorded straight into
+                        // the hardware display list keeps being animated by the render thread with stale bounds, so a second,
+                        // glitched Pip sat on top. Paint the current frame into our own bitmap instead and draw that.
+                        val bmp = SoftClip.frame(w, h)
+                        bmp.eraseColor(android.graphics.Color.TRANSPARENT)
+                        d.draw(android.graphics.Canvas(bmp))
+                        drawImage(bmp.asImageBitmap(), dstOffset = IntOffset.Zero, dstSize = IntSize(w, h))
+                    } else drawIntoCanvas { d.draw(it.nativeCanvas) }
                 } else still?.let { drawImage(it, dstOffset = IntOffset.Zero, dstSize = IntSize(w, h)) }
             }
         }
@@ -625,5 +633,16 @@ fun moodForReply(text: String, question: String = ""): PipMood {
         has("love", "thank", "❤", "shukriya") -> PipMood.LOVE
         text.trim().endsWith("?") -> PipMood.CURIOUS
         else -> PipMood.HAPPY
+    }
+}
+
+/** One reusable bitmap for painting animated clips in software on older Android versions (see the Pip draw code). */
+private object SoftClip {
+    val needed = Build.VERSION.SDK_INT < 31
+    private val bmps = object : android.util.LruCache<Long, android.graphics.Bitmap>(3) {}
+    fun frame(w: Int, h: Int): android.graphics.Bitmap {
+        val k = (w.toLong() shl 32) or h.toLong()
+        return bmps.get(k)?.takeIf { !it.isRecycled }
+            ?: android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888).also { bmps.put(k, it) }
     }
 }
