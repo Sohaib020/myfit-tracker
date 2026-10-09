@@ -168,6 +168,7 @@
       lt.textContent = rest > 0 ? `Rest 0:${String(rest).padStart(2, '0')}` : 'Go! Set 4 💪';
     };
     if (!reduce) setInterval(tick, 1000);
+    const d = new Date();
     clk.textContent = (d.getHours() % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0');
     clk.nextElementSibling.textContent = d.toLocaleDateString('en', { weekday: 'long' });
   }
