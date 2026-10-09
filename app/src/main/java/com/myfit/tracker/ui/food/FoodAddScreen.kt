@@ -80,6 +80,13 @@ object FoodFavs {
     }
 }
 
+/** The user's own portion of a food, in grams (or ml), remembered on this phone and used as the default next time. */
+object MyServing {
+    private fun sp(c: android.content.Context) = c.applicationContext.getSharedPreferences("food_my_serving", android.content.Context.MODE_PRIVATE)
+    fun get(c: android.content.Context, id: Long): Double? = sp(c).getFloat(id.toString(), -1f).takeIf { it > 0f }?.toDouble()
+    fun set(c: android.content.Context, id: Long, grams: Double) = sp(c).edit().putFloat(id.toString(), grams.toFloat()).apply()
+}
+
 @Composable
 fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, tab0: Int) {
     val th = LocalFitTheme.current
@@ -224,8 +231,14 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
     GlassSheet(visible = f != null, onDismiss = { picked = null }) {
         if (f != null) {
             val byWeight = f.servingUnit == "g" || f.servingUnit == "ml"
-            var amount by remember(f.id) { mutableStateOf(if (byWeight) Fmt.trim(f.servingSize, 0) else "1") }
-            val q = (amount.toDoubleOrNull() ?: 0.0).let { if (byWeight) it / f.servingSize else it }
+            // grams in one serving, when we know it: lets anyone log their own portion in grams
+            val gramsPer = if (byWeight) f.servingSize else f.servingGrams?.takeIf { it > 0 }
+            val mine = remember(f.id) { MyServing.get(ctx, f.id) }
+            var grams by remember(f.id) { mutableStateOf(byWeight || (mine != null && gramsPer != null)) }
+            var amount by remember(f.id) {
+                mutableStateOf(when { mine != null && gramsPer != null -> Fmt.trim(mine, 0); byWeight -> Fmt.trim(f.servingSize, 0); else -> "1" })
+            }
+            val q = (amount.toDoubleOrNull() ?: 0.0).let { if (grams && gramsPer != null) it / gramsPer else it }
             val meta = container.nutritionRepo.meta(f)
             if (meta?.photo != null) {
                 FoodThumb(meta.photo, 140.dp, 24.dp, Modifier.fillMaxWidth().height(140.dp))
@@ -246,7 +259,28 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
                 HealthWarningCard(jd, swaps.map { it.name }) { name -> swaps.firstOrNull { it.name == name }?.let { picked = it } }
             }
             Spacer(Modifier.height(12.dp))
-            NumberInput(amount, { amount = it }, if (byWeight) f.servingUnit else "servings")
+            if (gramsPer != null && !byWeight) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GlassChip("Servings", !grams, {
+                        if (grams) { grams = false; amount = Fmt.trim(((amount.toDoubleOrNull() ?: gramsPer) / gramsPer), 2) }
+                    })
+                    GlassChip("Grams", grams, {
+                        if (!grams) { grams = true; amount = Fmt.trim((amount.toDoubleOrNull() ?: 1.0) * gramsPer, 0) }
+                    })
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+            NumberInput(amount, { amount = it }, if (grams) (if (byWeight) f.servingUnit else "g") else "servings")
+            if (grams && gramsPer != null) {
+                val g = amount.toDoubleOrNull()
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Caption(if (mine != null) "Your serving: ${Fmt.int(mine)} ${if (byWeight) f.servingUnit else "g"}" else "Standard serving: ${Fmt.int(gramsPer)} ${if (byWeight) f.servingUnit else "g"}", modifier = Modifier.weight(1f))
+                    if (g != null && g > 0 && g != mine) GlassChip("Save as my serving", false, {
+                        MyServing.set(ctx, f.id, g); toaster.show("Saved ${Fmt.int(g)} g as your serving of ${f.name}")
+                    })
+                }
+            }
             Spacer(Modifier.height(10.dp))
             Text("${Fmt.int(q * f.calories)} ${com.myfit.tracker.domain.EnergyUnit.label} · P ${Fmt.int(q * f.proteinG)} · C ${Fmt.int(q * f.carbsG)} · F ${Fmt.int(q * f.fatG)} g", style = FitType.section, color = th.text)
             Spacer(Modifier.height(12.dp))

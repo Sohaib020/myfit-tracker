@@ -191,16 +191,28 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
     val e = editing
     GlassSheet(visible = e != null, onDismiss = { editing = null }) {
         if (e != null) {
-            var qty by remember(e.id) { mutableStateOf(Fmt.trim(if (e.servingUnit == "g" || e.servingUnit == "ml") e.quantity * e.servingSize else e.quantity, 2)) }
+            val weightUnit = e.servingUnit == "g" || e.servingUnit == "ml"
+            val gPer by androidx.compose.runtime.produceState<Double?>(if (weightUnit) e.servingSize else null, e.id) {
+                if (!weightUnit) value = e.foodId?.let { container.nutritionRepo.food(it) }?.servingGrams?.takeIf { it > 0 }
+            }
+            var inGrams by remember(e.id) { mutableStateOf(weightUnit) }
+            var qty by remember(e.id) { mutableStateOf(Fmt.trim(if (weightUnit) e.quantity * e.servingSize else e.quantity, 2)) }
             Text(e.foodName, style = FitType.title, color = th.text)
-            Caption("${Fmt.int(e.caloriesPerServing)} ${com.myfit.tracker.domain.EnergyUnit.label} per ${Fmt.trim(e.servingSize, 1)} ${e.servingUnit}")
+            Caption("${Fmt.int(e.caloriesPerServing)} ${com.myfit.tracker.domain.EnergyUnit.label} per ${Fmt.trim(e.servingSize, 1)} ${e.servingUnit}" + (gPer?.takeIf { !weightUnit }?.let { " (~${Fmt.int(it)} g)" } ?: ""))
             Spacer(Modifier.height(12.dp))
-            val grams = e.servingUnit == "g" || e.servingUnit == "ml"
-            NumberInput(qty, { qty = it }, if (grams) e.servingUnit else "servings")
+            val gp = gPer
+            if (gp != null && !weightUnit) {
+                androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                    com.myfit.tracker.ui.theme.GlassChip("Servings", !inGrams, { if (inGrams) { inGrams = false; qty = Fmt.trim((qty.toDoubleOrNull() ?: gp) / gp, 2) } })
+                    com.myfit.tracker.ui.theme.GlassChip("Grams", inGrams, { if (!inGrams) { inGrams = true; qty = Fmt.trim((qty.toDoubleOrNull() ?: 1.0) * gp, 0) } })
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+            NumberInput(qty, { qty = it }, if (inGrams) (if (weightUnit) e.servingUnit else "g") else "servings")
             Spacer(Modifier.height(12.dp))
             AccentButton("Save", {
                 val v = qty.toDoubleOrNull() ?: return@AccentButton
-                val q = if (grams) v / e.servingSize else v
+                val q = if (inGrams && gp != null) v / gp else v
                 if (q > 0) container.write { container.nutritionRepo.updateQuantity(e, q) }
                 editing = null
             }, Modifier.fillMaxWidth())
