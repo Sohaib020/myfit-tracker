@@ -109,7 +109,8 @@ private class MediaPipeTracker(ctx: Context) : Tracker {
             val fr = runCatching { face.detectForVideo(img, tsMs) }.getOrNull()
             val f = fr?.faceLandmarks()?.firstOrNull()
             if (f != null && f.size >= 468) {
-                fun px(i: Int) = f[i].x() * w; fun py(i: Int) = f[i].y() * h
+                fun px(i: Int) = f[i].x() * w
+                fun py(i: Int) = f[i].y() * h
                 lastFace = FloatArray(FACE_OVAL.size * 2).also { a -> FACE_OVAL.forEachIndexed { k, i -> a[k * 2] = px(i); a[k * 2 + 1] = py(i) } }
                 // head pose from stable face points: eye corners (33, 263), nose tip (1), chin (152), forehead (10)
                 val ex = (px(33) + px(263)) / 2; val ey = (py(33) + py(263)) / 2
