@@ -3,28 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MyFit Tracker — fitness that speaks your language</title>
-<meta name="description" content="MyFit Tracker for Android: a pro trainer that counts your reps and fixes your form, a nutritionist for desi food, 1,000+ Pakistani dishes with 3D icons, health-aware plans, Pip and the Arena. Private by design.">
-<meta property="og:title" content="MyFit Tracker">
-<meta property="og:description" content="Pro trainer, desi nutritionist, 1,000+ Pakistani foods, Pip and the Arena — private by design.">
-<meta property="og:image" content="img/pip.webp">
-<meta name="theme-color" content="#07110f">
+<title>MyFit Tracker — your trainer, nutritionist and fitness buddy in one app</title>
+<meta name="description" content="MyFit Tracker for Android: a camera coach that counts your reps and scores your form, snap-a-meal food logging in seconds, beautiful weight & BMI charts, live workout notifications, 30 themes — private by design and free.">
+<meta property="og:title" content="MyFit Tracker — train smarter, eat better">
+<meta property="og:description" content="Camera rep counting with form scores, snap-a-meal in seconds, weight & BMI charts, Coach Bolt and Chef Zest. Free for Android.">
+<meta property="og:image" content="img/shots/home.webp">
+<meta name="theme-color" content="#050c0b">
 <link rel="icon" href="img/pip.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=Noto+Nastaliq+Urdu:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
+<div class="progress-bar" aria-hidden="true"></div>
 <div class="cursor-glow" aria-hidden="true"></div>
+<div class="cursor-dot" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>
 
 <!-- ============ NAV ============ -->
 <nav class="nav" id="nav">
   <a class="brand" href="#top"><img src="img/pip.webp" alt=""><span>MyFit</span></a>
   <div class="links">
-    <a href="#tour">Features</a><a href="#coaches">Coaches</a><a href="#characters">Characters</a><a href="#faq">FAQ</a>
+    <a href="#showcase">Features</a><a href="#camera">Camera coach</a><a href="#coaches">Coaches</a><a href="#themes">Themes</a><a href="#faq">FAQ</a>
   </div>
-  <a class="btn btn-sm btn-glow" href="#download">Download</a>
+  <a class="btn btn-sm btn-glow magnetic" href="#download">Get the app</a>
 </nav>
 
 <!-- ============ HERO ============ -->
@@ -35,26 +37,26 @@
 
   <div class="hero-in">
     <div class="hero-copy">
-      <a class="pill reveal" href="#coaches"><span class="dot"></span>New · Pro trainer &amp; nutritionist</a>
-      <h1 class="reveal">Fitness that <span class="grad">speaks your language.</span></h1>
-      <p class="lead reveal">A pro trainer that counts your reps and fixes your form. A nutritionist who knows nihari from daal mash. 1,000+ Pakistani dishes, plans that respect your health — and it all stays on your phone.</p>
+      <a class="pill reveal" href="#camera"><span class="dot"></span>New · AI camera coach with a form score on every rep</a>
+      <h1 class="reveal split">Your trainer. Your nutritionist. <span class="grad">One app.</span></h1>
+      <p class="lead reveal">MyFit watches your form, counts every rep, logs a meal from a single photo and turns your progress into charts you'll actually want to look at. Free, fast, and private — your data stays on your phone.</p>
       <div class="cta reveal">
-        <a class="btn btn-glow" href="#download"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 1 1 1.4-1.4L11 13.6V4a1 1 0 0 1 1-1zm-7 15a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1z"/></svg>Download APK</a>
-        <a class="btn btn-ghost" href="#tour">Take the tour</a>
+        <a class="btn btn-glow btn-lg magnetic" href="#download"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 1 1 1.4-1.4L11 13.6V4a1 1 0 0 1 1-1zm-7 15a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1z"/></svg>Download free</a>
+        <a class="btn btn-ghost btn-lg magnetic" href="#showcase">See it in action</a>
+      </div>
+      <div class="trust reveal">
+        <span><b data-count="1066">1,066</b> foods</span><i></i><span><b data-count="19">19</b> camera exercises</span><i></i><span><b data-count="30">30</b> themes</span><i></i><span><b>EN</b> + <b class="ur">اردو</b> voice</span>
       </div>
       <p class="ver reveal" id="ver">Android 8.0+ · free</p>
     </div>
 
     <div class="hero-art" id="heroArt">
-      <div class="ring" data-depth="0.3">
-        <img src="img/food/nihari.webp" alt="" style="--i:0"><img src="img/food/chicken_biryani.webp" alt="" style="--i:1"><img src="img/food/chapli_kebab.webp" alt="" style="--i:2">
-        <img src="img/food/mango_lassi.webp" alt="" style="--i:3"><img src="img/food/halwa_puri.webp" alt="" style="--i:4"><img src="img/food/gol_gappay.webp" alt="" style="--i:5">
-        <img src="img/food/seekh_kebab.webp" alt="" style="--i:6"><img src="img/food/jalebi.webp" alt="" style="--i:7">
-      </div>
-      <div class="orb-card" data-depth="0.6"><img src="img/pip/dance.webp" alt="Pip dancing"></div>
-      <div class="chip c1" data-depth="1.1"><b>12</b> reps · form ✓</div>
-      <div class="chip c2" data-depth="0.9">“Chest up!” <span class="ur">سینہ اوپر</span></div>
-      <div class="chip c3" data-depth="1.3">🔥 1,840 kcal plan</div>
+      <div class="device side left" data-depth="0.5"><img src="img/shots/train.webp" alt="Train screen"></div>
+      <div class="device side right" data-depth="0.7"><img src="img/shots/progress.webp" alt="Progress charts"></div>
+      <div class="device main" data-depth="0.25"><img src="img/shots/home.webp" alt="MyFit home dashboard"></div>
+      <div class="chip c1" data-depth="1.2"><span class="ic">🎯</span><div><b>Rep 12 · 94%</b><small>Form score</small></div></div>
+      <div class="chip c2" data-depth="1.0"><span class="ic">📸</span><div><b>Chicken karahi</b><small>Logged in 2.1 s</small></div></div>
+      <div class="chip c3" data-depth="1.4"><span class="ic">📉</span><div><b>−5.6 kg</b><small>in 90 days</small></div></div>
     </div>
   </div>
   <a class="scroll-hint" href="#stats" aria-label="Scroll"><span></span></a>
@@ -63,144 +65,233 @@
 <!-- ============ STATS MARQUEE ============ -->
 <section class="marquee" id="stats" aria-label="Highlights">
   <div class="track">
-    <span><b data-count="1066">1,066</b> Pakistani foods</span><span><b data-count="876">876</b> exercises</span><span><b>EN + اردو</b> voice coach</span><span><b>On-device</b> AI &amp; camera</span><span><b data-count="55">55</b> health conditions</span><span><b>Prayer</b> times &amp; Qibla</span><span><b data-count="54">54</b> programs</span><span><b>Arena</b> races with friends</span>
-    <span aria-hidden="true"><b>1,066</b> Pakistani foods</span><span aria-hidden="true"><b>876</b> exercises</span><span aria-hidden="true"><b>EN + اردو</b> voice coach</span><span aria-hidden="true"><b>On-device</b> AI &amp; camera</span><span aria-hidden="true"><b>55</b> health conditions</span><span aria-hidden="true"><b>Prayer</b> times &amp; Qibla</span><span aria-hidden="true"><b>54</b> programs</span><span aria-hidden="true"><b>Arena</b> races with friends</span>
+    <span><b>AI camera</b> rep counting</span><span><b>Form score</b> on every rep</span><span><b>Snap a meal</b> in seconds</span><span><b>1,066</b> foods with 3D icons</span><span><b>876</b> exercises</span><span><b>Weight &amp; BMI</b> charts</span><span><b>Live</b> workout notifications</span><span><b>30</b> themes · Glass or Flat</span><span><b>Offline</b> AI brain</span><span><b>Prayer</b> times &amp; Ramadan mode</span>
+    <span aria-hidden="true"><b>AI camera</b> rep counting</span><span aria-hidden="true"><b>Form score</b> on every rep</span><span aria-hidden="true"><b>Snap a meal</b> in seconds</span><span aria-hidden="true"><b>1,066</b> foods with 3D icons</span><span aria-hidden="true"><b>876</b> exercises</span><span aria-hidden="true"><b>Weight &amp; BMI</b> charts</span><span aria-hidden="true"><b>Live</b> workout notifications</span><span aria-hidden="true"><b>30</b> themes · Glass or Flat</span><span aria-hidden="true"><b>Offline</b> AI brain</span><span aria-hidden="true"><b>Prayer</b> times &amp; Ramadan mode</span>
   </div>
 </section>
 
-<!-- ============ FEATURE TOUR ============ -->
-<section class="tour" id="tour">
-  <div class="tour-head">
-    <p class="eyebrow">Feature tour</p>
-    <h2>Everything you need. <span class="grad">Nothing you don't.</span></h2>
+<!-- ============ STICKY SHOWCASE ============ -->
+<section class="showcase" id="showcase">
+  <div class="sc-head">
+    <p class="eyebrow reveal">Real screens. Real app.</p>
+    <h2 class="reveal">Everything you need to get fit — <span class="grad">beautifully done.</span></h2>
+    <p class="sub reveal">No mockups here. Every screen below is the actual app, running on a phone.</p>
   </div>
-  <div class="tour-pin">
-    <div class="tour-track">
-
-      <article class="panel">
-        <div class="panel-copy">
-          <span class="tag">01 · Train</span>
-          <h3>A trainer that actually watches your form</h3>
-          <p>Turn on the camera and your coach counts every rep, measures the angle at your knees and elbows, and tells you — out loud — when to go deeper, keep your hips in line or slow down. Camera off? It paces each rep with voice and tempo instead.</p>
-          <ul><li>Squats, push-ups, curls, presses, raises, lunges, rows, planks</li><li>Pushes you on the last reps · saves the set for you</li><li>Frames are processed on the phone — never recorded</li></ul>
-        </div>
-        <div class="phone"><div class="screen s-train">
-          <div class="cam"><svg viewBox="0 0 200 260" class="skeleton"><g stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"><path d="M100 50 L100 120" /><path d="M100 70 L70 100 L60 140" /><path d="M100 70 L130 100 L140 140"/><path class="hot" d="M100 120 L80 175 L95 230" /><path class="hot" d="M100 120 L125 175 L110 230"/></g><circle cx="100" cy="35" r="14" fill="#fff"/><circle class="j" cx="80" cy="175" r="7"/><circle class="j" cx="125" cy="175" r="7"/></svg><span class="deg">92°</span></div>
-          <div class="counter"><b class="repcount">8</b><span>/ 12</span><em>DOWN</em></div>
-          <div class="bubble">“Two more — chest up!”</div>
-        </div></div>
+  <div class="sc-grid">
+    <div class="sc-steps">
+      <article class="sc-step" data-shot="home">
+        <span class="tag">01 · Today</span>
+        <h3>Your whole day at a glance</h3>
+        <p>Calories, protein, water, steps and sleep in one calm dashboard. Pip nudges you when you drift — and cheers when you nail it.</p>
+        <ul><li>Smart rings for every daily goal</li><li>One-tap logging from anywhere</li><li>Widgets and Wear OS companion</li></ul>
       </article>
-
-      <article class="panel">
-        <div class="panel-copy">
-          <span class="tag">02 · Food</span>
-          <h3>1,066 Pakistani dishes, each with its own 3D icon</h3>
-          <p>From Burns Road nihari and Lahori chikar cholay to Sindhi saag, Balochi sajji, Peshawari chapli and Hunza diram fitti — plus lassi, sharbat, qehwa and shakes. Search in Roman Urdu, snap a photo, or log a whole meal plan in one tap.</p>
-          <ul><li>Lahori, Karachi, Sindh, Balochistan, KP, GB &amp; Kashmir</li><li>Household units: roti, katori, cup, glass</li><li>Strictly Pakistani 7-day meal plans</li></ul>
-        </div>
-        <div class="phone"><div class="screen s-food">
-          <div class="search">🔍 nihari</div>
-          <div class="foodgrid">
-            <img src="img/food/nihari.webp" alt="Nihari"><img src="img/food/chicken_karahi.webp" alt="Chicken karahi"><img src="img/food/haleem.webp" alt="Haleem"><img src="img/food/daal_chawal.webp" alt="Daal chawal">
-            <img src="img/food/kebab_roll.webp" alt="Kebab roll"><img src="img/food/paratha_plain.webp" alt="Paratha"><img src="img/food/lassi_sweet.webp" alt="Lassi"><img src="img/food/kheer.webp" alt="Kheer">
-            <img src="img/food/tea_sugar.webp" alt="Chai"><img src="img/food/jalebi.webp" alt="Jalebi"><img src="img/food/seekh_kebab.webp" alt="Seekh kebab"><img src="img/food/gol_gappay.webp" alt="Gol gappay">
-          </div>
-        </div></div>
+      <article class="sc-step" data-shot="train">
+        <span class="tag">02 · Train</span>
+        <h3>A training hub that knows what's next</h3>
+        <p>Resume where you left off, start today's plan, or pick from 54 programs and 876 exercises. A live workout screen in Focus or List mode — switch any time.</p>
+        <ul><li>Today-first hub with quick tools</li><li>Rest timers, supersets, PR tracking</li><li>Live notification while you lift</li></ul>
       </article>
-
-      <article class="panel">
-        <div class="panel-copy">
-          <span class="tag">03 · Health</span>
-          <h3>Plans that respect your body</h3>
-          <p>Tell MyFit about diets, intolerances, conditions, injuries or life stages — or type your own and it works out the rules. Foods and exercises that don't suit you are flagged with a reason and a safer swap. Want to see them anyway? One tap.</p>
-          <ul><li>Diabetes, PCOS, hypertension, lactose, gluten, knee &amp; back pain, pregnancy…</li><li>Meal plans and workouts adapt automatically</li><li>Your health profile never leaves your phone</li></ul>
-        </div>
-        <div class="phone"><div class="screen s-health">
-          <div class="chips"><span class="on">Diabetes</span><span>Lactose-free</span><span class="on">Knee pain</span><span>PCOS</span><span>Vegetarian</span><span>Pregnancy</span><span>Gluten-free</span><span>High BP</span></div>
-          <div class="warn"><b>Limit:</b> high sugar<br><small>Try instead: Kheer (sugar-free) · Guava · Dahi</small></div>
-          <div class="warn ok"><b>Swapped</b> Squat jumps → Glute bridge</div>
-        </div></div>
+      <article class="sc-step" data-shot="progress">
+        <span class="tag">03 · Progress</span>
+        <h3>Weight &amp; BMI, finally made beautiful</h3>
+        <p>A smooth weight chart with a 7-day trend line, your goal marked, and a BMI gauge that uses the right cut-offs for South Asian bodies — or WHO, your choice.</p>
+        <ul><li>Scrub the chart to see any day</li><li>1M · 3M · 6M · 1Y · All ranges</li><li>Strength, volume and streak stats</li></ul>
       </article>
-
-      <article class="panel">
-        <div class="panel-copy">
-          <span class="tag">04 · Pip &amp; AI</span>
-          <h3>Pip, your chat-first buddy</h3>
-          <p>Ask anything about your own logs, get a nudge when you're off track, or just chat. Pip answers offline from your data first and only goes online when it needs to — in English or Urdu.</p>
-          <ul><li>Offline brain option · daily free AI answers</li><li>Snap-a-meal food recognition</li><li>Voices in English and Urdu</li></ul>
-        </div>
-        <div class="phone"><div class="screen s-pip">
-          <img src="img/pip/flex.webp" alt="Pip flexing" class="pipimg">
-          <div class="msg me">How much protein today?</div>
-          <div class="msg">96 g so far — 34 g to go. A katori of daal and 2 eggs gets you there 💪</div>
-        </div></div>
+      <article class="sc-step" data-shot="food">
+        <span class="tag">04 · Food</span>
+        <h3>Snap a meal. Done in seconds.</h3>
+        <p>Point the camera at your plate: a quick guess appears almost instantly, then a deeper pass refines every item and portion. No signal? The upgraded offline brain still works.</p>
+        <ul><li>1,066 foods, each with a 3D icon</li><li>Search in English or Roman Urdu</li><li>Household units: roti, katori, cup, glass</li></ul>
       </article>
-
-      <article class="panel">
-        <div class="panel-copy">
-          <span class="tag">05 · Arena</span>
-          <h3>Race your friends, not strangers</h3>
-          <p>Weekly challenges at your level, scenic tracks with checkpoints, stars, 30 levels and friendly duels. Friends see your name, picture and weekly totals — nothing else.</p>
-          <ul><li>Global &amp; friends leaderboards</li><li>Profile pictures and character avatars</li><li>Report and block built in</li></ul>
-        </div>
-        <div class="phone"><div class="screen s-arena">
-          <div class="row"><img src="img/cast/zara.webp" alt=""><span>Ayesha</span><b>58,210</b></div>
-          <div class="row me"><img src="img/pip.webp" alt=""><span>You</span><b>54,980</b></div>
-          <div class="row"><img src="img/cast/taj.webp" alt=""><span>Hamza</span><b>51,400</b></div>
-          <div class="row"><img src="img/cast/shaheen.webp" alt=""><span>Sana</span><b>47,035</b></div>
-        </div></div>
+      <article class="sc-step" data-shot="mealplans">
+        <span class="tag">05 · Meal plans</span>
+        <h3>7-day plans you'll actually eat</h3>
+        <p>Plans built around your calories, protein and health profile — with real home food, not salads you'll never make. Log a whole day in one tap.</p>
+        <ul><li>Grocery list in kg, litres and dozens</li><li>Swaps for diabetes, PCOS, high BP and more</li><li>Halal-only option</li></ul>
       </article>
-
-      <article class="panel">
-        <div class="panel-copy">
-          <span class="tag">06 · Shariah &amp; Health</span>
-          <h3>For those who want it</h3>
-          <p>Switch on Muslim mode and get prayer times, the Qibla compass, halal-only foods, Ramadan sehri &amp; iftar tools and the Shariah &amp; Health hub. Off by default — your choice.</p>
-          <ul><li>Accurate local prayer times</li><li>Halal filter across foods and plans</li><li>Fasting timer that adapts your goals</li></ul>
-        </div>
-        <div class="phone"><div class="screen s-deen">
-          <div class="compass"><div class="needle"></div><span>Qibla 258°</span></div>
-          <div class="times"><span>Fajr <b>4:52</b></span><span>Zuhr <b>12:08</b></span><span class="on">Asr <b>3:41</b></span><span>Maghrib <b>5:58</b></span><span>Isha <b>7:16</b></span></div>
-        </div></div>
+      <article class="sc-step" data-shot="arena">
+        <span class="tag">06 · Arena</span>
+        <h3>Race your friends, not strangers</h3>
+        <p>Weekly challenges, scenic tracks with checkpoints, 30 levels and friendly duels. Friends see your name, picture and weekly totals — nothing else.</p>
+        <ul><li>Global and friends leaderboards</li><li>Character avatars and badges</li><li>Report and block built in</li></ul>
       </article>
+      <article class="sc-step" data-shot="deen">
+        <span class="tag">07 · Faith &amp; health</span>
+        <h3>Ramadan-ready, if you want it</h3>
+        <p>Turn on Muslim mode for prayer times, Qibla, halal filters, and a live sehri &amp; iftar countdown that adapts your goals while you fast. Off by default.</p>
+        <ul><li>Accurate local prayer times</li><li>Fasting timer with phase tracking</li><li>Goals that adjust while fasting</li></ul>
+      </article>
+    </div>
+    <div class="sc-stage">
+      <div class="sc-phone tilt">
+        <div class="sc-screens" id="scScreens">
+          <img src="img/shots/home.webp" data-k="home" class="on" alt="Today dashboard">
+          <img src="img/shots/train.webp" data-k="train" alt="Train hub" loading="lazy">
+          <img src="img/shots/progress.webp" data-k="progress" alt="Weight and BMI charts" loading="lazy">
+          <img src="img/shots/food.webp" data-k="food" alt="Food logging" loading="lazy">
+          <img src="img/shots/mealplans.webp" data-k="mealplans" alt="Meal plans" loading="lazy">
+          <img src="img/shots/arena.webp" data-k="arena" alt="Arena" loading="lazy">
+          <img src="img/shots/deen.webp" data-k="deen" alt="Faith and health" loading="lazy">
+        </div>
+      </div>
+      <div class="sc-dots" id="scDots"></div>
+    </div>
+  </div>
+</section>
 
+<!-- ============ CAMERA COACH ============ -->
+<section class="camera" id="camera">
+  <div class="cam-grid">
+    <div class="cam-copy">
+      <p class="eyebrow reveal">AI camera coach</p>
+      <h2 class="reveal">It counts your reps. <span class="grad">It grades your form.</span></h2>
+      <p class="sub reveal">Prop up your phone and train. MyFit tracks 33 body points in real time, counts every rep, and scores each one out of 100 — telling you out loud to go deeper, slow down or keep your hips level.</p>
+      <div class="cam-feats">
+        <div class="cf reveal"><b>🎯 Form score per rep</b><span>See exactly which rep slipped — and why.</span></div>
+        <div class="cf reveal"><b>🧭 Setup helper</b><span>Guides your distance and angle before you start.</span></div>
+        <div class="cf reveal"><b>🗣️ Voice coaching</b><span>English or Urdu, pushes you on the last reps.</span></div>
+        <div class="cf reveal"><b>🔒 Never recorded</b><span>Every frame is processed on the phone, then gone.</span></div>
+      </div>
+      <div class="ex-cloud reveal" aria-label="Camera exercises">
+        <span>Squat</span><span>Push-up</span><span>Lunge</span><span>Bicep curl</span><span>Shoulder press</span><span>Lateral raise</span><span>Row</span><span>Plank</span><span>Jumping jack</span><span>High knees</span><span>Glute bridge</span><span>Sit-up</span><span>Mountain climber</span><span>Wall sit</span><span>Side plank</span><span>Calf raise</span><span>Burpee</span><span>Deadlift / RDL</span><span>Triceps</span>
+      </div>
+    </div>
+    <div class="cam-visual reveal">
+      <div class="cam-frame tilt">
+        <img class="cam-coach" src="img/coach/m_demo.webp" alt="Coach Bolt demonstrating a squat">
+        <svg viewBox="0 0 200 260" class="skeleton" aria-hidden="true"><g stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"><path d="M100 50 L100 120"/><path d="M100 70 L70 100 L60 140"/><path d="M100 70 L130 100 L140 140"/><path class="hot leg" d="M100 120 L80 175 L95 230"/><path class="hot leg" d="M100 120 L125 175 L110 230"/></g><circle cx="100" cy="35" r="12" fill="#fff"/><circle class="j" cx="80" cy="175" r="6"/><circle class="j" cx="125" cy="175" r="6"/></svg>
+        <div class="hud top"><span class="live">● LIVE</span><span class="deg" id="camDeg">92°</span></div>
+        <div class="hud bottom">
+          <div class="reps"><b id="camRep">8</b><small>/ 12 reps</small></div>
+          <div class="score"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" class="trk"/><circle cx="22" cy="22" r="19" class="val" id="camRing"/></svg><b id="camScore">94</b></div>
+        </div>
+        <div class="cue" id="camCue">“Great depth — chest up!”</div>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- ============ COACHES ============ -->
 <section class="coaches" id="coaches">
-  <p class="eyebrow reveal">Your pro team</p>
-  <h2 class="reveal">Two experts in your pocket. <span class="grad">You pick their names.</span></h2>
-  <p class="sub reveal">Realistic 3D characters — male or female — with fictional names you can change any time. They speak English or Urdu.</p>
+  <p class="eyebrow reveal">Meet your pro team</p>
+  <h2 class="reveal">Coach Bolt &amp; Chef Zest. <span class="grad">Always in your corner.</span></h2>
+  <p class="sub reveal">Two friendly characters with real expertise baked in. Pick a look, rename them, choose English or Urdu — they'll take it from there.</p>
   <div class="coach-grid">
-    <div class="coach-card tilt reveal">
-      <div class="coach-img"><img src="img/coach/m_stand.webp" alt="Coach Zarak" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'silhouette',textContent:'🏋️'}))"></div>
+    <div class="coach-card tilt reveal" data-coach="bolt">
+      <div class="coach-img">
+        <img id="boltImg" src="img/coach/m_stand.webp" alt="Coach Bolt">
+        <div class="looks" role="group" aria-label="Coach look">
+          <button class="on" data-look="m" aria-label="Look 1"><img src="img/coach/m_face.webp" alt=""></button>
+          <button data-look="f" aria-label="Look 2"><img src="img/coach/f_face.webp" alt=""></button>
+          <button data-look="fh" aria-label="Look 3"><img src="img/coach/fh_face.webp" alt=""></button>
+        </div>
+      </div>
       <div class="coach-body">
         <span class="tag">Pro trainer</span>
-        <h3>Coach Zarak <small>or Coach Inaya</small></h3>
-        <ul><li>Explains setup &amp; joint angles before each set</li><li>3-2-1 count-in, tempo for every rep, counts aloud</li><li>Camera form-check with live skeleton</li><li>Pushes you on the last reps · coaches your rest</li></ul>
-        <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <h3>Coach Bolt</h3>
+        <ul><li>Walks you through setup and joint angles before each set</li><li>3-2-1 count-in and tempo for every rep</li><li>Camera form check with a score per rep</li><li>Coaches your rest and pushes the final reps</li></ul>
+        <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <p class="ur" lang="ur">تین، دو، ایک، شروع!</p>
       </div>
     </div>
-    <div class="coach-card tilt reveal">
-      <div class="coach-img"><img src="img/coach/nf_plate.webp" alt="Areesha the nutritionist" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'silhouette',textContent:'🥗'}))"></div>
+    <div class="coach-card tilt reveal" data-coach="zest">
+      <div class="coach-img zest">
+        <img id="zestImg" src="img/coach/nf_plate.webp" alt="Chef Zest">
+        <div class="looks" role="group" aria-label="Nutritionist look">
+          <button class="on" data-look="nf" aria-label="Look 1"><img src="img/coach/nf_face.webp" alt=""></button>
+          <button data-look="nm" aria-label="Look 2"><img src="img/coach/nm_face.webp" alt=""></button>
+        </div>
+      </div>
       <div class="coach-body">
         <span class="tag">Pro nutritionist</span>
-        <h3>Areesha <small>or Faraz</small></h3>
-        <ul><li>Daily coaching against your calorie &amp; protein goals</li><li>Grades every meal and suggests a desi swap</li><li>Weekly plan with a grocery list in kg, litres &amp; dozens</li><li>Chat any time — health-profile aware</li></ul>
-        <div class="grocery"><span>Atta <b>1.5 kg</b></span><span>Chicken <b>1.3 kg</b></span><span>Dahi <b>2 kg</b></span><span>Anday <b>14</b></span></div>
+        <h3>Chef Zest</h3>
+        <ul><li>Daily coaching against your calorie and protein goals</li><li>Grades every meal and suggests a smarter swap</li><li>Weekly plan with a ready grocery list</li><li>Chat any time — aware of your health profile</li></ul>
+        <div class="grocery"><span>Atta <b>1.5 kg</b></span><span>Chicken <b>1.3 kg</b></span><span>Dahi <b>2 kg</b></span><span>Eggs <b>14</b></span></div>
       </div>
     </div>
   </div>
+  <div class="coach-shots">
+    <figure class="device-sm reveal tilt" data-speed="-0.04"><img src="img/shots/coach.webp" alt="Coach hub screen" loading="lazy"><figcaption>Coach hub</figcaption></figure>
+    <figure class="device-sm reveal tilt" data-speed="0.04"><img src="img/shots/nutritionist.webp" alt="Nutritionist screen" loading="lazy"><figcaption>Chef Zest's daily review</figcaption></figure>
+    <figure class="device-sm reveal tilt" data-speed="-0.03"><img src="img/shots/exercises.webp" alt="Exercise library" loading="lazy"><figcaption>876-exercise library</figcaption></figure>
+  </div>
+</section>
+
+<!-- ============ LIVE NOTIFICATIONS ============ -->
+<section class="live-sec" id="live">
+  <div class="live-grid">
+    <div>
+      <p class="eyebrow reveal">Live on your lock screen</p>
+      <h2 class="reveal">Glance. <span class="grad">Keep going.</span></h2>
+      <p class="sub reveal">Ride-app-style live notifications show your workout, rest timer, run, fast or daily goals right on the lock screen — with buttons to skip rest or add 15 seconds. On newer Samsung and Pixel phones they appear in the Now Bar automatically.</p>
+      <ul class="live-list reveal"><li>🏋️ Workout &amp; rest timer</li><li>🏃 Run / walk with distance &amp; pace</li><li>🌙 Fasting &amp; iftar countdown</li><li>🎯 Daily goal rings</li></ul>
+    </div>
+    <div class="lock reveal tilt">
+      <div class="lock-time"><span id="lockClock">7:42</span><small>Thursday</small></div>
+      <div class="notif n1">
+        <div class="n-top"><img src="img/pip.webp" alt=""><span>MyFit · now</span></div>
+        <b>🏋️ Squat · Set 3 of 4</b>
+        <div class="track"><div class="fill" id="liveFill"></div><span class="badge" id="liveBadge">💪</span><i style="left:25%"></i><i style="left:50%"></i><i style="left:75%"></i></div>
+        <div class="n-row"><span id="liveTxt">Rest 0:45</span><div class="n-btns"><em>+15 s</em><em>Skip</em></div></div>
+      </div>
+      <div class="notif n2">
+        <div class="n-top"><img src="img/pip.webp" alt=""><span>MyFit · 2 min</span></div>
+        <b>🌙 Iftar in 1 h 12 m</b>
+        <div class="track slim"><div class="fill" style="width:82%"></div></div>
+      </div>
+      <div class="notif n3">
+        <div class="n-top"><img src="img/pip.webp" alt=""><span>MyFit · today</span></div>
+        <div class="rings"><span style="--p:.78;--c:#7cf2c4">🔥</span><span style="--p:.62;--c:#9b7bff">💪</span><span style="--p:.9;--c:#5ab8ff">💧</span><span style="--p:.55;--c:#ffcf5a">👟</span><b>Daily goals · 71%</b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ THEMES ============ -->
+<section class="themes" id="themes">
+  <p class="eyebrow reveal">Make it yours</p>
+  <h2 class="reveal">30 themes. <span class="grad">Glass or Flat.</span></h2>
+  <p class="sub reveal">From pure AMOLED black to supercar red, hero moods and mountain greens — then choose frosted Glass or crisp Flat cards. Any theme, any style.</p>
+  <div class="theme-demo reveal">
+    <div class="td-controls">
+      <div class="seg" role="group" aria-label="Card style"><button class="on" data-style="glass">Glass</button><button data-style="flat">Flat</button></div>
+      <div class="swatches" id="swatches"></div>
+      <p class="td-name" id="tdName">Kinetic · Essentials</p>
+    </div>
+    <div class="td-preview glass" id="tdPreview">
+      <div class="td-card c-a"><small>Calories</small><b>1,640</b><div class="bar"><i style="width:78%"></i></div></div>
+      <div class="td-card c-b"><small>Protein</small><b>112 g</b><div class="bar"><i style="width:80%"></i></div></div>
+      <div class="td-card c-c"><small>Water</small><b>1.5 L</b><div class="bar"><i style="width:60%"></i></div></div>
+      <div class="td-card c-d wide"><small>Weight trend</small><svg viewBox="0 0 300 70" preserveAspectRatio="none"><path class="area" d="M0 18 C40 22 60 30 90 32 S150 44 180 46 S250 56 300 58 L300 70 L0 70Z"/><path class="ln" d="M0 18 C40 22 60 30 90 32 S150 44 180 46 S250 56 300 58"/></svg></div>
+    </div>
+  </div>
+  <div class="fam-row reveal"><span>Essentials</span><span>Dark &amp; AMOLED</span><span>Hero moods</span><span>Cars &amp; bikes</span><span>Nature</span><span>Pakistan</span></div>
+</section>
+
+<!-- ============ SCREEN WALL (parallax) ============ -->
+<section class="wall" aria-label="More screens">
+  <div class="wall-row r1" data-dir="-1">
+    <img src="img/shots/home.webp" alt="" loading="lazy"><img src="img/shots/food.webp" alt="" loading="lazy"><img src="img/shots/train.webp" alt="" loading="lazy"><img src="img/shots/body.webp" alt="" loading="lazy"><img src="img/shots/arena.webp" alt="" loading="lazy"><img src="img/shots/settings.webp" alt="" loading="lazy"><img src="img/shots/nutritionist.webp" alt="" loading="lazy">
+  </div>
+  <div class="wall-row r2" data-dir="1">
+    <img src="img/shots/progress.webp" alt="" loading="lazy"><img src="img/shots/coach.webp" alt="" loading="lazy"><img src="img/shots/mealplans.webp" alt="" loading="lazy"><img src="img/shots/deen.webp" alt="" loading="lazy"><img src="img/shots/exercises.webp" alt="" loading="lazy"><img src="img/shots/home.webp" alt="" loading="lazy"><img src="img/shots/food.webp" alt="" loading="lazy">
+  </div>
+  <div class="wall-cta"><h2 class="reveal">Built for <span class="grad">everyone.</span></h2><p class="sub reveal">Beginners, gym regulars, busy parents, fasting during Ramadan, managing diabetes or PCOS — MyFit adapts to you.</p></div>
+</section>
+
+<!-- ============ FOOD ICONS ============ -->
+<section class="foods" id="foods">
+  <p class="eyebrow reveal">The food database</p>
+  <h2 class="reveal">1,066 dishes. <span class="grad">Every one with a 3D icon.</span></h2>
+  <p class="sub reveal">Home cooking, street food, drinks and desserts — from nihari and biryani to omelettes, oats and smoothies. Hover to play.</p>
+  <div class="food-orbit" id="foodOrbit"></div>
 </section>
 
 <!-- ============ CHARACTERS ============ -->
 <section class="chars" id="characters">
   <p class="eyebrow reveal">Character gallery</p>
   <h2 class="reveal">Meet Pip <span class="grad">and the Arena cast.</span></h2>
-  <p class="sub reveal">Original characters inspired by Pakistan's wildlife — pick one as your buddy or your profile picture.</p>
+  <p class="sub reveal">Original characters inspired by wildlife — pick one as your buddy or your profile picture.</p>
   <div class="pip-row">
     <figure class="tilt reveal"><img src="img/pip/dance.webp" alt="Pip dancing" loading="lazy"><figcaption>Dance</figcaption></figure>
     <figure class="tilt reveal"><img src="img/pip/flex.webp" alt="Pip flexing" loading="lazy"><figcaption>Flex</figcaption></figure>
@@ -215,10 +306,10 @@
   <p class="eyebrow reveal">Private by design</p>
   <h2 class="reveal">Your data lives <span class="grad">on your phone.</span></h2>
   <div class="bento">
-    <div class="bcard reveal big"><h3>🔒 On-device first</h3><p>Workouts, food, sleep, cycle and health profile are stored locally. Camera form-check and food detection run on the phone.</p></div>
+    <div class="bcard reveal big"><h3>🔒 On-device first</h3><p>Workouts, food, sleep, cycle and health profile are stored locally. Camera form-check runs entirely on the phone — nothing is recorded.</p></div>
     <div class="bcard reveal"><h3>👥 Friends see little</h3><p>Name, picture and weekly totals — that's it.</p></div>
-    <div class="bcard reveal"><h3>🧠 AI only when needed</h3><p>Only the question goes online, never your history.</p></div>
-    <div class="bcard reveal"><h3>💾 Your backups</h3><p>Export everything any time.</p></div>
+    <div class="bcard reveal"><h3>🧠 AI only when needed</h3><p>Only the question or photo goes online, never your history.</p></div>
+    <div class="bcard reveal"><h3>💾 Your backups</h3><p>Export everything, any time.</p></div>
     <div class="bcard reveal"><h3>🚫 No selling data</h3><p>Ever. <a href="privacy.html">Read the privacy policy</a>.</p></div>
   </div>
 </section>
@@ -228,17 +319,18 @@
   <div class="dl-card reveal">
     <div class="dl-left">
       <p class="eyebrow">Download</p>
-      <h2>Get MyFit for Android</h2>
+      <h2>Start today. <span class="grad">It's free.</span></h2>
       <p class="sub">Free APK, always the latest build. Updates arrive inside the app.</p>
-      <a class="btn btn-glow btn-lg" id="dl" href="https://github.com/Sohaib020/myfit-tracker/releases/latest/download/MyFitTracker.apk">Download APK</a>
+      <a class="btn btn-glow btn-lg magnetic" id="dl" href="https://github.com/Sohaib020/myfit-tracker/releases/latest/download/MyFitTracker.apk">Download APK</a>
       <p class="ver" id="ver2">Android 8.0 or newer</p>
       <ol class="steps">
         <li><b>Download</b> — your browser may warn about apps outside a store. Tap “Download anyway”.</li>
         <li><b>Allow installing</b> — if Android asks, allow your browser to install unknown apps (once).</li>
-        <li><b>Open MyFit</b> — meet Pip, set your goals and you're in.</li>
+        <li><b>Open MyFit</b> — pick a theme, set your goals and meet your coaches.</li>
       </ol>
     </div>
     <div class="dl-right">
+      <div class="device dl-phone"><img src="img/shots/home.webp" alt="" loading="lazy"></div>
       <div class="qr"><div id="qr"></div><span>On a computer? Scan with your phone.</span></div>
       <pre class="notes" id="notes"></pre>
     </div>
@@ -252,11 +344,12 @@
   <div class="faq-list">
     <details class="reveal"><summary>Is MyFit free?</summary><p>Yes. Core tracking is free. Online AI has a generous daily free allowance; you can watch a short ad for more or use the offline brain.</p></details>
     <details class="reveal"><summary>Why an APK and not the Play Store?</summary><p>Store listings are on the way. Until then the APK on this page is the official build, signed by us, and updates itself inside the app.</p></details>
-    <details class="reveal"><summary>Does the camera record me?</summary><p>No. Frames are analysed on your phone to find body landmarks for rep counting and form cues, then thrown away. Nothing is saved or uploaded.</p></details>
-    <details class="reveal"><summary>Are the trainer and nutritionist real people?</summary><p>No — they're fictional characters powered by MyFit's on-phone logic and AI. Their advice is general guidance, not medical advice. Rename them however you like.</p></details>
-    <details class="reveal"><summary>I have diabetes / an injury. Is it safe?</summary><p>Add it to your health profile and MyFit avoids foods and exercises that don't suit you and suggests swaps. It never calculates insulin or medication doses — always follow your doctor.</p></details>
-    <details class="reveal"><summary>Does it work in Urdu?</summary><p>Pip and the trainer speak Urdu, and food search understands Roman Urdu (anda, kardi, nehari…). More Urdu screens are coming.</p></details>
-    <details class="reveal"><summary>Which phones are supported?</summary><p>Android 8.0 and newer, including tall and narrow screens. A Wear OS companion and widgets are included.</p></details>
+    <details class="reveal"><summary>Does the camera record me?</summary><p>No. Frames are analysed on your phone to find body points for rep counting and form scores, then thrown away. Nothing is saved or uploaded.</p></details>
+    <details class="reveal"><summary>How accurate is snap-a-meal?</summary><p>You get a quick estimate in a couple of seconds, then a deeper pass refines dishes and portions using our nutrition database. Values are estimates — you can adjust any item before saving.</p></details>
+    <details class="reveal"><summary>Are Coach Bolt and Chef Zest real people?</summary><p>No — they're original cartoon characters powered by MyFit's on-phone logic and AI. Their advice is general guidance, not medical advice. Rename them however you like.</p></details>
+    <details class="reveal"><summary>I have diabetes or an injury. Is it safe?</summary><p>Add it to your health profile and MyFit avoids foods and exercises that don't suit you and suggests swaps. It never calculates insulin or medication doses — always follow your doctor.</p></details>
+    <details class="reveal"><summary>Does it work in Urdu?</summary><p>The coaches and Pip speak Urdu, and food search understands Roman Urdu (anda, karahi, nihari…). More Urdu screens are coming.</p></details>
+    <details class="reveal"><summary>Which phones are supported?</summary><p>Android 8.0 and newer, including tall and narrow screens. Live notifications use the Now Bar on supported Samsung and Pixel phones. A Wear OS companion and widgets are included.</p></details>
   </div>
 </section>
 
@@ -267,14 +360,14 @@
     <div>
       <h2>Need help?</h2>
       <p class="sub">Found a bug, have an idea, or want your data deleted? Write to us — a real person reads every message.</p>
-      <div class="cta"><a class="btn btn-glow" href="mailto:myfitnesstrack.support@gmail.com">Email support</a><a class="btn btn-ghost" href="privacy.html">Privacy policy</a></div>
+      <div class="cta"><a class="btn btn-glow magnetic" href="mailto:myfitnesstrack.support@gmail.com">Email support</a><a class="btn btn-ghost magnetic" href="privacy.html">Privacy policy</a></div>
     </div>
   </div>
 </section>
 
 <footer class="foot">
   <div class="brand"><img src="img/pip.webp" alt=""><span>MyFit Tracker</span></div>
-  <p>Pip, the Arena cast and the coaches are original, fictional characters. Nutrition values are typical estimates; guidance is not medical advice.</p>
+  <p>Pip, the Arena cast, Coach Bolt and Chef Zest are original, fictional characters. Nutrition values and predictions are estimates; guidance is not medical advice.</p>
   <p><a href="privacy.html">Privacy</a> · <a href="mailto:myfitnesstrack.support@gmail.com">Support</a> · © <span id="yr"></span> MyFit</p>
 </footer>
 
