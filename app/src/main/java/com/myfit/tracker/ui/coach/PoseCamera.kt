@@ -27,14 +27,14 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.pose.PoseDetection
-import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
+import com.google.mlkit.vision.pose.accurate.AccuratePoseDetectorOptions
 import com.myfit.tracker.domain.FormGuide
 import java.util.concurrent.Executors
 
 private val BONES = listOf(11 to 12, 11 to 13, 13 to 15, 12 to 14, 14 to 16, 11 to 23, 12 to 24, 23 to 24, 23 to 25, 25 to 27, 24 to 26, 26 to 28, 27 to 31, 28 to 32)
 
 /**
- * Live camera with on-device body-landmark detection (ML Kit pose, stream mode). Frames are analysed on the phone
+ * Live camera with on-device body-landmark detection (ML Kit accurate pose model, stream mode). Frames are analysed on the phone
  * and never stored or uploaded. Draws a skeleton over the preview; [highlight] joints glow in [accent].
  */
 @Composable
@@ -48,7 +48,7 @@ fun PoseCamera(front: Boolean, accent: Color, highlight: Set<Int>, onPose: (Form
 
     DisposableEffect(front) {
         val exec = Executors.newSingleThreadExecutor()
-        val detector = PoseDetection.getClient(PoseDetectorOptions.Builder().setDetectorMode(PoseDetectorOptions.STREAM_MODE).build())
+        val detector = PoseDetection.getClient(AccuratePoseDetectorOptions.Builder().setDetectorMode(AccuratePoseDetectorOptions.STREAM_MODE).build())
         val analysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setResolutionSelector(ResolutionSelector.Builder().setResolutionStrategy(ResolutionStrategy(android.util.Size(640, 480), ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER)).build())
@@ -68,7 +68,7 @@ fun PoseCamera(front: Boolean, accent: Color, highlight: Set<Int>, onPose: (Form
                         val pts = FloatArray(33 * 3)
                         lm.forEach { l -> val i = l.landmarkType; if (i in 0..32) { pts[i * 3] = l.position.x; pts[i * 3 + 1] = l.position.y; pts[i * 3 + 2] = l.inFrameLikelihood } }
                         frame = Triple(pts, w, h)
-                        cb(FormGuide.Pose(pts), System.currentTimeMillis())
+                        cb(FormGuide.Pose(pts, w, h), System.currentTimeMillis())
                     } else frame = null
                 }
         }

@@ -133,6 +133,7 @@ fun MyFitRoot(container: AppContainer) {
 
     val s = settings ?: return          // settings load in a few ms; draw nothing until then
     val theme = Themes.byId(s.themeId)
+    com.myfit.tracker.ui.theme.UiStyle.flat = s.uiStyle == 1
     val backdrop = remember { Backdrop() }
     backdrop.theme = theme
     LaunchedEffect(theme.id) { com.myfit.tracker.ui.theme.ThemeShaders.prewarm(theme.id) }
@@ -170,7 +171,7 @@ fun MyFitRoot(container: AppContainer) {
                 val blurOk = !com.myfit.tracker.ui.theme.lowFx     // Android 12 and older: no blurred layers at all
                 val gfx = androidx.compose.ui.platform.LocalGraphicsContext.current
                 // ---- still path: bake three small bitmaps (theme, card blur, dock blur)
-                LaunchedEffect(theme.id, backdrop.image, backdrop.rootSize, cardBlurPx, dockBlurPx, blurOk) {
+                LaunchedEffect(theme.id, backdrop.image, backdrop.rootSize, cardBlurPx, dockBlurPx, blurOk, s.uiStyle) {
                     val full = backdrop.rootSize
                     if (full.width < 2f || full.height < 2f) return@LaunchedEffect
                     runCatching { com.myfit.tracker.ui.theme.BackdropBaker.bake(gfx, dens, theme, backdrop.image, full, cardBlurPx, dockBlurPx, blurOk) }
@@ -266,7 +267,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             ) { t ->
                 when (t) {
                     0 -> DashboardScreen(dash, container, { sheet = it }, bottomPad, goTab = { tab = it })
-                    1 -> com.myfit.tracker.ui.train.TrainHost(container, bottomPad)
+                    1 -> com.myfit.tracker.ui.train.TrainHost(container, bottomPad) { sheet = it }
                     2 -> com.myfit.tracker.ui.food.FoodDiaryScreen(container, null, asTab = true, bottomPad = bottomPad)
                     3 -> com.myfit.tracker.ui.arena.ArenaScreen(container, bottomPad)
                     else -> SettingsScreen(container, { sheet = it }, bottomPad)
@@ -385,6 +386,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.Backup -> com.myfit.tracker.ui.settings.BackupScreen(container)
                         Overlay.MealPlans -> com.myfit.tracker.ui.food.MealPlansScreen(container)
                         Overlay.Nutritionist -> com.myfit.tracker.ui.coach.NutritionistScreen(container)
+                        Overlay.CoachHub -> com.myfit.tracker.ui.coach.CoachHub(container)
                         is Overlay.PickExercises -> com.myfit.tracker.ui.train.PickExercisesScreen(container, o.templateId, o.workoutId)
                         is Overlay.ProgramDetail -> com.myfit.tracker.ui.programs.ProgramDetailScreen(container, o.id)
                         Overlay.Deen -> com.myfit.tracker.ui.deen.DeenScreen(container)
@@ -435,6 +437,25 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                     "report" -> if (nav.stack.lastOrNull() != Overlay.WeeklyReport) nav.push(Overlay.WeeklyReport)
                     "glucose" -> if (nav.stack.lastOrNull() != Overlay.Glucose) nav.push(Overlay.Glucose)
                     "friends" -> if (nav.stack.lastOrNull() != Overlay.Social) nav.push(Overlay.Social)
+                    else -> if (com.myfit.tracker.BuildConfig.DEBUG && o.startsWith("shot:")) {
+                        // debug-only routes for the website screenshots
+                        nav.popTo { false }
+                        when (o.removePrefix("shot:")) {
+                            "home" -> tab = 0
+                            "train" -> { tab = 1; com.myfit.tracker.ui.nav.Launch.trainSeg.value = 0 }
+                            "progress" -> { tab = 1; com.myfit.tracker.ui.nav.Launch.trainSeg.value = 3 }
+                            "exercises" -> { tab = 1; com.myfit.tracker.ui.nav.Launch.trainSeg.value = 2 }
+                            "food" -> tab = 2
+                            "arena" -> tab = 3
+                            "settings" -> tab = 4
+                            "nutritionist" -> nav.push(Overlay.Nutritionist)
+                            "coach" -> nav.push(Overlay.CoachHub)
+                            "mealplans" -> nav.push(Overlay.MealPlans)
+                            "body" -> nav.push(Overlay.Body)
+                            "deen" -> nav.push(Overlay.Deen)
+                            "pip" -> nav.push(Overlay.PipChat)
+                        }
+                    }
                 }
             }
             // friend invite links (myfit://invite?c=CODE): add the friend once signed in, then show Arena → Friends

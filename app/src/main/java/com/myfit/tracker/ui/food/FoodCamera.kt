@@ -45,6 +45,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -127,6 +128,8 @@ fun FoodCamera(
     val exec = remember { Executors.newSingleThreadExecutor() }
     val labeler = remember { ImageLabeling.getClient(ImageLabelerOptions.Builder().setConfidenceThreshold(0.45f).build()) }
     val vision = remember { FoodVision(container) }
+    // offline / phone-brain: start loading the on-phone model while you aim, so the answer comes sooner
+    LaunchedEffect(Unit) { runCatching { vision.prewarmIfOffline() } }
     val preview = remember { PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER; implementationMode = PreviewView.ImplementationMode.COMPATIBLE } }
     val selector = remember {
         ResolutionSelector.Builder().setResolutionStrategy(ResolutionStrategy(Size(1600, 1200), ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER)).build()

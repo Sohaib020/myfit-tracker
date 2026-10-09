@@ -54,6 +54,8 @@ sealed interface Overlay {
     data object MealPlans : Overlay
     /** Pro nutritionist: coaching, meal review, week plan + groceries, chat. */
     data object Nutritionist : Overlay
+    /** Pro trainer home. */
+    data object CoachHub : Overlay
     data class PickExercises(val templateId: Long? = null, val workoutId: Long? = null) : Overlay
     data class Food(val date: String? = null) : Overlay
     data class FoodAdd(val mealType: String, val date: String, val tab: Int) : Overlay
@@ -75,6 +77,8 @@ val LocalNav = staticCompositionLocalOf { Nav() }
 
 /** One-shot requests for a screen to jump straight to an action when it opens (set by Home card buttons). */
 object Launch {
+    /** Train tab segment to show (set by debug screenshot routes). */
+    val trainSeg = kotlinx.coroutines.flow.MutableStateFlow<Int?>(null)
     @Volatile var mind: String? = null
     @Volatile var cycle: String? = null
     fun takeMind(): String? = mind.also { mind = null }

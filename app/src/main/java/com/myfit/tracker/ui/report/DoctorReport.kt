@@ -294,6 +294,14 @@ object DoctorReport {
         }
         if (wRows.all { it.drop(1).all { v -> v == "—" } }) note("No weight, step or sleep data in this period.")
         else table(listOf("Week", "Avg weight", "Avg steps / day", "Avg sleep"), listOf(0.4f, 0.2f, 0.2f, 0.2f), wRows)
+        // R16: latest weight + BMI with both cut-off sets (South Asian risk starts lower)
+        val lastW = weights.maxByOrNull { it.loggedAt }
+        val hM = (profile?.heightCm ?: 0.0) / 100.0
+        if (lastW != null && hM > 0.5) {
+            val bmi = lastW.weightKg / (hM * hM)
+            fun cls(o: Double, ob: Double) = when { bmi < 18.5 -> "underweight"; bmi < o -> "healthy range"; bmi < ob -> "overweight"; else -> "obese range" }
+            note("Latest weight %.1f kg (%s) · BMI %.1f — %s by WHO Asia-Pacific cut-offs (23 / 27.5), %s by standard WHO (25 / 30).".format(lastW.weightKg, LocalDate.parse(lastW.localDate).format(dayFmt), bmi, cls(23.0, 27.5), cls(25.0, 30.0)))
+        }
 
         // ================= medicines
         section("Medicines", "As recorded by the patient — not a prescription")

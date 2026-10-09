@@ -81,6 +81,8 @@ data class BadgeState(
 }
 
 object BadgeEngine {
+    /** Debug demo (website screenshots): never pop the celebration sheet. */
+    @Volatile var quiet = false
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lock = Mutex()
     private val _state = MutableStateFlow<BadgeState?>(null)

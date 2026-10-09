@@ -97,6 +97,9 @@ fun IconBubble(icon: ImageVector, color: Color, size: Dp = 36.dp) {
 @Composable
 fun CardHeader(icon: ImageVector, title: String, color: Color, trailing: @Composable RowScope.() -> Unit = {}) {
     val th = LocalFitTheme.current
+    // tell the surrounding card its role colour (Flat style tints the card with it)
+    val holder = com.myfit.tracker.ui.theme.LocalCardAccent.current
+    androidx.compose.runtime.SideEffect { if (holder != null && holder.value != color) holder.value = color }
     Row(verticalAlignment = Alignment.CenterVertically) {
         IconBubble(icon, color)
         Spacer(Modifier.width(10.dp))

@@ -137,6 +137,7 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/steps_widget" />
         </receiver>
         <receiver android:name=".update.InstallResultReceiver" android:exported="false" />
+        <receiver android:name=".notify.LiveActionReceiver" android:exported="false" />
         <receiver android:name=".update.UpdatedReceiver" android:exported="false">
             <intent-filter><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /></intent-filter>
         </receiver>

@@ -5,21 +5,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Pro trainer & nutritionist personas. The characters are fictional (names are made up and editable),
- * drawn as realistic 3D renders in assets/coach. Everything is stored on this phone.
+ * Pro trainer & nutritionist personas: stylised cartoon characters (Coach Bolt, Chef Zest — names editable),
+ * drawn in assets/coach. Everything is stored on this phone.
  */
 object Coach {
     /** Trainer looks. Art files: assets/coach/<id>_<pose>.webp (pose = portrait, stand, demo, cheer). */
     enum class Look(val id: String, val male: Boolean, val label: String, val defaultName: String) {
-        M("m", true, "Male coach", "Coach Zarak"),
-        F("f", false, "Female coach", "Coach Inaya"),
-        FH("fh", false, "Female coach (hijab)", "Coach Inaya"),
+        M("m", true, "Male coach", "Coach Bolt"),
+        F("f", false, "Female coach", "Coach Bolt"),
+        FH("fh", false, "Female coach (hijab)", "Coach Bolt"),
     }
 
     /** Nutritionist looks. Art: assets/coach/<id>_<pose>.webp (pose = portrait, plate). */
     enum class NLook(val id: String, val male: Boolean, val label: String, val defaultName: String) {
-        F("nf", false, "Female nutritionist", "Areesha"),
-        M("nm", true, "Male nutritionist", "Faraz"),
+        F("nf", false, "Female nutritionist", "Chef Zest"),
+        M("nm", true, "Male nutritionist", "Chef Zest"),
     }
 
     enum class Push(val label: String) { CALM("Calm"), STEADY("Steady"), HARD("Push me hard") }
@@ -47,9 +47,11 @@ object Coach {
         val p = sp(c)
         val look = Look.entries.firstOrNull { it.id == p.getString("look", null) } ?: Look.M
         val nLook = NLook.entries.firstOrNull { it.id == p.getString("nlook", null) } ?: NLook.F
+        // R16: the old defaults sounded like real people — move anyone still on them to the new character names
+        val oldDefaults = setOf("Coach Zarak", "Coach Inaya", "Areesha", "Faraz")
         _prefs.value = Prefs(
-            look, p.getString("name", null)?.takeIf { it.isNotBlank() } ?: look.defaultName,
-            nLook, p.getString("nname", null)?.takeIf { it.isNotBlank() } ?: nLook.defaultName,
+            look, p.getString("name", null)?.takeIf { it.isNotBlank() && it !in oldDefaults } ?: look.defaultName,
+            nLook, p.getString("nname", null)?.takeIf { it.isNotBlank() && it !in oldDefaults } ?: nLook.defaultName,
             p.getBoolean("urdu", false), p.getBoolean("camera", false), p.getBoolean("voice", true),
             Push.entries.getOrNull(p.getInt("push", 1)) ?: Push.STEADY, p.getBoolean("front", true),
         )

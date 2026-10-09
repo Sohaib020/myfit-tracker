@@ -449,17 +449,17 @@ object Themes {
         success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF1C7EE0), steps = Color(0xFF2E9462),
     )
 
-    val all = listOf(
-        Kinetic, Blaze,
-        // premium dark
-        Cobalt, Graphite, Evergreen, Dusk, Steel, Golden,
-        Ember, Oceanic, Aurora, Carbon, Neon, Sapphire, Forest, Volcanic, Cosmic, Matcha,
-        // clean light
-        Porcelain, Sandstone, Lavender, Cloud, Peach, Mint, Sakura, Desert,
-        // sport & gym
-        Track, Court, Stadium, NeonGym, IronFloor, Clay, Chalk,
-        // Pakistani-inspired
-        TruckArt, Mughal, Ajrak, Hunza, Badshahi, Thar, Multani, Swat,
-    )
-    fun byId(id: String) = all.firstOrNull { it.id == id } ?: Kinetic
+    /** Theme families shown in the picker (R16: trimmed to essentials + dark, hero, motor, nature, Pakistan). */
+    val families: List<Pair<String, List<FitTheme>>> by lazy {
+        listOf(
+            "Essentials" to listOf(Kinetic, Blaze, Cobalt, Graphite, Evergreen, Porcelain, Sandstone, Cloud),
+            "Dark & AMOLED" to listOf(MoreThemes.TrueBlack, Carbon, Cosmic, Ember),
+            "Hero moods" to listOf(MoreThemes.WebCrimson, MoreThemes.Adamant, MoreThemes.SkyGuardian, MoreThemes.MidnightVigilante, MoreThemes.ReactorGold),
+            "Cars & bikes" to listOf(MoreThemes.RacingRed, MoreThemes.CarbonLime, MoreThemes.MidnightSupercar, MoreThemes.CafeRacer, MoreThemes.RallyBlue),
+            "Nature" to listOf(Forest, Oceanic, Aurora, Hunza, Desert, Sakura),
+            "Pakistan" to listOf(TruckArt, Badshahi),
+        )
+    }
+    val all: List<FitTheme> by lazy { families.flatMap { it.second } }
+    fun byId(id: String): FitTheme = (MoreThemes.legacy[id] ?: id).let { k -> all.firstOrNull { it.id == k } } ?: Kinetic
 }

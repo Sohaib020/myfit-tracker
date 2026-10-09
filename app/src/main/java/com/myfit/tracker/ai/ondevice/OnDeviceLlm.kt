@@ -148,6 +148,14 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
         }
     }
 
+    /** Loads the model in the background (e.g. while the food camera is open) so the first answer comes faster. */
+    fun prewarm() {
+        scope.launch {
+            if (!available()) return@launch
+            runCatching { lock.withLock { idleJob?.cancel(); ensure(); scheduleIdleRelease() } }
+        }
+    }
+
     /** One-shot text answer. [system] is prepended because each call is a fresh conversation. */
     suspend fun chat(system: String, turns: List<Pair<String, String>>): String = run(90_000) { e ->
         val prompt = buildString {

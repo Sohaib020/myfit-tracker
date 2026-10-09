@@ -1,8 +1,12 @@
 (() => {
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   $('#yr').textContent = new Date().getFullYear();
+
+  // hide a frame whose screenshot is missing rather than show a broken image
+  $$('img[src^="img/shots/"]').forEach(i => i.addEventListener('error', () => { const f = i.closest('.device,.device-sm'); (f || i).style.visibility = 'hidden'; }));
 
   // ---------------- cast gallery
   const CAST = [['zara', 'Zara', 'Snow leopard'], ['taj', 'Taj', 'Markhor'], ['kami', 'Kami', 'Camel'], ['shaheen', 'Shaheen', 'Falcon'], ['motu', 'Motu', 'Panda'],
@@ -16,59 +20,175 @@
     grid.appendChild(f);
   });
 
+  // ---------------- food grid
+  const FOODS = [['nihari', 'Nihari'], ['omelette', 'Omelette'], ['chicken_biryani', 'Biryani'], ['salad', 'Salad'], ['chicken_karahi', 'Karahi'], ['oats', 'Oats'], ['chapli_kebab', 'Chapli kebab'], ['mango_lassi', 'Mango lassi'],
+    ['beef_burger', 'Burger'], ['halwa_puri', 'Halwa puri'], ['banana', 'Banana'], ['gol_gappay', 'Gol gappay'], ['club_sandwich', 'Club sandwich'], ['seekh_kebab', 'Seekh kebab'], ['apple', 'Apple'], ['jalebi', 'Jalebi'],
+    ['daal_chawal', 'Daal chawal'], ['chocolate_shake', 'Chocolate shake'], ['haleem', 'Haleem'], ['paratha_plain', 'Paratha'], ['kebab_roll', 'Kebab roll'], ['tea_sugar', 'Chai'], ['kheer', 'Kheer'], ['lassi_sweet', 'Lassi']];
+  const fo = $('#foodOrbit');
+  FOODS.forEach(([id, n], i) => {
+    const f = document.createElement('figure');
+    f.className = 'reveal';
+    f.style.transitionDelay = (i % 8) * 60 + 'ms';
+    f.innerHTML = `<img src="img/food/${id}.webp" alt="${n}" loading="lazy"><figcaption>${n}</figcaption>`;
+    fo.appendChild(f);
+  });
+
+  // ---------------- headline word split
+  $$('.split').forEach(h => {
+    const walk = n => [...n.childNodes].forEach(c => {
+      if (c.nodeType === 3) {
+        const frag = document.createDocumentFragment();
+        c.textContent.split(/(\s+)/).forEach(w => { if (!w) return; if (/^\s+$/.test(w)) frag.append(w); else { const s = document.createElement('span'); s.className = 'w'; s.textContent = w; frag.append(s); } });
+        c.replaceWith(frag);
+      } else if (c.nodeType === 1) walk(c);
+    });
+    walk(h);
+    $$('.w', h).forEach((w, i) => { w.style.transitionDelay = 120 + i * 70 + 'ms'; });
+  });
+
   // ---------------- reveal on scroll
   const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .12, rootMargin: '0px 0px -40px 0px' });
-  $$('.reveal').forEach((el, i) => { el.style.transitionDelay = (el.closest('.pip-row,.cast-grid,.bento,.faq-list,.coach-grid') ? (i % 7) * 70 : 0) + 'ms'; io.observe(el); });
+  $$('.reveal').forEach((el, i) => { if (!el.style.transitionDelay) el.style.transitionDelay = (el.closest('.pip-row,.cast-grid,.bento,.faq-list,.coach-grid,.cam-feats,.coach-shots') ? (i % 7) * 70 : 0) + 'ms'; io.observe(el); });
 
-  // ---------------- nav
-  const nav = $('#nav');
-  const onScroll = () => nav.classList.toggle('solid', scrollY > 40);
+  // ---------------- nav + progress bar
+  const nav = $('#nav'), bar = $('.progress-bar');
+  const onScroll = () => {
+    nav.classList.toggle('solid', scrollY > 40);
+    bar.style.transform = `scaleX(${scrollY / Math.max(1, document.documentElement.scrollHeight - innerHeight)})`;
+  };
   addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
-  // ---------------- cursor glow + hero parallax (mouse)
-  const glow = $('.cursor-glow');
+  // ---------------- cursor glow, cursor dot, mouse + scroll parallax
+  const glow = $('.cursor-glow'), dot = $('.cursor-dot');
   let mx = innerWidth / 2, my = innerHeight / 2, tx = mx, ty = my;
-  addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; }, { passive: true });
+  addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; if (dot) dot.style.transform = `translate(${mx}px, ${my}px)`; }, { passive: true });
+  $$('a, button, .tilt, .food-orbit figure').forEach(el => {
+    el.addEventListener('pointerenter', () => dot && dot.classList.add('big'));
+    el.addEventListener('pointerleave', () => dot && dot.classList.remove('big'));
+  });
   const layers = $$('#heroArt [data-depth]');
   const speedEls = $$('[data-speed]');
+  const rows = $$('.wall-row');
+  const wall = $('.wall');
   function frame() {
-    tx += (mx - tx) * .12; ty += (my - ty) * .12;
+    tx += (mx - tx) * .1; ty += (my - ty) * .1;
     if (glow) glow.style.transform = `translate(${tx - 260}px, ${ty - 260}px)`;
     const nx = (tx / innerWidth - .5), ny = (ty / innerHeight - .5);
     const sy = scrollY;
-    layers.forEach(l => { const d = +l.dataset.depth; l.style.translate = `${-nx * 40 * d}px ${-ny * 30 * d - sy * .12 * d}px`; });
-    speedEls.forEach(l => { l.style.transform = `translateY(${sy * +l.dataset.speed}px)`; });
+    layers.forEach(l => { const d = +l.dataset.depth; l.style.translate = `${-nx * 46 * d}px ${-ny * 34 * d - sy * .14 * d}px`; });
+    speedEls.forEach(l => {
+      const r = l.getBoundingClientRect(); const c = (r.top + r.height / 2 - innerHeight / 2);
+      l.style.transform = l.classList.contains('blob') ? `translateY(${sy * +l.dataset.speed}px)` : `translateY(${c * +l.dataset.speed}px)`;
+    });
+    if (wall) {
+      const r = wall.getBoundingClientRect();
+      if (r.bottom > 0 && r.top < innerHeight) {
+        const p = (innerHeight - r.top) / (innerHeight + r.height);
+        rows.forEach(row => { const dir = +row.dataset.dir; const span = row.scrollWidth - innerWidth; row.style.transform = `translateX(${dir < 0 ? -p * span * .6 : -span * .6 + p * span * .6}px)`; });
+      }
+    }
     requestAnimationFrame(frame);
   }
   if (!reduce) requestAnimationFrame(frame);
 
-  // ---------------- 3D tilt cards
-  $$('.tilt').forEach(c => {
-    c.addEventListener('pointermove', e => {
-      if (reduce || e.pointerType === 'touch') return;
-      const r = c.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
-      c.style.transform = `perspective(900px) rotateY(${x * 10}deg) rotateX(${-y * 10}deg) translateZ(0)`;
-    });
-    c.addEventListener('pointerleave', () => { c.style.transform = ''; });
+  // ---------------- magnetic buttons
+  if (fine && !reduce) $$('.magnetic').forEach(b => {
+    b.addEventListener('pointermove', e => { const r = b.getBoundingClientRect(); b.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * .25}px, ${(e.clientY - r.top - r.height / 2) * .35}px)`; });
+    b.addEventListener('pointerleave', () => { b.style.transform = ''; });
   });
-  grid.addEventListener('pointermove', e => {
-    const c = e.target.closest('.tilt'); if (!c || reduce || e.pointerType === 'touch') return;
-    const r = c.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
-    c.style.transform = `perspective(700px) rotateY(${x * 14}deg) rotateX(${-y * 14}deg)`;
-  });
-  grid.addEventListener('pointerout', e => { const c = e.target.closest('.tilt'); if (c) c.style.transform = ''; });
 
-  // ---------------- rep counter in the trainer mockup
-  const rc = $('.repcount'), word = $('.s-train .counter em'), deg = $('.s-train .deg');
-  if (rc && !reduce) {
-    let n = 6, down = true;
+  // ---------------- 3D tilt + glare
+  const tilt = (c, e, k) => {
+    const r = c.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+    c.style.transform = `perspective(900px) rotateY(${x * k}deg) rotateX(${-y * k}deg)`;
+  };
+  if (fine && !reduce) {
+    $$('.tilt').forEach(c => { c.addEventListener('pointermove', e => tilt(c, e, 10)); c.addEventListener('pointerleave', () => { c.style.transform = ''; }); });
+    grid.addEventListener('pointermove', e => { const c = e.target.closest('.tilt'); if (c) tilt(c, e, 14); });
+    grid.addEventListener('pointerout', e => { const c = e.target.closest('.tilt'); if (c) c.style.transform = ''; });
+  }
+
+  // ---------------- sticky showcase: swap the phone screen as each step scrolls in
+  const steps = $$('.sc-step'), shots = $$('#scScreens img'), dots = $('#scDots');
+  steps.forEach((s, i) => {
+    s.style.setProperty('--shot', `url(../img/shots/${s.dataset.shot}.webp)`);
+    const d = document.createElement('i'); d.addEventListener('click', () => s.scrollIntoView({ behavior: 'smooth', block: 'center' })); dots.appendChild(d);
+  });
+  const setStep = k => {
+    steps.forEach((s, i) => { const on = s.dataset.shot === k; s.classList.toggle('on', on); dots.children[i].classList.toggle('on', on); });
+    shots.forEach(im => im.classList.toggle('on', im.dataset.k === k));
+  };
+  const sio = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) setStep(e.target.dataset.shot); }), { rootMargin: '-45% 0px -45% 0px' });
+  steps.forEach(s => sio.observe(s));
+  setStep('home');
+
+  // ---------------- camera coach demo: reps, angle, form score, cue
+  const cues = ['“Great depth — chest up!”', '“Knees out, nice!”', '“Slow on the way down.”', '“Two more — push!”', '“Hips level — perfect.”', '“Last one, make it count!”'];
+  const cRep = $('#camRep'), cDeg = $('#camDeg'), cSc = $('#camScore'), cRing = $('#camRing'), cCue = $('#camCue'), legs = $$('.cam-frame .leg');
+  const exs = $$('.ex-cloud span');
+  if (cRep && !reduce) {
+    let n = 8, down = false, ci = 0, ei = 0;
     setInterval(() => {
       down = !down;
-      word.textContent = down ? 'DOWN' : 'UP';
-      deg.textContent = (down ? 92 : 168) + '°';
-      if (!down) { n = n >= 12 ? 1 : n + 1; rc.textContent = n; }
+      cDeg.textContent = (down ? 88 + Math.round(Math.random() * 8) : 168) + '°';
+      legs.forEach(l => l.setAttribute('d', down ? (l === legs[0] ? 'M100 120 L72 160 L95 230' : 'M100 120 L133 160 L110 230') : (l === legs[0] ? 'M100 120 L80 175 L95 230' : 'M100 120 L125 175 L110 230')));
+      if (!down) {
+        n = n >= 12 ? 1 : n + 1; cRep.textContent = n;
+        const sc = 82 + Math.round(Math.random() * 17); cSc.textContent = sc;
+        cRing.style.strokeDashoffset = 119.4 * (1 - sc / 100);
+        cRing.style.stroke = sc >= 90 ? '#7cf2c4' : '#ffcf5a';
+        cCue.classList.add('swap');
+        setTimeout(() => { cCue.textContent = cues[ci++ % cues.length]; cCue.classList.remove('swap'); }, 300);
+        exs.forEach(x => x.classList.remove('lit')); exs[ei++ % exs.length].classList.add('lit');
+      }
     }, 1100);
   }
+
+  // ---------------- coach look switchers + pose cycling on hover
+  const coachSwitch = (card, imgSel, poses) => {
+    const img = $(imgSel); let look = $('.looks button.on', card).dataset.look, pi = 0, timer;
+    const show = src => { img.classList.add('swap'); setTimeout(() => { img.src = src; img.onload = () => img.classList.remove('swap'); }, 200); };
+    $$('.looks button', card).forEach(b => b.addEventListener('click', e => {
+      e.stopPropagation(); $$('.looks button', card).forEach(x => x.classList.remove('on')); b.classList.add('on');
+      look = b.dataset.look; pi = 0; show(`img/coach/${look}_${poses[0]}.webp`);
+    }));
+    card.addEventListener('pointerenter', () => { if (reduce) return; clearInterval(timer); timer = setInterval(() => { pi = (pi + 1) % poses.length; show(`img/coach/${look}_${poses[pi]}.webp`); }, 1500); });
+    card.addEventListener('pointerleave', () => { clearInterval(timer); });
+  };
+  coachSwitch($('[data-coach="bolt"]'), '#boltImg', ['stand', 'demo', 'cheer', 'point', 'clipboard']);
+  coachSwitch($('[data-coach="zest"]'), '#zestImg', ['plate', 'thumbs', 'think', 'cart', 'stand']);
+
+  // ---------------- live notification demo
+  const lf = $('#liveFill'), lb = $('#liveBadge'), lt = $('#liveTxt'), clk = $('#lockClock');
+  if (lf) {
+    let rest = 45;
+    const tick = () => {
+      rest = rest <= 0 ? 45 : rest - 1;
+      const p = 25 + (1 - rest / 45) * 25; lf.style.width = p + '%'; lb.style.left = p + '%';
+      lt.textContent = rest > 0 ? `Rest 0:${String(rest).padStart(2, '0')}` : 'Go! Set 4 💪';
+    };
+    if (!reduce) setInterval(tick, 1000);
+    const d = new Date();
+    clk.textContent = (d.getHours() % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0');
+    clk.nextElementSibling.textContent = d.toLocaleDateString('en', { weekday: 'long' });
+  }
+
+  // ---------------- theme demo (colours echo the app's families)
+  const THEMES = [['Kinetic', 'Essentials', '#7cf2c4', '#173c33', '#07120f'], ['Cobalt', 'Essentials', '#5ab8ff', '#13284a', '#070c16'], ['Blaze', 'Essentials', '#ff8a4c', '#4a1e10', '#130906'],
+    ['True Black', 'Dark & AMOLED', '#e8e8e8', '#202020', '#000000'], ['Cosmic', 'Dark & AMOLED', '#b48cff', '#2a1850', '#0a0614'], ['Web Crimson', 'Hero moods', '#ff4a5a', '#3a0d18', '#10050a'],
+    ['Reactor Gold', 'Hero moods', '#ffc94a', '#4a2a08', '#120b04'], ['Racing Red', 'Cars & bikes', '#ff3b30', '#2a2a2a', '#0b0b0b'], ['Carbon Lime', 'Cars & bikes', '#c6ff3d', '#22301a', '#0a0d08'],
+    ['Hunza', 'Nature', '#ffb36b', '#1d3b4a', '#071016'], ['Sakura', 'Nature', '#ff9ec7', '#3d1d33', '#120810'], ['Truck Art', 'Pakistan', '#ffd23f', '#c2185b', '#120714']];
+  const sw = $('#swatches'), tp = $('#tdPreview'), tn = $('#tdName');
+  THEMES.forEach(([n, fam, a, b, bg], i) => {
+    const btn = document.createElement('button'); btn.style.setProperty('--a', a); btn.style.setProperty('--b', b); btn.setAttribute('aria-label', n);
+    btn.addEventListener('click', () => { $$('button', sw).forEach(x => x.classList.remove('on')); btn.classList.add('on'); tp.style.setProperty('--a', a); tp.style.setProperty('--b', b); tp.style.setProperty('--bg', bg); tn.textContent = `${n} · ${fam}`; });
+    if (!i) btn.classList.add('on');
+    sw.appendChild(btn);
+  });
+  $$('.seg button').forEach(b => b.addEventListener('click', () => { $$('.seg button').forEach(x => x.classList.remove('on')); b.classList.add('on'); tp.classList.toggle('flat', b.dataset.style === 'flat'); tp.classList.toggle('glass', b.dataset.style !== 'flat'); }));
+  // auto-cycle until the visitor touches it
+  let auto = !reduce && setInterval(() => { const bs = $$('button', sw); const k = (bs.findIndex(x => x.classList.contains('on')) + 1) % bs.length; bs[k].click(); }, 2600);
+  $('.theme-demo').addEventListener('pointerdown', () => { clearInterval(auto); auto = 0; });
 
   // ---------------- release info + QR
   try { new QRCode($('#qr'), { text: location.origin + location.pathname, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M }); } catch (e) {}
@@ -82,28 +202,18 @@
     if (notes) $('#notes').textContent = "What's new\n" + notes;
   }).catch(() => {});
 
-  // ---------------- GSAP: pinned horizontal tour, count-ups
+  // ---------------- GSAP extras + count-ups
   addEventListener('load', () => {
     if (window.gsap && window.ScrollTrigger && !reduce) {
       gsap.registerPlugin(ScrollTrigger);
-      const mm = gsap.matchMedia();
-      mm.add('(min-width: 901px)', () => {
-        const track = $('.tour-track');
-        const dist = () => track.scrollWidth - innerWidth;
-        const tw = gsap.to(track, { x: () => -dist(), ease: 'none', scrollTrigger: { trigger: '.tour-pin', start: 'top 12%', end: () => '+=' + dist(), pin: true, scrub: 0.6, invalidateOnRefresh: true, anticipatePin: 1 } });
-        $$('.panel').forEach(p => {
-          gsap.from(p.querySelector('.phone'), { y: 80, rotate: 6, opacity: .2, ease: 'power2.out', scrollTrigger: { trigger: p, containerAnimation: tw, start: 'left 90%', end: 'left 40%', scrub: true } });
-          gsap.from(p.querySelector('.panel-copy'), { x: 60, opacity: 0, ease: 'power2.out', scrollTrigger: { trigger: p, containerAnimation: tw, start: 'left 85%', end: 'left 45%', scrub: true } });
-        });
-      });
-      mm.add('(max-width: 900px)', () => {
-        $$('.panel').forEach(p => gsap.from(p, { y: 60, opacity: 0, duration: .9, ease: 'power3.out', scrollTrigger: { trigger: p, start: 'top 85%' } }));
-      });
-      gsap.to('.hero-copy', { y: -80, opacity: .2, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
-      $$('.coach-img img').forEach(img => gsap.fromTo(img, { y: 50, scale: .94 }, { y: -10, scale: 1, ease: 'none', scrollTrigger: { trigger: img, start: 'top bottom', end: 'bottom top', scrub: true } }));
+      gsap.to('.hero-copy', { y: -90, opacity: .15, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
+      gsap.fromTo('.sc-phone', { rotate: -4, scale: .92 }, { rotate: 3, scale: 1, ease: 'none', scrollTrigger: { trigger: '.showcase', start: 'top bottom', end: 'bottom top', scrub: true } });
+      $$('.coach-img > img').forEach(img => gsap.fromTo(img, { y: 50 }, { y: -10, ease: 'none', scrollTrigger: { trigger: img, start: 'top bottom', end: 'bottom top', scrub: true } }));
+      gsap.fromTo('.cam-frame', { y: 60, rotate: 3 }, { y: -30, rotate: -2, ease: 'none', scrollTrigger: { trigger: '.camera', start: 'top bottom', end: 'bottom top', scrub: true } });
+      gsap.fromTo('.lock', { y: 70 }, { y: -30, ease: 'none', scrollTrigger: { trigger: '.live-sec', start: 'top bottom', end: 'bottom top', scrub: true } });
+      $$('.notif').forEach((n, i) => gsap.from(n, { x: 80, opacity: 0, duration: .8, delay: i * .15, ease: 'power3.out', scrollTrigger: { trigger: '.lock', start: 'top 75%' } }));
       $$('.pip-row figure img').forEach((f, i) => gsap.fromTo(f, { y: 14 + (i % 2) * 14 }, { y: -14 - (i % 2) * 10, ease: 'none', scrollTrigger: { trigger: '.pip-row', start: 'top bottom', end: 'bottom top', scrub: true } }));
     }
-    // count-ups (marquee numbers)
     $$('[data-count]').forEach(el => {
       const end = +el.dataset.count; let started = false;
       new IntersectionObserver(([e], o) => {

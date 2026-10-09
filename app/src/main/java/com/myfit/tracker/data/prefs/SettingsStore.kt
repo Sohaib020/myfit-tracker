@@ -51,6 +51,8 @@ data class AppSettings(
     val customBackground: String? = null,     // file name in app storage, null = theme art
     val animatedBackground: Boolean = true,
     val glassStrength: Float = 1f,            // 0.4 … 1.4
+    /** 0 = Glass (frosted, see-through cards), 1 = Flat (solid cards tinted by what they show). */
+    val uiStyle: Int = 0,
     val units: UnitPrefs = UnitPrefs(),
     val dashCards: Set<DashCard> = DashCard.entries.toSet(),
     val haptics: Boolean = true,
@@ -110,6 +112,7 @@ class SettingsStore(private val context: Context) {
     private object K {
         val theme = stringPreferencesKey("theme")
         val themeV2 = booleanPreferencesKey("theme_v2")
+        val uiStyle = intPreferencesKey("ui_style")
         val gentle = booleanPreferencesKey("gentle_themes")
         val bg = stringPreferencesKey("custom_bg")
         val animated = booleanPreferencesKey("animated_bg")
@@ -171,6 +174,7 @@ class SettingsStore(private val context: Context) {
             customBackground = p[K.bg],
             animatedBackground = p[K.animated] ?: true,
             glassStrength = p[K.glass] ?: 1f,
+            uiStyle = p[K.uiStyle] ?: 0,
             units = UnitPrefs(
                 weight = p[K.wu]?.let { runCatching { WeightUnit.valueOf(it) }.getOrNull() } ?: WeightUnit.KG,
                 length = p[K.lu]?.let { runCatching { LengthUnit.valueOf(it) }.getOrNull() } ?: LengthUnit.IN,
@@ -234,6 +238,7 @@ class SettingsStore(private val context: Context) {
     }
 
     suspend fun setTheme(id: String) = context.dataStore.edit { it[K.theme] = id; it[K.themeV2] = true }
+    suspend fun setUiStyle(v: Int) = context.dataStore.edit { it[K.uiStyle] = v }
     suspend fun setGentleThemes(v: Boolean) = context.dataStore.edit { it[K.gentle] = v }
     suspend fun setCustomBackground(file: String?) = context.dataStore.edit {
         if (file == null) it.remove(K.bg) else it[K.bg] = file

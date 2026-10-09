@@ -82,6 +82,8 @@ private class PhotoItem(val src: FoodVision.Item) {
     var on by mutableStateOf(true)
     var name by mutableStateOf(src.name)
     var grams by mutableStateOf(if (src.grams > 0) Fmt.trim(src.grams, 0) else "")
+    /** Unchanged since it arrived → may be replaced by the accuracy pass. */
+    val untouched get() = on && name == src.name && grams == (if (src.grams > 0) Fmt.trim(src.grams, 0) else "")
     val factor: Double get() = if (src.grams > 0) (grams.toDoubleOrNull() ?: 0.0) / src.grams else 1.0
     val kcal get() = src.kcal * factor
     val p get() = src.protein * factor
@@ -110,6 +112,9 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
     var stage by remember { mutableStateOf<Stage>(Stage.Pick) }
     var hint by remember { mutableStateOf("") }
     val items = remember { mutableStateListOf<PhotoItem>() }
+    var refining by remember { mutableStateOf(false) }
+    var startedAt by remember { mutableStateOf(0L) }
+    var tookMs by remember { mutableStateOf<Long?>(null) }
 
     var job by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     fun analyse() {
@@ -117,17 +122,27 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
         job?.cancel()
         stage = Stage.Working
         items.clear()
+        refining = false; tookMs = null; startedAt = System.currentTimeMillis()
         job = scope.launch {
             stage = try {
-                val r = FoodVision(container).analyze(b, hint)
-                items.addAll(r.items.map { PhotoItem(it) })
+                val r = FoodVision(container).analyze(b, hint) { early ->
+                    // quick pass: show it now, keep improving in the background
+                    items.clear(); items.addAll(early.items.map { PhotoItem(it) })
+                    tookMs = System.currentTimeMillis() - startedAt
+                    refining = true
+                    stage = Stage.Done(early.note)
+                }
+                refining = false
+                if (tookMs == null) tookMs = System.currentTimeMillis() - startedAt
+                if (items.isEmpty() || items.all { it.untouched }) { items.clear(); items.addAll(r.items.map { PhotoItem(it) }) }
                 Stage.Done(r.note)
             } catch (e: FoodVision.NotFood) {
                 Stage.Failed(e.message ?: "No food found", true)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Stage.Failed(e.message ?: "Something went wrong", false)
+                refining = false
+                if (items.isNotEmpty()) Stage.Done(null) else Stage.Failed(e.message ?: "Something went wrong", false)
             }
         }
     }
@@ -231,8 +246,13 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
                 is Stage.Done -> {
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("FOUND ${items.size} ITEM${if (items.size == 1) "" else "S"}", style = FitType.overline, color = th.textDim, modifier = Modifier.weight(1f))
-                            EstimateTag()
+                            Text("FOUND ${items.size} ITEM${if (items.size == 1) "" else "S"}" + (tookMs?.let { " · ${"%.1f".format(it / 1000.0)} s" } ?: ""),
+                                style = FitType.overline, color = th.textDim, modifier = Modifier.weight(1f))
+                            if (refining) {
+                                androidx.compose.material3.CircularProgressIndicator(Modifier.size(14.dp), color = th.accent, strokeWidth = 2.dp)
+                                Spacer(Modifier.width(6.dp))
+                                Caption("Refining…", color = th.accentBright)
+                            } else EstimateTag()
                         }
                     }
                     itemsIndexed(items, key = { i, _ -> i }) { _, it -> PhotoItemRow(it) }
@@ -301,9 +321,11 @@ private fun PhotoItemRow(it: PhotoItem) {
                     else Box(Modifier.size(28.dp).clip(RoundedCornerShape(9.dp)).then(Modifier)) { Icon(Duo.Check, null, tint = th.textFaint, modifier = Modifier.size(16.dp).align(Alignment.Center)) }
                 }
                 Spacer(Modifier.width(10.dp))
+                FoodThumb(it.src.photo, 44.dp, 12.dp)
+                Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(it.name, style = FitType.section, color = if (it.on) th.text else th.textDim, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Caption(listOf(it.src.portion, "${it.src.confidence} confidence").filter { s -> s.isNotBlank() }.joinToString(" · "))
+                    Caption(listOf(it.src.portion, if (it.src.catalogUuid != null) "MyFit values" else "${it.src.confidence} confidence").filter { s -> s.isNotBlank() }.joinToString(" · "))
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("≈ ${Fmt.int(it.kcal)}", style = FitType.section, color = th.text, textAlign = TextAlign.End)

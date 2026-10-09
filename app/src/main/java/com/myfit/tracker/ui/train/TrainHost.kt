@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -40,9 +41,11 @@ import com.myfit.tracker.ui.theme.LocalFitTheme
 
 /** Train tab: workouts (templates, Gym Mode, history) and the exercise library, behind one segmented switch. */
 @Composable
-fun TrainHost(container: AppContainer, bottomPad: Int) {
+fun TrainHost(container: AppContainer, bottomPad: Int, openSheet: (com.myfit.tracker.ui.entries.Sheet) -> Unit = {}) {
     val th = LocalFitTheme.current
     var seg by rememberSaveable { mutableIntStateOf(0) }
+    val segReq by com.myfit.tracker.ui.nav.Launch.trainSeg.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(segReq) { segReq?.let { seg = it; com.myfit.tracker.ui.nav.Launch.trainSeg.value = null } }
     val chrome = com.myfit.tracker.ui.components.LocalChrome.current
     val density = androidx.compose.ui.platform.LocalDensity.current
     var headerPx by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
@@ -54,9 +57,15 @@ fun TrainHost(container: AppContainer, bottomPad: Int) {
     Box(Modifier.fillMaxSize()) {
         androidx.compose.runtime.CompositionLocalProvider(com.myfit.tracker.ui.components.LocalTopInset provides with(density) { headerPx.toDp() }) {
             Box(Modifier.fillMaxSize()) {
-                if (seg == 0) TrainScreen(container, bottomPad, embedded = true, onBrowsePlans = { seg = 1 })
-                else if (seg == 1) com.myfit.tracker.ui.programs.ProgramsScreen(container, bottomPad)
-                else ExercisesScreen(container, bottomPad, embedded = true)
+                when (seg) {
+                    0 -> TrainScreen(container, bottomPad, embedded = true, onBrowsePlans = { seg = 1 }, onTab = { seg = it })
+                    1 -> com.myfit.tracker.ui.programs.ProgramsScreen(container, bottomPad)
+                    2 -> ExercisesScreen(container, bottomPad, embedded = true)
+                    else -> TrainProgressScreen(container, embedded = true, bottomPad = bottomPad) {
+                        item(key = "weight") { WeightProgressCard(container) { openSheet(com.myfit.tracker.ui.entries.Sheet.Weight()) } }
+                        item(key = "bmi") { BmiCard(container) }
+                    }
+                }
             }
         }
         Column(
@@ -71,7 +80,7 @@ fun TrainHost(container: AppContainer, bottomPad: Int) {
         ) {
             Text("Train", style = FitType.display, color = th.text)
             androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp))
-            Segmented(listOf("Workouts", "Plans", "Exercises"), seg) { seg = it }
+            Segmented(listOf("Today", "Plans", "Exercises", "Progress"), seg) { seg = it }
         }
     }
 }

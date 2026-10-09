@@ -62,6 +62,13 @@ fun DrawScope.drawBackdrop(theme: FitTheme, image: ImageBitmap?, t: Float, w: Fl
             drawRect(if (theme.isLight) Color(0x40FFFFFF) else Color(0x59000000), size = full)
             return@clipRect
         }
+        if (UiStyle.flat) {
+            // Flat design: calm solid background with a faint accent glow at the top — no art
+            drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(theme.bgTop, theme.bgBottom)), size = full)
+            drawRect(androidx.compose.ui.graphics.Brush.radialGradient(listOf(theme.accent.copy(alpha = if (theme.isLight) 0.06f else 0.10f), Color.Transparent),
+                center = androidx.compose.ui.geometry.Offset(w * 0.8f, 0f), radius = w * 0.9f), size = full)
+            return@clipRect
+        }
         if (ThemeShaders.draw(this, theme.id, t, w, h)) return@clipRect
         when (theme.art) {
             BackdropArt.AURORA -> aurora(theme, t, w, h)

@@ -135,40 +135,11 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         // ---------- appearance
         item {
             GlassCard {
-                CardHeader(Duo.Palette, "Theme", th.fat)
-                Spacer(Modifier.height(14.dp))
-                Caption("${Themes.all.size} themes · all still images, zero battery cost. Tap one to apply.")
+                CardHeader(Duo.Palette, "Theme & style", th.fat)
                 Spacer(Modifier.height(10.dp))
-                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(Themes.all.size, key = { Themes.all[it].id }) { idx ->
-                        val t = Themes.all[idx]
-                        val sel = t.id == settings.themeId
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(
-                                Modifier.size(width = 92.dp, height = 150.dp).clip(RoundedCornerShape(20.dp))
-                                    .border(if (sel) 3.dp else 1.dp, if (sel) t.accent else Color.White.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
-                                    .clickableNoRipple { container.write { container.settings.setTheme(t.id) } }
-                            ) {
-                                Canvas(Modifier.fillMaxSize()) {
-                                    // live miniature of the real backdrop art
-                                    val full = backdrop.rootSize
-                                    if (full.width > 0) {
-                                        val s = size.width / full.width
-                                        scale(s, s, pivot = androidx.compose.ui.geometry.Offset.Zero) {
-                                            drawBackdrop(t, null, t.stillT, full.width, full.height)
-                                        }
-                                    }
-                                    drawRoundRect(t.glassFallback.copy(alpha = 0.55f), topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.1f, size.height * 0.62f),
-                                        size = androidx.compose.ui.geometry.Size(size.width * 0.8f, size.height * 0.14f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(20f))
-                                    drawRoundRect(t.accent, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.1f, size.height * 0.8f),
-                                        size = androidx.compose.ui.geometry.Size(size.width * 0.8f, size.height * 0.1f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(40f))
-                                }
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            Text(t.name, style = FitType.caption, color = if (sel) th.text else th.textDim)
-                        }
-                    }
-                }
+                Caption("${Themes.all.size} themes in 6 families · every theme works as Glass or Flat. Tap to apply.")
+                Spacer(Modifier.height(12.dp))
+                ThemePicker(container, settings)
             }
         }
 
@@ -1005,18 +976,18 @@ private fun AiProvidersCard(container: AppContainer) {
 }
 
 
-/** Live notifications: Android 16 system Live Update (Now Bar) or MyFit's animated card. */
+/** Live notifications are automatic (Now Bar on Android 16 phones that allow it, else MyFit's live card) + daily goals card toggle. */
 @androidx.compose.runtime.Composable
 private fun LiveNotifRow() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val th = com.myfit.tracker.ui.theme.LocalFitTheme.current
-    if (android.os.Build.VERSION.SDK_INT < 36) return
-    var native by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.myfit.tracker.notify.LiveUpdates.nativeStyle(ctx)) }
+    val native = androidx.compose.runtime.remember { com.myfit.tracker.notify.LiveUpdates.nativeStyle(ctx) }
+    var daily by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.myfit.tracker.notify.LiveUpdates.dailyOn(ctx)) }
     androidx.compose.material3.Text("Live notifications", style = com.myfit.tracker.ui.theme.FitType.label, color = th.text)
-    com.myfit.tracker.ui.components.Caption(if (native) "Workouts, rest, activity and fasting show as a live progress bar in the Now Bar and on the lock screen."
-        else "Workouts, rest, activity and fasting show as MyFit's animated card in the notification shade (not in the Now Bar).")
-    Spacer(Modifier.height(8.dp))
-    com.myfit.tracker.ui.components.GlassSegmented(listOf(true, false), native, { if (it) "Now Bar" else "Rich card" }, { v ->
-        native = v; com.myfit.tracker.notify.LiveUpdates.setRichStyle(ctx, !v)
-    }, Modifier.fillMaxWidth())
+    com.myfit.tracker.ui.components.Caption(if (native) "Automatic: this phone shows workouts, rest, runs and fasts live in the Now Bar and on the lock screen."
+        else "Automatic: this phone shows workouts, rest, runs and fasts as a live card with a moving progress track.")
+    Spacer(Modifier.height(6.dp))
+    ToggleRow("Daily goals card", "A quiet card with today's steps, water and calories. Swipe it away any time.", daily) { v ->
+        daily = v; com.myfit.tracker.notify.LiveUpdates.setDailyOn(ctx, v)
+    }
 }

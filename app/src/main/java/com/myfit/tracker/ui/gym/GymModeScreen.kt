@@ -64,6 +64,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
@@ -121,6 +123,8 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
     var editSet by remember { mutableStateOf<Pair<SetRow, WorkoutExerciseView>?>(null) }
     var celebrate by remember { mutableStateOf<String?>(null) }
     var coach by remember { mutableStateOf(false) }
+    val viewPrefs = remember { ctx0Prefs(container) }
+    var listMode by remember { mutableStateOf(viewPrefs.getBoolean("list", false)) }
 
     // keep the screen awake while training
     val hostView = LocalView.current
@@ -185,6 +189,11 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
                         Text("  ·  ~${burn.toInt()} ${com.myfit.tracker.domain.EnergyUnit.label} · ${t.sets} sets" + (t.volumeKg?.let { " · ${Fmt.weight(it, u.weight, 0)}" } ?: ""), style = FitType.caption, color = th.textDim, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
+                GlassIconButton(if (listMode) Duo.TrackChanges else Duo.LinearScale, {
+                    listMode = !listMode; viewPrefs.edit().putBoolean("list", listMode).apply()
+                    toaster.show(if (listMode) "List view — every exercise on one page" else "Focus view — one exercise at a time, swipe to move")
+                }, size = 44.dp)
+                Spacer(Modifier.width(8.dp))
                 AccentButton("Finish", { nav.replace(Overlay.FinishWorkout(workoutId)) }, height = 44.dp, icon = Duo.Check)
             }
             // ---------------- exercise strip
@@ -194,8 +203,53 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
                 EmptyWorkout { showPicker = true }
                 return@Column
             }
+            if (listMode) {
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = if (rest != null) 190.dp else 40.dp)) {
+                    itemsIndexed(list, key = { _, e -> "l" + e.we.id }) { i, e ->
+                        val sel = e.we.id == cur.we.id
+                        Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp), onClick = if (sel) null else ({ vm.select(e.we.id) })) {
+                            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    ExerciseImage(e.exercise, Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)), animate = sel)
+                                    Spacer(Modifier.width(10.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text("${i + 1}. ${e.exercise.name}", style = FitType.section, color = th.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                        val tgt = vm.targets[e.exercise.id]?.targetSets
+                                        Caption("${e.sets.size}${tgt?.let { "/$it" } ?: ""} sets done" + if (sel) " · logging now" else "")
+                                    }
+                                    if (!sel) Text("Log", style = FitType.label, color = th.accentBright)
+                                }
+                                if (e.sets.isNotEmpty()) TodaySets(e, u, vm.history[e.exercise.id]) { row -> editSet = row to e }
+                                if (sel) {
+                                    CoachEntry { coach = true }
+                                    CurrentSetCard(e, list, vm, container, now) { res ->
+                                        res.error?.let { toaster.show(it) }
+                                        res.beatBest?.let { celebrate = it }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    item { GlassButton("Add exercises", { showPicker = true }, Modifier.fillMaxWidth(), icon = Duo.Add, height = 48.dp) }
+                    item { Spacer(Modifier.navigationBarsPadding()) }
+                }
+                return@Column
+            }
+            // focus view: swipe left / right to move between exercises
+            val swipeIdx = list.indexOfFirst { it.we.id == cur.we.id }
+            val swipeDensity = androidx.compose.ui.platform.LocalDensity.current
             Column(
-                Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).animateContentSize(),
+                Modifier.weight(1f)
+                    .pointerInput(swipeIdx, list.size) {
+                        var dx = 0f
+                        detectHorizontalDragGestures(onDragStart = { dx = 0f }, onDragEnd = {
+                            val th0 = with(swipeDensity) { 90.dp.toPx() }
+                            if (dx < -th0 && swipeIdx < list.lastIndex) vm.select(list[swipeIdx + 1].we.id)
+                            else if (dx > th0 && swipeIdx > 0) vm.select(list[swipeIdx - 1].we.id)
+                        }) { _, d -> dx += d }
+                    }
+                    .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).animateContentSize(),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 ExerciseHeaderCard(cur, list, vm, container, now, onRemoved = { ok -> if (ok) toaster.show("Exercise removed") })
@@ -245,6 +299,8 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
         if (coach && cur != null) com.myfit.tracker.ui.coach.CoachSetOverlay(cur, list, vm, container) { coach = false }
     }
 }
+
+private fun ctx0Prefs(c: AppContainer) = c.app.getSharedPreferences("gym_view", android.content.Context.MODE_PRIVATE)
 
 /** Opens the pro trainer for this exercise. */
 @Composable
