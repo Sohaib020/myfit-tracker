@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -44,23 +46,31 @@ import com.myfit.tracker.ui.theme.drawBackdrop
 import com.myfit.tracker.ui.theme.flatSurface
 
 /**
- * Pick a design style (Glass or Flat) and a theme, grouped by family. Used in Settings and onboarding.
- * Every theme works in both styles.
+ * R17: the design style (Glass or Flat — Android 13+ only; older phones are always Flat) and twelve themes in one
+ * tidy grid. The background is the same in both styles; only the cards change.
  */
 @Composable
-fun ThemePicker(container: AppContainer, settings: AppSettings, tileWidth: Int = 92) {
+fun ThemePicker(container: AppContainer, settings: AppSettings, @Suppress("UNUSED_PARAMETER") tileWidth: Int = 92) {
     val th = LocalFitTheme.current
-    val flat = settings.uiStyle == 1
-    Text("DESIGN STYLE", style = FitType.overline, color = th.textDim)
-    Spacer(Modifier.height(8.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        StyleCard("Glass", "Frosted, see-through cards over theme art", !flat, Modifier.weight(1f)) { container.write { container.settings.setUiStyle(0) } }
-        StyleCard("Flat", "Solid cards, each tinted by what it shows", flat, Modifier.weight(1f)) { container.write { container.settings.setUiStyle(1) } }
+    val canGlass = com.myfit.tracker.ui.theme.UiStyle.glassCapable
+    val flat = settings.uiStyle == 1 || !canGlass
+    if (canGlass) {
+        Text("DESIGN STYLE", style = FitType.overline, color = th.textDim)
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StyleCard("Glass", "Frosted see-through cards", !flat, Modifier.weight(1f).fillMaxHeight()) { container.write { container.settings.setUiStyle(0) } }
+            StyleCard("Flat", "Solid cards tinted by type", flat, Modifier.weight(1f).fillMaxHeight()) { container.write { container.settings.setUiStyle(1) } }
+        }
+        Spacer(Modifier.height(16.dp))
     }
-    Themes.families.forEach { (family, list) ->
-        Text(family.uppercase(), style = FitType.overline, color = th.textDim, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(list, key = { it.id }) { t -> ThemeTile(t, t.id == settings.themeId, flat, tileWidth) { container.write { container.settings.setTheme(t.id) } } }
+    Text("THEME", style = FitType.overline, color = th.textDim)
+    Spacer(Modifier.height(8.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Themes.all.chunked(3).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { t -> ThemeTile(t, t.id == Themes.byId(settings.themeId).id, flat, Modifier.weight(1f)) { container.write { container.settings.setTheme(t.id) } } }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
         }
     }
 }
@@ -89,18 +99,18 @@ private fun StyleCard(title: String, sub: String, selected: Boolean, modifier: M
             }
         }
         Spacer(Modifier.height(8.dp))
-        Text(title, style = FitType.label, color = th.text)
-        Caption(sub)
+        Text(title, style = FitType.label, color = th.text, maxLines = 1)
+        Text(sub, style = FitType.caption, color = th.textDim, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
 @Composable
-private fun ThemeTile(t: FitTheme, selected: Boolean, flat: Boolean, width: Int, onClick: () -> Unit) {
+private fun ThemeTile(t: FitTheme, selected: Boolean, flat: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     val backdrop = LocalBackdrop.current
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(width.dp)) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
         Box(
-            Modifier.size(width = width.dp, height = (width * 1.55f).dp).clip(RoundedCornerShape(20.dp))
+            Modifier.fillMaxWidth().aspectRatio(0.66f).clip(RoundedCornerShape(20.dp))
                 .border(if (selected) 3.dp else 1.dp, if (selected) t.accent else Color.White.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
                 .clickableNoRipple(onClick)
         ) {

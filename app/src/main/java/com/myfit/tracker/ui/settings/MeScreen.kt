@@ -137,7 +137,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
             GlassCard {
                 CardHeader(Duo.Palette, "Theme & style", th.fat)
                 Spacer(Modifier.height(10.dp))
-                Caption("${Themes.all.size} themes in 6 families · every theme works as Glass or Flat. Tap to apply.")
+                Caption(if (com.myfit.tracker.ui.theme.UiStyle.glassCapable) "${Themes.all.size} themes · each works as Glass or Flat. Tap to apply." else "${Themes.all.size} themes. Tap to apply.")
                 Spacer(Modifier.height(12.dp))
                 ThemePicker(container, settings)
             }

@@ -62,17 +62,14 @@ fun DrawScope.drawBackdrop(theme: FitTheme, image: ImageBitmap?, t: Float, w: Fl
             drawRect(if (theme.isLight) Color(0x40FFFFFF) else Color(0x59000000), size = full)
             return@clipRect
         }
-        if (UiStyle.flat) {
-            // Flat design: calm solid background with a faint accent glow at the top — no art
-            drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(theme.bgTop, theme.bgBottom)), size = full)
-            drawRect(androidx.compose.ui.graphics.Brush.radialGradient(listOf(theme.accent.copy(alpha = if (theme.isLight) 0.06f else 0.10f), Color.Transparent),
-                center = androidx.compose.ui.geometry.Offset(w * 0.8f, 0f), radius = w * 0.9f), size = full)
-            return@clipRect
-        }
+        // R17: Glass and Flat share the theme background — the style only changes the cards
         if (ThemeShaders.draw(this, theme.id, t, w, h)) return@clipRect
         when (theme.art) {
             BackdropArt.AURORA -> aurora(theme, t, w, h)
             BackdropArt.GRID -> grid(theme, t, w, h)
+            BackdropArt.HEX, BackdropArt.SPEED, BackdropArt.PLATES, BackdropArt.DOTS -> gym(theme, t, w, h)
+            BackdropArt.PLAIN -> plain(theme, w, h)
+            BackdropArt.GRADIENT -> gradient(theme, t, w, h)
             BackdropArt.WAVES -> waves(theme, t, w, h)
             BackdropArt.LANDSCAPE -> landscape(t, w, h)
             BackdropArt.FROST -> frost(theme, t, w, h)
@@ -117,22 +114,120 @@ private fun DrawScope.aurora(th: FitTheme, t: Float, w: Float, h: Float) {
 
 private fun DrawScope.grid(th: FitTheme, t: Float, w: Float, h: Float) {
     drawRect(Brush.verticalGradient(listOf(th.bgTop, th.bgBottom), 0f, h), size = Size(w, h))
+    val ink = if (th.isLight) Color.Black else Color.White
     val step = w / 9f
     var x = 0f
-    while (x <= w) { drawLine(Color.White.copy(alpha = 0.04f), Offset(x, 0f), Offset(x, h), 1.5f); x += step }
+    while (x <= w) { drawLine(ink.copy(alpha = 0.04f), Offset(x, 0f), Offset(x, h), 1.5f); x += step }
     var y = 0f
-    while (y <= h) { drawLine(Color.White.copy(alpha = 0.04f), Offset(0f, y), Offset(w, y), 1.5f); y += step }
-    // Sweeping ribbons
+    while (y <= h) { drawLine(ink.copy(alpha = 0.04f), Offset(0f, y), Offset(w, y), 1.5f); y += step }
+    ribbons(th, t, w, h)
+    blob(th.accent, Offset(w * (0.1f + 0.08f * sin(t * 0.1f)), h * 0.92f), w * 0.7f, if (th.isLight) 0.10f else 0.12f)
+    blob(th.blobs[0], Offset(w * 0.9f, h * 0.1f), w * 0.7f, if (th.isLight) 0.45f else 0.5f)
+}
+
+/** The two soft light ribbons that sweep across the gym themes. */
+private fun DrawScope.ribbons(th: FitTheme, t: Float, w: Float, h: Float) {
+    val c = if (th.isLight) th.accent else Color.White
+    val a = if (th.isLight) 0.06f else 0.07f
     val shift = sin(t * 0.08f) * w * 0.04f
     for (i in 0..1) {
         val path = Path().apply {
             moveTo(-w * 0.2f, h * (0.25f + i * 0.35f) + shift)
             cubicTo(w * 0.3f, h * (0.05f + i * 0.35f), w * 0.6f, h * (0.6f + i * 0.2f), w * 1.3f, h * (0.2f + i * 0.4f) - shift)
         }
-        drawPath(path, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.0f), Color.White.copy(alpha = 0.07f), Color.White.copy(alpha = 0.0f)), Offset.Zero, Offset(w, h)), style = Stroke(width = w * 0.16f))
+        drawPath(path, Brush.linearGradient(listOf(c.copy(alpha = 0f), c.copy(alpha = a), c.copy(alpha = 0f)), Offset.Zero, Offset(w, h)), style = Stroke(width = w * 0.16f))
     }
-    blob(th.accent, Offset(w * (0.1f + 0.08f * sin(t * 0.1f)), h * 0.92f), w * 0.7f, 0.12f)
-    blob(th.blobs[0], Offset(w * 0.9f, h * 0.1f), w * 0.7f, 0.5f)
+}
+
+/**
+ * R17 gym family: the Carbon & Lime / Web Crimson composition (deep gradient, fine pattern, two ribbons, accent glow)
+ * with a different pattern per theme — honeycomb, speed lines, weight-plate rings or a dot matrix.
+ */
+private fun DrawScope.gym(th: FitTheme, t: Float, w: Float, h: Float) {
+    drawRect(Brush.verticalGradient(listOf(th.bgTop, th.bgBottom), 0f, h), size = Size(w, h))
+    val ink = if (th.isLight) Color.Black else Color.White
+    when (th.art) {
+        BackdropArt.HEX -> {
+            val r = w / 9f
+            val dx = r * 1.732f; val dy = r * 1.5f
+            var row = 0; var y = -r
+            while (y < h + r) {
+                var x = if (row % 2 == 0) 0f else dx / 2
+                while (x < w + dx) {
+                    val p = Path()
+                    for (k in 0..5) {
+                        val ang = (PI / 3 * k + PI / 6).toFloat()
+                        val px = x + r * cos(ang); val py = y + r * sin(ang)
+                        if (k == 0) p.moveTo(px, py) else p.lineTo(px, py)
+                    }
+                    p.close()
+                    drawPath(p, ink.copy(alpha = 0.045f), style = Stroke(1.4f))
+                    x += dx
+                }
+                y += dy; row++
+            }
+            // a few lit cells near the glow
+            for (k in 0..2) drawCircle(th.accent.copy(alpha = 0.10f), r * 0.55f, Offset(w * (0.68f + k * 0.11f), h * (0.12f + k * 0.07f)))
+        }
+        BackdropArt.SPEED -> {
+            val gap = w / 13f
+            var i = -h
+            var n = 0
+            while (i < w + h) {
+                drawLine(ink.copy(alpha = if (n % 3 == 0) 0.065f else 0.03f), Offset(i, h), Offset(i + h * 0.58f, 0f), if (n % 3 == 0) 2f else 1.2f)
+                i += gap; n++
+            }
+            // two bold accent slashes, drifting slowly
+            val d = sin(t * 0.06f) * w * 0.03f
+            for (k in 0..1) {
+                val x0 = w * (0.55f + k * 0.18f) + d
+                drawLine(th.accent.copy(alpha = if (th.isLight) 0.12f else 0.16f), Offset(x0, h * 0.42f), Offset(x0 + h * 0.2f, h * 0.08f), w * 0.035f)
+            }
+        }
+        BackdropArt.PLATES -> {
+            val c = Offset(w * 1.02f, h * 0.78f)
+            var r = w * 0.12f
+            var k = 0
+            while (r < max(w, h) * 1.4f) {
+                drawCircle(ink.copy(alpha = if (k % 4 == 0) 0.07f else 0.035f), r, c, style = Stroke(if (k % 4 == 0) 2.4f else 1.2f))
+                r += w / 14f; k++
+            }
+            // the second, smaller plate top-left
+            val c2 = Offset(-w * 0.1f, h * 0.12f)
+            r = w * 0.06f
+            repeat(9) { drawCircle(th.accent.copy(alpha = 0.05f + if (it % 3 == 0) 0.04f else 0f), r, c2, style = Stroke(1.4f)); r += w / 18f }
+        }
+        else -> { // DOTS
+            val g = w / 15f
+            var y = g / 2
+            while (y < h) {
+                var x = g / 2
+                while (x < w) {
+                    val fall = 1f - (Offset(x - w * 0.85f, y - h * 0.1f).getDistance() / max(w, h)).coerceIn(0f, 1f)
+                    drawCircle(ink.copy(alpha = 0.035f + 0.07f * fall), 1.3f + 1.2f * fall, Offset(x, y))
+                    x += g
+                }
+                y += g
+            }
+        }
+    }
+    ribbons(th, t, w, h)
+    blob(th.accent, Offset(w * (0.1f + 0.08f * sin(t * 0.1f)), h * 0.92f), w * 0.7f, if (th.isLight) 0.10f else 0.13f)
+    blob(th.blobs[0], Offset(w * 0.9f, h * 0.1f), w * 0.7f, if (th.isLight) 0.45f else 0.5f)
+    blob(th.blobs[3], Offset(w * 0.15f, h * 0.45f), w * 0.5f, if (th.isLight) 0.18f else 0.10f)
+}
+
+/** Plain: one solid colour with the faintest vignette, nothing else. */
+private fun DrawScope.plain(th: FitTheme, w: Float, h: Float) {
+    drawRect(th.bgTop, size = Size(w, h))
+    drawRect(Brush.radialGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.22f)), Offset(w / 2, h * 0.4f), max(w, h) * 0.9f), size = Size(w, h))
+}
+
+/** Gradient: a smooth diagonal blend with a slow, soft glow. */
+private fun DrawScope.gradient(th: FitTheme, t: Float, w: Float, h: Float) {
+    drawRect(Brush.linearGradient(listOf(th.bgTop, th.bgBottom), Offset(0f, 0f), Offset(w * 0.6f, h)), size = Size(w, h))
+    blob(th.blobs[3], Offset(w * (0.85f + 0.05f * sin(t * 0.07f)), h * 0.08f), w * 0.8f, 0.22f)
+    blob(th.blobs[1], Offset(w * 0.1f, h * (0.9f + 0.03f * cos(t * 0.05f))), w * 0.9f, 0.3f)
 }
 
 private fun DrawScope.waves(th: FitTheme, t: Float, w: Float, h: Float) {

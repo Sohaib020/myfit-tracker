@@ -133,7 +133,7 @@ fun MyFitRoot(container: AppContainer) {
 
     val s = settings ?: return          // settings load in a few ms; draw nothing until then
     val theme = Themes.byId(s.themeId)
-    com.myfit.tracker.ui.theme.UiStyle.flat = s.uiStyle == 1
+    com.myfit.tracker.ui.theme.UiStyle.flat = s.uiStyle == 1 || !com.myfit.tracker.ui.theme.UiStyle.glassCapable
     val backdrop = remember { Backdrop() }
     backdrop.theme = theme
     LaunchedEffect(theme.id) { com.myfit.tracker.ui.theme.ThemeShaders.prewarm(theme.id) }
