@@ -1,3 +1,4 @@
+import java.net.URI
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -139,7 +140,7 @@ val fetchPoseModels by tasks.registering {
             if (f.exists() && f.length() > 100_000) return@forEach
             runCatching {
                 val tmp = File(dir, "$name.part")
-                java.net.URI(url).toURL().openStream().use { input -> tmp.outputStream().use { input.copyTo(it) } }
+                URI(url).toURL().openStream().use { input -> tmp.outputStream().use { out -> input.copyTo(out) } }
                 tmp.renameTo(f)
                 logger.lifecycle("Fetched $name (${f.length() / 1024} KB)")
             }.onFailure { logger.warn("Could not fetch $name — the camera coach will fall back to ML Kit: ${it.message}") }
