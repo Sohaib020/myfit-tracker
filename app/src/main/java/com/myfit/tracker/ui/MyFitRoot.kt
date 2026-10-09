@@ -250,6 +250,18 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
     val statusTop = androidx.compose.foundation.layout.WindowInsets.statusBars.getTop(densityC)
     LaunchedEffect(statusTop) { chromeState.baseLimit = statusTop + with(densityC) { 76.dp.toPx() }; if (chromeState.limit < chromeState.baseLimit) chromeState.limit = chromeState.baseLimit }
     LaunchedEffect(tab) { chromeState.show() }
+    // today's logged workouts → estimated burn for Home's calories ring (updates as soon as a workout is saved)
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.flow.combine(
+            container.workoutRepo.dayViews(com.myfit.tracker.domain.Clock.today().toString()),
+            container.logRepo.latestWeight(),
+        ) { views, w ->
+            val kg = w?.weightKg ?: 70.0
+            views.filter { it.workout.endedAt != null }.sumOf { v ->
+                com.myfit.tracker.domain.WorkoutBurn.estimate((v.workout.endedAt!! - v.workout.startedAt) / 1000, v.setData, kg).kcal
+            }
+        }.collect { com.myfit.tracker.domain.TodayBurn.kcal.value = it }
+    }
     // closing a sub-screen keeps the chrome where the page left it (resetting it here drew the header over a scrolled list)
     CompositionLocalProvider(LocalNav provides nav, com.myfit.tracker.ui.components.LocalChrome provides chromeState) {
         val win = com.myfit.tracker.ui.components.LocalWindowInfo.current
