@@ -65,16 +65,24 @@ class ThemeStyleShotTest {
         rule.onRoot().captureRoboImage("build/shots/theme_${themeId}_${if (flat) "flat" else "glass"}.png")
     }
 
-    @Test fun kineticFlat() = shot("kinetic", true)
-    @Test fun kineticGlass() = shot("kinetic", false)
-    @Test fun porcelainFlat() = shot("porcelain", true)
-    @Test fun webCrimsonFlat() = shot("web_crimson", true)
-    @Test fun racingRedGlass() = shot("racing_red", false)
-    @Test fun trueBlackFlat() = shot("trueblack", true)
+    @Test fun g_carbonlime() = shot("carbon_lime", false)
+    @Test fun g_webcrimson() = shot("web_crimson", false)
+    @Test fun g_voltcyan() = shot("volt_cyan", false)
+    @Test fun g_emberforge() = shot("ember_forge", false)
+    @Test fun g_ultraviolet() = shot("ultraviolet", false)
+    @Test fun g_irongold() = shot("iron_gold", false)
+    @Test fun g_chalklime() = shot("chalk_lime", false)
+    @Test fun g_arcticsteel() = shot("arctic_steel", false)
+    @Test fun g_coralcourt() = shot("coral_court", false)
+    @Test fun g_slate() = shot("slate", false)
+    @Test fun g_duskgradient() = shot("dusk_gradient", false)
+    @Test fun g_trueblack() = shot("trueblack", false)
+    @Test fun f_voltcyan() = shot("volt_cyan", true)
+    @Test fun f_chalk() = shot("chalk_lime", true)
 
     @Test fun liveCards() {
         rule.setContent {
-            MyFitTheme(Themes.byId("porcelain"), AppSettings()) {
+            MyFitTheme(Themes.byId("arctic_steel"), AppSettings()) {
                 Column(Modifier.width(412.dp).background(androidx.compose.ui.graphics.Color(0xFFEDEFF3)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     val now = System.currentTimeMillis()
                     listOf(
