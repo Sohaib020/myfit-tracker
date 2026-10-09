@@ -98,7 +98,13 @@ fun ProTeamCard(container: AppContainer) {
             }, Modifier.weight(1f), icon = Duo.VolumeUp, height = 44.dp)
             GlassButton("Open ${cp.nName}", { nav.push(Overlay.Nutritionist) }, Modifier.weight(1f), icon = Duo.ForkKnife, height = 44.dp)
         }
-        Caption("Start the trainer from any exercise in a live workout. Most natural voices need the online voice (Azure); otherwise your phone's voice is used.", Modifier.padding(top = 6.dp))
+        val packReady = remember { container.pipVoice.pack.ready }
+        Caption(if (packReady) "Start the trainer from any exercise in a live workout. ${cp.name} and ${cp.nName} use natural offline voices (English); Urdu uses your phone's voice."
+            else "Natural offline voices download once on Wi-Fi (~${com.myfit.tracker.ai.voice.VoicePack.SIZE_MB} MB). Until then your phone's voice is used.", Modifier.padding(top = 6.dp))
+        if (!packReady) {
+            Spacer(Modifier.height(6.dp))
+            GlassButton("Download natural voices", { com.myfit.tracker.ai.voice.VoicePackWorker.schedule(ctx) }, Modifier.fillMaxWidth(), icon = Duo.VolumeUp, height = 44.dp)
+        }
     }
 }
 
