@@ -25,3 +25,14 @@
 -dontwarn javax.annotation.**
 -dontwarn com.google.errorprone.annotations.**
 -dontwarn org.slf4j.**
+
+# R17: MediaPipe Tasks (pose + face landmarkers) — JNI-backed, reflection on protobuf options
+-keep class com.google.mediapipe.** { *; }
+-dontwarn com.google.mediapipe.**
+-keep class com.google.protobuf.** { *; }
+-dontwarn com.google.protobuf.**
+-dontwarn com.google.auto.value.**
+-dontwarn javax.annotation.**
+-dontwarn javax.lang.model.**
+-dontwarn org.checkerframework.**
+-dontwarn com.google.android.datatransport.**

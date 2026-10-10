@@ -139,8 +139,8 @@ class VoicePack(private val context: Context) {
     }
 
     /** Synthesises one sentence. [lang] is "en" or "hi". */
-    fun synth(engine: OfflineTts, text: String, lang: String): Pair<FloatArray, Int> {
-        val cfg = GenerationConfig(sid = VOICE_SID, speed = 1.04f, numSteps = 5, extra = mapOf("lang" to lang))
+    fun synth(engine: OfflineTts, text: String, lang: String, sid: Int = VOICE_SID, speed: Float = 1.04f): Pair<FloatArray, Int> {
+        val cfg = GenerationConfig(sid = sid, speed = speed, numSteps = 5, extra = mapOf("lang" to lang))
         val a = engine.generateWithConfig(text, cfg)
         return a.samples to a.sampleRate
     }

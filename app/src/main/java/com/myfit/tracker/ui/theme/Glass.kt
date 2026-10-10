@@ -61,7 +61,10 @@ val lowFx: Boolean get() = Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2 || 
 val realBlurSupported: Boolean get() = !lowFx
 
 /** Flat design system on/off (mirrors the setting so non-composable drawing — backdrop, baker — can read it). */
-object UiStyle { @Volatile var flat: Boolean = false }
+object UiStyle {
+    val glassCapable: Boolean = android.os.Build.VERSION.SDK_INT >= 33
+    @Volatile var flat: Boolean = false
+}
 
 /**
  * The role colour of the card being drawn (set by [com.myfit.tracker.ui.components.CardHeader]) — Flat style tints
@@ -124,7 +127,7 @@ fun Glass(
     // Everything samples a backdrop that was blurred ONCE per frame at low resolution:
     // cards use the shared card blur, the dock (`seeContent`) uses its own dock-blur layer.
     // The per-panel refraction shader only runs in "Smooth" motion — it costs one extra GPU pass per panel.
-    val flat = st.uiStyle == 1
+    val flat = st.uiStyle == 1 || !UiStyle.glassCapable
     val role = remember { mutableStateOf<Color?>(null) }
     val refr = st.refraction
     val lens = !flat && st.motion == 0 && LiquidGlass.supported && refr > 0.01f && !com.myfit.tracker.CrashGuard.safeMode

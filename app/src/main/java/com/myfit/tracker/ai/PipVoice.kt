@@ -68,8 +68,15 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
      */
     private val focus by lazy { com.myfit.tracker.ai.voice.Focus(context, transient = true) { stop() } }
 
-    /** A human voice other than Pip's (the trainer / nutritionist): Azure neural voice, else the phone's voice. */
-    data class Persona(val male: Boolean) {
+    /**
+     * A human voice other than Pip's (the trainer / nutritionist). R17: they use the same natural on-device voice pack
+     * as Pip, each with its own speaker — trainer: energetic M1 / confident F4; nutritionist: warm M5 / kind F5 —
+     * falling back to the phone's voice for Urdu or before the pack is downloaded.
+     */
+    data class Persona(val male: Boolean, val trainer: Boolean = true) {
+        /** Speaker index in the Supertonic voice pack (voice.bin is F1–F5 = 0–4, M1–M5 = 5–9). */
+        val sid: Int get() = when { trainer && male -> 5; trainer -> 3; male -> 9; else -> 4 }
+        val speed: Float get() = if (trainer) 1.08f else 1.0f
         fun azure(urdu: Boolean) = when {
             urdu && male -> "ur-PK-AsadNeural"
             urdu -> "ur-PK-UzmaNeural"
@@ -91,12 +98,8 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
                 val urdu = ur != null
                 val t = if (urdu) clean(ur!!) else en
                 var done = false
-                if (s.azureKeyEff.isNotBlank() && s.azureRegionEff.isNotBlank() && !azureOff)
-                    done = runCatching { viaAzure(s.azureKeyEff, s.azureRegionEff, t, urdu, persona.azure(urdu)) }.getOrElse { e ->
-                        if (e is java.net.UnknownHostException) azureOff = true
-                        if (e is com.myfit.tracker.ai.voice.AzureTts.Failure && (e.permanent || e.quota)) azureOff = true
-                        false
-                    }
+                // offline pack only (owner's choice): natural voice, no network; Urdu has no pack voice → phone voice
+                if (!urdu && pack.ready) done = runCatching { viaOnDevice(en, "en", persona.sid, persona.speed) }.getOrDefault(false)
                 if (!done && isActive) { viaPhone(t, urdu, persona); return@launch }
             } else run {
                 val urdu = ur != null
@@ -179,17 +182,17 @@ class PipVoice(private val context: Context, private val settings: SettingsStore
     }
 
     /** Sentence-by-sentence: the next sentence is synthesised while the current one plays. */
-    private suspend fun viaOnDevice(text: String, lang: String): Boolean {
+    private suspend fun viaOnDevice(text: String, lang: String, sid: Int = com.myfit.tracker.ai.voice.VoicePack.VOICE_SID, speed: Float = 1.04f): Boolean {
         val engine = pack.engine() ?: return false
         val parts = sentences(text)
         if (parts.isEmpty()) return false
         val ch = Channel<FloatArray>(capacity = 2)
         var rate = 44_100
-        val first = pack.synth(engine, parts[0], lang).also { rate = it.second }.first
+        val first = pack.synth(engine, parts[0], lang, sid, speed).also { rate = it.second }.first
         val p = PcmPlayer(rate, level).also { player = it }
         val producer = scope.launch {
             try {
-                for (i in 1 until parts.size) { if (!isActive) break; ch.send(pack.synth(engine, parts[i], lang).first) }
+                for (i in 1 until parts.size) { if (!isActive) break; ch.send(pack.synth(engine, parts[i], lang, sid, speed).first) }
             } finally { ch.close() }
         }
         try {

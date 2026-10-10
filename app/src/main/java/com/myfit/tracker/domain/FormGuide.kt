@@ -232,12 +232,26 @@ object FormGuide {
         CURL_HIGHER(Say("Curl up a bit higher.", "تھوڑا اور اوپر آئیں۔")),
         KNEE_90(Say("Slide down to 90 degrees.", "نیچے آئیں، 90 ڈگری تک۔")),
         HEELS_HIGHER(Say("Rise higher on your toes.", "پنجوں پر اور اونچا اٹھیں۔")),
+        HEAD_NEUTRAL(Say("Keep your neck long — don't drop your head.", "گردن سیدھی رکھیں، سر نیچے نہ گرائیں۔")),
+        LOOK_FORWARD(Say("Eyes forward, head up.", "نظریں سامنے، سر اوپر۔")),
+        HEAD_STILL(Say("Keep your head still and facing forward.", "سر سیدھا اور سامنے رکھیں۔")),
+    }
+
+    /** Head orientation in degrees from the face model: yaw + = turned to their left, pitch + = looking up, roll + = tilted. */
+    data class Head(val yaw: Float, val pitch: Float, val roll: Float) {
+        fun describe(): String = when {
+            kotlin.math.abs(yaw) > 22f -> if (yaw > 0) "turned left" else "turned right"
+            pitch < -20f -> "looking down"
+            pitch > 20f -> "looking up"
+            kotlin.math.abs(roll) > 15f -> "tilted"
+            else -> "level"
+        }
     }
 
     enum class View { SIDE, FRONT, ANY }
 
     /** 33 landmarks as x,y,likelihood triples in upright image pixels, plus the image size. */
-    class Pose(val pts: FloatArray, val w: Int = 0, val h: Int = 0) {
+    class Pose(val pts: FloatArray, val w: Int = 0, val h: Int = 0, val head: Head? = null) {
         fun x(i: Int) = pts[i * 3]; fun y(i: Int) = pts[i * 3 + 1]; fun ok(i: Int) = pts[i * 3 + 2] > 0.5f
         fun angle(a: Int, b: Int, c: Int): Float {
             val v1x = x(a) - x(b); val v1y = y(a) - y(b); val v2x = x(c) - x(b); val v2y = y(c) - y(b)
@@ -442,7 +456,7 @@ object FormGuide {
                 Pattern.CURL -> if (p.ok(sh) && p.ok(el) && p.ok(hip) && p.angle(hip, sh, el) > 35f) Fix.ELBOWS else null
                 Pattern.RAISE -> if (v > 110f) Fix.TOO_HIGH else null
                 else -> null
-            }
+            } ?: headFault(p, s)
             if (f != null) { faultFrames++; faultCounts[f] = (faultCounts[f] ?: 0) + 1; if (faultCounts[f] == 4) fix(out, f, now) }
         }
 
@@ -458,12 +472,26 @@ object FormGuide {
                     val line = p.angle(sh, hip, an); out += Event.Angle(line)
                     if (line < 160f) { if (hipAbove(p, sh, hip, an)) Fix.HIPS_DOWN else Fix.HIPS_UP } else null
                 }
-            }
+            } ?: headFault(p, s)
             if (bad != null) {
                 if (holdBadSince == 0L) holdBadSince = now
                 if (now - holdBadSince > 1200) { fix(out, bad, now); holdBadSince = now }
             } else holdBadSince = 0L
             return out
+        }
+
+        /**
+         * Head & neck: ear–shoulder–hip angle from the body model catches a dropped head in push-ups and planks; the face
+         * model's pitch/yaw catches looking at the floor in standing lifts or turning away mid-set.
+         */
+        private fun headFault(p: Pose, s: Int): Fix? {
+            val ear = 7 + s; val sh = SH + s; val hip = HIP + s
+            val prone = pattern in setOf(Pattern.PUSHUP, Pattern.PLANK, Pattern.SIDE_PLANK, Pattern.MOUNTAIN_CLIMBER)
+            if (prone && p.ok(ear) && p.ok(sh) && p.ok(hip) && p.angle(ear, sh, hip) < 140f) return Fix.HEAD_NEUTRAL
+            val h = p.head ?: return null
+            if (!prone && pattern in setOf(Pattern.SQUAT, Pattern.LUNGE, Pattern.HINGE, Pattern.OVERHEAD, Pattern.CURL, Pattern.RAISE) && h.pitch < -32f) return Fix.LOOK_FORWARD
+            if (!prone && kotlin.math.abs(h.yaw) > 40f) return Fix.HEAD_STILL
+            return null
         }
 
         /** Image y grows downward: hips "above" the shoulder-ankle line means piked. */

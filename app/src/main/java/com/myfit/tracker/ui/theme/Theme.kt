@@ -3,7 +3,7 @@ package com.myfit.tracker.ui.theme
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 
-enum class BackdropArt { KINETIC, AURORA, GRID, WAVES, LANDSCAPE, FROST, BOREALIS, OCEAN, SAKURA, NEON_CITY, DUNES, GALAXY, FOREST, LAVA, RAIN, MINT, GOLD, ARCTIC, CYBER, DESERT_NIGHT, LOTUS, MONSOON }
+enum class BackdropArt { HEX, SPEED, PLATES, DOTS, PLAIN, GRADIENT, KINETIC, AURORA, GRID, WAVES, LANDSCAPE, FROST, BOREALIS, OCEAN, SAKURA, NEON_CITY, DUNES, GALAXY, FOREST, LAVA, RAIN, MINT, GOLD, ARCTIC, CYBER, DESERT_NIGHT, LOTUS, MONSOON }
 
 @Immutable
 data class FitTheme(
@@ -449,17 +449,11 @@ object Themes {
         success = Color(0xFF17A85A), warning = Color(0xFFD98A00), water = Color(0xFF1C7EE0), steps = Color(0xFF2E9462),
     )
 
-    /** Theme families shown in the picker (R16: trimmed to essentials + dark, hero, motor, nature, Pakistan). */
-    val families: List<Pair<String, List<FitTheme>>> by lazy {
-        listOf(
-            "Essentials" to listOf(Kinetic, Blaze, Cobalt, Graphite, Evergreen, Porcelain, Sandstone, Cloud),
-            "Dark & AMOLED" to listOf(MoreThemes.TrueBlack, Carbon, Cosmic, Ember),
-            "Hero moods" to listOf(MoreThemes.WebCrimson, MoreThemes.Adamant, MoreThemes.SkyGuardian, MoreThemes.MidnightVigilante, MoreThemes.ReactorGold),
-            "Cars & bikes" to listOf(MoreThemes.RacingRed, MoreThemes.CarbonLime, MoreThemes.MidnightSupercar, MoreThemes.CafeRacer, MoreThemes.RallyBlue),
-            "Nature" to listOf(Forest, Oceanic, Aurora, Hunza, Desert, Sakura),
-            "Pakistan" to listOf(TruckArt, Badshahi),
-        )
+    /** R17: twelve themes, no families (see GymThemes). */
+    val all: List<FitTheme> get() = GymThemes.all
+    fun byId(id: String): FitTheme {
+        var k = id
+        repeat(3) { k = GymThemes.legacy[k] ?: MoreThemes.legacy[k] ?: k }
+        return all.firstOrNull { it.id == k } ?: GymThemes.CarbonLime
     }
-    val all: List<FitTheme> by lazy { families.flatMap { it.second } }
-    fun byId(id: String): FitTheme = (MoreThemes.legacy[id] ?: id).let { k -> all.firstOrNull { it.id == k } } ?: Kinetic
 }

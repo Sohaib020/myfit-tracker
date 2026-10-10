@@ -106,6 +106,11 @@ object DoctorReport {
             .filter { !LocalDate.parse(it.localDate).isBefore(first) && !LocalDate.parse(it.localDate).isAfter(today) }
         val hcDaily = runCatching { container.healthRepo.dailyRange(first, today).first() }.getOrDefault(emptyList())
         val hcSleep = runCatching { container.healthRepo.sleepRange(first, today).first() }.getOrDefault(emptyList())
+        // R17: logged workouts in the period — count, time and estimated burn
+        val workoutViews = runCatching {
+            container.workoutRepo.completedRange(first.toString(), today.toString()).first()
+                .mapNotNull { w -> container.workoutRepo.workoutView(w.id).first() }
+        }.getOrDefault(emptyList())
         val mmol = cfg.mmol
         val u = Glucose.unitLabel(mmol)
         fun g(v: Double) = Glucose.format(v, mmol)
@@ -294,6 +299,13 @@ object DoctorReport {
         }
         if (wRows.all { it.drop(1).all { v -> v == "—" } }) note("No weight, step or sleep data in this period.")
         else table(listOf("Week", "Avg weight", "Avg steps / day", "Avg sleep"), listOf(0.4f, 0.2f, 0.2f, 0.2f), wRows)
+        if (workoutViews.isNotEmpty()) {
+            val kg = weights.maxByOrNull { it.loggedAt }?.weightKg ?: 70.0
+            var mins = 0L; var kcal = 0.0
+            workoutViews.forEach { v -> val end = v.workout.endedAt ?: return@forEach; val sec = (end - v.workout.startedAt) / 1000
+                mins += sec / 60; kcal += com.myfit.tracker.domain.WorkoutBurn.estimate(sec, v.setData, kg).kcal }
+            note("Workouts logged: ${workoutViews.size} · ${mins / 60} h ${mins % 60} min in total · about ${kcal.toInt()} kcal burned (estimate from duration and training density).")
+        }
         // R16: latest weight + BMI with both cut-off sets (South Asian risk starts lower)
         val lastW = weights.maxByOrNull { it.loggedAt }
         val hM = (profile?.heightCm ?: 0.0) / 100.0

@@ -142,7 +142,7 @@ fun NutritionistScreen(container: AppContainer) {
     val muslim = s.muslim == "yes"
     val voice = container.pipVoice
     val speaking by voice.speaking.collectAsState()
-    val persona = PipVoice.Persona(cp.nLook.male)
+    val persona = PipVoice.Persona(cp.nLook.male, trainer = false)
     var tab by rememberSaveable { mutableIntStateOf(0) }
 
     val today = remember { Clock.today() }

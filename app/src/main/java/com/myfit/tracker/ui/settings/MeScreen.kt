@@ -137,7 +137,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
             GlassCard {
                 CardHeader(Duo.Palette, "Theme & style", th.fat)
                 Spacer(Modifier.height(10.dp))
-                Caption("${Themes.all.size} themes in 6 families · every theme works as Glass or Flat. Tap to apply.")
+                Caption(if (com.myfit.tracker.ui.theme.UiStyle.glassCapable) "${Themes.all.size} themes · each works as Glass or Flat. Tap to apply." else "${Themes.all.size} themes. Tap to apply.")
                 Spacer(Modifier.height(12.dp))
                 ThemePicker(container, settings)
             }
@@ -208,7 +208,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 Text("Weight +/− step (kg)", style = FitType.body, color = th.text)
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(1.0, 1.25, 2.5, 5.0).forEach { st -> GlassChip(Fmt.trim(st, 2), settings.weightStepKg == st, { container.write { container.settings.setWeightStep(st) } }) }
+                    listOf(1.0, 2.0, 2.5, 5.0).forEach { st -> GlassChip(Fmt.trim(st, 2), settings.weightStepKg == st, { container.write { container.settings.setWeightStep(st) } }) }
                 }
                 Caption("In pounds the step is always 5 lb. You can always tap the number to type an exact weight.")
             }

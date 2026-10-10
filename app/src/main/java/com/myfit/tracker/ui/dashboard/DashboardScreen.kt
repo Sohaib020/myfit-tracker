@@ -621,7 +621,9 @@ private fun TripleRings(s: DashState, outer: Dp) {
     Box(Modifier.size(outer), contentAlignment = Alignment.Center) {
         ProgressRing(frac(s.waterMl, s.waterTarget), th.water, size = outer, stroke = stroke)
         ProgressRing(frac(s.steps?.toDouble(), s.stepTarget), th.steps, size = outer - step, stroke = stroke)
-        ProgressRing(frac(s.health.daily?.activeKcal, ACTIVE_KCAL_TARGET), CaloriesColor, size = outer - step * 2, stroke = stroke)
+        val burn by com.myfit.tracker.domain.TodayBurn.kcal.collectAsState()
+        val active = remember(burn, s.health.daily?.activeKcal) { com.myfit.tracker.domain.TodayBurn.active(s.health.daily?.activeKcal) }
+        ProgressRing(frac(active, ACTIVE_KCAL_TARGET), CaloriesColor, size = outer - step * 2, stroke = stroke)
     }
 }
 
@@ -643,7 +645,9 @@ internal fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
                     RingLegend(th.water, "Water", s.waterMl?.let { Fmt.volume(it, units.volume) } ?: "—",
                         s.waterTarget?.let { "of ${Fmt.volume(it, units.volume)}" }, { open(Sheet.Water()) }, frac(s.waterMl, s.waterTarget))
                     RingLegend(th.steps, "Steps", s.steps?.let { Fmt.int(it) } ?: "—", s.stepTarget?.let { "of ${Fmt.int(it)}" }, { open(Sheet.Steps()) }, frac(s.steps?.toDouble(), s.stepTarget))
-                    RingLegend(CaloriesColor, "Calories", s.health.daily?.activeKcal?.let { Fmt.int(it.toLong()) + " ${com.myfit.tracker.domain.EnergyUnit.label}" } ?: "—", "of ${Fmt.int(ACTIVE_KCAL_TARGET.toLong())} active", { nav.push(Overlay.Today) }, frac(s.health.daily?.activeKcal, ACTIVE_KCAL_TARGET))
+                    val burn by com.myfit.tracker.domain.TodayBurn.kcal.collectAsState()
+                    val active = remember(burn, s.health.daily?.activeKcal) { com.myfit.tracker.domain.TodayBurn.active(s.health.daily?.activeKcal) }
+                    RingLegend(CaloriesColor, "Calories", active?.let { Fmt.int(it.toLong()) + " ${com.myfit.tracker.domain.EnergyUnit.label}" } ?: "—", "of ${Fmt.int(ACTIVE_KCAL_TARGET.toLong())} active", { nav.push(Overlay.Today) }, frac(active, ACTIVE_KCAL_TARGET))
                 }
             }
         }

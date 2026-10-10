@@ -54,6 +54,8 @@ fun TrainHost(container: AppContainer, bottomPad: Int, openSheet: (com.myfit.tra
         if (headerPx > 0) chrome.limit = maxOf(chrome.baseLimit, headerPx.toFloat())
         onDispose { chrome.limit = chrome.baseLimit; chrome.show() }
     }
+    // each segment opens at its top, so the header must come back with it
+    androidx.compose.runtime.LaunchedEffect(seg) { chrome.show() }
     Box(Modifier.fillMaxSize()) {
         androidx.compose.runtime.CompositionLocalProvider(com.myfit.tracker.ui.components.LocalTopInset provides with(density) { headerPx.toDp() }) {
             Box(Modifier.fillMaxSize()) {

@@ -121,23 +121,12 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
                     runCatching { java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.parse(w.workout.localDate), java.time.LocalDate.now()) in 0..6 }.getOrDefault(false) }) }
         }
 
-        // ---------------- 2. every tool as a tile
+        // ---------------- 2. every tool as a neon bento tile
         item(key = "tiles") {
-            val tiles = listOf(
-                TileSpec("Build a workout", "Pick muscles, done", Duo.AutoAwesome, th.accent) { nav.push(Overlay.DayBuilder()) },
-                TileSpec("Quick start", "Empty workout", Duo.PlayArrow, th.protein) { start { container.workoutRepo.startEmpty() } },
-                TileSpec("Run · walk · ride", "Activity timer", Duo.DirectionsRun, th.steps) { nav.push(Overlay.Stopwatch) },
-                TileSpec(coach.name, "Voice & camera coach", Duo.SportsGymnastics, th.fat) { nav.push(Overlay.CoachHub) },
-                TileSpec("Programs", if (p != null) "Following ${p.name}" else "Plans that progress", Duo.CalendarMonth, th.water) { onTab(1) },
-                TileSpec("Exercises", "876 with animations", Duo.FitnessCenter, th.carbs) { onTab(2) },
-                TileSpec("Weight & BMI", "Graphs and body", Duo.MonitorWeight, th.sleep) { onTab(3) },
-                TileSpec("Records", "Your personal bests", Duo.EmojiEvents, th.warning) { nav.push(Overlay.Records) },
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                tiles.chunked(2).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { row.forEach { t -> ToolTile(t, Modifier.weight(1f)) } }
-                }
-            }
+            TrainBento(container, coach, p?.name, recent,
+                onBuild = { nav.push(Overlay.DayBuilder()) }, onQuick = { start { container.workoutRepo.startEmpty() } },
+                onRun = { nav.push(Overlay.Stopwatch) }, onCoach = { nav.push(Overlay.CoachHub) }, onPlans = { onTab(1) },
+                onExercises = { onTab(2) }, onBody = { onTab(3) }, onRecords = { nav.push(Overlay.Records) })
         }
 
         // ---------------- 3. my workout days
@@ -192,23 +181,104 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
     }
 }
 
-private data class TileSpec(val title: String, val sub: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val color: androidx.compose.ui.graphics.Color, val onClick: () -> Unit)
-
-/** A big, colourful tool tile: icon blob, title and a one-line hint. */
+/**
+ * Today's tools as a neon glass bento: one tall hero tile, stacked quick tiles, a wide coach tile with the
+ * character's face, then paired tiles with live mini-stats (weight sparkline, this week's sessions).
+ */
 @Composable
-private fun ToolTile(t: TileSpec, modifier: Modifier) {
+private fun TrainBento(
+    container: AppContainer, coach: com.myfit.tracker.domain.Coach.Prefs, planName: String?, recent: List<WorkoutView>,
+    onBuild: () -> Unit, onQuick: () -> Unit, onRun: () -> Unit, onCoach: () -> Unit, onPlans: () -> Unit,
+    onExercises: () -> Unit, onBody: () -> Unit, onRecords: () -> Unit,
+) {
     val th = LocalFitTheme.current
-    Glass(modifier.height(112.dp), onClick = t.onClick) {
-        val holder = com.myfit.tracker.ui.theme.LocalCardAccent.current
-        androidx.compose.runtime.SideEffect { if (holder != null && holder.value != t.color) holder.value = t.color }
-        Box(Modifier.matchParentSize().drawBehind {
-            drawCircle(Brush.radialGradient(listOf(t.color.copy(alpha = 0.28f), androidx.compose.ui.graphics.Color.Transparent), center = Offset(size.width, 0f), radius = size.width * 0.8f), radius = size.width * 0.8f, center = Offset(size.width, 0f))
-        })
-        Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            com.myfit.tracker.ui.components.IconBubble(t.icon, t.color, 38.dp)
-            Column {
-                Text(t.title, style = FitType.label, color = th.text, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                Text(t.sub, style = FitType.caption, color = th.textDim, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    val u = LocalSettings.current.units
+    val weights by remember { container.logRepo.weightsAll() }.collectAsState(initial = emptyList())
+    val wSeries = remember(weights) { weights.sortedBy { it.loggedAt }.takeLast(20).map { it.weightKg } }
+    val weekN = remember(recent) { recent.count { w -> runCatching { java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.parse(w.workout.localDate), java.time.LocalDate.now()) in 0..6 }.getOrDefault(false) } }
+    val N = com.myfit.tracker.ui.components.Neon
+    @Composable
+    fun TitleSub(title: String, sub: String) {
+        Column {
+            Text(title, style = FitType.section, color = th.text, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(sub, style = FitType.caption, color = th.textDim, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            com.myfit.tracker.ui.components.NeonTile(N.Lime, Modifier.weight(1.15f).height(210.dp), onBuild, glowAt = Alignment.TopStart) {
+                Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                    com.myfit.tracker.ui.components.IconOrb(Duo.AutoAwesome, N.Lime, 54.dp)
+                    Column {
+                        com.myfit.tracker.ui.components.TileLabel("Smart builder")
+                        Text("Build a workout", style = FitType.title, color = th.text)
+                        Caption("Pick muscles — sets, reps and order are done for you.")
+                    }
+                }
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                com.myfit.tracker.ui.components.NeonTile(N.Crimson, Modifier.fillMaxWidth().height(100.dp), onQuick, phase = 0.33f) {
+                    Row(Modifier.fillMaxSize().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        com.myfit.tracker.ui.components.IconOrb(Duo.PlayArrow, N.Crimson, 40.dp, phase = 0.2f)
+                        Spacer(Modifier.width(10.dp)); TitleSub("Quick start", "Empty workout")
+                    }
+                }
+                com.myfit.tracker.ui.components.NeonTile(N.Cyan, Modifier.fillMaxWidth().height(100.dp), onRun, phase = 0.66f) {
+                    Row(Modifier.fillMaxSize().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        com.myfit.tracker.ui.components.IconOrb(Duo.DirectionsRun, N.Cyan, 40.dp, phase = 0.5f)
+                        Spacer(Modifier.width(10.dp)); TitleSub("Run · walk", "Live tracker")
+                    }
+                }
+            }
+        }
+        com.myfit.tracker.ui.components.NeonTile(N.Amber, Modifier.fillMaxWidth().height(112.dp), onCoach, glowAt = Alignment.BottomEnd, phase = 0.15f) {
+            Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    com.myfit.tracker.ui.components.TileLabel("Your trainer")
+                    Text(coach.name, style = FitType.title, color = th.text, maxLines = 1)
+                    Caption("Camera rep counting · form score · voice coaching")
+                }
+                com.myfit.tracker.ui.coach.CoachPortrait(coach.look.id, speaking = false, size = 76.dp)
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            com.myfit.tracker.ui.components.NeonTile(N.Violet, Modifier.weight(1f).height(132.dp), onPlans, phase = 0.4f) {
+                Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                    com.myfit.tracker.ui.components.IconOrb(Duo.CalendarMonth, N.Violet, 40.dp, phase = 0.3f)
+                    TitleSub("Programs", planName?.let { "Following $it" } ?: "54 plans that progress")
+                }
+            }
+            com.myfit.tracker.ui.components.NeonTile(N.Blue, Modifier.weight(1f).height(132.dp), onExercises, phase = 0.8f) {
+                Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                    com.myfit.tracker.ui.components.IconOrb(Duo.FitnessCenter, N.Blue, 40.dp, phase = 0.6f)
+                    TitleSub("Exercises", "876 with animations")
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            com.myfit.tracker.ui.components.NeonTile(N.Mint, Modifier.weight(1f).height(140.dp), onBody, glowAt = Alignment.BottomStart, phase = 0.1f) {
+                Column(Modifier.fillMaxSize().padding(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        com.myfit.tracker.ui.components.IconOrb(Duo.MonitorWeight, N.Mint, 34.dp, float = false)
+                        Spacer(Modifier.width(8.dp)); com.myfit.tracker.ui.components.TileLabel("Weight & BMI")
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    val last = wSeries.lastOrNull()
+                    Text(last?.let { Fmt.weight(it, u.weight, 1) } ?: "Add weight", style = FitType.title, color = th.text)
+                    com.myfit.tracker.ui.components.Spark(wSeries, N.Mint, Modifier.fillMaxWidth().weight(1f).padding(top = 4.dp))
+                }
+            }
+            com.myfit.tracker.ui.components.NeonTile(N.Pink, Modifier.weight(1f).height(140.dp), onRecords, glowAt = Alignment.BottomEnd, phase = 0.55f) {
+                Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                    com.myfit.tracker.ui.components.IconOrb(Duo.EmojiEvents, N.Pink, 40.dp, phase = 0.7f)
+                    Column {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            com.myfit.tracker.ui.components.CountUp(weekN.toDouble(), { it.toInt().toString() }, FitType.title, th.text)
+                            Spacer(Modifier.width(4.dp)); Caption("this week")
+                        }
+                        Text("Records & PRs", style = FitType.label, color = th.textDim)
+                    }
+                }
             }
         }
     }

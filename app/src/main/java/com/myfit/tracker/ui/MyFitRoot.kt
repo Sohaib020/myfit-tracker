@@ -133,7 +133,7 @@ fun MyFitRoot(container: AppContainer) {
 
     val s = settings ?: return          // settings load in a few ms; draw nothing until then
     val theme = Themes.byId(s.themeId)
-    com.myfit.tracker.ui.theme.UiStyle.flat = s.uiStyle == 1
+    com.myfit.tracker.ui.theme.UiStyle.flat = s.uiStyle == 1 || !com.myfit.tracker.ui.theme.UiStyle.glassCapable
     val backdrop = remember { Backdrop() }
     backdrop.theme = theme
     LaunchedEffect(theme.id) { com.myfit.tracker.ui.theme.ThemeShaders.prewarm(theme.id) }
@@ -250,7 +250,19 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
     val statusTop = androidx.compose.foundation.layout.WindowInsets.statusBars.getTop(densityC)
     LaunchedEffect(statusTop) { chromeState.baseLimit = statusTop + with(densityC) { 76.dp.toPx() }; if (chromeState.limit < chromeState.baseLimit) chromeState.limit = chromeState.baseLimit }
     LaunchedEffect(tab) { chromeState.show() }
-    LaunchedEffect(top) { if (top == null) chromeState.show() }
+    // today's logged workouts → estimated burn for Home's calories ring (updates as soon as a workout is saved)
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.flow.combine(
+            container.workoutRepo.dayViews(com.myfit.tracker.domain.Clock.today().toString()),
+            container.logRepo.latestWeight(),
+        ) { views, w ->
+            val kg = w?.weightKg ?: 70.0
+            views.filter { it.workout.endedAt != null }.sumOf { v ->
+                com.myfit.tracker.domain.WorkoutBurn.estimate((v.workout.endedAt!! - v.workout.startedAt) / 1000, v.setData, kg).kcal
+            }
+        }.collect { com.myfit.tracker.domain.TodayBurn.kcal.value = it }
+    }
+    // closing a sub-screen keeps the chrome where the page left it (resetting it here drew the header over a scrolled list)
     CompositionLocalProvider(LocalNav provides nav, com.myfit.tracker.ui.components.LocalChrome provides chromeState) {
         val win = com.myfit.tracker.ui.components.LocalWindowInfo.current
         Box(Modifier.fillMaxSize()) {
@@ -311,7 +323,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut() + scaleOut(targetScale = 0.6f),
             ) {
                 androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
-                    com.myfit.tracker.ui.theme.GlassIconButton(Duo.Person, { nav.push(Overlay.Social) }, size = 50.dp)
+                    com.myfit.tracker.ui.theme.GlassIconButton(Duo.Group, { nav.push(Overlay.Social) }, size = 50.dp)
                     androidx.compose.foundation.layout.Spacer(Modifier.size(10.dp))
                     com.myfit.tracker.ui.theme.GlassIconButton(Duo.CalendarMonth, { nav.push(Overlay.History) }, Modifier.tourTarget("cal"), size = 50.dp)
                     androidx.compose.foundation.layout.Spacer(Modifier.size(10.dp))
