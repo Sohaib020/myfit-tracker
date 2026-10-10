@@ -174,14 +174,13 @@
   }
 
   // ---------------- theme demo (colours echo the app's families)
-  const THEMES = [['Kinetic', 'Essentials', '#7cf2c4', '#173c33', '#07120f'], ['Cobalt', 'Essentials', '#5ab8ff', '#13284a', '#070c16'], ['Blaze', 'Essentials', '#ff8a4c', '#4a1e10', '#130906'],
-    ['True Black', 'Dark & AMOLED', '#e8e8e8', '#202020', '#000000'], ['Cosmic', 'Dark & AMOLED', '#b48cff', '#2a1850', '#0a0614'], ['Web Crimson', 'Hero moods', '#ff4a5a', '#3a0d18', '#10050a'],
-    ['Reactor Gold', 'Hero moods', '#ffc94a', '#4a2a08', '#120b04'], ['Racing Red', 'Cars & bikes', '#ff3b30', '#2a2a2a', '#0b0b0b'], ['Carbon Lime', 'Cars & bikes', '#c6ff3d', '#22301a', '#0a0d08'],
-    ['Hunza', 'Nature', '#ffb36b', '#1d3b4a', '#071016'], ['Sakura', 'Nature', '#ff9ec7', '#3d1d33', '#120810'], ['Truck Art', 'Pakistan', '#ffd23f', '#c2185b', '#120714']];
+  const THEMES = [['Carbon & Lime', 'Gym', '#c6ff3d', '#22301a', '#0a0d08'], ['Web Crimson', 'Gym', '#ff4a5a', '#3a0d18', '#10050a'], ['Volt Cyan', 'Gym', '#22d3ee', '#0e3a4a', '#04090c'],
+    ['Ember Forge', 'Gym', '#ff7a1a', '#3d2a20', '#0d0704'], ['Ultraviolet', 'Gym', '#b06bff', '#3a1a66', '#08040e'], ['Iron Gold', 'Gym', '#f2c230', '#3a3630', '#0b0a09'],
+    ['Slate', 'Plain', '#34d399', '#1a1f25', '#111418'], ['Dusk', 'Gradient', '#f472b6', '#2a1650', '#0a1028'], ['True Black', 'AMOLED', '#2ee6b6', '#0b1a16', '#000000']];
   const sw = $('#swatches'), tp = $('#tdPreview'), tn = $('#tdName');
   THEMES.forEach(([n, fam, a, b, bg], i) => {
     const btn = document.createElement('button'); btn.style.setProperty('--a', a); btn.style.setProperty('--b', b); btn.setAttribute('aria-label', n);
-    btn.addEventListener('click', () => { $$('button', sw).forEach(x => x.classList.remove('on')); btn.classList.add('on'); tp.style.setProperty('--a', a); tp.style.setProperty('--b', b); tp.style.setProperty('--bg', bg); tn.textContent = `${n} · ${fam}`; });
+    btn.addEventListener('click', () => { $$('button', sw).forEach(x => x.classList.remove('on')); btn.classList.add('on'); tp.style.setProperty('--a', a); tp.style.setProperty('--b', b); tp.style.setProperty('--bg', bg); tn.textContent = n; });
     if (!i) btn.classList.add('on');
     sw.appendChild(btn);
   });
