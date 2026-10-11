@@ -5,10 +5,10 @@
  "w": 512,
  "h": 768,
  "init": {
-  "l3_blaze_0": "init/blaze_l1.jpg",
-  "l3_blaze_1": "init/blaze_l1.jpg",
-  "l3_frost_0": "init/frost_l1.jpg",
-  "l3_frost_1": "init/frost_l1.jpg"
+  "l3x_blaze_0": "init/blaze_l1.jpg",
+  "l3x_blaze_1": "init/blaze_l1.jpg",
+  "l3x_frost_0": "init/frost_l1.jpg",
+  "l3x_frost_1": "init/frost_l1.jpg"
  },
- "strength": 0.68
+ "strength": 0.82
 }
