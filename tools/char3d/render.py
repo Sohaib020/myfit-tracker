@@ -64,11 +64,11 @@ print("SKIN", skin)
 
 # warm the skin toward a South Asian tone: multiply every diffuse texture by a tan colour
 TAN = (0.80, 0.58, 0.44, 1)
-def tan_tree(nt, seen):
+def tan_tree(nt, seen, TAN=TAN):
     if nt in seen: return
     seen.add(nt)
     for n in list(nt.nodes):
-        if n.type == "GROUP" and n.node_tree: tan_tree(n.node_tree, seen)
+        if n.type == "GROUP" and n.node_tree: tan_tree(n.node_tree, seen, TAN)
         if n.type == "TEX_IMAGE" and n.image:
             nm = n.image.name.lower()
             print("IMG", nt.name, nm)
@@ -87,6 +87,10 @@ for slot in human.material_slots:
 for sub, words, at in (("eyes", ("high-poly", "brown"), "Eyes"), ("eyebrows", ("eyebrow010", "eyebrow001", "eyebrow"), "Eyebrows"),
                        ("eyelashes", ("eyelashes01", "eyelash"), "Eyelashes"), ("hair", ("short02", "short"), "Hair")):
     asset(sub, pick(sub, *words), at)
+for o in bpy.data.objects:
+    if o.type == "MESH" and any(k in o.name.lower() for k in ("short0", "hair", "eyebrow")):
+        for sl in o.material_slots:
+            if sl.material and sl.material.use_nodes: tan_tree(sl.material.node_tree, set(), (0.05, 0.035, 0.025, 1))
 shoes = asset("clothes", pick("clothes", "shoes02", "shoes01", "shoes"), "Clothes")
 
 rig = HumanService.add_builtin_rig(human, "default")
@@ -107,47 +111,46 @@ def wsum(v, prefixes):
     if ids is None: ids = _gs[prefixes] = {i for k, i in gi.items() if k.startswith(prefixes)}
     return sum(g.weight for g in v.groups if g.group in ids)
 
-def garment(name, keep, color, trim=None, push=0.006):
-    import bmesh
-    me = rest.copy(); me.name = name
-    ob = bpy.data.objects.new(name, me); sc0 = bpy.context.scene; sc0.collection.objects.link(ob)
-    ob.matrix_world = human.matrix_world.copy()
-    for g in human.vertex_groups: ob.vertex_groups.new(name=g.name)
-    sel = [keep(v) for v in me.vertices]
-    bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table()
-    bmesh.ops.delete(bm, geom=[f for f in bm.faces if not all(sel[v.index] for v in f.verts)], context="FACES")
-    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
-    bm.to_mesh(me); bm.free()
-    for p in me.polygons: p.use_smooth = True
-    ob.modifiers.new("arm", "ARMATURE").object = rig
-    d = ob.modifiers.new("push", "DISPLACE"); d.strength = push; d.mid_level = 0
-    s = ob.modifiers.new("thick", "SOLIDIFY"); s.thickness = 0.003; s.offset = 1
-    m = bpy.data.materials.new(name); m.use_nodes = True; b = m.node_tree.nodes["Principled BSDF"]
-    b.inputs["Base Color"].default_value = color; b.inputs["Roughness"].default_value = 0.42
-    b.inputs["Sheen Weight"].default_value = 0.4
-    if trim:   # neon trim band near the garment's edge, driven by height
-        nt = m.node_tree; geo = nt.nodes.new("ShaderNodeNewGeometry"); sep = nt.nodes.new("ShaderNodeSeparateXYZ")
-        ramp = nt.nodes.new("ShaderNodeValToRGB"); nt.links.new(geo.outputs["Position"], sep.inputs[0]); nt.links.new(sep.outputs[2], ramp.inputs[0])
-        lo, hi = trim[0]; e = ramp.color_ramp.elements
-        e[0].position = 0; e[0].color = (0, 0, 0, 1); e[1].position = 1; e[1].color = (0, 0, 0, 1)
-        for pos, c in ((lo - 0.001, (0, 0, 0, 1)), (lo, (1, 1, 1, 1)), (hi, (1, 1, 1, 1)), (hi + 0.001, (0, 0, 0, 1))):
-            el = e.new(max(0, min(1, pos))); el.color = c
-        ramp.color_ramp.interpolation = "CONSTANT"
-        mix = nt.nodes.new("ShaderNodeMix"); mix.data_type = "RGBA"; nt.links.new(ramp.outputs[0], mix.inputs["Factor"])
-        mix.inputs[6].default_value = color; mix.inputs[7].default_value = trim[1]
-        nt.links.new(mix.outputs[2], b.inputs["Base Color"])
-        b.inputs["Emission Color"].default_value = trim[1]; nt.links.new(ramp.outputs[0], b.inputs["Emission Strength"])
-    me.materials.clear(); me.materials.append(m)
-    for p in me.polygons: p.material_index = 0
-    return ob
-
-def z(v): return (human.matrix_world @ v.co).z
+RV = rest.vertices
+def z(v): return (human.matrix_world @ RV[v.index].co).z
+print("VCOUNT", len(RV), len(human.data.vertices))
 ARM, HEAD = ("upperarm", "lowerarm", "hand", "finger", "wrist"), ("neck", "head", "jaw")
-tank = garment("tank", lambda v: waist - 0.03 < z(v) < neck + 0.02 and wsum(v, ARM) < 0.30 and wsum(v, HEAD) < 0.25,
-               (0.015, 0.015, 0.018, 1))
-shorts = garment("shorts", lambda v: thigh < z(v) < waist + 0.02 and wsum(v, ARM) < 0.5,
-                 (0.02, 0.004, 0.008, 1))
-print("KIT", len(tank.data.polygons), len(shorts.data.polygons), "hip", hip, "waist", waist, "neck", neck)
+# per-vertex signed fields (metres-ish; > 0 = inside). Interpolated across faces, so the cut lines come out smooth.
+me = human.data
+att = me.color_attributes.new("kit", "FLOAT_COLOR", "POINT")
+for v in me.vertices:
+    zz = z(v); aw = wsum(v, ARM); hw = wsum(v, HEAD)
+    tank = min(zz - (waist - 0.03), (neck + 0.02) - zz, (0.30 - aw) * 0.2, (0.25 - hw) * 0.2)
+    shorts = min(zz - thigh, (waist + 0.025) - zz, (0.5 - aw) * 0.2)
+    att.data[v.index].color = (tank, shorts, zz - thigh, (waist + 0.025) - zz)
+
+def kit_material(m):
+    nt = m.node_tree; N = nt.nodes.new; L = nt.links.new
+    out = next(n for n in nt.nodes if n.type == "OUTPUT_MATERIAL" and n.is_active_output)
+    src = out.inputs["Surface"].links[0].from_socket
+    a = N("ShaderNodeVertexColor"); a.layer_name = "kit"
+    sep = N("ShaderNodeSeparateColor"); L(a.outputs["Color"], sep.inputs[0])
+    def cmp(sock, op, v):
+        mth = N("ShaderNodeMath"); mth.operation = op; L(sock, mth.inputs[0]); mth.inputs[1].default_value = v; return mth.outputs[0]
+    def mm(x, y, op="MAXIMUM"):
+        mth = N("ShaderNodeMath"); mth.operation = op; L(x, mth.inputs[0]); L(y, mth.inputs[1]); return mth.outputs[0]
+    t = cmp(sep.outputs[0], "GREATER_THAN", 0); sh = cmp(sep.outputs[1], "GREATER_THAN", 0)
+    mask = mm(t, sh)
+    hem = mm(sh, cmp(sep.outputs[2], "LESS_THAN", 0.014), "MULTIPLY")
+    band = mm(sh, cmp(a.outputs["Alpha"], "LESS_THAN", 0.022), "MULTIPLY")
+    fab = N("ShaderNodeBsdfPrincipled"); fab.inputs["Roughness"].default_value = 0.38; fab.inputs["Sheen Weight"].default_value = 0.5
+    fab.inputs["Specular IOR Level"].default_value = 0.6
+    c1 = N("ShaderNodeMix"); c1.data_type = "RGBA"; L(sh, c1.inputs["Factor"]); c1.inputs[6].default_value = (0.012, 0.012, 0.015, 1); c1.inputs[7].default_value = (0.035, 0.004, 0.01, 1)
+    CR, LM = (1.0, 0.05, 0.2, 1), (0.6, 1.0, 0.1, 1)
+    c2 = N("ShaderNodeMix"); c2.data_type = "RGBA"; L(hem, c2.inputs["Factor"]); L(c1.outputs[2], c2.inputs[6]); c2.inputs[7].default_value = CR
+    c3 = N("ShaderNodeMix"); c3.data_type = "RGBA"; L(band, c3.inputs["Factor"]); L(c2.outputs[2], c3.inputs[6]); c3.inputs[7].default_value = LM
+    L(c3.outputs[2], fab.inputs["Base Color"])
+    em = N("ShaderNodeMix"); em.data_type = "RGBA"; L(band, em.inputs["Factor"]); em.inputs[6].default_value = CR; em.inputs[7].default_value = LM
+    L(em.outputs[2], fab.inputs["Emission Color"]); L(mm(hem, band), fab.inputs["Emission Strength"])
+    mix = N("ShaderNodeMixShader"); L(mask, mix.inputs[0]); L(src, mix.inputs[1]); L(fab.outputs[0], mix.inputs[2])
+    L(mix.outputs[0], out.inputs["Surface"])
+for sl in human.material_slots:
+    if sl.material and sl.material.use_nodes and "body" in sl.material.name.lower(): kit_material(sl.material); print("KIT on", sl.material.name)
 
 # ---- posing by aiming bones at world directions (independent of bone roll)
 from mathutils import Matrix
@@ -194,7 +197,7 @@ def pose(name):
     reset(); fists(65 if name != "victory" else 80)
     if name == "idle":      arms(P(0.22, 0.04, -1), P(0.12, -0.22, -1))
     elif name == "flex":    # double biceps
-        arms(P(1, 0.10, -0.08), P(0.10, 0.10, 1))
+        arms(P(1, 0.12, -0.35), P(0.05, 0.12, 1))
     elif name == "victory": aim("head", (0, -0.25, 1)); arms(P(0.55, 0.05, 1), P(0.3, 0, 1))
     elif name == "hero":    # fists on hips
         arms(P(0.75, 0.25, -0.62), P(-0.55, -0.35, -0.45))
