@@ -22,6 +22,7 @@ jobs:
           pip install -q gradio_client
           mkdir -p glb
           for f in tools/img3d/inputs/*; do n=$(basename "${f%.*}")
+            if [ -f tools/img3d/only.txt ] && ! grep -qx "$n" tools/img3d/only.txt; then continue; fi
             for t in 1 2 3; do python tools/img3d/trellis.py "$f" "glb/$n.glb" >> glb/trellis.log 2>&1 && break; sleep 30; done
           done
           ls -la glb; grep -E "GLB_OK|FAIL" glb/trellis.log | cut -c1-300
