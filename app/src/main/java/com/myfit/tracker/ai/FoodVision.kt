@@ -73,7 +73,8 @@ class FoodVision(private val c: AppContainer) {
         var offlineError: String? = null
         if (ai.llm.available()) {
             try {
-                val jpeg = withContext(Dispatchers.Default) { compress(photo, 448f, 80) }
+                // R18: full detail for the on-phone model too (the vision encoder resizes itself; we no longer shrink the photo)
+                val jpeg = withContext(Dispatchers.Default) { compress(photo, 896f, 85) }
                 val r = enrich(parse(ai.llm.vision(COMPACT + note, jpeg), compact = true))
                 onDevice = true
                 return r

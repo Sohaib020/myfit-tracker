@@ -31,10 +31,10 @@ class PipBrain(private val c: AppContainer) {
      * @param addUserMessage false when retrying a question that is already in the chat.
      * Failed online answers are stored with source "error" so the chat can offer "Try again".
      */
-    suspend fun ask(question: String, addUserMessage: Boolean = true): Reply {
+    suspend fun ask(question: String, addUserMessage: Boolean = true, onPartial: ((String) -> Unit)? = null): Reply {
         if (addUserMessage) c.healthRepo.addChat("user", question, "user")
         val r = try {
-            answer(question)
+            answer(question, onPartial)
         } catch (e: PipError) {
             Reply(e.userText, "error", PipMood.CONCERNED)
         } catch (e: Exception) {
@@ -53,7 +53,7 @@ class PipBrain(private val c: AppContainer) {
             (if (halal) " The user eats halal only." else "")
     }
 
-    private suspend fun answer(q: String): Reply {
+    private suspend fun answer(q: String, onPartial: ((String) -> Unit)? = null): Reply {
         data.answer(q)?.let { return Reply(it.text, "data", it.mood) }
         val s = c.settings.settings.first()
         val ai = com.myfit.tracker.ai.ondevice.OnDeviceAi.get(c.app)
@@ -66,12 +66,15 @@ class PipBrain(private val c: AppContainer) {
         if (ai.llm.available() && (mode != BrainMode.ONLINE || !online)) {
             try {
                 val summary = data.summaryFor(q).take(1800)
-                val system = "${com.myfit.tracker.ui.pip.Buddy.persona()} Be warm, practical and brief (under 100 words, at most 2 emoji). " +
-                    "For the user's own numbers use ONLY the User data block; if it lacks something, say so. No medical diagnoses. " +
+                // R18: stable instructions (kept in the model's memory for the whole chat) — no length cap on answers
+                val system = "${com.myfit.tracker.ui.pip.Buddy.persona()} Be warm and practical; answer fully but without padding, at most 2 emoji. " +
+                    "For the user's own numbers use ONLY the User data block in their message; if it lacks something, say so. No medical diagnoses. " +
                     "Units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}." + healthNote()
                 val history = c.healthRepo.lastChat(5).dropLast(1).filter { it.source != "local" && it.source != "error" }
                     .takeLast(2).map { (if (it.role == "user") "user" else "model") to it.text.take(400) }
-                val out = ai.llm.chat(system, history + ("user" to "User data (only what's relevant; may be incomplete):\n$summary\n\nQuestion: $q"))
+                val out = ai.llm.chatStream(system, "User data (only what's relevant; may be incomplete):\n$summary\n\nQuestion: $q", history) { partial ->
+                    onPartial?.invoke(splitSpeech(partial).first)
+                }
                 if (out.isNotBlank()) {
                     router.lastProvider = "Offline brain"
                     val (display, _, _) = splitSpeech(out)

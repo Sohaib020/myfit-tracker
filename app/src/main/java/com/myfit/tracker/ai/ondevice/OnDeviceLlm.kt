@@ -6,6 +6,8 @@ import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.Conversation
+import com.google.ai.edge.litertlm.ConversationConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,6 +20,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.flow.catch
 
 /**
  * Pip's offline brain: Gemma running on the phone through LiteRT-LM. Loaded lazily on first use and
@@ -54,10 +57,12 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
 
     /** (text backend, vision backend) pairs to try, best first. The vision encoder can fail on GPU where text works. */
     private fun backendsToTry(pref: String, working: String): List<Pair<String, String>> {
+        val tier = DeviceTier.profile(app)
         val all = when (pref) {
             "gpu" -> listOf("gpu" to "gpu", "gpu" to "cpu")
             "cpu" -> listOf("cpu" to "cpu")
-            else -> listOf("gpu" to "gpu", "gpu" to "cpu", "cpu" to "cpu")
+            // R18: weak / old GPUs run faster on the CPU path, so light mode tries CPU first
+            else -> if (tier.preferGpu) listOf("gpu" to "gpu", "gpu" to "cpu", "cpu" to "cpu") else listOf("cpu" to "cpu", "gpu" to "cpu")
         }
         val w = all.firstOrNull { "${it.first}/${it.second}" == working }
         return if (w != null) listOf(w) + (all - w) else all
@@ -74,11 +79,14 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
         val c = hub.prefs.cfg()
         var last: Throwable? = null
         val errors = mutableListOf<String>()
+        val maxTok = DeviceTier.profile(app).maxTokens
         for ((b, v) in backendsToTry(c.backendPref, c.workingBackend)) {
             try {
+                // multi-token prediction: several tokens per step on GPU — a big decode speed-up where the build supports it
+                setSpeculative(b == "gpu")
                 val vision = file.absolutePath !in noVisionFiles && (ModelCatalog.all.firstOrNull { it.fileName == file.name }?.vision ?: true)
                 var e = Engine(EngineConfig(modelPath = file.absolutePath, backend = backend(b), visionBackend = if (vision) backend(v) else null,
-                    maxNumTokens = 4096, maxNumImages = if (vision) 1 else null, cacheDir = app.cacheDir.path))
+                    maxNumTokens = maxTok, maxNumImages = if (vision) 1 else null, cacheDir = app.cacheDir.path))
                 e.initialize()
                 hasVision = vision
                 if (vision) {
@@ -87,7 +95,7 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
                     if (probe != null && (probe.message ?: "").contains("VISION", ignoreCase = true)) {
                         runCatching { e.close() }
                         noVisionFiles += file.absolutePath; hasVision = false
-                        e = Engine(EngineConfig(modelPath = file.absolutePath, backend = backend(b), maxNumTokens = 4096, cacheDir = app.cacheDir.path))
+                        e = Engine(EngineConfig(modelPath = file.absolutePath, backend = backend(b), maxNumTokens = maxTok, cacheDir = app.cacheDir.path))
                         e.initialize()
                     }
                 }
@@ -105,7 +113,7 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
         lastError = errors.joinToString(" · ").ifBlank { last?.message ?: "couldn't start" }
         val lowMem = errors.any { it.contains("memory", true) || it.contains("OOM", false) || it.contains("alloc", true) } || last is OutOfMemoryError
         throw IllegalStateException(
-            if (lowMem) "Your phone ran out of memory starting the offline brain. Close other apps and try again — phones with 8 GB of RAM or more run it best."
+            if (lowMem) "Your phone ran out of memory starting the offline brain. Close other apps and try again — it will retry in light mode next time."
             else "The offline brain couldn't start on this phone (${lastError})."
         )
     }
@@ -113,7 +121,7 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
     private fun scheduleIdleRelease() {
         idleJob?.cancel()
         idleJob = scope.launch {
-            delay(IDLE_MS)
+            delay(DeviceTier.profile(app).idleMs)
             lock.withLock { releaseLocked() }
         }
     }
@@ -131,7 +139,7 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
         }
     }
 
-    private suspend fun <T> run(timeoutMs: Long, block: (Engine) -> T): T = withContext(Dispatchers.IO) {
+    private suspend fun <T> run(timeoutMs: Long, block: suspend (Engine) -> T): T = withContext(Dispatchers.IO) {
         lock.withLock {
             idleJob?.cancel()
             val e = ensure()
@@ -166,6 +174,67 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
         e.createConversation().use { conv -> conv.sendMessage(prompt).toString().trim() }
     }
 
+    // ---------------------------------------------------------------- R18: reused conversation + streaming
+
+    private var convo: Conversation? = null
+    private var convoKey: Int = 0
+    private var convoTurns = 0
+
+    private fun closeConvo() { runCatching { convo?.close() }; convo = null; convoKey = 0; convoTurns = 0 }
+
+    /**
+     * Pip chat on the phone. The [system] instructions (persona, rules, units, health notes) are processed ONCE per chat
+     * and kept in the model's memory (KV cache); every later turn only feeds the new message — follow-ups start
+     * answering much sooner. [onText] receives the growing answer as it streams. The conversation restarts when the
+     * instructions change, after many turns (to stay inside the context window) or after an error.
+     */
+    suspend fun chatStream(system: String, message: String, seedTurns: List<Pair<String, String>> = emptyList(), onText: (String) -> Unit = {}): String = run(120_000) { e ->
+        val key = system.hashCode()
+        if (convo == null || convoKey != key || convoTurns >= MAX_TURNS) {
+            closeConvo()
+            convo = e.createConversation(ConversationConfig(systemInstruction = Contents.of(system.trim())))
+            convoKey = key
+        }
+        val conv = convo!!
+        val first = convoTurns == 0 && seedTurns.isNotEmpty()
+        val msg = if (first) buildString {
+            append("Earlier in this chat:\n")
+            seedTurns.forEach { (r, t) -> append(if (r == "user") "User: " else com.myfit.tracker.ui.pip.Buddy.name + ": ").append(t.trim()).append("\n") }
+            append("\n").append(message.trim())
+        } else message.trim()
+        val sb = StringBuilder()
+        var firstAt = 0L
+        try {
+            conv.sendMessageAsync(msg).catch { throw it }.collect { chunk ->
+                if (firstAt == 0L) firstAt = System.currentTimeMillis()
+                sb.append(chunk.toString())
+                onText(sb.toString())
+            }
+        } catch (t: Throwable) {
+            closeConvo()           // a failed turn can leave the KV cache half-written: start fresh next time
+            throw t
+        }
+        convoTurns++
+        // speed test from real use: tokens/s while decoding (≈ 4 characters per token)
+        if (firstAt > 0) {
+            val secs = (System.currentTimeMillis() - firstAt) / 1000f
+            if (secs > 1.5f && sb.length > 120) DeviceTier.recordSpeed(app, sb.length / 4f / secs)
+        }
+        sb.toString().trim()
+    }
+
+    /** Drop the kept conversation (e.g. when the chat screen closes or the user clears the chat). */
+    fun resetChat() { scope.launch { lock.withLock { closeConvo() } } }
+
+    private fun setSpeculative(on: Boolean) {
+        runCatching {
+            val k = Class.forName("com.google.ai.edge.litertlm.ExperimentalFlags")
+            val inst = runCatching { k.getField("INSTANCE").get(null) }.getOrNull()
+            val m = k.methods.firstOrNull { it.name == "setEnableSpeculativeDecoding" && it.parameterTypes.size == 1 }
+            m?.invoke(inst, on)
+        }
+    }
+
     /** Image + prompt → text (food photos). */
     suspend fun vision(prompt: String, jpeg: ByteArray): String = run(120_000) { e ->
         if (!hasVision) throw IllegalStateException("this offline model can't read photos — download the photo model (2.6 GB) in Pip settings → Downloads")
@@ -173,6 +242,7 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
     }
 
     private fun releaseLocked() {
+        closeConvo()
         runCatching { engine?.close() }
         engine = null; enginePath = null
         if (_status.value != Status.FAILED) _status.value = Status.OFF
@@ -182,6 +252,6 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
     suspend fun release() = lock.withLock { idleJob?.cancel(); releaseLocked() }
 
     companion object {
-        private const val IDLE_MS = 120_000L
+        private const val MAX_TURNS = 8
     }
 }
