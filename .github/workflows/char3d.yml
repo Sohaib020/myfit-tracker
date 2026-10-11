@@ -1,0 +1,46 @@
+name: 3D character test
+# Realistic rigged 3D athlete via MPFB (MakeHuman, CC0) in Blender, rendered in CI. Push to char3d-run.
+on:
+  push:
+    branches: [ char3d-run ]
+  workflow_dispatch:
+permissions: { contents: write }
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Blender 4.2 LTS
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 libxrender1 libxxf86vm1 libxfixes3 zip >/dev/null
+          curl -fsSL https://download.blender.org/release/Blender4.2/blender-4.2.3-linux-x64.tar.xz | tar -xJ
+          mv blender-4.2.3-linux-x64 blender
+      - name: MPFB extension + CC0 system assets
+        run: |
+          git clone -q --depth 1 https://github.com/makehumancommunity/mpfb2.git mpfb2
+          (cd mpfb2/src && zip -qr ../../mpfb.zip mpfb)
+          ./blender/blender -b --command extension install-file -r user_default -e mpfb.zip
+          U=$(find ~/.config/blender -type d -path "*extensions/.user/user_default/mpfb" | head -1); [ -z "$U" ] && U=~/.config/blender/4.2/extensions/.user/user_default/mpfb
+          mkdir -p "$U/data"; echo "user data: $U/data"
+          PAGE=$(curl -fsSL https://static.makehumancommunity.org/assets/assetpacks/makehuman_system_assets.html || true)
+          echo "$PAGE" | grep -oE 'href="[^"]+\.zip"' | head -5
+          ZIP=$(echo "$PAGE" | grep -oE 'href="[^"]+\.zip"' | grep -i cc0 | head -1 | sed 's/href="//;s/"$//')
+          [ -z "$ZIP" ] && ZIP=$(echo "$PAGE" | grep -oE 'href="[^"]+\.zip"' | head -1 | sed 's/href="//;s/"$//')
+          case "$ZIP" in http*) ;; *) ZIP="https://static.makehumancommunity.org/assets/assetpacks/$ZIP";; esac
+          echo "::notice::asset pack $ZIP"
+          curl -fsSL "$ZIP" -o sys.zip && mkdir -p syspack && unzip -q sys.zip -d syspack
+          find syspack -maxdepth 3 -type d | head -20
+          D=$(find syspack -type d -name skins | head -1 | xargs dirname); echo "pack data root: $D"
+          cp -r "$D"/* "$U/data/" && ls "$U/data"
+      - name: Render
+        run: |
+          set -o pipefail
+          ./blender/blender -b --addons bl_ext.user_default.mpfb -P tools/char3d/render.py -- out 2>&1 | tee r.log | grep -E "INVENTORY|WORN|BONES|RENDERED|ALLDONE|Error|error|missing|fail" | head -60
+          grep -q ALLDONE r.log
+      - name: Publish to char3d-assets
+        if: always()
+        run: |
+          mkdir -p out && cp r.log out/ 2>/dev/null || true
+          cd out && git init -q && git checkout -q -b char3d-assets && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "3D test ${{ github.run_number }}" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" char3d-assets
