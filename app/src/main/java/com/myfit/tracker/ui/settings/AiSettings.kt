@@ -85,6 +85,7 @@ fun OfflineBrainCard() {
             cap.tier == DeviceCheck.Tier.UNSUPPORTED -> Caption(cap.reason ?: "This phone can't run it.", color = th.warning)
             cap.reason != null -> Caption(cap.reason, color = th.textDim)
         }
+        if (cap.tier != DeviceCheck.Tier.UNSUPPORTED) Caption("This phone: " + com.myfit.tracker.ai.ondevice.DeviceTier.describe(ctx), color = th.textFaint)
         if (cap.tier != DeviceCheck.Tier.UNSUPPORTED) {
             Spacer(Modifier.height(10.dp))
             when (val s = st) {
