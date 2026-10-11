@@ -1,0 +1,32 @@
+name: Image to 3D test
+# Free route: concept image -> TRELLIS (public HF demo, MIT) -> GLB -> Blender toon turntable. Push to img3d-run.
+on:
+  push:
+    branches: [ img3d-run ]
+  workflow_dispatch:
+permissions: { contents: write }
+jobs:
+  make:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: TRELLIS
+        run: |
+          pip install -q gradio_client
+          mkdir -p out
+          for f in tools/img3d/inputs/*.jpg tools/img3d/inputs/*.png; do [ -f "$f" ] || continue
+            n=$(basename "${f%.*}"); python tools/img3d/trellis.py "$f" "out/$n.glb" 2>&1 | tee -a out/trellis.log || true
+          done
+          ls -la out
+      - name: Blender toon turntable
+        run: |
+          ls out/*.glb >/dev/null 2>&1 || exit 0
+          sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 libxrender1 libxxf86vm1 libxfixes3 >/dev/null
+          curl -fsSL https://download.blender.org/release/Blender4.2/blender-4.2.3-linux-x64.tar.xz | tar -xJ
+          for g in out/*.glb; do ./blender-4.2.3-linux-x64/blender -b -P tools/img3d/turntable.py -- "$g" "${g%.glb}" 2>&1 | grep -E "Saved|Error|TURN" | tail -5; done
+      - name: Publish to img3d-assets
+        if: always()
+        run: |
+          cd out && git init -q && git checkout -q -b img3d-assets && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "img3d ${{ github.run_number }}" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" img3d-assets
