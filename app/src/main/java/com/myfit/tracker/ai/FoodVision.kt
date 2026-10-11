@@ -12,6 +12,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
+import com.myfit.tracker.domain.Fmt
 import java.io.ByteArrayOutputStream
 
 /**
@@ -27,7 +28,13 @@ class FoodVision(private val c: AppContainer) {
         /** Matched built-in food (3D icon + typical values), if any. */
         val catalogUuid: String? = null, val photo: String? = null,
     )
-    data class Result(val items: List<Item>, val note: String?)
+    data class Result(
+        val items: List<Item>, val note: String?,
+        /** R18: other likely dishes from the offline recogniser ("Not right? Try…"). */
+        val alternatives: List<Item> = emptyList(),
+        /** True for the instant on-phone recogniser result (before any AI refinement). */
+        val instant: Boolean = false,
+    )
 
     class NotFood(msg: String) : Exception(msg)
     /** No internet and no working offline brain — message is ready to show. */
@@ -48,7 +55,10 @@ class FoodVision(private val c: AppContainer) {
         val online = Net.online(c.app)
         val mode = BrainMode.get(c.app)
         val cloud = online && mode != BrainMode.PHONE && c.aiRouter.chain(c.settings.settings.first()).isNotEmpty()
-        if (!cloud) return@coroutineScope offline(photo, note, ai, online)
+        // R18: the offline recogniser answers in ~0.2 s on any phone — shown first, then refined
+        val instant = recognized(photo)
+        if (instant != null) onEarly?.invoke(instant)
+        if (!cloud) return@coroutineScope offline(photo, note, ai, online, instant, onEarly)
 
         onDevice = false
         ai.quota.require(AiQuota.Kind.PHOTO)
@@ -57,11 +67,11 @@ class FoodVision(private val c: AppContainer) {
         val quick = async { runCatching { enrich(parse(c.aiRouter.vision(COMPACT + note, small.await(), fast = true, perProviderMs = 8_000), compact = true)) } }
         val full = async { runCatching { enrich(parse(c.aiRouter.vision(PROMPT + note, big.await(), fast = false, perProviderMs = 28_000))) } }
         var early: Result? = null
-        quick.await().onSuccess { early = it; onEarly?.invoke(it) }
+        quick.await().onSuccess { early = it.copy(alternatives = instant?.let { r -> r.items + r.alternatives }.orEmpty().filter { a -> it.items.none { i -> i.catalogUuid == a.catalogUuid } }.take(4)); onEarly?.invoke(early!!) }
         // once a quick answer is on screen, give the accuracy pass a little longer — but never leave the user waiting long
         val best = withTimeoutOrNull(if (early != null) 14_000L else 32_000L) { full.await() }
         if (best == null) full.cancel()
-        val out = best?.getOrNull() ?: early ?: run {
+        val out = best?.getOrNull()?.let { r -> r.copy(alternatives = early?.alternatives.orEmpty()) } ?: early ?: instant ?: run {
             val e = best?.exceptionOrNull() ?: quick.await().exceptionOrNull() ?: IllegalStateException("Couldn't read the photo")
             throw e
         }
@@ -69,26 +79,49 @@ class FoodVision(private val c: AppContainer) {
         out
     }
 
-    private suspend fun offline(photo: Bitmap, note: String, ai: OnDeviceAi, online: Boolean): Result {
+    private suspend fun offline(photo: Bitmap, note: String, ai: OnDeviceAi, online: Boolean, instant: Result? = null, onEarly: ((Result) -> Unit)? = null): Result {
         var offlineError: String? = null
         if (ai.llm.available()) {
             try {
                 // R18: full detail for the on-phone model too (the vision encoder resizes itself; we no longer shrink the photo)
                 val jpeg = withContext(Dispatchers.Default) { compress(photo, 896f, 85) }
-                val r = enrich(parse(ai.llm.vision(COMPACT + note, jpeg), compact = true))
+                // the recogniser's best guesses help the model name Pakistani dishes the same way the catalogue does
+                val hints = instant?.let { r -> (r.items + r.alternatives).joinToString { it.name } }?.let { "\nLikely dishes (from a food classifier, may be wrong): $it" } ?: ""
+                val r = enrich(parse(ai.llm.vision(COMPACT + hints + note, jpeg), compact = true))
                 onDevice = true
-                return r
+                return r.copy(alternatives = instant?.let { i -> (i.items + i.alternatives).filter { a -> r.items.none { it.catalogUuid == a.catalogUuid } } }.orEmpty().take(4))
             } catch (e: NotFood) { throw e } catch (e: kotlinx.coroutines.CancellationException) {
                 if (e !is kotlinx.coroutines.TimeoutCancellationException) throw e
                 offlineError = ai.llm.lastError ?: "it took too long"
             } catch (e: Exception) { offlineError = ai.llm.lastError ?: e.message ?: "couldn't read the photo" }
         }
+        // no (working) offline brain: the recogniser's answer is the result — still accurate catalogue nutrition
+        if (instant != null) { onDevice = true; return instant }
         throw Offline(when {
             online && offlineError != null -> "The phone brain couldn't read this photo ($offlineError). Switch Pip's brain to Auto to use online AI, or search foods instead."
             offlineError != null -> "You're offline and the offline brain couldn't read this photo ($offlineError). Try again, or search foods instead."
             ai.models.installedFile() == null -> "You're offline. Download the offline brain once (Me → Pip → Pip settings → Downloads) to recognise meals without internet — or search foods instead."
             else -> "You're offline and the offline brain is switched off (Pip settings → Downloads). Turn it on, or search foods instead."
         })
+    }
+
+    /** The offline recogniser's answer as a [Result]: top dish + alternatives, catalogue nutrition per serving. Null if unavailable/unsure. */
+    private suspend fun recognized(photo: Bitmap): Result? {
+        val g = runCatching { FoodRecognizer.recognize(c.app, photo, 6) }.getOrNull() ?: return null
+        if (g.isEmpty() || g[0].score < 0.08f) return null
+        val foods = c.db.nutritionDao().byUuids(g.map { "pkfood:${it.id}" }).first().associateBy { it.uuid }
+        val items = g.mapNotNull { gu ->
+            val f = foods["pkfood:${gu.id}"] ?: return@mapNotNull null
+            val grams = f.servingGrams?.takeIf { it > 0 } ?: if (f.servingUnit == "g" || f.servingUnit == "ml") f.servingSize else 0.0
+            Item(
+                name = f.name, portion = "${Fmt.trim(f.servingSize, 1)} ${f.servingUnit}" + (if (grams > 0 && f.servingUnit != "g") " (~${grams.toInt()} g)" else ""),
+                grams = grams, kcal = f.calories, protein = f.proteinG, carbs = f.carbsG, fat = f.fatG, fiber = f.fiberG,
+                confidence = when { gu.score >= 0.5f -> "high"; gu.score >= 0.25f -> "medium"; else -> "low" },
+                catalogUuid = f.uuid, photo = c.nutritionRepo.meta(f)?.photo,
+            )
+        }
+        if (items.isEmpty()) return null
+        return Result(listOf(items[0]), "Recognised on your phone — tap another dish below if it's not right.", items.drop(1).take(4), instant = true)
     }
 
     /** Start loading the on-phone model while the camera is open, when it's the one that will answer. */

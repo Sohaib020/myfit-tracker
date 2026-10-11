@@ -36,3 +36,7 @@
 -dontwarn javax.lang.model.**
 -dontwarn org.checkerframework.**
 -dontwarn com.google.android.datatransport.**
+
+# R18: ONNX Runtime (offline food recogniser) — JNI
+-keep class ai.onnxruntime.** { *; }
+-dontwarn ai.onnxruntime.**

@@ -70,5 +70,6 @@ class MyFitApplication : Application() {
         container.write { runCatching { container.social.uploadNow() }; runCatching { container.friendsRepo.refresh() } }
         if (!java.io.File(filesDir, "voice/" + com.myfit.tracker.ai.voice.VoicePack.MODEL + "/.complete").exists())
             com.myfit.tracker.ai.voice.VoicePackWorker.schedule(this)
+        com.myfit.tracker.ai.FoodRecognizer.schedule(this)   // offline food recogniser, Wi-Fi only
     }
 }

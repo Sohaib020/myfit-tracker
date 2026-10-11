@@ -203,6 +203,8 @@ dependencies {
     implementation("com.google.mlkit:pose-detection-accurate:18.0.0-beta5")   // fallback tracker
     // R17 camera coach: MediaPipe Pose Landmarker (heavy) + Face Landmarker for head pose — models fetched at build time
     implementation("com.google.mediapipe:tasks-vision:0.10.14")
+    // R18 offline food recogniser (MobileCLIP image encoder, downloaded in the background)
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.19.2")
     // accounts, friends & leaderboards
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth")
