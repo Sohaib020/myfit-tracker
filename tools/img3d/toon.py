@@ -1,6 +1,27 @@
 """Shared Blender helpers for image-to-3D characters: load + normalise a GLB, anime cel look, scene + render."""
 import bpy, math, os, mathutils
 
+def drop_flat(ob):
+    """Remove loose parts that are flat and low (TRELLIS bakes the image's drop shadow into a floor tile)."""
+    import bmesh
+    bm = bmesh.new(); bm.from_mesh(ob.data); bm.verts.ensure_lookup_table()
+    zs = [v.co.z for v in bm.verts]; zmin, zmax = min(zs), max(zs); hgt = zmax - zmin
+    seen = set(); kill = []
+    for v0 in bm.verts:
+        if v0.index in seen: continue
+        isl = []; stack = [v0]; seen.add(v0.index)
+        while stack:
+            v = stack.pop(); isl.append(v)
+            for e in v.link_edges:
+                w = e.other_vert(v)
+                if w.index not in seen: seen.add(w.index); stack.append(w)
+        iz = [v.co.z for v in isl]
+        if max(iz) - min(iz) < 0.02 * hgt and max(iz) < zmin + 0.06 * hgt: kill += isl
+        elif len(isl) < 12: kill += isl          # specks
+    if kill:
+        bmesh.ops.delete(bm, geom=list(set(kill)), context="VERTS"); bm.to_mesh(ob.data); print("DROP_FLAT removed", len(set(kill)), "verts")
+    bm.free()
+
 def load(src, height=1.8):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=src)
@@ -14,6 +35,7 @@ def load(src, height=1.8):
         if o.type != "MESH": bpy.data.objects.remove(o)
     ob.parent = None
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    drop_flat(ob)
     vs = [v.co for v in ob.data.vertices]
     mn = mathutils.Vector((min(v.x for v in vs), min(v.y for v in vs), min(v.z for v in vs)))
     mx = mathutils.Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs)))
@@ -81,6 +103,8 @@ def scene(res=(512, 640), samples=16, transparent=False, bg=(0.03, 0.035, 0.03))
     tc = cam.constraints.new("TRACK_TO"); tc.target = t; tc.track_axis = "TRACK_NEGATIVE_Z"; tc.up_axis = "UP_Y"
     return cam
 
-def shoot(cam, path, yaw=0, dist=4.2, z=1.1):
-    a = math.radians(-90 + yaw); cam.location = (dist * math.cos(a), dist * math.sin(a), z)
+def shoot(cam, path, yaw=0, dist=4.2, z=1.1, centre=(0.0, 0.0)):
+    a = math.radians(-90 + yaw); cam.location = (centre[0] + dist * math.cos(a), centre[1] + dist * math.sin(a), z)
+    t = bpy.data.objects.get("t")
+    if t: t.location = (centre[0], centre[1], t.location.z)
     bpy.context.scene.render.filepath = path; bpy.ops.render.render(write_still=True)

@@ -18,6 +18,39 @@ H = 1.8
 ob = toon.load(src, H)
 sc = bpy.context.scene
 
+# ---- 0. rebuild as ONE watertight surface (TRELLIS gives ~100 overlapping shells that tear when posed),
+#         then bake the original colours onto it
+def rebuild(src_ob, voxel=float(os.environ.get("VOXEL", "0.0075")), faces=int(os.environ.get("FACES", "60000")), tex=int(os.environ.get("BAKE", "2048"))):
+    new = src_ob.copy(); new.data = src_ob.data.copy(); sc.collection.objects.link(new); new.name = "body"
+    new.data.materials.clear()
+    for m_ in list(new.modifiers): new.modifiers.remove(m_)
+    bpy.ops.object.select_all(action="DESELECT"); new.select_set(True); bpy.context.view_layer.objects.active = new
+    so = new.modifiers.new("thick", "SOLIDIFY"); so.thickness = voxel * 2.2; so.offset = 0; so.use_even_offset = True
+    bpy.ops.object.modifier_apply(modifier="thick")
+    rm = new.modifiers.new("vox", "REMESH"); rm.mode = "VOXEL"; rm.voxel_size = voxel; rm.use_smooth_shade = True
+    bpy.ops.object.modifier_apply(modifier="vox")
+    n0 = len(new.data.polygons)
+    if n0 > faces:
+        dc = new.modifiers.new("dec", "DECIMATE"); dc.ratio = faces / n0; bpy.ops.object.modifier_apply(modifier="dec")
+    for uv in list(new.data.uv_layers): new.data.uv_layers.remove(uv)
+    new.data.uv_layers.new(name="UVMap")
+    bpy.ops.object.mode_set(mode="EDIT"); bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.003); bpy.ops.object.mode_set(mode="OBJECT")
+    img = bpy.data.images.new("baked", tex, tex); img.use_fake_user = True
+    mat = bpy.data.materials.new("baked"); mat.use_nodes = True; nt_ = mat.node_tree
+    ti = nt_.nodes.new("ShaderNodeTexImage"); ti.image = img; nt_.nodes.active = ti
+    nt_.links.new(ti.outputs[0], nt_.nodes["Principled BSDF"].inputs["Base Color"]); new.data.materials.append(mat)
+    sc.render.engine = "CYCLES"; sc.cycles.samples = 1; sc.cycles.device = "CPU"
+    sc.render.bake.use_selected_to_active = True; sc.render.bake.cage_extrusion = 0.03; sc.render.bake.max_ray_distance = 0.0
+    sc.render.bake.use_pass_direct = False; sc.render.bake.use_pass_indirect = False; sc.render.bake.margin = 6
+    bpy.ops.object.select_all(action="DESELECT"); src_ob.select_set(True); new.select_set(True); bpy.context.view_layer.objects.active = new
+    bpy.ops.object.bake(type="DIFFUSE", pass_filter={"COLOR"})
+    print("REBUILT faces", n0, "->", len(new.data.polygons))
+    bpy.data.objects.remove(src_ob)
+    return new
+if os.environ.get("REBUILD", "0") == "1":   # experimental: bake picks up inner shells on TRELLIS meshes
+    ob = rebuild(ob)
+
 # ---- 1. orthographic front render (flat lit) for joint detection
 RES = 768
 cd = bpy.data.cameras.new("ortho"); cd.type = "ORTHO"; cd.ortho_scale = H * 1.1
@@ -51,6 +84,20 @@ names = {0: "nose", 11: "shoulder.L", 12: "shoulder.R", 13: "elbow.L", 14: "elbo
          31: "toe.L", 32: "toe.R"}
 for i, n in names.items():
     x, z = px_to_world(lm[i].x, lm[i].y); J[n] = Vector((x, depth(x, z), z)); J[n + "_vis"] = lm[i].visibility
+# detector sometimes reads the figure as facing away (animals): character's left must be on +X
+if J["shoulder.L"].x < J["shoulder.R"].x:
+    for k in [k for k in list(J) if k.endswith(".L") or k.endswith(".L_vis")]:
+        r_ = k.replace(".L", ".R"); J[k], J[r_] = J[r_], J[k]
+    print("SWAP left/right")
+# anatomy sanity: upper and lower limb segments are roughly equal; fur/loose sleeves can fool the detector
+for a_, b_, c_ in (("shoulder", "elbow", "wrist"), ("hip", "knee", "ankle")):
+    for sd in ("L", "R"):
+        A, B, C = J[f"{a_}.{sd}"], J[f"{b_}.{sd}"], J[f"{c_}.{sd}"]
+        r_ = (B - A).length / max((C - B).length, 1e-6)
+        unsure = min(J.get(f"{b_}.{sd}_vis", 1), J.get(f"{c_}.{sd}_vis", 1)) < 0.8
+        if unsure and not 0.45 < r_ < 2.2:
+            m_ = A.lerp(C, 0.5); m_.y = depth(m_.x, m_.z); J[f"{b_}.{sd}"] = m_
+            print("ANATOMY fix", b_, sd, "ratio", round(r_, 2))
 top = float(verts[:, 2].max())
 print("JOINTS", {k: (tuple(round(c, 3) for c in v) if isinstance(v, Vector) else round(v, 2)) for k, v in J.items()})
 ov = Image.open(pre + "_front.png").convert("RGB"); dr = ImageDraw.Draw(ov)
@@ -165,6 +212,85 @@ if SRCIMG:
     img = bpy.data.images.load(os.path.abspath(SRCIMG)); img.pack(); img.name = "concept"; img.use_fake_user = True
     base_uv = me.uv_layers[0]; me.uv_layers.active = base_uv; base_uv.active_render = True
     print("PROJ weighted verts", round(float((w_ > 0.5).mean()), 3))
+# ---- weight clean-up: arms must not pull the head/hood; distance skinning if heat weighting left gaps
+def bone_dist_weights(target, power=4.0):
+    bones = [(b.name, Vector(b.head_local), Vector(b.tail_local)) for b in arm.data.bones]
+    for g in list(target.vertex_groups): target.vertex_groups.remove(g)
+    groups = {n: target.vertex_groups.new(name=n) for n, _, _ in bones}
+    for v in target.data.vertices:
+        p_ = v.co; ds = []
+        for n, h_, t_ in bones:
+            ab = t_ - h_; tt = max(0.0, min(1.0, (p_ - h_).dot(ab) / max(ab.length_squared, 1e-9)))
+            ds.append((n, (h_ + ab * tt - p_).length + 1e-4))
+        ds.sort(key=lambda x: x[1]); near = ds[:3]
+        ws = [1 / d ** power for _, d in near]; tot = sum(ws)
+        for (n, _), w in zip(near, ws): groups[n].add([v.index], w / tot, "REPLACE")
+gap = sum(1 for v in ob.data.vertices if not any(g.weight > 0.01 for g in v.groups)) / len(ob.data.vertices)
+if gap > 0.03:
+    print("FALLBACK distance skinning, gap", round(gap, 3)); bone_dist_weights(ob)
+    if not any(m.type == "ARMATURE" for m in ob.modifiers): am = ob.modifiers.new("arm", "ARMATURE"); am.object = arm
+    ob.parent = arm
+shz = (J["shoulder.L"].z + J["shoulder.R"].z) / 2; shw = abs(J["shoulder.L"].x - J["shoulder.R"].x)
+ARMG = {g.index for g in ob.vertex_groups if g.name.split(".")[0] in ("upper_arm", "forearm", "hand")}
+headg = ob.vertex_groups.get("head") or ob.vertex_groups.get("neck")
+fixed = 0
+for v in ob.data.vertices:
+    if v.co.z > shz + 0.06 * H and abs(v.co.x) < shw * 0.42:
+        aw = sum(g.weight for g in v.groups if g.group in ARMG)
+        if aw > 0.01:
+            for g in v.groups:
+                if g.group in ARMG: g.weight = 0.0
+            headg.add([v.index], aw, "ADD"); fixed += 1
+print("HEAD_CLEAN verts", fixed)
+# loose fragments (coat tails, trims) copy the weights of the nearest point on the main body
+def islands(me_):
+    adj = [[] for _ in me_.vertices]
+    for e in me_.edges: a1, b1 = e.vertices; adj[a1].append(b1); adj[b1].append(a1)
+    lab = [-1] * len(me_.vertices); out = []
+    for i in range(len(lab)):
+        if lab[i] >= 0: continue
+        st = [i]; lab[i] = len(out); cur = []
+        while st:
+            k = st.pop(); cur.append(k)
+            for w in adj[k]:
+                if lab[w] < 0: lab[w] = len(out); st.append(w)
+        out.append(cur)
+    return out
+isl = sorted(islands(ob.data), key=len, reverse=True)
+NV = len(ob.data.vertices)
+others = [x for x in isl if len(x) < 0.02 * NV]
+big = [x for x in isl if len(x) >= 0.02 * NV]
+if os.environ.get("SKIN") == "dist": others = isl
+if others:
+    bones = [(bb.name, Vector(bb.head_local), Vector(bb.tail_local)) for bb in arm.data.bones]
+    groups = {g.name: g for g in ob.vertex_groups}
+    for n, _, _ in bones:
+        if n not in groups: groups[n] = ob.vertex_groups.new(name=n)
+    def seg_d(p_, h_, t_):
+        ab = t_ - h_; tt = max(0.0, min(1.0, (p_ - h_).dot(ab) / max(ab.length_squared, 1e-9))); return (h_ + ab * tt - p_).length + 1e-4
+    RIGID = os.environ.get("PIECE_MODE", "rigid") == "rigid"
+    for part in others:
+        c_ = sum((ob.data.vertices[i].co for i in part), Vector()) / len(part)
+        for g in ob.vertex_groups: g.remove(part)
+        for i in part:
+            p_ = c_ if RIGID else ob.data.vertices[i].co
+            ds = sorted(((n, seg_d(p_, h_, t_)) for n, h_, t_ in bones), key=lambda x: x[1])[:2]
+            ws = [1 / d ** 4 for _, d in ds]; tot = sum(ws)
+            for (n, _), w in zip(ds, ws): groups[n].add([i], w / tot, "REPLACE")
+    pass
+hipz = (J["hip.L"].z + J["hip.R"].z) / 2
+ARMG2 = {g.index for g in ob.vertex_groups if g.name.split(".")[0] in ("upper_arm", "forearm", "hand", "shoulder")}
+spg = ob.vertex_groups.get("spine"); hpg = ob.vertex_groups.get("hips"); tg = 0
+for v in ob.data.vertices:
+    if hipz - 0.02 < v.co.z < shz - 0.03 and abs(v.co.x) < shw * 0.5 * 0.92:
+        aw = sum(g.weight for g in v.groups if g.group in ARMG2 and not ob.vertex_groups[g.group].name.startswith("shoulder"))
+        if aw > 0.01:
+            for g in v.groups:
+                if g.group in ARMG2 and not ob.vertex_groups[g.group].name.startswith("shoulder"): g.weight = 0.0
+            (spg if v.co.z > hipz + 0.35 * (shz - hipz) else hpg).add([v.index], aw, "ADD"); tg += 1
+print("TORSO_GUARD verts", tg)
+if others:
+    print("PIECES distance-weighted", len(others), "of", len(isl), "islands; main", len(big))
 sc.camera = None; bpy.data.objects.remove(cam)
 json.dump({k: list(v) for k, v in J.items() if isinstance(v, Vector)}, open(pre + "_joints.json", "w"))
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(pre + ".blend"))
