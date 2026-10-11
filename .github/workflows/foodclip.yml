@@ -16,9 +16,11 @@ jobs:
       - name: Install
         run: |
           pip install --quiet torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          pip install --quiet open_clip_torch timm onnx onnxruntime pillow numpy
+          pip install --quiet open_clip_torch timm onnx onnxscript onnxruntime pillow numpy
       - name: Build
-        run: python tools/foodclip/build.py . 2>&1 | tee build.log
+        run: |
+          set -o pipefail
+          python tools/foodclip/build.py . 2>&1 | tee build.log
       - name: Report
         if: always()
         run: grep -E "top1|onnx exported|text embeddings|Error|error" build.log | sed 's/^/::notice::/' || true

@@ -64,7 +64,11 @@ try:
 except Exception:
     pass
 fp32 = os.path.join(OUT, "foodclip_fp32.onnx")
-torch.onnx.export(wrapped, torch.randn(1, 3, size, size), fp32, input_names=["pixels"], output_names=["embedding"], opset_version=17, do_constant_folding=True)
+kw = dict(input_names=["pixels"], output_names=["embedding"], opset_version=17, do_constant_folding=True)
+try:
+    torch.onnx.export(wrapped, torch.randn(1, 3, size, size), fp32, dynamo=False, **kw)   # classic exporter: most compatible
+except TypeError:
+    torch.onnx.export(wrapped, torch.randn(1, 3, size, size), fp32, **kw)
 print("onnx exported", os.path.getsize(fp32) // 1_000_000, "MB")
 
 import onnxruntime as ort
