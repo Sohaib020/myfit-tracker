@@ -14,13 +14,15 @@ for sp in spaces:
         pre = c.predict(image=handle_file(img), api_name="/preprocess_image")
         print("preprocessed", pre)
         t = time.time()
-        vid = c.predict(image=handle_file(pre if isinstance(pre, str) else img), multiimages=[], seed=7, ss_guidance_strength=7.5,
+        res = c.predict(image=handle_file(pre if isinstance(pre, str) else img), multiimages=[], seed=7, ss_guidance_strength=7.5,
                         ss_sampling_steps=12, slat_guidance_strength=3, slat_sampling_steps=12, multiimage_algo="stochastic",
-                        api_name="/image_to_3d")
-        print("image_to_3d", round(time.time() - t), "s", vid)
-        glb = c.predict(mesh_simplify=0.9, texture_size=1024, api_name="/extract_glb")
-        print("extract_glb", glb)
-        g = glb[0] if isinstance(glb, (list, tuple)) else glb
+                        mesh_simplify=0.9, texture_size=1024, api_name="/generate_and_extract_glb")
+        print("generate_and_extract_glb", round(time.time() - t), "s", res)
+        g = res[2] or res[1]
+        try:
+            v = res[0]["video"] if isinstance(res[0], dict) else res[0]
+            shutil.copy(v, out[:-4] + "_preview.mp4")
+        except Exception as e: print("no video", e)
         shutil.copy(g, out); print("GLB_OK", os.path.getsize(out)); sys.exit(0)
     except SystemExit: raise
     except Exception as e:
