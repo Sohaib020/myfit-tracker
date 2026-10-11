@@ -56,7 +56,7 @@ jobs:
         with: { path: parts }
       - name: Merge + pack
         run: |
-          pip install -q pillow
+          pip install -q pillow numpy
           mkdir -p out frames && for d in parts/*/; do cp -rn "$d"* frames/; done
           cp frames/*.png frames/*.log frames/inventory.json out/ 2>/dev/null || true
           python tools/char3d/pack.py frames out/pack | tee out/pack.txt

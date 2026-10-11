@@ -7,11 +7,14 @@ SIZE = 448
 CLIPS = {"idle": 60, "flex": 50, "victory": 50}      # ms per frame
 os.makedirs(out, exist_ok=True)
 def ld(p): return Image.open(p).convert("RGBA").resize((SIZE, SIZE), Image.LANCZOS)
-def bg():
-    im = Image.new("RGBA", (SIZE, SIZE), (10, 12, 9, 255)); d = ImageDraw.Draw(im)
-    for r in range(260, 0, -4):
-        a = int(70 * (1 - r / 260)); d.ellipse((SIZE / 2 - r, SIZE * 0.78 - r * 0.5, SIZE / 2 + r, SIZE * 0.78 + r * 0.5), fill=(120 + a // 2, 170 + a // 3, 40, a // 3 + 2))
-    return im
+def bg():   # Carbon & Lime-like: near-black with a soft lime floor glow
+    import numpy as np
+    y, x = np.mgrid[0:SIZE, 0:SIZE].astype(np.float32)
+    d = np.sqrt(((x - SIZE / 2) / (SIZE * 0.55)) ** 2 + ((y - SIZE * 0.86) / (SIZE * 0.22)) ** 2)
+    g = np.clip(1 - d, 0, 1) ** 1.6
+    base = np.array([10, 12, 9], np.float32); lime = np.array([110, 160, 30], np.float32)
+    im = base + g[..., None] * (lime - base) * 0.45
+    return Image.fromarray(np.dstack([im, np.full((SIZE, SIZE), 255, np.float32)]).astype("uint8"), "RGBA")
 B = bg()
 total = 0
 p = sorted(glob.glob(os.path.join(src, "portrait", "*.png")))

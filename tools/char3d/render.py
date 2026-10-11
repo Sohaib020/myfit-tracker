@@ -219,11 +219,13 @@ def blend(a, b, t):
     return {k: (lerp3(A[k], B[k], t) if isinstance(A[k], tuple) else A[k] + (B[k] - A[k]) * t) for k in A}
 def apply(spec, breath=0.0, sway=0.0):
     reset(); fists(spec["fist"])
-    if "spine04" in pb: aim("spine04", (0, -0.035 * breath, 1))
+    for n, k in (("spine03", 1.6), ("spine02", 1.0)):      # breathing: tiny local chest lift
+        if n in pb: pb[n].rotation_quaternion = Euler((math.radians(-k * breath), 0, 0)).to_quaternion()
     up = P(*spec["up"]); lo = P(*spec["lo"])
     up = (up[0] + 0.03 * breath * S, up[1], up[2])
     arms(up, lo)
-    aim("head", (spec["head"][0] + sway * 0.06, spec["head"][1], spec["head"][2]))
+    if spec["head"][1] < -0.15: aim("head", spec["head"])          # only big head moves (victory look-up)
+    elif sway and "head" in pb: pb["head"].rotation_quaternion = Euler((0, 0, math.radians(2.5 * sway))).to_quaternion()
 def pose(name): apply(POSE[name])
 
 def ease(t): return t * t * (3 - 2 * t)
@@ -308,7 +310,7 @@ else:
         else:
             sp, br, sw = clip_spec(c, i / n); apply(sp, br, sw); yaw = 14
         os.makedirs(os.path.join(OUT, c), exist_ok=True)
-        r = h * 2.25; a = math.radians(-90 + yaw)
+        r = h * 1.95; a = math.radians(-90 + yaw)
         cam.location = (r * math.cos(a), r * math.sin(a), h * 0.34)
         sc.render.filepath = os.path.join(OUT, c, "%03d.png" % i)
         bpy.ops.render.render(write_still=True); print("FRAME", c, i)
