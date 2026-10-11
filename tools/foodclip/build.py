@@ -146,5 +146,5 @@ for p in (fp32, q8):
 meta = {"arch": ARCH, "tag": TAG, "size": size, "mean": mean, "std": std, "dim": d, "count": n,
         "quant": "int8" if use_int8 else "fp32", "icon_top1": b1 if use_int8 else a1, "icon_top5": b5 if use_int8 else a5,
         "temperature": 100.0, "bytes": os.path.getsize(final)}
-json.dump(meta, open(os.path.join(OUT, "meta.json"), "w"), indent=1)
-print(json.dumps(meta))
+json.dump(meta, open(os.path.join(OUT, "meta.json"), "w"), indent=1, default=lambda o: o.item() if hasattr(o, "item") else str(o))
+print(json.dumps(meta, default=lambda o: o.item() if hasattr(o, "item") else str(o)))
