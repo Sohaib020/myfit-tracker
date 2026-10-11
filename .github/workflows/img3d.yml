@@ -26,6 +26,8 @@ jobs:
             for t in 1 2 3; do python tools/img3d/trellis.py "$f" "glb/$n.glb" >> glb/trellis.log 2>&1 && break; sleep 30; done
           done
           ls -la glb; grep -E "GLB_OK|FAIL" glb/trellis.log | cut -c1-300
+          grep -E "FAIL|Error|error" glb/trellis.log | sort -u | head -5 | while read -r l; do echo "::warning::${l:0:300}"; done
+          [ -n "$HF_TOKEN" ] && echo "::notice::HF token present" || echo "::warning::HF token missing"
       - id: n
         run: echo "names=$(ls glb/*.glb | xargs -n1 basename | sed 's/\.glb$//' | python3 -c 'import sys,json;print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))')" >> $GITHUB_OUTPUT
       - uses: actions/upload-artifact@v4
