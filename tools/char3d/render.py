@@ -127,22 +127,24 @@ for v in me.vertices:
     zz = z(v); aw = wsum(v, ARM); hw = wsum(v, HEAD)
     tank = min(zz - (waist - 0.03), (neck + 0.02) - zz, (0.30 - aw) * 0.2, (0.25 - hw) * 0.2)
     shorts = min(zz - thigh, (waist + 0.025) - zz, (0.5 - aw) * 0.2)
-    att.data[v.index].color = (tank, shorts, zz - thigh, (waist + 0.025) - zz)
+    E = lambda f: max(0.0, min(1.0, 0.5 + f * 0.5))   # encode around 0.5: colour attributes clamp negatives
+    att.data[v.index].color = (E(tank), E(shorts), E(zz - thigh), E((waist + 0.025) - zz))
 
 def kit_material(m):
     nt = m.node_tree; N = nt.nodes.new; L = nt.links.new
     out = next(n for n in nt.nodes if n.type == "OUTPUT_MATERIAL" and n.is_active_output)
     src = out.inputs["Surface"].links[0].from_socket
-    a = N("ShaderNodeVertexColor"); a.layer_name = "kit"
+    a = N("ShaderNodeAttribute"); a.attribute_name = "kit"
+    for l in list(out.inputs["Displacement"].links): nt.links.remove(l)
     sep = N("ShaderNodeSeparateColor"); L(a.outputs["Color"], sep.inputs[0])
     def cmp(sock, op, v):
         mth = N("ShaderNodeMath"); mth.operation = op; L(sock, mth.inputs[0]); mth.inputs[1].default_value = v; return mth.outputs[0]
     def mm(x, y, op="MAXIMUM"):
         mth = N("ShaderNodeMath"); mth.operation = op; L(x, mth.inputs[0]); L(y, mth.inputs[1]); return mth.outputs[0]
-    t = cmp(sep.outputs[0], "GREATER_THAN", 0); sh = cmp(sep.outputs[1], "GREATER_THAN", 0)
+    t = cmp(sep.outputs[0], "GREATER_THAN", 0.5); sh = cmp(sep.outputs[1], "GREATER_THAN", 0.5)
     mask = mm(t, sh)
-    hem = mm(sh, cmp(sep.outputs[2], "LESS_THAN", 0.014), "MULTIPLY")
-    band = mm(sh, cmp(a.outputs["Alpha"], "LESS_THAN", 0.022), "MULTIPLY")
+    hem = mm(sh, cmp(sep.outputs[2], "LESS_THAN", 0.507), "MULTIPLY")
+    band = mm(sh, cmp(a.outputs["Alpha"], "LESS_THAN", 0.511), "MULTIPLY")
     fab = N("ShaderNodeBsdfPrincipled"); fab.inputs["Roughness"].default_value = 0.38; fab.inputs["Sheen Weight"].default_value = 0.5
     fab.inputs["Specular IOR Level"].default_value = 0.6
     c1 = N("ShaderNodeMix"); c1.data_type = "RGBA"; L(sh, c1.inputs["Factor"]); c1.inputs[6].default_value = (0.012, 0.012, 0.015, 1); c1.inputs[7].default_value = (0.035, 0.004, 0.01, 1)
