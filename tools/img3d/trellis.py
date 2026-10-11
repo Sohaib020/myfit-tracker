@@ -7,7 +7,9 @@ spaces = [s for s in os.environ.get("HF_SPACE", "trellis-community/TRELLIS,Jeffr
 last = None
 for sp in spaces:
     try:
-        c = Client(sp, verbose=False, hf_token=os.environ.get("HF_TOKEN") or None)
+        tok = os.environ.get("HF_TOKEN") or None
+        try: c = Client(sp, verbose=False, token=tok)
+        except TypeError: c = Client(sp, verbose=False, hf_token=tok)
         print("SPACE", sp)
         try: c.predict(api_name="/start_session")
         except Exception as e: print("start_session:", str(e)[:120])
