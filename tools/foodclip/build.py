@@ -101,21 +101,38 @@ def evaluate(path_model):
         t1 += int(top[0] == gt); t5 += int(gt in top)
     return t1 / max(1, len(icons)), t5 / max(1, len(icons)), np.stack(vecs)
 
-# static int8 (QDQ, per-channel) calibrated on real dish images — far more faithful than dynamic quantisation for convs
-class Cal(CalibrationDataReader):
-    def __init__(s, paths): s.it = iter(paths)
-    def get_next(s):
-        p = next(s.it, None)
-        return None if p is None else {"pixels": prep(p)}
-try:
-    quant_pre_process(fp32, pre)
-    src = pre
-except Exception as e:
-    print("pre-process skipped", e); src = fp32
-quantize_static(src, q8, Cal(icons[::3][:120]), quant_format=QuantFormat.QDQ, per_channel=True,
-                activation_type=QuantType.QUInt8, weight_type=QuantType.QInt8)
-if os.path.exists(pre): os.remove(pre)
-print("int8 size", os.path.getsize(q8) // 1_000_000, "MB")
+# weight-only int8: every large Conv / MatMul / Gemm weight is stored as int8 + per-output-channel scale and
+# de-quantised once when the model loads. Small download (~4x smaller), activations stay float → near-fp32 accuracy.
+import onnx
+from onnx import numpy_helper, helper
+m = onnx.load(fp32)
+g = m.graph
+inits = {i.name: i for i in g.initializer}
+users = {}
+for node in g.node:
+    for k, inp in enumerate(node.input):
+        users.setdefault(inp, []).append((node, k))
+new_inits, new_nodes, replaced = [], [], 0
+for name, init in list(inits.items()):
+    arr = numpy_helper.to_array(init)
+    if arr.dtype != np.float32 or arr.size < 4096 or arr.ndim < 2: continue
+    us = users.get(name, [])
+    if not us or not all(n.op_type in ("Conv", "MatMul", "Gemm", "ConvTranspose") for n, _ in us): continue
+    axis = 0 if us[0][0].op_type in ("Conv", "ConvTranspose") or (us[0][0].op_type == "Gemm") else arr.ndim - 1
+    red = tuple(i for i in range(arr.ndim) if i != axis)
+    scale = (np.abs(arr).max(axis=red) / 127.0).astype(np.float32)
+    scale[scale == 0] = 1e-8
+    shp = [1] * arr.ndim; shp[axis] = -1
+    q = np.clip(np.round(arr / scale.reshape(shp)), -127, 127).astype(np.int8)
+    g.initializer.remove(init)
+    new_inits += [numpy_helper.from_array(q, name + "_q"), numpy_helper.from_array(scale, name + "_s"),
+                  numpy_helper.from_array(np.zeros(scale.shape, np.int8), name + "_z")]
+    new_nodes.append(helper.make_node("DequantizeLinear", [name + "_q", name + "_s", name + "_z"], [name], axis=axis, name=name + "_dq"))
+    replaced += 1
+g.initializer.extend(new_inits)
+for i, n in enumerate(new_nodes): g.node.insert(i, n)
+onnx.save(m, q8)
+print("weight-only int8:", replaced, "tensors · int8 size", os.path.getsize(q8) // 1_000_000, "MB")
 
 a1, a5, v32 = evaluate(fp32)
 b1, b5, v8 = evaluate(q8)
