@@ -67,7 +67,7 @@ fun DrawScope.drawBackdrop(theme: FitTheme, image: ImageBitmap?, t: Float, w: Fl
         when (theme.art) {
             BackdropArt.AURORA -> aurora(theme, t, w, h)
             BackdropArt.GRID -> grid(theme, t, w, h)
-            BackdropArt.HEX, BackdropArt.SPEED, BackdropArt.PLATES, BackdropArt.DOTS -> gym(theme, t, w, h)
+            BackdropArt.HEX, BackdropArt.SPEED, BackdropArt.PLATES, BackdropArt.DOTS, BackdropArt.PULSE -> gym(theme, t, w, h)
             BackdropArt.PLAIN -> plain(theme, w, h)
             BackdropArt.GRADIENT -> gradient(theme, t, w, h)
             BackdropArt.WAVES -> waves(theme, t, w, h)
@@ -196,6 +196,39 @@ private fun DrawScope.gym(th: FitTheme, t: Float, w: Float, h: Float) {
             val c2 = Offset(-w * 0.1f, h * 0.12f)
             r = w * 0.06f
             repeat(9) { drawCircle(th.accent.copy(alpha = 0.05f + if (it % 3 == 0) 0.04f else 0f), r, c2, style = Stroke(1.4f)); r += w / 18f }
+        }
+        BackdropArt.PULSE -> {
+            // fine grid (like Carbon & Lime) + three heart-rate traces, the middle one glowing in the accent
+            val step = w / 12f
+            var gx = 0f
+            while (gx <= w) { drawLine(ink.copy(alpha = 0.035f), Offset(gx, 0f), Offset(gx, h), 1.2f); gx += step }
+            var gy = 0f
+            while (gy <= h) { drawLine(ink.copy(alpha = 0.035f), Offset(0f, gy), Offset(w, gy), 1.2f); gy += step }
+            val drift = (t * 0.02f % 1f) * w * 0.5f
+            for (k in 0..2) {
+                val base = h * (0.22f + k * 0.26f)
+                val amp = h * (if (k == 1) 0.06f else 0.035f)
+                val path = Path()
+                var x = -w * 0.5f + drift
+                path.moveTo(x, base)
+                while (x < w * 1.2f) {
+                    // flat · small bump · sharp spike · dip · flat — one heartbeat every ~0.42 w
+                    val seg = w * 0.42f
+                    path.lineTo(x + seg * 0.30f, base)
+                    path.lineTo(x + seg * 0.36f, base - amp * 0.25f)
+                    path.lineTo(x + seg * 0.42f, base)
+                    path.lineTo(x + seg * 0.48f, base + amp * 0.35f)
+                    path.lineTo(x + seg * 0.54f, base - amp * 1.6f)
+                    path.lineTo(x + seg * 0.60f, base + amp * 0.7f)
+                    path.lineTo(x + seg * 0.66f, base)
+                    path.lineTo(x + seg, base)
+                    x += seg
+                }
+                if (k == 1) {
+                    drawPath(path, th.accent.copy(alpha = if (th.isLight) 0.10f else 0.14f), style = Stroke(w * 0.022f))
+                    drawPath(path, th.accent.copy(alpha = if (th.isLight) 0.35f else 0.45f), style = Stroke(2.4f))
+                } else drawPath(path, ink.copy(alpha = 0.06f), style = Stroke(1.6f))
+            }
         }
         else -> { // DOTS
             val g = w / 15f

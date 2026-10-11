@@ -327,12 +327,9 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
                     }
                 }
             }
-            item(key = "arrange", span = full) {
-                val nav = LocalNav.current
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Spacer(Modifier.height(8.dp))
-                    com.myfit.tracker.ui.theme.GlassButton("Show / hide cards", { nav.push(Overlay.ArrangeDash) }, icon = Duo.Tune, height = 44.dp)
-                }
+            item(key = "arrangeHint", span = full) {
+                Text("Long-press any card to resize it, hide it or bring hidden cards back", style = FitType.caption, color = LocalFitTheme.current.textFaint,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
 
@@ -343,6 +340,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
             })
         }
         val sel = selected
+        val navTb = LocalNav.current
         AnimatedVisibility(
             visible = sel != null && dragKey == null && selBounds != null,
             enter = fadeIn() + scaleIn(initialScale = 0.85f), exit = fadeOut() + scaleOut(targetScale = 0.9f),
@@ -368,6 +366,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
                 onSize = { setSize(sel, it) },
                 onHide = { hide(sel) },
                 onDone = { selected = null },
+                onCards = { selected = null; navTb.push(Overlay.ArrangeDash) },
             )
         }
     }
@@ -398,9 +397,9 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
     }
 }
 
-/** Floating toolbar on a lifted card: Small / Large, Hide, Done. */
+/** Floating toolbar on a lifted card (long-press any tile): Small / Large, Hide, all cards (show hidden / arrange), Done. */
 @Composable
-private fun CardToolbar(small: Boolean, onSize: (Boolean) -> Unit, onHide: () -> Unit, onDone: () -> Unit) {
+private fun CardToolbar(small: Boolean, onSize: (Boolean) -> Unit, onHide: () -> Unit, onDone: () -> Unit, onCards: () -> Unit) {
     val th = LocalFitTheme.current
     Glass(
         Modifier.height(48.dp), shape = RoundedCornerShape(24.dp), pressScale = 1f,
@@ -417,6 +416,7 @@ private fun CardToolbar(small: Boolean, onSize: (Boolean) -> Unit, onHide: () ->
             }
             Spacer(Modifier.width(4.dp))
             ToolAction(Duo.Close, "Hide", th.text, onHide)
+            ToolAction(Duo.Tune, "Cards", th.text, onCards)
             Box(Modifier.size(38.dp).clip(CircleShape).drawBehind { drawCircle(Brush.verticalGradient(listOf(th.accentBright, th.accent))) }.clickableNoRipple(onDone), contentAlignment = Alignment.Center) {
                 Icon(Duo.Check, "Done", tint = th.onAccent, modifier = Modifier.size(20.dp))
             }

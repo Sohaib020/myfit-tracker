@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -133,5 +135,65 @@ private fun ThemeTile(t: FitTheme, selected: Boolean, flat: Boolean, modifier: M
         }
         Spacer(Modifier.height(6.dp))
         Text(t.name, style = FitType.caption, color = if (selected) th.text else th.textDim, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/**
+ * R19: compact theme card for Settings — the current theme as a live mini preview, a glance of the others and one
+ * button that opens the full picker in a sheet (instead of a long grid taking over the page).
+ */
+@Composable
+fun ThemeGlanceCard(container: AppContainer, settings: AppSettings) {
+    val th = LocalFitTheme.current
+    val cur = Themes.byId(settings.themeId)
+    var open by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val canGlass = com.myfit.tracker.ui.theme.UiStyle.glassCapable
+    val flat = settings.uiStyle == 1 || !canGlass
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickableNoRipple { open = true }) {
+        Box(Modifier.width(78.dp).aspectRatio(0.66f)) { ThemeTileArt(cur, flat) }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text("THEME", style = FitType.overline, color = th.textDim)
+            Text(cur.name, style = FitType.title, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Caption(if (canGlass) (if (flat) "Flat cards" else "Glass cards") + " · ${Themes.all.size} themes" else "${Themes.all.size} themes")
+            Spacer(Modifier.height(10.dp))
+            // a glance at the others: accent dots in their own colours
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Themes.all.filter { it.id != cur.id }.take(7).forEach { t ->
+                    Canvas(Modifier.size(20.dp)) {
+                        drawCircle(androidx.compose.ui.graphics.Brush.linearGradient(listOf(t.accentBright, t.bgTop)))
+                        drawCircle(Color.White.copy(alpha = 0.35f), style = Stroke(1.5f))
+                    }
+                }
+                Text("+${(Themes.all.size - 8).coerceAtLeast(0)}", style = FitType.caption, color = th.textDim)
+            }
+        }
+        androidx.compose.material3.Icon(Duo.KeyboardArrowRight, "Change theme", tint = th.textDim)
+    }
+    com.myfit.tracker.ui.components.GlassSheet(visible = open, onDismiss = { open = false }) {
+        Text("Theme & style", style = FitType.title, color = th.text)
+        Spacer(Modifier.height(12.dp))
+        ThemePicker(container, settings)
+        Spacer(Modifier.height(8.dp))
+    }
+}
+
+/** The theme's real background, scaled down, with two sample cards and its accent button. */
+@Composable
+private fun ThemeTileArt(t: FitTheme, flat: Boolean) {
+    val backdrop = LocalBackdrop.current
+    Canvas(Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)).border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(16.dp))) {
+        val full = backdrop.rootSize
+        if (full.width > 0) {
+            val s = size.width / full.width
+            scale(s, s, pivot = Offset.Zero) { drawBackdrop(t, null, t.stillT, full.width, full.height) }
+        } else drawRect(t.bgBottom)
+        val r = CornerRadius(12f)
+        fun card(y: Float, role: Color) {
+            drawRoundRect(if (flat) t.flatSurface(role) else t.glassFallback.copy(alpha = 0.55f), topLeft = Offset(size.width * 0.1f, size.height * y), size = Size(size.width * 0.8f, size.height * 0.2f), cornerRadius = r)
+            drawRoundRect(role, topLeft = Offset(size.width * 0.16f, size.height * (y + 0.03f)), size = Size(size.width * 0.12f, size.width * 0.12f), cornerRadius = CornerRadius(6f))
+        }
+        card(0.14f, t.protein); card(0.38f, t.water)
+        drawRoundRect(t.accent, topLeft = Offset(size.width * 0.1f, size.height * 0.8f), size = Size(size.width * 0.8f, size.height * 0.1f), cornerRadius = CornerRadius(40f))
     }
 }
