@@ -112,6 +112,8 @@ android {
     }
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+        // several native SDKs (LiteRT-LM, MediaPipe, ONNX Runtime, sherpa) ship the same C++ runtime
+        jniLibs { pickFirsts += listOf("**/libc++_shared.so") }
     }
     // MediaPipe memory-maps its .task models straight from the APK
     androidResources { noCompress += "task" }
