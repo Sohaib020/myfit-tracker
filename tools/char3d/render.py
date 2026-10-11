@@ -102,6 +102,9 @@ bpy.context.view_layer.update()
 def bone_z(n): return (rig.matrix_world @ rig.data.bones[n].head_local).z
 hip = bone_z("upperleg01.L"); knee = bone_z("lowerleg01.L"); neck = bone_z("neck01")
 waist = hip + 0.30 * (neck - hip); thigh = hip - 0.50 * (hip - knee)
+_vis = [(m, m.show_viewport) for m in human.modifiers]
+for m, _ in _vis: m.show_viewport = False
+bpy.context.view_layer.update()
 dg = bpy.context.evaluated_depsgraph_get()
 rest = bpy.data.meshes.new_from_object(human.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
 gi = {g.name: g.index for g in human.vertex_groups}
@@ -111,6 +114,8 @@ def wsum(v, prefixes):
     if ids is None: ids = _gs[prefixes] = {i for k, i in gi.items() if k.startswith(prefixes)}
     return sum(g.weight for g in v.groups if g.group in ids)
 
+for m, v in _vis: m.show_viewport = v
+bpy.context.view_layer.update()
 RV = rest.vertices
 def z(v): return (human.matrix_world @ RV[v.index].co).z
 print("VCOUNT", len(RV), len(human.data.vertices))
