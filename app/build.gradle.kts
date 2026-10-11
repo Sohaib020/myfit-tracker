@@ -113,7 +113,8 @@ android {
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
         // several native SDKs (LiteRT-LM, MediaPipe, ONNX Runtime, sherpa) ship the same C++ runtime
-        jniLibs { pickFirsts += listOf("**/libc++_shared.so") }
+        // sherpa-onnx and ONNX Runtime both ship libonnxruntime.so — kept at the SAME version (1.28.2), so either copy works
+        jniLibs { pickFirsts += listOf("**/libc++_shared.so", "**/libonnxruntime.so") }
     }
     // MediaPipe memory-maps its .task models straight from the APK
     androidResources { noCompress += "task" }
@@ -206,7 +207,7 @@ dependencies {
     // R17 camera coach: MediaPipe Pose Landmarker (heavy) + Face Landmarker for head pose — models fetched at build time
     implementation("com.google.mediapipe:tasks-vision:0.10.14")
     // R18 offline food recogniser (MobileCLIP image encoder, downloaded in the background)
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.19.2")
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.28.2")   // same ORT version sherpa-onnx 1.13.8 bundles
     // accounts, friends & leaderboards
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth")
