@@ -1,0 +1,8 @@
+flex.webp: 728 KB
+idle.webp: 748 KB
+portrait.webp: 26 KB
+preview_flex.gif: 1089 KB
+preview_idle.gif: 1158 KB
+preview_victory.gif: 1052 KB
+victory.webp: 693 KB
+PACK webp total 2.14 MB
