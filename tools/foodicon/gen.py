@@ -32,7 +32,12 @@ for n, i in enumerate(ids):
            "--clip_l", f"{models}/clip_l.safetensors", "--t5xxl", f"{models}/t5xxl.gguf",
            "-p", prompt, "--cfg-scale", "1.0", "--sampling-method", "euler", "--steps", str(STYLE.get("steps", 4)),
            "-W", wd, "-H", ht, "--vae-tiling", "--seed", str(seed), "-t", str(max(1, (os.cpu_count() or 4) - 1)), "-o", f"raw/{i}.png"]
+    init = STYLE.get("init", {}).get(i)
+    if init:   # img2img: keep the character from a chosen image, change the outfit (strength = how much may change)
+        cmd += ["--init-img", os.path.join(H, init), "--strength", str(STYLE.get("strength", 0.62))]
     r = subprocess.run(cmd, capture_output=True, text=True)
+    if init and (r.returncode != 0 or not os.path.exists(f"raw/{i}.png")):
+        r = subprocess.run(cmd[:1] + ["-M", "img2img"] + cmd[1:], capture_output=True, text=True)
     if r.returncode != 0 or not os.path.exists(f"raw/{i}.png"):
         print("FAIL", i, r.stdout[-2000:], r.stderr[-2000:], flush=True)
         fails += 1

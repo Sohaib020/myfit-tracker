@@ -1,32 +1,70 @@
-name: Image to 3D test
-# Free route: concept image -> TRELLIS (public HF demo, MIT) -> GLB -> Blender toon turntable. Push to img3d-run.
+name: Anime 3D characters
+# Free route: model-sheet image -> TRELLIS (public HF demo, MIT) -> GLB -> auto-rig (MediaPipe + Blender heat weights)
+# -> cel-shaded clips -> Pip-style WebP packs. Inputs: tools/img3d/inputs/<name>.png|jpg. Push to img3d-run.
 on:
   push:
     branches: [ img3d-run ]
   workflow_dispatch:
 permissions: { contents: write }
 jobs:
-  make:
+  model:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 40
+    outputs:
+      names: ${{ steps.n.outputs.names }}
     steps:
       - uses: actions/checkout@v4
-      - name: TRELLIS
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: TRELLIS image -> 3D
         run: |
           pip install -q gradio_client
-          mkdir -p out
-          for f in tools/img3d/inputs/*.jpg tools/img3d/inputs/*.png; do [ -f "$f" ] || continue
-            n=$(basename "${f%.*}"); python tools/img3d/trellis.py "$f" "out/$n.glb" 2>&1 | tee -a out/trellis.log || true
+          mkdir -p glb
+          for f in tools/img3d/inputs/*; do n=$(basename "${f%.*}")
+            for t in 1 2 3; do python tools/img3d/trellis.py "$f" "glb/$n.glb" >> glb/trellis.log 2>&1 && break; sleep 30; done
           done
-          ls -la out
-      - name: Blender toon turntable
+          ls -la glb; grep -E "GLB_OK|FAIL" glb/trellis.log | cut -c1-300
+      - id: n
+        run: echo "names=$(ls glb/*.glb | xargs -n1 basename | sed 's/\.glb$//' | python3 -c 'import sys,json;print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))')" >> $GITHUB_OUTPUT
+      - uses: actions/upload-artifact@v4
+        with: { name: glb, path: glb }
+  anim:
+    needs: model
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: { name: '${{ fromJSON(needs.model.outputs.names) }}' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - uses: actions/download-artifact@v4
+        with: { name: glb, path: glb }
+      - name: Rig + animate
         run: |
-          ls out/*.glb >/dev/null 2>&1 || exit 0
           sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 libxrender1 libxxf86vm1 libxfixes3 >/dev/null
-          curl -fsSL https://download.blender.org/release/Blender4.2/blender-4.2.3-linux-x64.tar.xz | tar -xJ
-          for g in out/*.glb; do ./blender-4.2.3-linux-x64/blender -b -P tools/img3d/turntable.py -- "$g" "${g%.glb}" 2>&1 | grep -E "Saved|Error|TURN" | tail -5; done
-      - name: Publish to img3d-assets
+          pip install -q bpy==4.2.0 mediapipe==0.10.14 pillow numpy
+          N=${{ matrix.name }}; mkdir -p out/$N
+          python tools/img3d/autorig.py glb/$N.glb out/$N/rig 2>&1 | grep -E "JOINTS|UNWEIGHT|RIG_|Error|Traceback" | cut -c1-400
+          python tools/img3d/animate.py out/$N/rig.blend out/$N/stills stills 2>&1 | grep -E "ANIM|Error|Traceback"
+          SAMPLES=16 python tools/img3d/animate.py out/$N/rig.blend out/$N/frames clips 2>&1 | grep -E "ANIM|Error|Traceback"
+          python tools/char3d/pack.py out/$N/frames out/$N/pack | tail -3
+          rm -rf out/$N/frames out/$N/rig.blend1
+      - uses: actions/upload-artifact@v4
         if: always()
+        with: { name: 'out-${{ matrix.name }}', path: out }
+  publish:
+    needs: [model, anim]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: parts }
+      - name: Publish to img3d-assets
         run: |
-          cd out && git init -q && git checkout -q -b img3d-assets && git add -A
-          git -c user.name=ci -c user.email=ci@x commit -qm "img3d ${{ github.run_number }}" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" img3d-assets
+          mkdir -p pub && cp -r parts/glb pub/ 2>/dev/null || true
+          for d in parts/out-*/; do cp -r "$d"* pub/; done
+          find pub -name "*.blend" -size +40M -delete
+          cd pub && git init -q && git checkout -q -b img3d-assets && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "anime 3D ${{ github.run_number }}" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" img3d-assets
