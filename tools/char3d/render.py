@@ -121,11 +121,16 @@ def z(v): return (human.matrix_world @ RV[v.index].co).z
 print("VCOUNT", len(RV), len(human.data.vertices))
 ARM, HEAD = ("upperarm", "lowerarm", "hand", "finger", "wrist"), ("neck", "head", "jaw")
 # per-vertex signed fields (metres-ish; > 0 = inside). Interpolated across faces, so the cut lines come out smooth.
+SHX = abs((rig.matrix_world @ rig.data.bones['upperarm01.L'].head_local).x)
+print('SHOULDER X', SHX)
 me = human.data
 att = me.color_attributes.new("kit", "FLOAT_COLOR", "POINT")
 for v in me.vertices:
     zz = z(v); aw = wsum(v, ARM); hw = wsum(v, HEAD)
-    tank = min(zz - (waist - 0.03), (neck + 0.02) - zz, (0.30 - aw) * 0.2, (0.25 - hw) * 0.2)
+    ax = abs((human.matrix_world @ RV[v.index].co).x)
+    side = (SHX * 0.80 - ax) if zz > neck - 0.20 else 1.0                       # racer-back arm holes
+    scoop = (neck - 0.045 + 1.4 * max(0.0, ax - 0.055)) - zz                   # scoop neckline
+    tank = min(zz - (waist - 0.03), scoop, side, (0.45 - aw) * 0.2, (0.25 - hw) * 0.2)
     shorts = min(zz - thigh, (waist + 0.025) - zz, (0.5 - aw) * 0.2)
     E = lambda f: max(0.0, min(1.0, 0.5 + f * 0.5))   # encode around 0.5: colour attributes clamp negatives
     att.data[v.index].color = (E(tank), E(shorts), E(zz - thigh), E((waist + 0.025) - zz))
@@ -156,8 +161,9 @@ def kit_material(m):
     L(em.outputs[2], fab.inputs["Emission Color"]); L(mm(hem, band), fab.inputs["Emission Strength"])
     mix = N("ShaderNodeMixShader"); L(mask, mix.inputs[0]); L(src, mix.inputs[1]); L(fab.outputs[0], mix.inputs[2])
     L(mix.outputs[0], out.inputs["Surface"])
+print("SLOTS", [(sl.material.name if sl.material else None) for sl in human.material_slots])
 for sl in human.material_slots:
-    if sl.material and sl.material.use_nodes and "body" in sl.material.name.lower(): kit_material(sl.material); print("KIT on", sl.material.name)
+    if sl.material and sl.material.use_nodes: kit_material(sl.material); print("KIT on", sl.material.name)
 
 # ---- posing by aiming bones at world directions (independent of bone roll)
 from mathutils import Matrix
@@ -200,14 +206,44 @@ S = 1 if (rig.matrix_world @ rig.data.bones["upperarm01.L"].head_local).x > 0 el
 print("LEFT SIDE SIGN", S)
 def P(x, y, zz): return (x * S, y, zz)
 
-def pose(name):
-    reset(); fists(65 if name != "victory" else 80)
-    if name == "idle":      arms(P(0.22, 0.04, -1), P(0.12, -0.22, -1))
-    elif name == "flex":    # double biceps
-        arms(P(1, 0.12, -0.35), P(0.05, 0.12, 1))
-    elif name == "victory": aim("head", (0, -0.25, 1)); arms(P(0.55, 0.05, 1), P(0.3, 0, 1))
-    elif name == "hero":    # fists on hips
-        arms(P(0.75, 0.25, -0.62), P(-0.55, -0.35, -0.45))
+def mirror(d): return (-d[0], d[1], d[2])
+POSE = {   # left-side directions (mirrored for right); extra bones listed explicitly
+    "idle":    {"up": (0.22, 0.04, -1), "lo": (0.12, -0.22, -1), "head": (0, -0.04, 1), "fist": 60},
+    "flex":    {"up": (1, 0.12, -0.35), "lo": (0.05, 0.12, 1), "head": (0, -0.08, 1), "fist": 85},
+    "victory": {"up": (0.55, 0.05, 1), "lo": (0.3, 0, 1), "head": (0, -0.25, 1), "fist": 85},
+    "hero":    {"up": (0.75, 0.25, -0.62), "lo": (-0.55, -0.35, -0.45), "head": (0, -0.05, 1), "fist": 70},
+}
+def lerp3(a, b, t): return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
+def blend(a, b, t):
+    A, B = POSE[a] if isinstance(a, str) else a, POSE[b] if isinstance(b, str) else b
+    return {k: (lerp3(A[k], B[k], t) if isinstance(A[k], tuple) else A[k] + (B[k] - A[k]) * t) for k in A}
+def apply(spec, breath=0.0, sway=0.0):
+    reset(); fists(spec["fist"])
+    if "spine04" in pb: aim("spine04", (0, -0.035 * breath, 1))
+    up = P(*spec["up"]); lo = P(*spec["lo"])
+    up = (up[0] + 0.03 * breath * S, up[1], up[2])
+    arms(up, lo)
+    aim("head", (spec["head"][0] + sway * 0.06, spec["head"][1], spec["head"][2]))
+def pose(name): apply(POSE[name])
+
+def ease(t): return t * t * (3 - 2 * t)
+def seg(t, a, b): return ease(max(0.0, min(1.0, (t - a) / (b - a))))
+def clip_spec(clip, t):
+    br = math.sin(t * 2 * math.pi)
+    if clip == "idle":
+        return blend("idle", "idle", 0), br, math.sin(t * 2 * math.pi + 1.0) * 0.5
+    if clip == "flex":         # rise into a double-biceps, two squeezes, back down
+        k = seg(t, 0.0, 0.32) * (1 - seg(t, 0.78, 1.0))
+        sp = blend("idle", "flex", k)
+        sq = math.sin(max(0.0, min(1.0, (t - 0.32) / 0.46)) * 4 * math.pi) * 0.5 + 0.5 if 0.32 < t < 0.78 else 0
+        sp["lo"] = lerp3(sp["lo"], P_inv((0.25, 0.2, 0.95)), 0.35 * sq * k); return sp, br * 0.4, 0
+    if clip == "victory":      # arms shoot up, two fist pumps, come down
+        k = seg(t, 0.0, 0.25) * (1 - seg(t, 0.8, 1.0))
+        sp = blend("idle", "victory", k)
+        pump = abs(math.sin(max(0.0, min(1.0, (t - 0.25) / 0.55)) * 2 * math.pi)) if 0.25 < t < 0.8 else 0
+        sp["up"] = lerp3(sp["up"], (0.4, 0.02, 1), 0.5 * pump * k); sp["lo"] = lerp3(sp["lo"], (0.05, -0.1, 1), 0.6 * pump * k)
+        return sp, 0, 0
+def P_inv(d): return d
 # ---- arena: dark floor, haze-free, coloured rim lights
 sc = bpy.context.scene
 sc.render.engine = "CYCLES"; sc.cycles.device = "CPU"; sc.cycles.samples = int(os.environ.get("SAMPLES", "48"))
@@ -252,8 +288,28 @@ def shot(name, yaw_deg=0):
     bpy.ops.render.render(write_still=True)
     print("RENDERED", name)
 
-for n, yaw in (("idle", 0), ("flex", 0), ("victory", 0), ("hero", 32)):
-    try: pose(n)
-    except Exception as e: import traceback; traceback.print_exc()
-    shot(n, yaw)
+MODE = os.environ.get("MODE", "stills")
+if MODE == "stills":
+    for n, yaw in (("idle", 0), ("flex", 0), ("victory", 0), ("hero", 32)):
+        try: pose(n)
+        except Exception as e: import traceback; traceback.print_exc()
+        shot(n, yaw)
+else:
+    # app clips like Pip's packs: transparent background + shadow catcher, square frames, sharded by frame
+    CLIPS = {"idle": 30, "flex": 28, "victory": 28}
+    sh, nsh = int(os.environ.get("SHARD", "0")), int(os.environ.get("SHARDS", "1"))
+    sc.render.film_transparent = True; floor.is_shadow_catcher = True; wall.hide_render = True
+    rs = int(os.environ.get("RES", "560")); sc.render.resolution_x = sc.render.resolution_y = rs
+    cam_d.lens = 58
+    jobs = [("portrait", 0, 1)] + [(c, i, n) for c, n in CLIPS.items() for i in range(n)]
+    for j, (c, i, n) in enumerate(jobs):
+        if j % nsh != sh: continue
+        if c == "portrait": pose("hero"); yaw = 20
+        else:
+            sp, br, sw = clip_spec(c, i / n); apply(sp, br, sw); yaw = 14
+        os.makedirs(os.path.join(OUT, c), exist_ok=True)
+        r = h * 2.25; a = math.radians(-90 + yaw)
+        cam.location = (r * math.cos(a), r * math.sin(a), h * 0.34)
+        sc.render.filepath = os.path.join(OUT, c, "%03d.png" % i)
+        bpy.ops.render.render(write_still=True); print("FRAME", c, i)
 print("ALLDONE")

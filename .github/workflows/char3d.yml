@@ -9,6 +9,9 @@ jobs:
   render:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: { job: [stills, c0, c1, c2, c3] }
     steps:
       - uses: actions/checkout@v4
       - name: Blender 4.2 LTS
@@ -36,11 +39,28 @@ jobs:
       - name: Render
         run: |
           set -o pipefail
-          ./blender/blender -b --addons bl_ext.user_default.mpfb -P tools/char3d/render.py -- out 2>&1 | tee r.log | grep -E "INVENTORY|WORN|BONES|RENDERED|ALLDONE|Error|error|missing|fail" | head -60
-          grep -q ALLDONE r.log
-      - name: Publish to char3d-assets
+          J=${{ matrix.job }}
+          if [ "$J" = stills ]; then export MODE=stills; else export MODE=clips SHARD=${J#c} SHARDS=4 SAMPLES=20; fi
+          ./blender/blender -b --addons bl_ext.user_default.mpfb -P tools/char3d/render.py -- out 2>&1 | tee r.log | grep -E "INVENTORY|SLOTS|KIT|SHOULDER|RENDERED|ALLDONE|Error|error|missing|fail" | head -60
+          cp r.log out/r_$J.log; grep -q ALLDONE r.log
+      - uses: actions/upload-artifact@v4
         if: always()
+        with: { name: 'part-${{ matrix.job }}', path: out }
+  pack:
+    needs: render
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: parts }
+      - name: Merge + pack
         run: |
-          mkdir -p out && cp r.log out/ 2>/dev/null || true
+          pip install -q pillow
+          mkdir -p out frames && for d in parts/*/; do cp -rn "$d"* frames/; done
+          cp frames/*.png frames/*.log frames/inventory.json out/ 2>/dev/null || true
+          python tools/char3d/pack.py frames out/pack | tee out/pack.txt
+      - name: Publish to char3d-assets
+        run: |
           cd out && git init -q && git checkout -q -b char3d-assets && git add -A
           git -c user.name=ci -c user.email=ci@x commit -qm "3D test ${{ github.run_number }}" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" char3d-assets
