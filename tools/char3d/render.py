@@ -64,20 +64,28 @@ print("SKIN", skin)
 
 # warm the skin toward a South Asian tone: multiply every diffuse texture by a tan colour
 TAN = (0.80, 0.58, 0.44, 1)
-for slot in human.material_slots:
-    m = slot.material
-    if not m or not m.use_nodes: continue
-    nt = m.node_tree
+def tan_tree(nt, seen):
+    if nt in seen: return
+    seen.add(nt)
     for n in list(nt.nodes):
-        if n.type == "TEX_IMAGE" and n.image and "diffuse" in n.image.name.lower():
+        if n.type == "GROUP" and n.node_tree: tan_tree(n.node_tree, seen)
+        if n.type == "TEX_IMAGE" and n.image:
+            nm = n.image.name.lower()
+            print("IMG", nt.name, nm)
+            if any(k in nm for k in ("normal", "bump", "spec", "rough", "ao", "sss", "trans")): continue
             for l in list(n.outputs["Color"].links):
+                if "color" not in l.to_socket.name.lower() and "base" not in l.to_socket.name.lower(): continue
                 mix = nt.nodes.new("ShaderNodeMix"); mix.data_type = "RGBA"; mix.blend_type = "MULTIPLY"
                 mix.inputs["Factor"].default_value = 1.0; mix.inputs[7].default_value = TAN
-                nt.links.new(n.outputs["Color"], mix.inputs[6]); nt.links.new(mix.outputs[2], l.to_socket); nt.links.remove(l)
-            print("TANNED", m.name)
+                to = l.to_socket; nt.links.remove(l)
+                nt.links.new(n.outputs["Color"], mix.inputs[6]); nt.links.new(mix.outputs[2], to)
+                print("TANNED", nt.name, nm, "->", to.name)
+_seen = set()
+for slot in human.material_slots:
+    if slot.material and slot.material.use_nodes: tan_tree(slot.material.node_tree, _seen)
 
 for sub, words, at in (("eyes", ("high-poly", "brown"), "Eyes"), ("eyebrows", ("eyebrow010", "eyebrow001", "eyebrow"), "Eyebrows"),
-                       ("eyelashes", ("eyelashes01", "eyelash"), "Eyelashes"), ("hair", ("short04", "short02", "short"), "Hair")):
+                       ("eyelashes", ("eyelashes01", "eyelash"), "Eyelashes"), ("hair", ("short02", "short"), "Hair")):
     asset(sub, pick(sub, *words), at)
 shoes = asset("clothes", pick("clothes", "shoes02", "shoes01", "shoes"), "Clothes")
 
@@ -129,7 +137,8 @@ def garment(name, keep, color, trim=None, push=0.006):
         mix.inputs[6].default_value = color; mix.inputs[7].default_value = trim[1]
         nt.links.new(mix.outputs[2], b.inputs["Base Color"])
         b.inputs["Emission Color"].default_value = trim[1]; nt.links.new(ramp.outputs[0], b.inputs["Emission Strength"])
-    me.materials.append(m)
+    me.materials.clear(); me.materials.append(m)
+    for p in me.polygons: p.material_index = 0
     return ob
 
 def z(v): return (human.matrix_world @ v.co).z
@@ -185,7 +194,7 @@ def pose(name):
     reset(); fists(65 if name != "victory" else 80)
     if name == "idle":      arms(P(0.22, 0.04, -1), P(0.12, -0.22, -1))
     elif name == "flex":    # double biceps
-        aim("spine01", (0, 0.06, 1)); arms(P(1, 0.08, 0.18), P(0.12, 0.06, 1))
+        arms(P(1, 0.10, -0.08), P(0.10, 0.10, 1))
     elif name == "victory": aim("head", (0, -0.25, 1)); arms(P(0.55, 0.05, 1), P(0.3, 0, 1))
     elif name == "hero":    # fists on hips
         arms(P(0.75, 0.25, -0.62), P(-0.55, -0.35, -0.45))
