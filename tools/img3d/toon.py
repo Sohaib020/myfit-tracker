@@ -42,6 +42,12 @@ def toonify(ob, outline=0.006, ramp=RAMP, lift=1.25):
         if col: L(col, mul.inputs[6])
         else: mul.inputs[6].default_value = bs.inputs["Base Color"].default_value
         L(r.outputs[0], mul.inputs[7])
+        if "proj" in ob.data.uv_layers and "concept" in bpy.data.images:
+            uvn = N("ShaderNodeUVMap"); uvn.uv_map = "proj"
+            ti = N("ShaderNodeTexImage"); ti.image = bpy.data.images["concept"]; ti.extension = "EXTEND"; L(uvn.outputs[0], ti.inputs[0])
+            pw = N("ShaderNodeAttribute"); pw.attribute_name = "projw"
+            pm = N("ShaderNodeMix"); pm.data_type = "RGBA"; L(pw.outputs["Fac"], pm.inputs[0])
+            L(col, pm.inputs[6]) if col else None; L(ti.outputs[0], pm.inputs[7]); L(pm.outputs[2], mul.inputs[6])
         # rim light: fresnel band in the accent colour
         fr = N("ShaderNodeLayerWeight"); fr.inputs[0].default_value = 0.18
         rimr = N("ShaderNodeValToRGB"); rimr.color_ramp.interpolation = "CONSTANT"; re = rimr.color_ramp.elements

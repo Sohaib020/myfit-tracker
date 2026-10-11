@@ -7,7 +7,7 @@ spaces = [s for s in os.environ.get("HF_SPACE", "trellis-community/TRELLIS,Jeffr
 last = None
 for sp in spaces:
     try:
-        c = Client(sp, verbose=False)
+        c = Client(sp, verbose=False, hf_token=os.environ.get("HF_TOKEN") or None)
         print("SPACE", sp)
         try: c.predict(api_name="/start_session")
         except Exception as e: print("start_session:", str(e)[:120])
@@ -16,7 +16,7 @@ for sp in spaces:
         t = time.time()
         res = c.predict(image=handle_file(pre if isinstance(pre, str) else img), multiimages=[], seed=7, ss_guidance_strength=7.5,
                         ss_sampling_steps=12, slat_guidance_strength=3, slat_sampling_steps=12, multiimage_algo="stochastic",
-                        mesh_simplify=0.9, texture_size=1024, api_name="/generate_and_extract_glb")
+                        mesh_simplify=0.9, texture_size=2048, api_name="/generate_and_extract_glb")
         print("generate_and_extract_glb", round(time.time() - t), "s", res)
         g = res[2] or res[1]
         try:

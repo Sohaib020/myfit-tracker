@@ -11,7 +11,9 @@ import bpy, bmesh, numpy as np, mathutils
 from mathutils import Vector
 import toon
 
-src, pre = sys.argv[-2], sys.argv[-1]
+args = [a for a in sys.argv[1:] if not a.startswith("-")]
+src, pre = args[0], args[1]
+SRCIMG = args[2] if len(args) > 2 else None
 H = 1.8
 ob = toon.load(src, H)
 sc = bpy.context.scene
@@ -114,6 +116,55 @@ if miss > 0.03:
     bpy.data.objects.remove(px)
     ob.parent = arm; am = ob.modifiers.new("arm", "ARMATURE"); am.object = arm
     print("UNWEIGHTED after transfer", round(sum(1 for v in ob.data.vertices if not v.groups) / len(ob.data.vertices), 3))
+# ---- 4. project the sharp concept image onto front-facing surfaces (TRELLIS bakes only ~1K textures)
+if SRCIMG:
+    sc.render.film_transparent = True; sc.render.filepath = pre + "_alpha.png"
+    for m in list(ob.modifiers):
+        if m.type == "ARMATURE": m.show_render = False
+    bpy.ops.render.render(write_still=True)
+    for m in list(ob.modifiers):
+        if m.type == "ARMATURE": m.show_render = True
+    si_img = Image.open(SRCIMG).convert("RGB"); si = np.array(si_img).astype(np.int32); SH_, SW_ = si.shape[:2]
+    with mp.solutions.pose.Pose(static_image_mode=True, model_complexity=1) as p2:
+        r2 = p2.process(np.array(si_img))
+    if not r2.pose_landmarks: print("PROJ skip: no pose in source"); SRCIMG = None
+if SRCIMG:
+    sl = r2.pose_landmarks.landmark
+    def fit(ids):   # least-squares similarity (scale, tx, ty) from mesh-render px -> source px
+        P = np.array([[lm[i].x * RES, lm[i].y * RES] for i in ids]); Q = np.array([[sl[i].x * SW_, sl[i].y * SH_] for i in ids])
+        pc, qc = P.mean(0), Q.mean(0); s_ = np.sqrt(((Q - qc) ** 2).sum() / max(((P - pc) ** 2).sum(), 1e-9))
+        return s_, qc - s_ * pc
+    HEADF = fit([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]); BODYF = fit([11, 12, 23, 24, 25, 26, 27, 28, 0])
+    print("PROJ fits head", HEADF, "body", BODYF)
+    corner = np.median(np.concatenate([si[:8, :8].reshape(-1, 3), si[:8, -8:].reshape(-1, 3)]), axis=0)
+    fg = np.abs(si - corner).sum(axis=2) > 40
+    from PIL import ImageFilter
+    fg = np.array(Image.fromarray((fg * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(7))) > 128   # erode: keep away from edges
+    me = ob.data
+    uvl = me.uv_layers.new(name="proj")
+    co = np.array([v.co[:] for v in me.vertices]); nrm = np.array([v.normal[:] for v in me.vertices])
+    neck_z = (J["shoulder.L"].z + J["shoulder.R"].z) / 2 + 0.04 * H
+    u_ = (co[:, 0] / cd.ortho_scale + 0.5) * RES; v_ = (0.5 - (co[:, 2] - H / 2) / cd.ortho_scale) * RES
+    t = np.clip((co[:, 2] - (neck_z - 0.03)) / 0.06, 0, 1)            # 0 body … 1 head
+    px = (1 - t) * (BODYF[0] * u_ + BODYF[1][0]) + t * (HEADF[0] * u_ + HEADF[1][0])
+    py = (1 - t) * (BODYF[0] * v_ + BODYF[1][1]) + t * (HEADF[0] * v_ + HEADF[1][1])
+    inside = fg[np.clip(py.astype(int), 0, SH_ - 1), np.clip(px.astype(int), 0, SW_ - 1)] & (px >= 0) & (px < SW_) & (py >= 0) & (py < SH_)
+    UV = np.stack([px / SW_, 1 - py / SH_], 1)
+    for poly in me.polygons:
+        for li in poly.loop_indices:
+            uvl.data[li].uv = UV[me.loops[li].vertex_index]
+    # weight: faces the camera AND is the front-most surface at that spot (1 cm grid depth test)
+    gx = np.floor(co[:, 0] / 0.01).astype(int); gz = np.floor(co[:, 2] / 0.01).astype(int)
+    front = {}
+    for i, k in enumerate(zip(gx, gz)):
+        if co[i, 1] < front.get(k, 9): front[k] = co[i, 1]
+    vis = np.array([1.0 if co[i, 1] - front[(gx[i], gz[i])] < 0.02 else 0.0 for i in range(len(co))])
+    facing = np.clip((-nrm[:, 1] - 0.35) / 0.45, 0, 1)
+    w_ = vis * facing * inside
+    at = me.attributes.new("projw", "FLOAT", "POINT"); at.data.foreach_set("value", w_.astype(np.float32))
+    img = bpy.data.images.load(os.path.abspath(SRCIMG)); img.pack(); img.name = "concept"; img.use_fake_user = True
+    base_uv = me.uv_layers[0]; me.uv_layers.active = base_uv; base_uv.active_render = True
+    print("PROJ weighted verts", round(float((w_ > 0.5).mean()), 3))
 sc.camera = None; bpy.data.objects.remove(cam)
 json.dump({k: list(v) for k, v in J.items() if isinstance(v, Vector)}, open(pre + "_joints.json", "w"))
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(pre + ".blend"))
