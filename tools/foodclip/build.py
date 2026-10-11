@@ -58,11 +58,13 @@ class Img(torch.nn.Module):
         v = s.m.encode_image(x); return v / v.norm(dim=-1, keepdim=True)
 
 wrapped = Img(model).eval()
-try:
-    from mobileclip.modules.common.mobileone import reparameterize_model  # optional
-    wrapped = reparameterize_model(wrapped)
-except Exception:
-    pass
+# fold MobileOne/FastViT training branches into single convs: smaller and faster, identical outputs
+for mod in ("timm.utils.model", "timm.models"):
+    try:
+        reparam = __import__(mod, fromlist=["reparameterize_model"]).reparameterize_model
+        wrapped = reparam(wrapped); print("reparameterized via", mod); break
+    except Exception as e:
+        print("reparam skipped", mod, e)
 fp32 = os.path.join(OUT, "foodclip_fp32.onnx")
 kw = dict(input_names=["pixels"], output_names=["embedding"], opset_version=17, do_constant_folding=True)
 try:
@@ -72,9 +74,10 @@ except TypeError:
 print("onnx exported", os.path.getsize(fp32) // 1_000_000, "MB")
 
 import onnxruntime as ort
-from onnxruntime.quantization import quantize_dynamic, QuantType
+from onnxruntime.quantization import quantize_static, QuantType, QuantFormat, CalibrationDataReader
+from onnxruntime.quantization.shape_inference import quant_pre_process
 q8 = os.path.join(OUT, "foodclip_int8.onnx")
-quantize_dynamic(fp32, q8, weight_type=QuantType.QUInt8)
+pre = os.path.join(OUT, "foodclip_pre.onnx")
 
 def prep(path):
     im = Image.open(path).convert("RGB")
@@ -97,6 +100,22 @@ def evaluate(path_model):
         sims = E_ @ v; top = np.argsort(-sims)[:5]; gt = idx[os.path.basename(p)[:-5]]
         t1 += int(top[0] == gt); t5 += int(gt in top)
     return t1 / max(1, len(icons)), t5 / max(1, len(icons)), np.stack(vecs)
+
+# static int8 (QDQ, per-channel) calibrated on real dish images — far more faithful than dynamic quantisation for convs
+class Cal(CalibrationDataReader):
+    def __init__(s, paths): s.it = iter(paths)
+    def get_next(s):
+        p = next(s.it, None)
+        return None if p is None else {"pixels": prep(p)}
+try:
+    quant_pre_process(fp32, pre)
+    src = pre
+except Exception as e:
+    print("pre-process skipped", e); src = fp32
+quantize_static(src, q8, Cal(icons[::3][:120]), quant_format=QuantFormat.QDQ, per_channel=True,
+                activation_type=QuantType.QUInt8, weight_type=QuantType.QInt8)
+if os.path.exists(pre): os.remove(pre)
+print("int8 size", os.path.getsize(q8) // 1_000_000, "MB")
 
 a1, a5, v32 = evaluate(fp32)
 b1, b5, v8 = evaluate(q8)

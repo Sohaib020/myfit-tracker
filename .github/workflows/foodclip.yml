@@ -17,13 +17,15 @@ jobs:
         run: |
           pip install --quiet torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install --quiet open_clip_torch timm onnx onnxscript onnxruntime pillow numpy
+      - name: ORT Android versions on Maven (for the app's dependency)
+        run: curl -s https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/maven-metadata.xml | grep -o "<version>[^<]*" | tail -6 | sed 's/<version>/::notice::ORT /'
       - name: Build
         run: |
           set -o pipefail
           python tools/foodclip/build.py . 2>&1 | tee build.log
       - name: Report
         if: always()
-        run: grep -E "top1|onnx exported|text embeddings|Error|error" build.log | sed 's/^/::notice::/' || true
+        run: grep -E "top1|onnx exported|text embeddings|int8 size|reparam|Error|error" build.log | sed 's/^/::notice::/' || true
       - name: Publish to models-v2
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
