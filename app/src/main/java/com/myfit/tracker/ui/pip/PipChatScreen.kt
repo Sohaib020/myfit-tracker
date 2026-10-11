@@ -99,6 +99,8 @@ fun PipChatScreen(container: AppContainer) {
     var thinking by remember { mutableStateOf(false) }
     var mood by remember { mutableStateOf(PipMood.WAVE) }
     var typingId by remember { mutableLongStateOf(-1L) }
+    /** R18: the offline brain's answer while it's still being written (streamed word by word). */
+    var partial by remember { mutableStateOf<String?>(null) }
     var showSettings by remember { mutableStateOf(PipChatLaunch.openSettings.also { PipChatLaunch.openSettings = false }) }
     var showBrain by remember { mutableStateOf(false) }
     var sharedFor by remember { mutableStateOf<String?>(null) }
@@ -110,24 +112,36 @@ fun PipChatScreen(container: AppContainer) {
     val voiceLevel by container.pipVoice.level.collectAsState()
     var typing by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(2200); if (mood == PipMood.WAVE) mood = PipMood.HAPPY }
+    val ctxB0 = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.DisposableEffect(Unit) {
         container.pipVoice.prepare()
+        // R18: start loading the offline brain as soon as the chat opens, so the first answer doesn't wait for it
+        if (com.myfit.tracker.ai.BrainMode.get(ctxB0) != com.myfit.tracker.ai.BrainMode.ONLINE || !com.myfit.tracker.ai.Net.online(ctxB0))
+            com.myfit.tracker.ai.ondevice.OnDeviceAi.get(ctxB0).llm.prewarm()
         onDispose { container.pipVoice.release() }
     }
     LaunchedEffect(messages.size) { if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex) }
+    // keep the streaming answer in view as it grows
+    LaunchedEffect(partial?.length) { if (partial != null) listState.layoutInfo.totalItemsCount.takeIf { it > 0 }?.let { listState.scrollToItem(it - 1) } }
 
     fun send(text: String, retry: Boolean = false) {
         val q = text.trim()
         if (q.isEmpty() || thinking) return
         tick(); if (!retry) input = ""; thinking = true; mood = PipMood.THINKING
         scope.launch {
-            val r = container.pipBrain.ask(q, addUserMessage = !retry)
+            var streamed = false
+            val r = container.pipBrain.ask(q, addUserMessage = !retry) { p ->
+                streamed = true
+                scope.launch(kotlinx.coroutines.Dispatchers.Main) { if (thinking) partial = p }
+            }
             if (r.shared != null) sharedFor = r.shared
             thinking = false
+            partial = null
             // Pip reacts to what it's saying while its lips move
             mood = if (r.source == "error") PipMood.CONCERNED else r.mood
             typing = true
-            typingId = container.healthRepo.lastChat(1).firstOrNull()?.id ?: -1L
+            // a streamed answer is already fully on screen — don't type it out a second time
+            typingId = if (streamed) -1L else container.healthRepo.lastChat(1).firstOrNull()?.id ?: -1L
             if (r.source != "error") container.pipVoice.speak(r.text, r.speakUr, r.speakHi)
             delay((r.text.length * 6L).coerceIn(700, 4000))
             typing = false
@@ -183,7 +197,10 @@ fun PipChatScreen(container: AppContainer) {
             items(messages, key = { it.id }) { m ->
                 Bubble(m, animate = m.id == typingId, onShowShared = if (m.source == "online" && sharedFor != null && m == messages.lastOrNull()) ({ showShared = true }) else null)
             }
-            if (thinking) item { ThinkingBubble() }
+            if (thinking) item(key = "live") {
+                val p = partial
+                if (p.isNullOrBlank()) ThinkingBubble() else LiveBubble(p)
+            }
         }
         // ---- suggestions + input
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -328,6 +345,19 @@ private fun Bubble(m: ChatMessage, animate: Boolean, onShowShared: (() -> Unit)?
                     }
                 }
             }
+        }
+    }
+}
+
+/** The answer as it streams in from the on-phone brain, with a blinking caret. */
+@Composable
+private fun LiveBubble(text: String) {
+    val th = LocalFitTheme.current
+    var on by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) { while (true) { delay(450); on = !on } }
+    Row(Modifier.fillMaxWidth()) {
+        Glass(Modifier.widthIn(max = 320.dp), shape = RoundedCornerShape(22.dp, 22.dp, 22.dp, 6.dp)) {
+            Text(markdown(text + if (on) " ▍" else "  "), style = FitType.body, color = th.text, modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp))
         }
     }
 }

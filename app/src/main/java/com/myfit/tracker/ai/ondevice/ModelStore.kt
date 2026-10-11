@@ -55,7 +55,8 @@ object ModelCatalog {
         url = "$HF/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
         sizeBytes = 2_588_147_712L,
         sha256 = "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
-        minRamBytes = 5_300_000_000L, license = "Apache 2.0", source = "Hugging Face · litert-community",
+        // R18: the model only keeps ~0.8 GB resident (embeddings are memory-mapped), so 4 GB phones run it in light mode
+        minRamBytes = 3_300_000_000L, license = "Apache 2.0", source = "Hugging Face · litert-community",
         mirrorParts = listOf("$MIRROR/gemma-4-E2B-it.litertlm.part00", "$MIRROR/gemma-4-E2B-it.litertlm.part01"),
     )
 
@@ -65,7 +66,7 @@ object ModelCatalog {
         fileName = "gemma-4-E2B-it-gpu.litertlm",
         url = "$HF/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-gpu.litertlm",
         sizeBytes = 0L, sha256 = null,
-        minRamBytes = 5_300_000_000L, license = "Apache 2.0", source = "Hugging Face · litert-community", vision = false,
+        minRamBytes = 3_300_000_000L, license = "Apache 2.0", source = "Hugging Face · litert-community", vision = false,
     )
     @Deprecated("same as DEFAULT now") val CPU get() = DEFAULT
 
@@ -105,8 +106,8 @@ object DeviceCheck {
         val free = runCatching { StatFs(ctx.filesDir.absolutePath).availableBytes }.getOrDefault(0L)
         val (tier, reason) = when {
             !arm64 -> Tier.UNSUPPORTED to "This phone's processor isn't supported (needs 64-bit ARM)."
-            ram < spec.minRamBytes -> Tier.UNSUPPORTED to "Your phone isn't compatible with the offline brain: it needs at least 6 GB of RAM and this phone has ${gb(ram)}. Online AI still works."
-            ram < spec.minRamBytes + 1_800_000_000L -> Tier.OK to "Works, but answers may be slower on ${gb(ram)} of RAM."
+            ram < spec.minRamBytes -> Tier.UNSUPPORTED to "Your phone isn't compatible with the offline brain: it needs at least 4 GB of RAM and this phone has ${gb(ram)}. Online AI still works."
+            DeviceTier.profile(ctx).level == DeviceTier.Level.LITE -> Tier.OK to "Runs in light mode on this phone (${gb(ram)} RAM): the same answers, a little slower."
             else -> Tier.RECOMMENDED to null
         }
         return Capability(ram, arm64, free, tier, reason)

@@ -1,0 +1,33 @@
+name: Food recogniser model
+# Builds the offline food recogniser (MobileCLIP → ONNX + dish embeddings) and publishes it to the models-v2 release.
+on:
+  push:
+    branches: [ foodclip-run ]
+  workflow_dispatch:
+permissions: { contents: write }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Install
+        run: |
+          pip install --quiet torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install --quiet open_clip_torch timm onnx onnxscript onnxruntime pillow numpy
+      - name: ORT Android versions on Maven (for the app's dependency)
+        run: curl -s https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/maven-metadata.xml | grep -o "<version>[^<]*" | tail -6 | sed 's/<version>/::notice::ORT /'
+      - name: Build
+        run: |
+          set -o pipefail
+          python tools/foodclip/build.py . 2>&1 | tee build.log
+      - name: Report
+        if: always()
+        run: grep -E "top1|onnx exported|text embeddings|int8 size|reparam|Error|error" build.log | sed 's/^/::notice::/' || true
+      - name: Publish to models-v2
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release view models-v2 >/dev/null 2>&1 || gh release create models-v2 --title "On-device models v2" --notes "Offline food recogniser (MobileCLIP) for MyFit." --prerelease
+          gh release upload models-v2 out/foodclip_image.onnx out/dish_emb.bin out/dish_ids.json out/meta.json --clobber

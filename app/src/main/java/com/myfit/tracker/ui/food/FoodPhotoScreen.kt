@@ -112,6 +112,8 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
     var stage by remember { mutableStateOf<Stage>(Stage.Pick) }
     var hint by remember { mutableStateOf("") }
     val items = remember { mutableStateListOf<PhotoItem>() }
+    /** R18: other likely dishes from the offline recogniser — one tap swaps the top guess. */
+    val alts = remember { mutableStateListOf<FoodVision.Item>() }
     var refining by remember { mutableStateOf(false) }
     var startedAt by remember { mutableStateOf(0L) }
     var tookMs by remember { mutableStateOf<Long?>(null) }
@@ -121,13 +123,14 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
         val b = photo ?: return
         job?.cancel()
         stage = Stage.Working
-        items.clear()
+        items.clear(); alts.clear()
         refining = false; tookMs = null; startedAt = System.currentTimeMillis()
         job = scope.launch {
             stage = try {
                 val r = FoodVision(container).analyze(b, hint) { early ->
-                    // quick pass: show it now, keep improving in the background
-                    items.clear(); items.addAll(early.items.map { PhotoItem(it) })
+                    // instant / quick pass: show it now, keep improving in the background (never overwrite the user's edits)
+                    if (items.isEmpty() || items.all { it.untouched }) { items.clear(); items.addAll(early.items.map { PhotoItem(it) }) }
+                    if (early.alternatives.isNotEmpty() || alts.isEmpty()) { alts.clear(); alts.addAll(early.alternatives) }
                     tookMs = System.currentTimeMillis() - startedAt
                     refining = true
                     stage = Stage.Done(early.note)
@@ -135,6 +138,7 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
                 refining = false
                 if (tookMs == null) tookMs = System.currentTimeMillis() - startedAt
                 if (items.isEmpty() || items.all { it.untouched }) { items.clear(); items.addAll(r.items.map { PhotoItem(it) }) }
+                if (r.alternatives.isNotEmpty()) { alts.clear(); alts.addAll(r.alternatives.filter { a -> items.none { it.src.catalogUuid == a.catalogUuid } }) }
                 Stage.Done(r.note)
             } catch (e: FoodVision.NotFood) {
                 Stage.Failed(e.message ?: "No food found", true)
@@ -256,6 +260,21 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
                         }
                     }
                     itemsIndexed(items, key = { i, _ -> i }) { _, it -> PhotoItemRow(it) }
+                    if (alts.isNotEmpty()) item {
+                        Column {
+                            Caption("Not right? Tap the dish it is:", color = th.textDim)
+                            Spacer(Modifier.height(6.dp))
+                            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                this.items(alts.toList(), key = { it.catalogUuid ?: it.name }) { a ->
+                                    com.myfit.tracker.ui.theme.GlassChip(a.name.substringBefore(" ("), false, {
+                                        val old = items.firstOrNull()?.src
+                                        if (items.isEmpty()) items.add(PhotoItem(a)) else items[0] = PhotoItem(a)
+                                        alts.remove(a); if (old != null && old.catalogUuid != null) alts.add(0, old)
+                                    })
+                                }
+                            }
+                        }
+                    }
                     s.note?.let { n -> item { Caption("Pip: $n", color = th.textDim) } }
                     container.aiRouter.lastProvider?.let { pv -> item { Caption("Analysed by $pv", color = th.textFaint) } }
                     item {
