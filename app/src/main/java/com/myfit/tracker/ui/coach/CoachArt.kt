@@ -104,20 +104,56 @@ fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level
             drawCircle(Brush.radialGradient(listOf(th.accentBright.copy(alpha = 0.16f), Color.Transparent), center = Offset(size.width / 2, size.height * 0.45f), radius = size.width * 0.6f),
                 radius = size.width * 0.6f, center = Offset(size.width / 2, size.height * 0.45f))
         }
+        val ctx = LocalContext.current
+        val packs by CoachPacks.installed.collectAsState()
+        // first appearance of this coach: fetch the animated moves in the background (the still shows meanwhile)
+        androidx.compose.runtime.LaunchedEffect(look) { if (!CoachPacks.isInstalled(ctx, look)) CoachPacks.ensure(ctx, look) }
         AnimatedContent(pose, Modifier.fillMaxSize(), transitionSpec = {
-            (scaleIn(spring(0.55f, 380f), initialScale = 0.9f) + slideInVertically(spring(0.6f, 400f)) { it / 14 } + fadeIn(tween(160)))
-                .togetherWith(fadeOut(tween(120)))
+            (scaleIn(spring(0.55f, 380f), initialScale = 0.96f) + fadeIn(tween(180)))
+                .togetherWith(fadeOut(tween(140)))
         }, label = "pose") { p ->
-            val img = rememberCoachImage(look, p)
+            val clip = androidx.compose.runtime.remember(look, p, packs) {
+                if (android.os.Build.VERSION.SDK_INT >= 28) CoachPacks.clip(ctx, look, p) else null
+            }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                if (img != null) Image(img, null, Modifier.fillMaxSize().graphicsLayer {
-                    transformOrigin = TransformOrigin(0.5f, 1f)
-                    scaleY = 1f + 0.014f * b + lv * 0.03f; scaleX = 1f + 0.006f * b
-                    rotationZ = sway * 0.8f
-                    translationY = -lv * 10f
-                }, contentScale = ContentScale.Fit)
-                else Icon(Duo.SportsGymnastics, null, tint = th.accentBright.copy(alpha = 0.6f), modifier = Modifier.size(96.dp).align(Alignment.Center))
+                if (clip != null) {
+                    // the animation carries its own breathing and motion; only bob gently with the voice
+                    CoachClip(clip, Modifier.fillMaxSize().graphicsLayer { transformOrigin = TransformOrigin(0.5f, 1f); translationY = -lv * 6f })
+                } else {
+                    val img = rememberCoachImage(look, p)
+                    if (img != null) Image(img, null, Modifier.fillMaxSize().graphicsLayer {
+                        transformOrigin = TransformOrigin(0.5f, 1f)
+                        scaleY = 1f + 0.014f * b + lv * 0.03f; scaleX = 1f + 0.006f * b
+                        rotationZ = sway * 0.8f
+                        translationY = -lv * 10f
+                    }, contentScale = ContentScale.Fit)
+                    else Icon(Duo.SportsGymnastics, null, tint = th.accentBright.copy(alpha = 0.6f), modifier = Modifier.size(96.dp).align(Alignment.Center))
+                }
             }
         }
     }
+}
+
+
+/**
+ * Plays a looping animated WebP (Android 9+). An ImageView hosts the AnimatedImageDrawable in its own render node,
+ * which avoids the stale-bounds double image some Android 11 MediaTek phones showed when drawing into Compose.
+ */
+@Composable
+private fun CoachClip(file: java.io.File, modifier: Modifier) {
+    androidx.compose.ui.viewinterop.AndroidView(
+        factory = { c -> android.widget.ImageView(c).apply { scaleType = android.widget.ImageView.ScaleType.FIT_END; adjustViewBounds = false } },
+        modifier = modifier,
+        update = { iv ->
+            if (iv.tag != file.path && android.os.Build.VERSION.SDK_INT >= 28) {
+                iv.tag = file.path
+                runCatching {
+                    val d = android.graphics.ImageDecoder.decodeDrawable(android.graphics.ImageDecoder.createSource(file))
+                    iv.setImageDrawable(d)
+                    (d as? android.graphics.drawable.AnimatedImageDrawable)?.apply { repeatCount = android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE; start() }
+                }
+            }
+        },
+        onRelease = { iv -> ((iv.drawable as? android.graphics.drawable.Animatable))?.stop(); iv.setImageDrawable(null) },
+    )
 }
