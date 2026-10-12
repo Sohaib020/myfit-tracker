@@ -4,7 +4,7 @@ import sys, os, glob
 from PIL import Image, ImageDraw
 src, out = sys.argv[1], sys.argv[2]
 SIZE = 448
-CLIPS = {"idle": 60, "flex": 50, "victory": 50}      # ms per frame
+CLIPS = {"idle": 60, "flex": 50, "victory": 50, "punch": 45}      # ms per frame (missing clips are skipped)
 os.makedirs(out, exist_ok=True)
 def ld(p): return Image.open(p).convert("RGBA").resize((SIZE, SIZE), Image.LANCZOS)
 def bg():   # Carbon & Lime-like: near-black with a soft lime floor glow
@@ -22,7 +22,7 @@ if p: ld(p[0]).save(os.path.join(out, "portrait.webp"), "WEBP", quality=86, meth
 sheet = []
 for c, ms in CLIPS.items():
     fs = sorted(glob.glob(os.path.join(src, c, "*.png")))
-    if not fs: print("missing", c); continue
+    if not fs: continue
     ims = [ld(f) for f in fs]
     ims[0].save(os.path.join(out, c + ".webp"), "WEBP", save_all=True, append_images=ims[1:], duration=ms, loop=0, quality=80, method=6)
     pv = [Image.alpha_composite(B, im).convert("RGB") for im in ims]

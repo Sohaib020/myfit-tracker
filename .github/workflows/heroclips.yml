@@ -1,0 +1,50 @@
+name: Hero clips
+# Quaternius CC0 bodies (branch hero-assets) + tools/heroes -> 3 tiers x clips (sharded) + stills -> branch hero-out.
+on:
+  push:
+    branches: [ heroclips-run ]
+  workflow_dispatch:
+permissions: { contents: write }
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix: { level: [1, 2, 3], shard: [0, 1, 2, 3] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { ref: hero-assets, path: assets }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Render
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 libxrender1 libxxf86vm1 libxfixes3 >/dev/null
+          pip install -q bpy==4.2.0 pillow numpy
+          L=${{ matrix.level }}; S=${{ matrix.shard }}
+          python tools/heroes/render_clips.py assets $L out/l$L/frames $S 4 2>&1 | grep -E "RENDER_DONE|Error|Traceback" | head
+          if [ "$S" = 0 ]; then python tools/heroes/render_clips.py assets $L out/l$L/stills --stills 2>&1 | grep -E "RENDER_DONE|Error|Traceback" | head; fi
+      - uses: actions/upload-artifact@v4
+        with: { name: 'r-${{ matrix.level }}-${{ matrix.shard }}', path: out }
+  pack:
+    needs: render
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: parts }
+      - name: Merge, pack, ladder preview
+        run: |
+          pip install -q pillow numpy
+          mkdir -p merged pub && for d in parts/*/; do cp -rn "$d"* merged/; done
+          for L in 1 2 3; do
+            python tools/char3d/pack.py merged/l$L/frames pub/l$L | tail -1
+            mkdir -p pub/l$L/stills && cp merged/l$L/stills/*.png pub/l$L/stills/ 2>/dev/null || true
+          done
+          python tools/heroes/ladder.py pub pub/ladder.gif
+      - name: Publish to hero-out
+        run: |
+          cd pub && git init -q && git checkout -q -b hero-out && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "hero clips ${{ github.run_number }}" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" hero-out
