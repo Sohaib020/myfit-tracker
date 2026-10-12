@@ -63,6 +63,8 @@ object ActivityClock {
     fun start(c: Context, id: String) { activity = id; accumulated = 0; startedAt = System.currentTimeMillis(); save(c) }
     fun pause(c: Context) { if (running) { accumulated = elapsedMs(); startedAt = 0; save(c) } }
     fun resume(c: Context) { if (!running && active) { startedAt = System.currentTimeMillis(); save(c) } }
+    /** Pauses as of [at] (in the past): the time since then is not counted (R20 auto-pause). */
+    fun pauseAt(c: Context, at: Long) { if (running) { accumulated += (minOf(at, System.currentTimeMillis()) - startedAt).coerceAtLeast(0); startedAt = 0; save(c) } }
     fun reset(c: Context) { activity = null; startedAt = 0; accumulated = 0; save(c) }
 }
 
@@ -121,8 +123,8 @@ fun StopwatchScreen(container: AppContainer) {
                             val kcal = Burn.kcal(a.met, kg, ms / 1000)
                             Dial(ms, ActivityClock.running, a.name, kcal)
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                if (ActivityClock.running) GlassButton("Pause", { ActivityClock.pause(ctx) }, Modifier.weight(1f), icon = Duo.Pause)
-                                else GlassButton("Resume", { ActivityClock.resume(ctx) }, Modifier.weight(1f), icon = Duo.PlayArrow)
+                                if (ActivityClock.running) GlassButton("Pause", { ActivityClock.pause(ctx); com.myfit.tracker.gym.WorkoutGuard.userTouchedStopwatch(ctx) }, Modifier.weight(1f), icon = Duo.Pause)
+                                else GlassButton("Resume", { ActivityClock.resume(ctx); com.myfit.tracker.gym.WorkoutGuard.userTouchedStopwatch(ctx) }, Modifier.weight(1f), icon = Duo.PlayArrow)
                                 AccentButton("Finish", {
                                     ActivityClock.pause(ctx)
                                     val total = ActivityClock.elapsedMs()

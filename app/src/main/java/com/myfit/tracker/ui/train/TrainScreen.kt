@@ -403,7 +403,7 @@ private fun ResumeCard(container: AppContainer, workoutId: Long, onResume: () ->
     val v by remember(workoutId) { container.workoutRepo.workoutView(workoutId) }.collectAsState(null)
     val now by produceState(Clock.now()) { while (true) { androidx.compose.runtime.withFrameMillis { }; value = Clock.now(); delay(1000) } }
     val w = v ?: return
-    val elapsed = now - w.workout.startedAt
+    val elapsed = com.myfit.tracker.gym.WorkoutGuard.activeMs(w.workout.id, w.workout.startedAt, now)
     // left open for hours (forgot to finish): offer to save it at the last set, or discard it
     val stale = elapsed > 4 * 3_600_000L
     Glass(Modifier.fillMaxWidth(), onClick = onResume) {

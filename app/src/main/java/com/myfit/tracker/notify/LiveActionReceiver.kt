@@ -24,8 +24,8 @@ class LiveActionReceiver : BroadcastReceiver() {
                 when (intent.action) {
                     REST_ADD -> { val s = c.settings.settings.first(); c.restTimer.add(15, s.restSound, s.restVibrate) }
                     REST_SKIP -> c.restTimer.stop()?.let { (setId, sec) -> c.workoutRepo.recordRest(setId, sec) }
-                    SW_PAUSE -> { ActivityClock.load(context); ActivityClock.pause(context) }
-                    SW_RESUME -> { ActivityClock.load(context); ActivityClock.resume(context) }
+                    SW_PAUSE -> { ActivityClock.load(context); ActivityClock.pause(context); com.myfit.tracker.gym.WorkoutGuard.userTouchedStopwatch(context) }
+                    SW_RESUME -> { ActivityClock.load(context); ActivityClock.resume(context); com.myfit.tracker.gym.WorkoutGuard.userTouchedStopwatch(context) }
                 }
             } finally { pending.finish() }
         }

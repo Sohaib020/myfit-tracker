@@ -71,7 +71,7 @@ fun WorkoutCard(w: WorkoutToday, container: AppContainer) {
             a != null -> {
                 Text("IN PROGRESS", style = FitType.overline, color = th.accentBright)
                 Text(a.workout.name, style = FitType.title, color = th.text)
-                Caption("${mmss((now - a.workout.startedAt) / 1000)} · ${a.exercises.size} exercises · ${a.totals.sets} sets" +
+                Caption("${mmss(com.myfit.tracker.gym.WorkoutGuard.activeMs(a.workout.id, a.workout.startedAt, now) / 1000)}${if (com.myfit.tracker.gym.WorkoutGuard.pausedAt(a.workout.id) != null) " paused" else ""} · ${a.exercises.size} exercises · ${a.totals.sets} sets" +
                     (a.totals.volumeKg?.let { " · ${Fmt.weight(it, u.weight, 0)}" } ?: ""))
                 Spacer(Modifier.height(12.dp))
                 AccentButton("Resume Gym Mode", { nav.push(Overlay.Gym(a.workout.id)) }, icon = Duo.PlayArrow, height = 48.dp)
