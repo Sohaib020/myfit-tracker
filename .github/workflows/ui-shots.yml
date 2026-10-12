@@ -25,7 +25,8 @@ jobs:
         env: { SHOTS_FILTER: "${{ github.event.inputs.filter }}" }
         run: |
           set -o pipefail
-          gradle :app:testGithubDebugUnitTest --tests "${SHOTS_FILTER:-*ShotTest*}" -Pshots -Proborazzi.test.record=true 2>&1 | tee t.log || { grep -E -A3 "^e: |Error|Exception|spills|overlaps|FAILED|What went wrong" t.log | grep -v '^\s*at org\.\|^\s*at java\.\|^\s*at kotlin' | head -80 | sed 's/^/::error::/'; exit 1; }
+          T=""; for f in $(echo "${SHOTS_FILTER:-*ShotTest*}" | tr ',' ' '); do T="$T --tests $f"; done
+          gradle :app:testGithubDebugUnitTest $T -Pshots -Proborazzi.test.record=true 2>&1 | tee t.log || { grep -E -A3 "^e: |Error|Exception|spills|overlaps|FAILED|What went wrong" t.log | grep -v '^\s*at org\.\|^\s*at java\.\|^\s*at kotlin' | head -80 | sed 's/^/::error::/'; exit 1; }
       - name: Save shots to ui-shots branch
         if: always()
         run: |
