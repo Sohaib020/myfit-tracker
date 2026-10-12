@@ -46,6 +46,7 @@ object LiveUpdates {
     const val STOPWATCH = 4301
     const val FASTING = 4302
     const val EXTRA_OPEN = "open"
+    private const val GUARD_CHANNEL = "workout_guard"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + kotlinx.coroutines.CoroutineExceptionHandler { _, e -> android.util.Log.w("LiveUpdates", e) })
     @Volatile private var started = false
@@ -86,25 +87,30 @@ object LiveUpdates {
     fun post(
         c: Context, id: Int, card: NCard, open: String,
         points: List<Float> = emptyList(), category: String = Notification.CATEGORY_PROGRESS,
-        segments: List<Pair<Float, Int>> = emptyList(), actions: List<Action> = emptyList(),
+        segments: List<Pair<Float, Int>> = emptyList(), actions: List<Action> = emptyList(), alert: Boolean = false,
     ) {
         if (!canPost(c)) return
-        runCatching { postNow(c, id, card, open, points, category, segments, actions) }.onFailure { android.util.Log.w("LiveUpdates", it) }
+        runCatching { postNow(c, id, card, open, points, category, segments, actions, alert) }.onFailure { android.util.Log.w("LiveUpdates", it) }
     }
 
     private fun actionIntent(c: Context, a: Action): PendingIntent = PendingIntent.getBroadcast(
-        c, a.action.hashCode(), Intent(c, LiveActionReceiver::class.java).setAction(a.action),
+        c, a.action.hashCode(), Intent(c, if (a.action.startsWith("com.myfit.tracker.guard.")) GuardReceiver::class.java else LiveActionReceiver::class.java).setAction(a.action),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    private fun postNow(c: Context, id: Int, card: NCard, open: String, points: List<Float>, category: String, segments: List<Pair<Float, Int>>, actions: List<Action>) {
+    private fun postNow(c: Context, id: Int, card: NCard, open: String, points: List<Float>, category: String, segments: List<Pair<Float, Int>>, actions: List<Action>, alert: Boolean) {
         channel(c)
         val nm = c.getSystemService(NotificationManager::class.java) ?: return
-        val n: Notification = if (nativeStyle(c)) nativeCard(c, card, open, points, category, segments, actions) else
-            NotifKit.live(c, NotificationCompat.Builder(c, CHANNEL), card, points)
+        if (alert && nm.getNotificationChannel(GUARD_CHANNEL) == null) nm.createNotificationChannel(
+            NotificationChannel(GUARD_CHANNEL, "Still training?", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Asks once when a workout has been idle for 5 minutes and pauses its timer"; setShowBadge(false)
+            })
+        val n: Notification = if (nativeStyle(c) && !alert) nativeCard(c, card, open, points, category, segments, actions) else
+            NotifKit.live(c, NotificationCompat.Builder(c, if (alert) GUARD_CHANNEL else CHANNEL), card, points)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentIntent(intent(c, open))
-                .setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setCategory(category)
+                .setOngoing(true).setOnlyAlertOnce(true).setSilent(!alert).setCategory(category)
+                .apply { if (alert) priority = NotificationCompat.PRIORITY_HIGH }
                 .apply { actions.forEach { a -> addAction(R.drawable.ic_notification, a.label, actionIntent(c, a)) } }
                 .apply {
                     if (card.chrono != null) { setWhen(card.chrono); setShowWhen(true); setUsesChronometer(true); setChronometerCountDown(card.countDown) }
@@ -200,8 +206,19 @@ object LiveUpdates {
         scope.launch {
             val workout = container.workoutRepo.inProgress.flatMapLatest { w -> if (w == null) flowOf(null) else container.workoutRepo.workoutView(w.id) }
             val rest = snapshotFlow { container.restTimer.state }
-            combine(workout, rest) { v, r -> v to r }.collectLatest { (v, r) ->
+            com.myfit.tracker.gym.WorkoutGuard.load(app)
+            combine(workout, rest, com.myfit.tracker.gym.WorkoutGuard.paused) { v, r, pz -> Triple(v, r, pz) }.collectLatest { (v, r, pz) ->
                 if (v == null) { cancel(app, WORKOUT); return@collectLatest }
+                // R20: auto-paused after 5 idle minutes — ask once, loudly, with Resume / End
+                if (pz != null && pz.first == v.workout.id) {
+                    val active = ((pz.second - v.workout.startedAt) / 1000).coerceAtLeast(0)
+                    post(app, WORKOUT, NCard(NKind.LIFT, "Still training?", "No sets for 5 min and your phone is still, so the timer is paused. Idle time won't count.",
+                        value = mmss(active), unit = "trained", chip = "Paused", eyebrow = v.workout.name,
+                        stats = listOf("${v.totals.sets}" to "Sets", (v.totals.volumeKg?.let { com.myfit.tracker.domain.Fmt.int(it) + " kg" } ?: "—") to "Volume", mmss(active) to "Active")),
+                        "gym", category = Notification.CATEGORY_REMINDER, alert = true,
+                        actions = listOf(Action("Resume", GuardReceiver.RESUME), Action("End & save", GuardReceiver.END)))
+                    return@collectLatest
+                }
                 val t = v.totals
                 val exs = v.exercises
                 val doneEx = exs.count { it.sets.isNotEmpty() }
@@ -213,6 +230,7 @@ object LiveUpdates {
                 val points = if (exs.size in 2..12) (1 until exs.size).map { it.toFloat() / exs.size } else emptyList()
                 // one route segment per exercise
                 val segs = if (exs.size in 2..12) exs.map { 1f to NKind.LIFT.color } else emptyList()
+                val segN = if (exs.size in 2..12) exs.size else 0
                 val vol = t.volumeKg?.let { com.myfit.tracker.domain.Fmt.int(it) + " kg" } ?: "—"
                 val stats = listOf("${t.sets}" to "Sets", vol to "Volume", "$doneEx/${exs.size}" to "Exercises")
                 if (r != null && r.endsAt > System.currentTimeMillis()) {
@@ -222,22 +240,29 @@ object LiveUpdates {
                     while (true) {
                         val left = r.endsAt - System.currentTimeMillis()
                         if (left <= 0) break
-                        post(app, WORKOUT, NCard(NKind.REST, "Rest · then ${r.label}", "${t.sets} sets done · ${v.workout.name}", chrono = r.endsAt, countDown = true,
-                            progress = 1f - left.toFloat() / total, chip = "Rest", stats = stats, eyebrow = "Resting", unit = "left"),
+                        post(app, WORKOUT, NCard(NKind.REST, "Next · ${r.label}", "Breathe and reset — ${t.sets} sets done", chrono = r.endsAt, countDown = true,
+                            progress = 1f - left.toFloat() / total, chip = "Rest", stats = stats, eyebrow = "Rest · ${v.workout.name}", unit = "rest left"),
                             "gym", category = Notification.CATEGORY_STOPWATCH, actions = acts)
                         delay(minOf(5_000L, left))
                     }
-                    post(app, WORKOUT, NCard(NKind.LIFT, "Rest over — let's go 💪", "Next: ${r.label}", chrono = v.workout.startedAt, progress = frac,
-                        progressLabel = next?.let { "Then: $it" }, stats = stats, eyebrow = "Workout · live", unit = "elapsed", chip = "Go"),
+                    post(app, WORKOUT, NCard(NKind.LIFT, "Rest over — you're up", "Next set · ${r.label}", chrono = v.workout.startedAt, progress = frac,
+                        progressLabel = next?.let { "Then $it" }, stats = stats, eyebrow = v.workout.name, unit = "elapsed", chip = "$doneEx/${exs.size}", segments = segN),
                         "gym", points, Notification.CATEGORY_STOPWATCH, segs)
                 } else {
-                    post(app, WORKOUT, NCard(NKind.LIFT, current?.let { "$it · set $setNo" } ?: v.workout.name,
-                        next?.let { "Up next: $it" } ?: if (exs.isNotEmpty()) "Last exercise — finish strong" else "Add your first exercise",
+                    post(app, WORKOUT, NCard(NKind.LIFT, current?.let { "$it · Set $setNo" } ?: v.workout.name,
+                        next?.let { "Up next · $it" } ?: if (exs.isNotEmpty()) "Final exercise — finish strong" else "Add your first exercise",
                         chrono = v.workout.startedAt, progress = frac, indeterminate = frac == null,
-                        progressLabel = "${(((frac ?: 0f) * 100).toInt())}% of ${v.workout.name}",
-                        stats = stats, eyebrow = "Workout · live", unit = "elapsed", chip = "$doneEx/${exs.size}"),
+                        stats = stats, eyebrow = v.workout.name, unit = "elapsed", chip = "$doneEx/${exs.size}", segments = segN),
                         "gym", points, Notification.CATEGORY_STOPWATCH, segs)
                 }
+            }
+        }
+
+        // ---- R20 auto-pause: idle check once a minute while the app is alive (an alarm covers it while asleep)
+        scope.launch {
+            while (true) {
+                delay(60_000)
+                runCatching { com.myfit.tracker.gym.WorkoutGuard.check(container) }
             }
         }
 
@@ -261,7 +286,9 @@ object LiveUpdates {
                             "stopwatch", category = Notification.CATEGORY_STOPWATCH, actions = listOf(Action("Pause", LiveActionReceiver.SW_PAUSE)))
                         delay(30_000)
                     }
-                } else post(app, STOPWATCH, NCard(NKind.RUN, "$name · paused", "Tap Resume when you're ready", value = mmss(acc / 1000), chip = "Paused",
+                } else post(app, STOPWATCH, NCard(NKind.RUN, "$name · paused",
+                    if (com.myfit.tracker.gym.WorkoutGuard.cardioAuto) "Auto-paused — you stopped moving. It restarts when you do." else "Tap Resume when you're ready",
+                    value = mmss(acc / 1000), chip = "Paused",
                     eyebrow = "$name · paused", unit = "so far"), "stopwatch", category = Notification.CATEGORY_STOPWATCH,
                     actions = listOf(Action("Resume", LiveActionReceiver.SW_RESUME)))
             }

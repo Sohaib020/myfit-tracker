@@ -78,7 +78,7 @@ import java.io.File
 import java.time.LocalDate
 
 /** One detected item, editable before saving. Nutrition scales with grams. */
-private class PhotoItem(val src: FoodVision.Item) {
+private class PhotoItem(val src: FoodVision.Item, val guessedAs: String? = null) {
     var on by mutableStateOf(true)
     var name by mutableStateOf(src.name)
     var grams by mutableStateOf(if (src.grams > 0) Fmt.trim(src.grams, 0) else "")
@@ -218,7 +218,7 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
             }
             when (val s = stage) {
                 Stage.Pick -> item {
-                    Caption("The photo is sent to an online AI (Gemini, or a backup service if it is busy) for analysis. Results are estimates — check portions before saving.", color = th.textFaint)
+                    Caption("Your phone recognises 1,000+ dishes instantly; anything else is named by the AI (online, or the offline brain without internet). Fix a name once and MyFit remembers it. Results are estimates — check portions before saving.", color = th.textFaint)
                 }
                 Stage.Working -> item {
                     Glass(Modifier.fillMaxWidth()) {
@@ -268,7 +268,8 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
                                 this.items(alts.toList(), key = { it.catalogUuid ?: it.name }) { a ->
                                     com.myfit.tracker.ui.theme.GlassChip(a.name.substringBefore(" ("), false, {
                                         val old = items.firstOrNull()?.src
-                                        if (items.isEmpty()) items.add(PhotoItem(a)) else items[0] = PhotoItem(a)
+                                        val guess = items.firstOrNull()?.let { it.guessedAs ?: it.src.name }
+                                        if (items.isEmpty()) items.add(PhotoItem(a)) else items[0] = PhotoItem(a, guess)
                                         alts.remove(a); if (old != null && old.catalogUuid != null) alts.add(0, old)
                                     })
                                 }
@@ -305,17 +306,31 @@ fun FoodPhotoScreen(container: AppContainer, mealType0: String, dateKey: String)
                 "Log ${sel.size} item${if (sel.size == 1) "" else "s"} to ${mealLabel(mealType)}",
                 {
                     if (sel.isEmpty()) { toaster.show("Select at least one item"); return@AccentButton }
-                    val lines = sel.map { pi ->
-                        val g = pi.grams.toDoubleOrNull()
-                        val byGrams = pi.src.grams > 0 && g != null && g > 0
-                        LogLine(
-                            name = pi.name.trim(), quantity = 1.0,
-                            servingSize = if (byGrams) g!! else 1.0, servingUnit = if (byGrams) "g" else "serving",
-                            kcal = pi.kcal, protein = pi.p, carbs = pi.c, fat = pi.f, fiber = pi.src.fiber?.let { it * pi.factor },
-                            source = NutritionSource.AI_PHOTO,
-                        )
+                    val picked = sel.map { pi -> Triple(pi, pi.name.trim(), pi.grams.toDoubleOrNull()) }
+                    container.write {
+                        val lines = picked.map { (pi, name, g) ->
+                            val byGrams = pi.src.grams > 0 && g != null && g > 0
+                            var kcal = pi.kcal; var p = pi.p; var cb = pi.c; var f = pi.f
+                            val renamed = name != pi.src.name
+                            // R20: renamed to a dish MyFit knows → use its nutrition for the same grams
+                            if (renamed) runCatching { container.nutritionRepo.matchDish(name) }.getOrNull()?.let { food ->
+                                val sg = food.servingGrams?.takeIf { it > 0 }
+                                val k = if (sg != null && g != null && g > 0) g / sg else 1.0
+                                kcal = food.calories * k; p = food.proteinG * k; cb = food.carbsG * k; f = food.fatG * k
+                            }
+                            // remember the correction as a personal dish (on this phone) for next time
+                            val from = if (renamed) pi.src.name else pi.guessedAs
+                            if (from != null && byGrams && kcal > 0) com.myfit.tracker.ai.PersonalDishes.remember(ctx, from,
+                                com.myfit.tracker.ai.PersonalDishes.Dish(name, kcal / g!! * 100, p / g * 100, cb / g * 100, f / g * 100, g))
+                            LogLine(
+                                name = name, quantity = 1.0,
+                                servingSize = if (byGrams) g!! else 1.0, servingUnit = if (byGrams) "g" else "serving",
+                                kcal = kcal, protein = p, carbs = cb, fat = f, fiber = pi.src.fiber?.let { it * pi.factor },
+                                source = NutritionSource.AI_PHOTO,
+                            )
+                        }
+                        container.nutritionRepo.log(date, mealType, lines)
                     }
-                    container.write { container.nutritionRepo.log(date, mealType, lines) }
                     toaster.show("Logged ≈ ${Fmt.int(sel.sumOf { it.kcal })} ${com.myfit.tracker.domain.EnergyUnit.label}")
                     nav.pop()
                 },

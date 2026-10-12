@@ -14,12 +14,15 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -59,7 +62,8 @@ private class Frame(val pts: FloatArray, val w: Int, val h: Int, val face: Float
 /**
  * The body tracker. R17: MediaPipe Pose Landmarker **heavy** (33 3-D body points incl. hands, feet, eyes, ears and mouth)
  * plus the Face Landmarker for the head — its outline and yaw / pitch / roll — every few frames.
- * GPU first, CPU if the GPU path fails; Google ML Kit's accurate model if MediaPipe can't start at all.
+ * GPU first, CPU if the GPU path fails. R20: models are downloaded once on first use ([PoseModels]); the ML Kit
+ * fallback was removed (≈ 30–40 MB) — if MediaPipe can't start, the camera says so instead.
  */
 private interface Tracker {
     val label: String
@@ -75,7 +79,8 @@ private class MediaPipeTracker(ctx: Context) : Tracker {
     private var lastFace: FloatArray? = null
 
     init {
-        fun base(path: String, gpu: Boolean) = com.google.mediapipe.tasks.core.BaseOptions.builder().setModelAssetPath(path)
+        fun base(name: String, gpu: Boolean) = com.google.mediapipe.tasks.core.BaseOptions.builder()
+            .setModelAssetBuffer(PoseModels.buffer(ctx, name) ?: error("model $name missing"))
             .setDelegate(if (gpu) com.google.mediapipe.tasks.core.Delegate.GPU else com.google.mediapipe.tasks.core.Delegate.CPU).build()
         fun makePose(gpu: Boolean) = com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker.createFromOptions(ctx,
             com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker.PoseLandmarkerOptions.builder()
@@ -130,28 +135,10 @@ private class MediaPipeTracker(ctx: Context) : Tracker {
     override fun close() { runCatching { pose.close() }; runCatching { face?.close() } }
 
     companion object {
-        const val POSE_MODEL = "pose/pose_landmarker_heavy.task"
-        const val FACE_MODEL = "pose/face_landmarker.task"
-        fun available(ctx: Context) = runCatching { ctx.assets.list("pose")?.contains("pose_landmarker_heavy.task") == true }.getOrDefault(false)
+        const val POSE_MODEL = PoseModels.POSE
+        const val FACE_MODEL = PoseModels.FACE
+        fun available(ctx: Context) = PoseModels.installed(ctx)
     }
-}
-
-private class MlKitTracker : Tracker {
-    override val label = "ML Kit"
-    private val detector = com.google.mlkit.vision.pose.PoseDetection.getClient(
-        com.google.mlkit.vision.pose.accurate.AccuratePoseDetectorOptions.Builder()
-            .setDetectorMode(com.google.mlkit.vision.pose.accurate.AccuratePoseDetectorOptions.STREAM_MODE).build())
-
-    override fun analyse(bmp: Bitmap, tsMs: Long, wantFace: Boolean): Frame? {
-        val pose = runCatching { com.google.android.gms.tasks.Tasks.await(detector.process(com.google.mlkit.vision.common.InputImage.fromBitmap(bmp, 0))) }.getOrNull()
-        val lm = pose?.allPoseLandmarks.orEmpty()
-        if (lm.size < 33) return null
-        val pts = FloatArray(33 * 3)
-        lm.forEach { l -> val i = l.landmarkType; if (i in 0..32) { pts[i * 3] = l.position.x; pts[i * 3 + 1] = l.position.y; pts[i * 3 + 2] = l.inFrameLikelihood } }
-        return Frame(pts, bmp.width, bmp.height, null, null)
-    }
-
-    override fun close() { runCatching { detector.close() } }
 }
 
 /** CameraX frame → upright bitmap (front-camera frames stay un-mirrored; the overlay mirrors when drawing). */
@@ -170,6 +157,49 @@ private fun ImageProxy.upright(): Bitmap {
 @Composable
 fun PoseCamera(front: Boolean, accent: Color, highlight: Set<Int>, onPose: (FormGuide.Pose, Long) -> Unit, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
+    var ready by remember { mutableStateOf(PoseModels.installed(ctx)) }
+    if (!ready) { PoseModelPrompt(accent, modifier) { ready = true }; return }
+    PoseCameraLive(front, accent, highlight, onPose, modifier)
+}
+
+/** First use: one-time download of the tracking models (starts by itself on Wi-Fi). */
+@Composable
+private fun PoseModelPrompt(accent: Color, modifier: Modifier, onReady: () -> Unit) {
+    val ctx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val prog by PoseModels.progress.collectAsState()
+    var error by remember { mutableStateOf<String?>(null) }
+    fun start() {
+        error = null
+        scope.launch { if (PoseModels.download(ctx)) onReady() else error = "Download didn't finish — check your connection and try again." }
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        val cm = ctx.getSystemService(android.net.ConnectivityManager::class.java)
+        if (cm != null && !cm.isActiveNetworkMetered) start()
+    }
+    Box(modifier.background(Color(0xFF0B0D10)), contentAlignment = Alignment.Center) {
+        androidx.compose.foundation.layout.Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Camera coach setup", style = FitType.title, color = Color.White)
+            Text("One-time download of the body-tracking model (about ${PoseModels.SIZE_MB} MB). It runs fully on your phone — video is never stored or uploaded.",
+                style = FitType.caption, color = Color.White.copy(alpha = 0.75f), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.padding(top = 6.dp, bottom = 16.dp))
+            val p = prog
+            if (p != null) {
+                androidx.compose.material3.LinearProgressIndicator({ p }, Modifier.padding(horizontal = 12.dp).fillMaxWidthCompat(), color = accent, trackColor = Color.White.copy(alpha = 0.15f))
+                Text("${(p * 100).toInt()}%", style = FitType.caption, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(top = 6.dp))
+            } else {
+                error?.let { Text(it, style = FitType.caption, color = Color(0xFFFF8A80), modifier = Modifier.padding(bottom = 10.dp)) }
+                com.myfit.tracker.ui.theme.AccentButton("Download (${PoseModels.SIZE_MB} MB)", { start() }, icon = com.myfit.tracker.ui.theme.Duo.Camera)
+            }
+        }
+    }
+}
+
+private fun Modifier.fillMaxWidthCompat(): Modifier = this.fillMaxWidth()
+
+@Composable
+private fun PoseCameraLive(front: Boolean, accent: Color, highlight: Set<Int>, onPose: (FormGuide.Pose, Long) -> Unit, modifier: Modifier) {
+    val ctx = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val main = remember { ContextCompat.getMainExecutor(ctx) }
     val preview = remember { PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER; implementationMode = PreviewView.ImplementationMode.COMPATIBLE } }
@@ -180,6 +210,7 @@ fun PoseCamera(front: Boolean, accent: Color, highlight: Set<Int>, onPose: (Form
     DisposableEffect(front) {
         val exec = Executors.newSingleThreadExecutor()
         var tracker: Tracker? = null
+        var failed = false
         var frameNo = 0L
         var lastTs = 0L
         val analysis = ImageAnalysis.Builder()
@@ -189,8 +220,9 @@ fun PoseCamera(front: Boolean, accent: Color, highlight: Set<Int>, onPose: (Form
             .build()
         analysis.setAnalyzer(exec) { proxy ->
             try {
-                val t = tracker ?: (runCatching { if (MediaPipeTracker.available(ctx)) MediaPipeTracker(ctx) else null }.getOrNull() ?: MlKitTracker())
-                    .also { tracker = it; val l = it.label; main.execute { engine = l } }
+                val t = tracker ?: runCatching { MediaPipeTracker(ctx) }.getOrNull()
+                    ?.also { tracker = it; val l = it.label; main.execute { engine = l } }
+                if (t == null) { if (!failed) { failed = true; main.execute { engine = "Body tracking couldn't start on this phone" } }; return@setAnalyzer }
                 val bmp = proxy.upright()
                 val ts = maxOf(System.currentTimeMillis(), lastTs + 1).also { lastTs = it }
                 val f = runCatching { t.analyse(bmp, ts, wantFace = frameNo++ % 3 == 0L) }.getOrNull()

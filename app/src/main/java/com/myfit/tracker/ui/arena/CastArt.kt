@@ -30,7 +30,7 @@ import kotlinx.coroutines.withContext
 /** Clips each cast member has (Pip reuses his own animation set). */
 enum class CastClip(val file: String, val pip: String) { CHEER("cheer", "cheer"), RUN("run", "jog"), SAD("sad", "sad"), WAVE("wave", "wave") }
 
-private fun portraitPath(m: Mascot) = if (m == Mascot.PIP) "pip/look/look_06_06.webp" else "buddy/${m.id}/portrait.webp"
+private fun portraitPath(m: Mascot) = if (m == Mascot.PIP) "pip/portrait.webp" else "buddy/${m.id}/portrait.webp"
 // the buddy packs (downloaded on demand) cover cheer and wave
 private fun clipPath(m: Mascot, c: CastClip) = when {
     m == Mascot.PIP -> "pip/${c.pip}.webp"

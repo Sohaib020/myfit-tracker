@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- R20: live-notification text that stays readable in the phone's light AND dark shade (values-night overrides). -->
+<resources>
+    <color name="n_text_1">#FF14171A</color>
+    <color name="n_text_2">#FF454B52</color>
+    <color name="n_text_3">#FF6E757D</color>
+    <color name="n_chip_bg">#1F14171A</color>
+
+    <style name="NText" parent="@style/TextAppearance.Compat.Notification">
+        <item name="android:textColor">@color/n_text_2</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+    <style name="NText.Title" parent="@style/TextAppearance.Compat.Notification.Title">
+        <item name="android:textColor">@color/n_text_1</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="NText.Hero" parent="@style/TextAppearance.Compat.Notification.Title">
+        <item name="android:textColor">@color/n_text_1</item>
+        <item name="android:textSize">40sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:letterSpacing">-0.02</item>
+    </style>
+    <style name="NText.Info" parent="@style/TextAppearance.Compat.Notification.Info">
+        <item name="android:textColor">@color/n_text_3</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+    <style name="NText.Eyebrow" parent="NText.Info">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.12</item>
+    </style>
+    <style name="NText.Stat" parent="NText.Title">
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+    </style>
+</resources>

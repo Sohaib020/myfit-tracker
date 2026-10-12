@@ -28,9 +28,6 @@ object Buddy {
 
     /** The buddy currently shown. */
     val active = MutableStateFlow(Mascot.PIP)
-    @Volatile var lookN = 13; private set
-    /** Only Pip has the look-at-your-finger head grid. */
-    val hasLook: Boolean get() = active.value == Mascot.PIP
 
     /** Download progress per buddy id (0..1), for the chooser UI. */
     val downloading = MutableStateFlow<Map<String, Float>>(emptyMap())
@@ -77,7 +74,6 @@ object Buddy {
     }
 
     private fun apply(m: Mascot) {
-        lookN = if (m == Mascot.PIP) 13 else 1
         active.value = m
         onChange.forEach { it() }
     }
@@ -138,7 +134,7 @@ object Buddy {
     /** Removes a downloaded pack (Settings → storage). */
     fun remove(c: Context, m: Mascot) { if (m != Mascot.PIP) dir(c, m).deleteRecursively() }
 
-    /** Asset-relative path for a Pip-relative file ("idle.webp", "talk/0.webp", "look/…") of [m]. */
+    /** Asset-relative path for a Pip-relative file ("idle.webp", "talk/0.webp") of [m]. */
     fun path(rel: String, m: Mascot = active.value): String {
         if (m == Mascot.PIP) return "pip/$rel"
         val base = "buddy/${m.id}/"
