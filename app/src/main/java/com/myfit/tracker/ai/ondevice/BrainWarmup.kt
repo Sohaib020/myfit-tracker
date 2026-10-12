@@ -7,6 +7,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.launch
 
 /**
  * R21: the offline brain's slow first start (LiteRT-LM builds its GPU/CPU caches for this phone + app build) is done in
@@ -33,7 +34,7 @@ class BrainWarmup(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
         private fun done(c: Context) = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("done", null)
 
         /** "versionCode|model file|size" — changes after an app update or a new model. */
-        private fun key(c: Context): String? {
+        private suspend fun key(c: Context): String? {
             val f = OnDeviceAi.get(c).models.installedFile() ?: return null
             val v = runCatching { androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(c.packageManager.getPackageInfo(c.packageName, 0)) }.getOrDefault(0L)
             return "$v|${f.name}|${f.length()}"
@@ -42,6 +43,10 @@ class BrainWarmup(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
         /** Queue the warm-up if this app version + model hasn't been warmed yet. Cheap; safe to call often. */
         fun schedule(c: Context) {
             val app = c.applicationContext
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch { enqueue(app) }
+        }
+
+        private suspend fun enqueue(app: Context) {
             val k = key(app) ?: return
             if (done(app) == k) return
             val req = OneTimeWorkRequestBuilder<BrainWarmup>()
