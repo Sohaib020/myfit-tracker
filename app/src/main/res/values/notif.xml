@@ -6,16 +6,16 @@
     <color name="n_text_3">#FF6E757D</color>
     <color name="n_chip_bg">#1F14171A</color>
 
-    <style name="NText" parent="@android:style/TextAppearance.DeviceDefault.Notification">
+    <style name="NText" parent="@style/TextAppearance.Compat.Notification">
         <item name="android:textColor">@color/n_text_2</item>
         <item name="android:textSize">13sp</item>
     </style>
-    <style name="NText.Title" parent="@android:style/TextAppearance.DeviceDefault.Notification.Title">
+    <style name="NText.Title" parent="@style/TextAppearance.Compat.Notification.Title">
         <item name="android:textColor">@color/n_text_1</item>
         <item name="android:textSize">15sp</item>
         <item name="android:textStyle">bold</item>
     </style>
-    <style name="NText.Hero" parent="@android:style/TextAppearance.DeviceDefault.Notification.Title">
+    <style name="NText.Hero" parent="@style/TextAppearance.Compat.Notification.Title">
         <item name="android:textColor">@color/n_text_1</item>
         <item name="android:textSize">40sp</item>
         <item name="android:textStyle">bold</item>
@@ -24,7 +24,7 @@
         <item name="android:includeFontPadding">false</item>
         <item name="android:letterSpacing">-0.02</item>
     </style>
-    <style name="NText.Info" parent="@android:style/TextAppearance.DeviceDefault.Notification.Info">
+    <style name="NText.Info" parent="@style/TextAppearance.Compat.Notification.Info">
         <item name="android:textColor">@color/n_text_3</item>
         <item name="android:textSize">12sp</item>
     </style>
