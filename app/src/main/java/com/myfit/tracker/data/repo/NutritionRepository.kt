@@ -82,7 +82,11 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
      * Best built-in food for a dish name from the photo AI ("chicken karahi", "chana daal"), or null when nothing is
      * close. Uses names and Roman-Urdu aliases; exact alias hits win, then word overlap.
      */
-    suspend fun matchDish(name: String): Food? {
+    /**
+     * [strict] (used for AI photo names): every word the AI used must be in the catalogue name and the catalogue name
+     * may add at most a third more — so "pad thai" or plain "pasta" are NOT forced onto a different Pakistani dish.
+     */
+    suspend fun matchDish(name: String, strict: Boolean = false): Food? {
         val list = cands ?: dao.builtIn().first().map { f ->
             val m = metaMap[f.uuid]
             val all = listOf(f.name) + (m?.aliases ?: emptyList())
@@ -96,6 +100,7 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
         for (c in list) for (n in c.names) {
             val inter = n.intersect(qw).size
             if (inter == 0) continue
+            if (strict && (inter < qw.size || inter.toDouble() / n.size < 0.67)) continue
             // reward covering the query, penalise extra words in the candidate a little
             val score = inter.toDouble() / qw.size * 0.75 + inter.toDouble() / n.size * 0.25
             if (score > bestScore) { bestScore = score; best = c.food }
