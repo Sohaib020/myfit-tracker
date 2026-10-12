@@ -255,3 +255,11 @@ Update (12 Oct): owner chose the **B→A ladder** (L1 streetwear, L2 Epic gold t
 - Lesson for the roster: fitted outfits rig cleanly (Blaze L3 armour perfect); open coats/vests near the arms tear when arms lift.
 - Clip packs ≈0.95 MB per character per level (toon compresses ~2× better than realistic).
 - Pending: Frost L3 (quota), app integration after owner approves previews.
+
+## Heroes route (12 Oct) — sculpted CC0 bases
+Owner rejected AI image-to-3D, MakeHuman, code-built toys and the cute buddies; wants professional collectible characters. Roster stays: 8 men, 8 women (incl. hijab/modest), 4 animal champions; gamer-tag names; tiers Street → Epic → Legendary.
+- Bases: Quaternius Universal Base Characters (Standard, free, CC0: Superhero male/female, light/dark skin, 6 hairstyles + beard + brows) and Universal Animation Library (Standard, CC0: 43 animations). Same 65-bone UE-style skeleton → every animation fits every body. Render inputs live on branch **hero-assets** (ubc/, ual/UAL1_Standard.glb).
+- tools/heroes/heroes.py: load body + hair + tint, import UAL actions, studio lights (Khronos PBR Neutral — AgX turned reds pink), act(), freeze() (bake action frame so manual posing sticks), gym moves flex/victory authored over Idle, clip_frame() for idle/flex/victory/punch.
+- tools/heroes/outfit.py: garments cut from the body with bisect planes (clean seams) + dissolve_degenerate/remove_doubles (slivers caused spikes) → Displace lift → Solidify (no even offset) → Subsurf; keep body skin weights. Rigid trims ride bones (_ride must update view layer before reading matrix_world). L1 fitted tee + accent yoke + joggers + sneakers (hoodie/drape attempts looked frumpy — skipped), L2 + gold chain/medal/glow seams/gold soles, L3 moulded armour (chest/ab plates, pauldrons, gauntlets, greaves, knee caps, belt, core).
+- tools/heroes/render_clips.py + roster.json + .github/workflows/heroclips.yml (push heroclips-run; 3 tiers × 4 shards, stills, pack, ladder.gif → branch hero-out). Blaze packs ≈2.8 MB per tier (4 clips + portrait).
+- Next: owner review; then richer outfit designs per character, female/hijab variants, 4 animal champions, app integration.
