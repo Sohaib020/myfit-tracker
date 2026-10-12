@@ -299,3 +299,21 @@ def _fix_long_hair(mesh, J):
         for g in arm_groups: g.remove([v.index])
         t = max(0.0, min(1.0, (p.z - (zc - 0.10)) / 0.25))
         head.add([v.index], 0.3 + 0.7 * t, 'REPLACE'); neck.add([v.index], 0.7 - 0.7 * t + 0.01, 'REPLACE')
+
+
+# per-character muscle bulk to match the reference images (lateral scale of each bone; length unchanged)
+BULK = {
+    'trainer_m': {'UpperChest': 1.10, 'Chest': 1.07, 'Neck': 1.10, 'Shoulder': 1.10, 'UpperArm': 1.20, 'ForeArm': 1.12, 'UpLeg': 1.08, 'Leg': 1.06},
+    'trainer_f': {'UpperChest': 1.04, 'Shoulder': 1.06, 'UpperArm': 1.12, 'ForeArm': 1.07, 'UpLeg': 1.08, 'Leg': 1.06},
+    'nutri_m': {'Shoulder': 1.03, 'UpperArm': 1.07, 'ForeArm': 1.04},
+    'nutri_f': {},
+}
+
+
+def bulk(arm, who):
+    prof = BULK.get(who, {})
+    for b in arm.data.bones:
+        b.inherit_scale = 'NONE'                       # each bone keeps its own girth; hands/feet never inflate
+    for pb in arm.pose.bones:
+        k = prof.get(pb.name.split('.')[0], 1.0)
+        pb.scale = (k, 1.0, k)
