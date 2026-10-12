@@ -38,6 +38,13 @@ def load(base, anim_glb, sex='male', hair=None, skin=None):
     RIG.animation_data_create()
     return RIG
 
+def add_hair(base, name):
+    hp = os.path.join(base, 'Hairstyles', 'Origin at 0', 'glTF (Godot)', name + '.gltf')
+    before = set(S.objects); bpy.ops.import_scene.gltf(filepath=hp)
+    for o in set(S.objects) - before:
+        if o.type == 'MESH': _attach_to_head(o)
+        elif o.type == 'ARMATURE': bpy.data.objects.remove(o)
+
 def _attach_to_head(o):
     """Hair pieces in the 'Origin at 0' set sit in rest-pose space: parent to the Head bone keeping their transform."""
     mw = o.matrix_world.copy(); o.parent = RIG; o.parent_type = 'BONE'; o.parent_bone = 'Head'
@@ -65,10 +72,10 @@ def studio(res=(560, 700), samples=32, bg=(0.012, 0.014, 0.012)):
     k = hgt * hgt
     area('key', (-1.2, -1.9, 1.9), 260 * k, 1.2 * hgt, (1.0, 0.96, 0.92))
     area('fill', (1.6, -1.4, 0.9), 70 * k, 1.6 * hgt, (0.85, 0.9, 1.0))
-    area('rimL', (-1.3, 1.2, 1.4), 240 * k, 0.6 * hgt, (0.72, 1.0, 0.3))
-    area('rimR', (1.3, 1.1, 1.3), 190 * k, 0.6 * hgt, (1.0, 0.25, 0.32))
+    area('rimL', (-1.3, 1.6, 1.6), 200 * k, 0.6 * hgt, (0.72, 1.0, 0.3))
+    area('rimR', (1.3, 1.5, 1.5), 150 * k, 0.6 * hgt, (1.0, 0.25, 0.32))
     bpy.ops.mesh.primitive_plane_add(size=40 * hgt); fl = bpy.context.object
-    fm = bpy.data.materials.new('floor'); fm.use_nodes = True; fm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = srgb('#060706')
+    fm = bpy.data.materials.new('floor'); fm.use_nodes = True; fm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = srgb('#050505')
     fm.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 0.8; fl.data.materials.append(fm)
     cd = bpy.data.cameras.new('cam'); cd.lens = 60; cam = bpy.data.objects.new('cam', cd); sc.collection.objects.link(cam); sc.camera = cam
     t = bpy.data.objects.new('t', None); t.location = (0, 0, hgt * 0.52); sc.collection.objects.link(t)
@@ -78,6 +85,8 @@ def studio(res=(560, 700), samples=32, bg=(0.012, 0.014, 0.012)):
 
 def render(path, yaw=-20, dist=2.3, z=0.6):
     h = S['hgt']; a = math.radians(-90 + yaw); S.camera.location = (dist * h * math.cos(a), dist * h * math.sin(a), z * h)
+    t = bpy.data.objects.get('t')
+    if t: t.location.z = h * (0.9 if z > 0.85 else 0.52)
     S.render.filepath = path; bpy.ops.render.render(write_still=True)
 
 # ------------------------------------------------------------------ gym moves authored on top of the real animations
@@ -110,15 +119,24 @@ def freeze():
     bpy.context.view_layer.update()
 
 def _ease(t): return t * t * (3 - 2 * t)
+CLIPS = {   # app clip -> frames; every clip loops back to its first pose
+    'idle': 30, 'combo': 30, 'run': 28, 'jump': 32, 'dance': 40,
+}
 def clip_frame(clip, u):
-    """Pose the rig for clip at phase u in [0,1). Returns nothing; idle-based clips loop back to idle."""
-    import math as _m
+    """Pose the rig for [clip] at phase u in [0,1). Uses the animation library only (no hand-authored poses)."""
     if clip == 'idle': act('Idle_Loop', t=u); return
-    if clip == 'punch':
-        if u < 0.5: act('Punch_Jab', t=u * 2)
-        else: act('Punch_Cross', t=(u - 0.5) * 2)
+    if clip == 'combo':              # jab then cross
+        if u < 0.45: act('Punch_Jab', t=u / 0.45)
+        else: act('Punch_Cross', t=(u - 0.45) / 0.55)
         return
-    act('Idle_Loop', t=u); freeze()
-    k = _ease(min(1, u / 0.28)) * (1 - _ease(max(0, (u - 0.78) / 0.22)))
-    pump = (0.5 + 0.5 * _m.sin((u - 0.28) / 0.5 * 4 * _m.pi)) if 0.28 < u < 0.78 else 0.0
-    gym(clip, k, pump * k)
+    if clip == 'run':                # jog into sprint
+        if u < 0.5: act('Jog_Fwd_Loop', t=(u / 0.5) % 1.0)
+        else: act('Sprint_Loop', t=((u - 0.5) / 0.5 * 2) % 1.0)
+        return
+    if clip == 'jump':               # take-off, air, landing
+        if u < 0.3: act('Jump_Start', t=u / 0.3)
+        elif u < 0.62: act('Jump_Loop', t=(u - 0.3) / 0.32)
+        else: act('Jump_Land', t=(u - 0.62) / 0.38)
+        return
+    if clip == 'dance': act('Dance_Loop', t=u); return
+    raise KeyError(clip)

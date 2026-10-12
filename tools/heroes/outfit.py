@@ -34,6 +34,33 @@ def tint(obj, color, strength=1.0):
         else: mix.inputs[6].default_value = b.inputs['Base Color'].default_value
         mix.inputs[7].default_value = H.srgb(color); nt.links.new(mix.outputs[2], b.inputs['Base Color'])
 
+# ------------------------------------------------------------------ muscle growth per tier
+MUSCLE = {'spine_03': 1.0, 'clavicle_l': 1.0, 'clavicle_r': 1.0, 'upperarm_l': 1.0, 'upperarm_r': 1.0, 'lowerarm_l': 0.7, 'lowerarm_r': 0.7,
+          'thigh_l': 0.75, 'thigh_r': 0.75, 'calf_l': 0.45, 'calf_r': 0.45, 'spine_02': 0.45, 'neck_01': 0.35}
+BULK = {1: 0.0, 2: 0.005, 3: 0.011}          # metres of growth along the surface (~8% / ~16% bulk)
+STATE = {'bulk': 0.0}
+
+def prep_muscle(level):
+    """Add a 'muscle' weight map to the body (copied into every garment) and a bulk layer for this tier."""
+    body = H.BODY; amt = BULK.get(level, 0.0); STATE['bulk'] = amt
+    g = body.vertex_groups.get('muscle') or body.vertex_groups.new(name='muscle')
+    idx = {vg.index: MUSCLE.get(vg.name, 0.0) for vg in body.vertex_groups}
+    for v in body.data.vertices:
+        w = min(1.0, sum(e.weight * idx.get(e.group, 0.0) for e in v.groups))
+        if w > 0.01: g.add([v.index], w, 'REPLACE')
+    if amt > 0: _bulk_mod(body)
+
+def _bulk_mod(ob):
+    amt = STATE['bulk']
+    if amt <= 0 or 'muscle' not in ob.vertex_groups: return
+    d = ob.modifiers.new('bulk', 'DISPLACE'); d.strength = amt; d.mid_level = 0.0; d.vertex_group = 'muscle'
+    # keep it right after the armature so garments lifted on top inherit the bigger silhouette
+    order = [m.name for m in ob.modifiers]
+    if 'arm' in order or any(m.type == 'ARMATURE' for m in ob.modifiers):
+        arm_i = next(i for i, m in enumerate(ob.modifiers) if m.type == 'ARMATURE')
+        while list(ob.modifiers).index(d) > arm_i + 1:
+            bpy.context.view_layer.objects.active = ob; bpy.ops.object.modifier_move_up(modifier=d.name)
+
 # ------------------------------------------------------------------ fitted shells
 def shell(name, planes, lift, thick, m, rim=None, sub=1, extra=None, drape=0):
     """Copy the body, keep the part on the positive side of every (point, normal) plane, lift it off the skin."""
@@ -57,6 +84,7 @@ def shell(name, planes, lift, thick, m, rim=None, sub=1, extra=None, drape=0):
     if rim: me.materials.append(rim)
     for p in me.polygons: p.use_smooth = True; p.material_index = 0
     a = ob.modifiers.new('arm', 'ARMATURE'); a.object = H.RIG
+    _bulk_mod(ob)
     d = ob.modifiers.new('lift', 'DISPLACE'); d.strength = lift; d.mid_level = 0.0
     if drape:   # fabric doesn't show every muscle: relax the surface after lifting it
         sm = ob.modifiers.new('drape', 'SMOOTH'); sm.factor = 0.9; sm.iterations = drape

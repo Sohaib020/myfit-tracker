@@ -1,3 +1,7 @@
 {
- "blaze": {"body": "male", "hair": "Hair_SimpleParted", "skin": "#C8916C", "hair_col": "#2A211C", "accent": "#8A0A1C"}
+ "blaze":        {"body": "male",   "hair": "Hair_SimpleParted", "beard": true, "skin": "#C8916C", "hair_col": "#211A16", "accent": "#7A0A18"},
+ "nova":         {"body": "female", "hair": "Hair_Buns", "skin": "#D9A07C", "hair_col": "#1C1512", "accent": "#0B5F73"},
+ "valor":        {"body": "female", "hair": null, "skin": "#C08A66", "hair_col": "#1C1512", "accent": "#4B2A7A", "hijab": "#15161C"},
+ "frost_armour": {"body": "male",   "hair": null, "skin": "#C8916C", "hair_col": "#211A16", "accent": "#0B3D66"},
+ "frost_hybrid": {"body": "male",   "hair": null, "skin": "#FFFFFF", "hair_col": "#211A16", "accent": "#0B3D66"}
 }

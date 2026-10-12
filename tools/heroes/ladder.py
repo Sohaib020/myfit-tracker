@@ -7,7 +7,7 @@ except Exception: F = ImageFont.load_default()
 LAB = {1: 'LV1 · Street', 2: 'LV2 · Epic', 3: 'LV3 · Legendary'}
 def frames(d):
     fr = []
-    for c in ('idle', 'flex', 'victory', 'punch'):
+    for c in ('idle', 'combo', 'run', 'jump', 'dance'):
         p = os.path.join(d, 'preview_%s.gif' % c)
         if not os.path.exists(p): continue
         g = Image.open(p)
