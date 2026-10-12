@@ -3,7 +3,7 @@ package com.myfit.tracker.ui.theme
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 
-enum class BackdropArt { HEX, SPEED, PLATES, DOTS, PULSE, PLAIN, GRADIENT, KINETIC, AURORA, GRID, WAVES, LANDSCAPE, FROST, BOREALIS, OCEAN, SAKURA, NEON_CITY, DUNES, GALAXY, FOREST, LAVA, RAIN, MINT, GOLD, ARCTIC, CYBER, DESERT_NIGHT, LOTUS, MONSOON }
+enum class BackdropArt { HEX, SPEED, PLATES, DOTS, PULSE, PLAIN, GRADIENT, KINETIC, AURORA, GRID, WAVES, LANDSCAPE, FROST, BOREALIS, OCEAN, SAKURA, NEON_CITY, DUNES, GALAXY, FOREST, LAVA, RAIN, MINT, GOLD, ARCTIC, CYBER, DESERT_NIGHT, LOTUS, MONSOON, CULTURE }
 
 @Immutable
 data class FitTheme(
@@ -450,7 +450,7 @@ object Themes {
     )
 
     /** R17: twelve themes, no families (see GymThemes). */
-    val all: List<FitTheme> get() = GymThemes.all
+    val all: List<FitTheme> by lazy { GymThemes.all + CulturalThemes.all }
     fun byId(id: String): FitTheme {
         var k = id
         repeat(3) { k = GymThemes.legacy[k] ?: MoreThemes.legacy[k] ?: k }

@@ -137,7 +137,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
             GlassCard {
                 CardHeader(Duo.Palette, "Theme & style", th.fat)
                 Spacer(Modifier.height(12.dp))
-                ThemeGlanceCard(container, settings)
+                ThemePicker(container, settings)
             }
         }
 

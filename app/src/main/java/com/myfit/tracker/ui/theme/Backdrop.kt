@@ -73,6 +73,7 @@ fun DrawScope.drawBackdrop(theme: FitTheme, image: ImageBitmap?, t: Float, w: Fl
             BackdropArt.WAVES -> waves(theme, t, w, h)
             BackdropArt.LANDSCAPE -> landscape(t, w, h)
             BackdropArt.FROST -> frost(theme, t, w, h)
+            BackdropArt.CULTURE -> culture(theme, t, w, h)
             else -> drawAnimatedArt(theme, t, w, h)
         }
     }
@@ -89,7 +90,7 @@ private fun DrawScope.drawCover(img: ImageBitmap, w: Float, h: Float) {
     )
 }
 
-private fun DrawScope.blob(c: Color, center: Offset, radius: Float, alpha: Float) {
+internal fun DrawScope.blob(c: Color, center: Offset, radius: Float, alpha: Float) {
     drawCircle(
         Brush.radialGradient(listOf(c.copy(alpha = alpha), c.copy(alpha = 0f)), center, radius),
         radius, center,
@@ -126,7 +127,7 @@ private fun DrawScope.grid(th: FitTheme, t: Float, w: Float, h: Float) {
 }
 
 /** The two soft light ribbons that sweep across the gym themes. */
-private fun DrawScope.ribbons(th: FitTheme, t: Float, w: Float, h: Float) {
+internal fun DrawScope.ribbons(th: FitTheme, t: Float, w: Float, h: Float) {
     val c = if (th.isLight) th.accent else Color.White
     val a = if (th.isLight) 0.06f else 0.07f
     val shift = sin(t * 0.08f) * w * 0.04f
