@@ -213,6 +213,7 @@ object LiveUpdates {
                 val points = if (exs.size in 2..12) (1 until exs.size).map { it.toFloat() / exs.size } else emptyList()
                 // one route segment per exercise
                 val segs = if (exs.size in 2..12) exs.map { 1f to NKind.LIFT.color } else emptyList()
+                val segN = if (exs.size in 2..12) exs.size else 0
                 val vol = t.volumeKg?.let { com.myfit.tracker.domain.Fmt.int(it) + " kg" } ?: "—"
                 val stats = listOf("${t.sets}" to "Sets", vol to "Volume", "$doneEx/${exs.size}" to "Exercises")
                 if (r != null && r.endsAt > System.currentTimeMillis()) {
@@ -222,20 +223,19 @@ object LiveUpdates {
                     while (true) {
                         val left = r.endsAt - System.currentTimeMillis()
                         if (left <= 0) break
-                        post(app, WORKOUT, NCard(NKind.REST, "Rest · then ${r.label}", "${t.sets} sets done · ${v.workout.name}", chrono = r.endsAt, countDown = true,
-                            progress = 1f - left.toFloat() / total, chip = "Rest", stats = stats, eyebrow = "Resting", unit = "left"),
+                        post(app, WORKOUT, NCard(NKind.REST, "Next · ${r.label}", "Breathe and reset — ${t.sets} sets done", chrono = r.endsAt, countDown = true,
+                            progress = 1f - left.toFloat() / total, chip = "Rest", stats = stats, eyebrow = "Rest · ${v.workout.name}", unit = "rest left"),
                             "gym", category = Notification.CATEGORY_STOPWATCH, actions = acts)
                         delay(minOf(5_000L, left))
                     }
-                    post(app, WORKOUT, NCard(NKind.LIFT, "Rest over — let's go 💪", "Next: ${r.label}", chrono = v.workout.startedAt, progress = frac,
-                        progressLabel = next?.let { "Then: $it" }, stats = stats, eyebrow = "Workout · live", unit = "elapsed", chip = "Go"),
+                    post(app, WORKOUT, NCard(NKind.LIFT, "Rest over — you're up", "Next set · ${r.label}", chrono = v.workout.startedAt, progress = frac,
+                        progressLabel = next?.let { "Then $it" }, stats = stats, eyebrow = v.workout.name, unit = "elapsed", chip = "$doneEx/${exs.size}", segments = segN),
                         "gym", points, Notification.CATEGORY_STOPWATCH, segs)
                 } else {
-                    post(app, WORKOUT, NCard(NKind.LIFT, current?.let { "$it · set $setNo" } ?: v.workout.name,
-                        next?.let { "Up next: $it" } ?: if (exs.isNotEmpty()) "Last exercise — finish strong" else "Add your first exercise",
+                    post(app, WORKOUT, NCard(NKind.LIFT, current?.let { "$it · Set $setNo" } ?: v.workout.name,
+                        next?.let { "Up next · $it" } ?: if (exs.isNotEmpty()) "Final exercise — finish strong" else "Add your first exercise",
                         chrono = v.workout.startedAt, progress = frac, indeterminate = frac == null,
-                        progressLabel = "${(((frac ?: 0f) * 100).toInt())}% of ${v.workout.name}",
-                        stats = stats, eyebrow = "Workout · live", unit = "elapsed", chip = "$doneEx/${exs.size}"),
+                        stats = stats, eyebrow = v.workout.name, unit = "elapsed", chip = "$doneEx/${exs.size}", segments = segN),
                         "gym", points, Notification.CATEGORY_STOPWATCH, segs)
                 }
             }

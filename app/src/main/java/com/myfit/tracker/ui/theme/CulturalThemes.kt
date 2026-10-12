@@ -325,17 +325,17 @@ private fun DrawScope.iznik(th: FitTheme, w: Float, h: Float) {
     }
     // hero tulip, bottom-right
     val o = Offset(w * 0.8f, h * 0.7f); val u = h * 0.2f
-    fun P(x: Float, y: Float) = Offset(o.x + x * u, o.y + y * u)
-    fun path(vararg pts: Offset) = Path().apply {
+    fun path(vararg xy: Float) = Path().apply {
+        val pts = List(xy.size / 2) { Offset(o.x + xy[it * 2] * u, o.y + xy[it * 2 + 1] * u) }
         moveTo(pts[0].x, pts[0].y)
         var q = 1
         while (q + 2 < pts.size) { cubicTo(pts[q].x, pts[q].y, pts[q + 1].x, pts[q + 1].y, pts[q + 2].x, pts[q + 2].y); q += 3 }
     }
     val red = th.protein
-    val center = path(P(0f, 0f), P(-0.28f, -0.2f), P(-0.18f, -0.75f), P(0f, -1f), P(0.18f, -0.75f), P(0.28f, -0.2f), P(0f, 0f))
-    val left = path(P(0f, 0f), P(-0.45f, -0.05f), P(-0.55f, -0.5f), P(-0.42f, -0.85f), P(-0.3f, -0.55f), P(-0.15f, -0.3f), P(0f, 0f))
-    val right = path(P(0f, 0f), P(0.45f, -0.05f), P(0.55f, -0.5f), P(0.42f, -0.85f), P(0.3f, -0.55f), P(0.15f, -0.3f), P(0f, 0f))
-    val leaf = path(P(-0.02f, 0.7f), P(-0.4f, 0.6f), P(-0.6f, 0.3f), P(-0.55f, 0.1f), P(-0.35f, 0.35f), P(-0.2f, 0.55f), P(-0.02f, 0.7f))
+    val center = path(0f, 0f, -0.28f, -0.2f, -0.18f, -0.75f, 0f, -1f, 0.18f, -0.75f, 0.28f, -0.2f, 0f, 0f)
+    val left = path(0f, 0f, -0.45f, -0.05f, -0.55f, -0.5f, -0.42f, -0.85f, -0.3f, -0.55f, -0.15f, -0.3f, 0f, 0f)
+    val right = path(0f, 0f, 0.45f, -0.05f, 0.55f, -0.5f, 0.42f, -0.85f, 0.3f, -0.55f, 0.15f, -0.3f, 0f, 0f)
+    val leaf = path(-0.02f, 0.7f, -0.4f, 0.6f, -0.6f, 0.3f, -0.55f, 0.1f, -0.35f, 0.35f, -0.2f, 0.55f, -0.02f, 0.7f)
     for (pp in listOf(left, right)) { drawPath(pp, th.accent.copy(alpha = 0.08f)); drawPath(pp, th.accent.copy(alpha = 0.2f), style = Stroke(w * 0.005f)) }
     drawPath(center, red.copy(alpha = 0.12f)); drawPath(center, red.copy(alpha = 0.3f), style = Stroke(w * 0.005f))
     drawPath(leaf, th.accent.copy(alpha = 0.07f)); drawPath(leaf, th.accent.copy(alpha = 0.16f), style = Stroke(w * 0.004f))
