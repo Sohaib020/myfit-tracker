@@ -35,7 +35,7 @@ class ModelDownloadWorker(ctx: Context, params: WorkerParameters) : CoroutineWor
             runCatching { setForeground(info(p, text)) }
         }
         return when {
-            err == null -> Result.success()
+            err == null -> { BrainWarmup.schedule(applicationContext); Result.success() }
             err.contains("resume", true) && runAttemptCount < 8 -> Result.retry()
             else -> Result.failure()
         }
