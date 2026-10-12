@@ -75,6 +75,11 @@ class FoodVision(private val c: AppContainer) {
         // once a quick answer is on screen, give the accuracy pass a little longer — but never leave the user waiting long
         val best = if (agree) null else withTimeoutOrNull(if (early != null) 12_000L else 30_000L) { full.await() }
         if (best == null) full.cancel()
+        // R21: an AI pass said "no food" and none found any → say what it saw (the phone's dish guess on a chair is meaningless)
+        if (best?.getOrNull() == null && early == null) {
+            val nf = (best?.exceptionOrNull() as? NotFood) ?: (quick.await().exceptionOrNull() as? NotFood)
+            if (nf != null) { ai.quota.consume(AiQuota.Kind.PHOTO); throw nf }
+        }
         val out = best?.getOrNull()?.let { r -> r.copy(alternatives = early?.alternatives.orEmpty()) } ?: early ?: instant ?: run {
             val e = best?.exceptionOrNull() ?: quick.await().exceptionOrNull() ?: IllegalStateException("Couldn't read the photo")
             throw e
@@ -195,7 +200,7 @@ class FoodVision(private val c: AppContainer) {
     private fun parse(raw: String, compact: Boolean = false): Result {
         val txt = raw.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
         val o = JSONObject(txt.substring(txt.indexOf('{').coerceAtLeast(0), txt.lastIndexOf('}') + 1))
-        if (!o.optBoolean("is_food", true)) throw NotFood(o.optString("note").ifBlank { "I couldn't see any food in that photo." })
+        if (!o.optBoolean("is_food", true)) throw NotFood(o.optString("note").ifBlank { "I couldn't see any food in that photo." }.take(240))
         val arr = o.optJSONArray("items") ?: throw NotFood("I couldn't recognise the food — try a closer, brighter photo.")
         val items = (0 until arr.length()).map { arr.getJSONObject(it) }.map { j ->
             Item(
@@ -219,7 +224,8 @@ class FoodVision(private val c: AppContainer) {
 Identify each food or drink clearly visible in this photo — from ANY cuisine worldwide. Name it specifically (e.g. pad thai, margherita pizza, sushi roll, shawarma, caesar salad). For Pakistani / South Asian dishes use the usual local name (chicken karahi, daal mash, aloo paratha, chicken biryani, chapli kebab, nihari, chai, lassi).
 Estimate the visible portion in grams (use plate, utensils and hands for scale) and total kcal for that portion.
 Reply ONLY with JSON: {"is_food": true, "items": [{"name": "...", "grams": 250, "kcal": 400, "protein_g": 20, "carbs_g": 45, "fat_g": 15}]}
-If there is no food: {"is_food": false, "items": []}
+If there is no food: {"is_food": false, "items": [], "note": "one friendly sentence saying what you see instead, e.g. I don't see any food — I see a grey chair, a table and a phone on it"}
+Describe objects and the scene only; never describe people's faces, bodies or identity.
 """.trim()
         private const val QUICK = "Name the foods or dishes clearly visible in this photo, from any cuisine (Pakistani / South Asian dishes by their usual local names). Reply ONLY with JSON: {\"foods\": [\"name\", ...]} — at most 4, empty list if there is no food."
         private val PROMPT = """
@@ -230,7 +236,7 @@ For each item estimate the portion visible (use plate size, utensils and hands a
 Be realistic, not optimistic. If unsure, give your best estimate and set confidence "low".
 Reply ONLY with JSON in exactly this shape:
 {"is_food": true, "items": [{"name": "Chicken biryani", "portion": "1 plate (~350 g)", "grams": 350, "calories": 600, "protein_g": 28, "carbs_g": 70, "fat_g": 22, "fiber_g": 3, "confidence": "high|medium|low"}], "note": "one short tip or caveat, optional"}
-If there is no food in the photo, reply {"is_food": false, "items": [], "note": "what you see instead"}.
+If there is no food in the photo, reply {"is_food": false, "items": [], "note": "one friendly sentence saying what you see instead, e.g. I don't see any food — I see a grey chair, a table and a phone on it"}. Describe objects and the scene only; never describe people's faces, bodies or identity.
 """.trim()
     }
 }

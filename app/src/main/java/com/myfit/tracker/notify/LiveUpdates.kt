@@ -74,7 +74,17 @@ object LiveUpdates {
      * Picked automatically: Android 16+ phones that allow promoted notifications get the system Live Update (Now Bar,
      * status-bar chip, lock screen); every other phone gets MyFit's live card.
      */
-    fun nativeStyle(c: Context): Boolean = Build.VERSION.SDK_INT >= 36 && promotionAllowed(c) != false
+    fun nativeStyle(c: Context): Boolean = nowBarCapable(c) && useNowBar(c)
+
+    /** Android 16+ phone that allows promoted (Now Bar) notifications. */
+    fun nowBarCapable(c: Context): Boolean = Build.VERSION.SDK_INT >= 36 && promotionAllowed(c) != false
+
+    /**
+     * R21: which look to use where both work. MyFit card (default) = the full design (big clock, ring, stats) in the
+     * shade; Now Bar = Android's own Live Update (status-bar chip + Now Bar), drawn by the system in its own style.
+     */
+    fun useNowBar(c: Context) = c.getSharedPreferences("live_notif", Context.MODE_PRIVATE).getBoolean("now_bar", false)
+    fun setUseNowBar(c: Context, on: Boolean) = c.getSharedPreferences("live_notif", Context.MODE_PRIVATE).edit().putBoolean("now_bar", on).apply()
 
     /** A button on a live notification: label + action handled by [LiveActionReceiver]. */
     data class Action(val label: String, val action: String)
@@ -137,7 +147,8 @@ object LiveUpdates {
             }
         }
         // Android 16 draws at most a few milestone dots: keep up to 4, spread across the bar
-        val pts = if (points.size <= 4) points else (0 until 4).map { points[it * (points.size - 1) / 3] }
+        // segments already mark each exercise; extra milestone squares only clutter the bar
+        val pts = if (segs.isNotEmpty()) emptyList() else if (points.size <= 4) points else (0 until 4).map { points[it * (points.size - 1) / 3] }
         pts.forEach { f -> style.addProgressPoint(Notification.ProgressStyle.Point((f.coerceIn(0f, 1f) * 1000).toInt().coerceIn(1, 999)).setColor(card.kind.color)) }
         if (card.progress != null) style.setProgress((card.progress.coerceIn(0f, 1f) * 1000).toInt()) else style.setProgressIndeterminate(true)
         val text = listOfNotNull(card.text, card.progressLabel).joinToString(" · ")
