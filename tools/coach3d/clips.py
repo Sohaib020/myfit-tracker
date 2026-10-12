@@ -63,11 +63,6 @@ def build(who, name, arm, assets, ual_path):
     _clear_contacts(arm)
     if arm.animation_data: arm.animation_data.action = None
     for pb in arm.pose.bones: pb.location = (0, 0, 0); pb.rotation_mode = 'QUATERNION'; pb.rotation_quaternion = Quaternion()
-    if name in ('idle', 'talk'):
-        src, acts = cs.import_source(ual_path)
-        act, n = anim.retarget(src, cs.UAL, acts['Idle_Loop' if name == 'idle' else 'Idle_Talking_Loop'], arm, name)
-        cs.remove(src)
-        c = Clip(name, n, loop=True); _scene_range(c); return c
     if name == 'dance':
         f, a, m = DANCE[who]
         src, acts = cs.import_source(os.path.join(assets, f))
@@ -83,8 +78,9 @@ def build(who, name, arm, assets, ual_path):
     if getattr(c, 'legs_planted', False):
         feet = plant_feet(arm)
         if name == 'lunge': _lunge_step(arm, c, feet)
+    hold_f = c.keys[1][0] if len(c.keys) > 1 else 0       # props are placed at the first held pose
     for pname, bone in c.props:
-        props.attach(pname, arm, bone)
+        props.attach(pname, arm, bone, frame=0 if name == 'press' else int(hold_f) if name != 'bottle' else 0)
     return c
 
 
@@ -115,16 +111,16 @@ def victory():
     P = moves.P
     load = P(both('UpperArm', x=20, y=8), both('ForeArm', x=-30), {'Spine': (22, 0, 0), 'Head': (8, 0, 0)},
              both('UpLeg', x=-60), both('Leg', x=95), both('Foot', x=-35), moves.fist('L', .6), moves.fist('R', .6))
-    air = P(both('UpperArm', x=-20, y=-150), both('ForeArm', x=-10), {'Spine': (-8, 0, 0), 'Chest': (-6, 0, 0), 'Head': (-14, 0, 0)},
+    air = P(both('UpperArm', x=-20, y=-150), both('ForeArm', x=-10), both('Hand', x=18), {'Spine': (-8, 0, 0), 'Chest': (-6, 0, 0), 'Head': (-14, 0, 0)},
             both('UpLeg', x=-28), both('Leg', x=55), both('Foot', x=30), moves.fist('L'), moves.fist('R'))
-    land = P(both('UpperArm', x=-25, y=-120), both('ForeArm', x=-30), {'Spine': (14, 0, 0)}, both('UpLeg', x=-50), both('Leg', x=80), both('Foot', x=-25),
+    land = P(both('UpperArm', x=-10, y=-62, tw=-70), both('ForeArm', x=-115), {'Spine': (14, 0, 0), 'Head': (-6, 0, 0)}, both('UpLeg', x=-50), both('Leg', x=80), both('Foot', x=-25),
              moves.fist('L'), moves.fist('R'))
     c.key(0, P()); c.key(10, load, hips=(0, 0.04, -0.26), ease='in')
     c.key(16, air, hips=(0, 0, 0.30), ease='out')
     c.key(22, air, hips=(0, 0, 0.36))
     c.key(28, merge(air, both('Leg', x=-30), both('UpLeg', x=20)), hips=(0, 0, 0.12), ease='in')
     c.key(32, land, hips=(0, 0.03, -0.20), ease='out')
-    c.key(40, merge(land, both('UpperArm', y=20)), hips=(0, 0.01, -0.06))
+    c.key(40, merge(land, {'Spine': (-10, 0, 0)}, both('UpLeg', x=40), both('Leg', x=-60), both('Foot', x=20)), hips=(0, 0.01, -0.03))
     c.key(50, P(both('ForeArm', x=-25)), hips=(0, 0, 0))
     return c
 

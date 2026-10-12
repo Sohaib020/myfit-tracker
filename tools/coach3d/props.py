@@ -21,6 +21,7 @@ def _join(objs, name):
     for o in objs: o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
     bpy.ops.object.join(); o = bpy.context.active_object; o.name = name; o['prop'] = 1
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)   # attach() sets the full matrix later
     bpy.ops.object.shade_smooth()
     return o
 
@@ -74,22 +75,38 @@ def tablet():
 
 
 MAKERS = {'dumbbell': dumbbell, 'plate': plate, 'bottle': bottle, 'tablet': tablet}
-# (location in hand-bone space [x across, y along the hand, z out of the palm], rotation euler deg)
-OFFSETS = {
-    ('dumbbell', 'L'): ((0.0, 0.07, 0.02), (0, 0, 90)), ('dumbbell', 'R'): ((0.0, 0.07, 0.02), (0, 0, 90)),
-    ('plate', 'L'): ((0.0, 0.10, -0.03), (90, 0, 0)), ('bottle', 'R'): ((0.0, 0.06, 0.0), (0, 0, 0)),
-    ('tablet', 'L'): ((0.0, 0.11, -0.02), (100, 0, 0)),
+
+# world-space placement at the clip's hold frame: (palm point along the hand 0..1, offset from it in world metres,
+# world rotation euler deg). The prop is then parented to the hand, so it follows every later move naturally.
+PLACE = {
+    'dumbbell': (0.55, (0, 0, 0), None),          # None = follow the hand's own orientation (grip axis across the fist)
+    'plate': (0.62, (0, 0, 0.035), (0, 0, 0)),    # lying flat on the palm
+    'bottle': (0.5, (0, 0, 0.03), (0, 0, 0)),     # standing in the fist
+    'tablet': (0.7, (0, -0.02, 0.05), (-58, 0, 0)),
 }
 
 
-def attach(name, arm, bone):
+def attach(name, arm, bone, frame=0):
     o = MAKERS[name]()
-    s = bone[-1]
-    loc, rot = OFFSETS.get((name, s), ((0, 0.07, 0), (0, 0, 0)))
-    o.parent = arm; o.parent_type = 'BONE'; o.parent_bone = bone
-    # bone-parented objects sit at the bone TAIL; move back to the palm
-    L = arm.data.bones[bone].length
-    o.location = Vector(loc) - Vector((0, L, 0))
-    o.rotation_euler = Euler([math.radians(a) for a in rot])
     o['prop'] = 1
+    scene = bpy.context.scene
+    scene.frame_set(frame)
+    pb = arm.pose.bones[bone]
+    hm = arm.matrix_world @ pb.matrix
+    head = hm.translation; tail = arm.matrix_world @ pb.tail
+    along, off, rot = PLACE[name]
+    pos = head.lerp(tail, along) + Vector(off)
+    if rot is None:
+        R = hm.to_quaternion().to_matrix().to_4x4()
+        # dumbbell handle runs across the fist (perpendicular to the hand bone and the palm normal)
+        R = R @ Matrix.Rotation(math.radians(90), 4, 'Z')
+    else:
+        R = Euler([math.radians(a) for a in rot]).to_matrix().to_4x4()
+    o.matrix_world = Matrix.Translation(pos) @ R
+    bpy.context.view_layer.update()
+    W = o.matrix_world.copy()
+    o.parent = arm; o.parent_type = 'BONE'; o.parent_bone = bone
+    bone_tail_world = arm.matrix_world @ pb.matrix @ Matrix.Translation((0, pb.bone.length, 0))
+    o.matrix_parent_inverse = bone_tail_world.inverted()
+    o.matrix_basis = W
     return o

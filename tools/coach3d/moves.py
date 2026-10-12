@@ -9,6 +9,7 @@ import math
 from anim import Clip, both, side, merge, mirror
 
 S = ('L', 'R')
+PALM_UP = -80   # forearm twist that turns a (left) palm up — mirrored for .R by side()
 
 
 def relaxed_hands(curl=1.0):
@@ -39,6 +40,42 @@ def P(*ps):
 
 
 # ---------------------------------------------------------------- core
+
+def idle():
+    """Relaxed coach idle (4 s loop): slow weight shift hip to hip, shoulders settle, a glance to the side and back,
+    fingers never fully still. Breathing comes from the engine."""
+    c = Clip('idle', 96); c.lag = {'Head': 6, 'Neck': 4, 'Hand.L': 5, 'Hand.R': 5, 'ForeArm.L': 3, 'ForeArm.R': 3}
+    c.breath = 1.2; c.noise = 0.8
+    a = P(side('UpLeg', 'L', x=-3, y=2), side('Leg', 'L', x=6), side('UpLeg', 'R', y=-2), {'Spine': (2, -1.5, 0), 'Chest': (-2, 1.0, 0)})
+    b = P(side('UpLeg', 'R', x=-3, y=-2), side('Leg', 'R', x=6), side('UpLeg', 'L', y=2), {'Spine': (2, 1.5, 0), 'Chest': (-2, -1.0, 0)},
+          {'Head': (-2, 0, 9), 'Neck': (0, 0, 4)})
+    c.key(0, a, hips=(0.018, 0, -0.004)); c.key(30, merge(a, {'Head': (1, 0, -3)}), hips=(0.02, 0, -0.005))
+    c.key(48, b, hips=(-0.018, 0, -0.004)); c.key(78, merge(b, {'Head': (-1, 0, -2)}), hips=(-0.02, 0, -0.005))
+    return c
+
+
+
+def talk():
+    """Explaining: open-palm beats on the stressed words, one hand presents an idea, the other joins, head nods on
+    the beats, weight drifts. Reads as warm and confident, never crossed-arm."""
+    c = Clip('talk', 120); c.lag = {'Head': 3, 'Hand.L': 2, 'Hand.R': 2, 'Fingers1.L': 3, 'Fingers1.R': 3}
+    c.breath = 1.0; c.noise = 0.6
+    rest = P(both('ForeArm', x=-32), {'Head': (2, 0, 0)})
+    def palm(s, up=0.6, fx=-62, ux=-14, uy=-10):
+        return merge(side('UpperArm', s, x=ux, y=uy, tw=10), side('ForeArm', s, x=fx, tw=PALM_UP * up), open_hand(s, .6))
+    c.key(0, rest)
+    c.key(10, P(palm('R'), {'Head': (5, 0, -4), 'Spine': (0, 0, -3)}), hips=(0.01, 0, 0))                 # R palm out on the first word
+    c.key(18, P(palm('R', .8, -55, -18, -16), {'Head': (-3, 0, -6)}), hips=(0.01, 0, 0), ease='snap')       # beat
+    c.key(30, P(palm('R', .7), palm('L', .7), {'Head': (4, 0, 0), 'Chest': (-2, 0, 0)}))                      # both hands: "here's the thing"
+    c.key(40, P(palm('R', .9, -50, -20, -22), palm('L', .9, -50, -20, -22), {'Head': (-4, 0, 0)}), ease='snap')
+    c.key(54, P(palm('L', .5, -70), side('ForeArm', 'R', x=-30), {'Head': (3, 0, 8), 'Spine': (0, 0, 4)}), hips=(-0.012, 0, 0))
+    c.key(64, P(merge(palm('L', .5, -70), side('Fingers1', 'L', y=40), side('Fingers2', 'L', y=40)), side('ForeArm', 'R', x=-30),
+                {'Head': (-3, 0, 6)}), hips=(-0.012, 0, 0), ease='snap')                                      # small "pinch" emphasis
+    c.key(80, P(palm('R', .6, -66), palm('L', .4, -48), {'Head': (5, 0, -2)}))
+    c.key(92, P(palm('R', .8, -58), palm('L', .4, -48), {'Head': (-2, 0, -2)}), ease='snap')
+    c.key(108, rest)
+    return c
+
 
 def wave():
     """Friendly wave: arm swings up (external rotation so the forearm stands up), forearm sways from the elbow,
@@ -122,7 +159,7 @@ def lunge():
     c = Clip('lunge', 80); c.lag = {'Head': 2}
     down = P(both('UpperArm', x=-6, y=6), both('ForeArm', x=-80), fist('L', .5), fist('R', .5), {'Spine': (-2, 0, 0), 'Head': (-4, 0, 0)},
              side('UpLeg', 'R', x=-80), side('Leg', 'R', x=82), side('Foot', 'R', x=-4),
-             side('UpLeg', 'L', x=12), side('Leg', 'L', x=88), side('Foot', 'L', x=40))
+             side('UpLeg', 'L', x=12), side('Leg', 'L', x=88), side('Foot', 'L', x=12), side('Toe', 'L', x=-38))
     c.key(0, P())
     c.key(10, P(both('ForeArm', x=-60), side('UpLeg', 'R', x=-35), side('Leg', 'R', x=40)), hips=(0, -0.10, 0.0), ease='in')
     c.key(30, down, hips=(0, -0.30, -0.38), ease='smooth')
@@ -181,46 +218,50 @@ def plank():
 # ---------------------------------------------------------------- nutritionist props
 
 def hold_plate():
-    c = Clip('plate', 96); c.lag = {'Head': 3}
-    hold = P(side('UpperArm', 'L', x=-28, y=6), side('ForeArm', 'L', x=-88, tw=-35), side('Hand', 'L', y=10), open_hand('L', .4),
-             side('UpperArm', 'R', x=-20, y=-10), side('ForeArm', 'R', x=-70), side('Hand', 'R', x=-10, z=-20), open_hand('R'),
-             {'Spine': (0, 0, 4), 'Head': (6, 0, 6)})
-    present = merge(hold, side('UpperArm', 'R', x=-38, y=-30), side('ForeArm', 'R', x=-40), {'Head': (-2, 0, -4)})
-    c.key(0, hold); c.key(30, merge(hold, {'Head': (10, 2, 10)})); c.key(48, present, ease='out'); c.key(70, present); c.key(88, hold)
+    """Presents a healthy plate: plate balanced on the left palm in front of the waist, right hand gestures to it."""
+    c = Clip('plate', 96); c.lag = {'Head': 3, 'Hand.R': 2}
+    hold = P(side('UpperArm', 'L', x=-14, y=-6, tw=18), side('ForeArm', 'L', x=-60, tw=PALM_UP), side('Hand', 'L', x=4), open_hand('L', .3),
+             side('ForeArm', 'R', x=-18), {'Spine': (0, 0, 3), 'Head': (8, 0, 6)})
+    present = merge(hold, side('UpperArm', 'R', x=-30, y=-18, tw=-10), side('ForeArm', 'R', x=-55, tw=PALM_UP * 0.6), open_hand('R'),
+                    {'Head': (-2, 0, -2)})
+    c.key(0, hold); c.key(26, merge(hold, {'Head': (12, 2, 10)})); c.key(44, present, ease='out'); c.key(70, present); c.key(88, hold)
     c.props = [('plate', 'Hand.L')]
     return c
 
 
 def hold_bottle():
-    c = Clip('bottle', 96); c.lag = {'Head': 3}
-    hold = P(side('UpperArm', 'R', x=-25, y=-6), side('ForeArm', 'R', x=-95), fist('R', .75), {'Head': (2, 0, -4)})
-    raise_ = merge(hold, side('UpperArm', 'R', x=-45, y=-25), side('ForeArm', 'R', x=-80), {'Head': (-6, 0, -6), 'Chest': (-3, 0, 0)})
-    c.key(0, hold); c.key(26, raise_, ease='out'); c.key(36, merge(raise_, side('Hand', 'R', x=12))); c.key(46, merge(raise_, side('Hand', 'R', z=-10)))
-    c.key(56, raise_); c.key(84, hold)
+    """Water reminder: bottle held upright in front, lifted with a little shake toward the viewer."""
+    c = Clip('bottle', 96); c.lag = {'Head': 3, 'Hand.R': 2}
+    hold = P(side('UpperArm', 'R', x=-10, y=-2, tw=22), side('ForeArm', 'R', x=-66), fist('R', .8), {'Head': (2, 0, -4)})
+    raise_ = merge(hold, side('UpperArm', 'R', x=-30, y=-8), side('ForeArm', 'R', x=-12), {'Head': (-6, 0, -6), 'Chest': (-3, 0, 0)})
+    c.key(0, hold); c.key(26, raise_, ease='out'); c.key(34, merge(raise_, side('Hand', 'R', z=10))); c.key(42, merge(raise_, side('Hand', 'R', z=-8)))
+    c.key(52, raise_); c.key(84, hold)
     c.props = [('bottle', 'Hand.R')]
     return c
 
 
 def hold_tablet():
+    """Checks the meal plan on a tablet held in the left hand, taps it, then looks up with a smile."""
     c = Clip('tablet', 96); c.lag = {'Head': 3, 'Hand.R': 2}
-    hold = P(side('UpperArm', 'L', x=-22, y=8), side('ForeArm', 'L', x=-95, tw=-60), side('Hand', 'L', x=-8), open_hand('L', .3),
-             {'Head': (16, 0, 4), 'Neck': (6, 0, 0)})
-    tap = merge(hold, side('UpperArm', 'R', x=-22, y=6), side('ForeArm', 'R', x=-100), side('Hand', 'R', x=-15),
-                side('Fingers1', 'R', y=10), side('Fingers2', 'R', y=60), side('Fingers3', 'R', y=50))
+    hold = P(side('UpperArm', 'L', x=-10, y=0, tw=48), side('ForeArm', 'L', x=-72, tw=PALM_UP * 0.7), side('Hand', 'L', x=6), open_hand('L', .3),
+             {'Head': (18, 0, 4), 'Neck': (6, 0, 0)})
+    tap = merge(hold, side('UpperArm', 'R', x=-14, y=2, tw=40), side('ForeArm', 'R', x=-74), side('Hand', 'R', x=-12),
+                side('Fingers1', 'R', y=10), side('Fingers2', 'R', y=55), side('Fingers3', 'R', y=45))
     look = merge(hold, {'Head': (-4, 0, -2), 'Neck': (0, 0, 0)})
-    c.key(0, hold); c.key(16, tap); c.key(22, merge(tap, side('Hand', 'R', x=-5))); c.key(28, tap); c.key(44, look, ease='out'); c.key(70, look); c.key(86, hold)
+    c.key(0, hold); c.key(16, tap); c.key(22, merge(tap, side('Hand', 'R', x=-6))); c.key(28, tap); c.key(44, look, ease='out'); c.key(70, look); c.key(86, hold)
     c.props = [('tablet', 'Hand.L')]
     return c
 
 
 def think():
-    c = Clip('think', 96); c.lag = {'Head': 4}
-    t = P(side('UpperArm', 'R', x=-30, y=-4), side('ForeArm', 'R', x=-140, tw=-20), side('Hand', 'R', x=-20), fist('R', .55),
-          side('UpperArm', 'L', x=-12, y=0), side('ForeArm', 'L', x=-90, tw=-50),
-          {'Head': (-4, -8, 14), 'Spine': (0, 0, 4)})
-    c.key(0, P()); c.key(18, t, ease='out'); c.key(40, merge(t, {'Head': (-8, -4, 22)})); c.key(62, merge(t, {'Head': (0, -10, 8)})); c.key(80, t); c.key(90, P())
+    """Hand to chin, other arm folded under the elbow, head tilts and eyes 'search'."""
+    c = Clip('think', 96); c.lag = {'Head': 4, 'Hand.R': 2}
+    t = P(side('UpperArm', 'R', x=-24, y=-2, tw=40), side('ForeArm', 'R', x=-120), side('Hand', 'R', x=-25), fist('R', .55),
+          side('UpperArm', 'L', x=-18, y=2, tw=62), side('ForeArm', 'L', x=-92),
+          {'Head': (-4, -8, 12), 'Spine': (0, 0, 3)})
+    c.key(0, P()); c.key(18, t, ease='out'); c.key(40, merge(t, {'Head': (-8, -4, 20)})); c.key(62, merge(t, {'Head': (0, -10, 6)})); c.key(80, t); c.key(90, P())
     return c
 
 
-ALL = {f.__name__: f for f in (wave, thumbs_up, cheer, fist_pump, squat, lunge, shoulder_press, stretch, pushup, plank,
+ALL = {f.__name__: f for f in (idle, talk, wave, thumbs_up, cheer, fist_pump, squat, lunge, shoulder_press, stretch, pushup, plank,
                                hold_plate, hold_bottle, hold_tablet, think)}
