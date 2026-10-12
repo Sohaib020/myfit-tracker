@@ -200,7 +200,7 @@ def world_head(arm, bone):
 
 # ---------------------------------------------------------------- retargeting mocap
 
-def retarget(src_arm, src_map, src_action, tgt_arm, name, frames=None, step=1.0, hip_scale=None, fix=None):
+def retarget(src_arm, src_map, src_action, tgt_arm, name, frames=None, step=1.0, hip_scale=None, fix=None, travel=1.0):
     """Copies a mocap action from another rig onto the canonical skeleton by matching WORLD bone directions frame by
     frame (rest poses may differ: T vs A pose). src_map: canonical -> source bone name. fix(f, pose) may add offsets."""
     src_arm.animation_data_create(); src_arm.animation_data.action = src_action
@@ -252,6 +252,11 @@ def retarget(src_arm, src_map, src_action, tgt_arm, name, frames=None, step=1.0,
         hp = src_arm.matrix_world @ src_arm.pose.bones[src_map['Hips']].head
         if hip0 is None: hip0 = hp.copy()
         d = (hp - (src_arm.matrix_world @ src_arm.data.bones[src_map['Hips']].head_local)) * hs
+        if hip0 is not None and travel != 1.0:
+            # keep the dancer on the spot: horizontal drift from the first frame is damped, the bounce stays
+            d0 = (hip0 - (src_arm.matrix_world @ src_arm.data.bones[src_map['Hips']].head_local)) * hs
+            d = Vector((d0.x + (d.x - d0.x) * travel, d0.y + (d.y - d0.y) * travel, d.z))
+            d.x -= d0.x; d.y -= d0.y
         hb = tgt_arm.pose.bones['Hips']
         hb.location = _rest_q(tgt_arm, 'Hips').to_matrix().inverted() @ d
         hb.keyframe_insert('location', frame=i)

@@ -13,7 +13,7 @@ NUTRI = ['idle', 'wave', 'talk', 'thumbsup', 'cheer', 'plate', 'bottle', 'tablet
 CLIPS = {'trainer_m': TRAINER, 'trainer_f': TRAINER, 'nutri_m': NUTRI, 'nutri_f': NUTRI}
 # whose Meshy dance each coach performs (the female nutritionist borrows one)
 DANCE = {'trainer_m': ('trainer_m_rig.glb', 'All_Night_Dance', rig.RIGIFY), 'trainer_f': ('trainer_f_rig.glb', 'All_Night_Dance', rig.MIXAMO),
-         'nutri_m': ('nutri_m_rig.glb', 'Boom_Dance', rig.MIXAMO), 'nutri_f': ('trainer_f_rig.glb', 'Boxing_Practice', rig.MIXAMO)}
+         'nutri_m': ('nutri_m_rig.glb', 'Boom_Dance', rig.MIXAMO), 'nutri_f': ('nutri_m_rig.glb', 'You_Groove', rig.MIXAMO)}
 
 
 def J(arm, k):
@@ -66,7 +66,7 @@ def build(who, name, arm, assets, ual_path):
     if name == 'dance':
         f, a, m = DANCE[who]
         src, acts = cs.import_source(os.path.join(assets, f))
-        act, n = anim.retarget(src, m, acts[a], arm, name, step=1.0)
+        act, n = anim.retarget(src, m, acts[a], arm, name, step=1.0, travel=0.15)
         cs.remove(src)
         c = Clip(name, min(n, 168), loop=True); _scene_range(c); return c
     fn = {'thumbsup': moves.thumbs_up, 'fistpump': moves.fist_pump, 'press': moves.shoulder_press, 'plate': moves.hold_plate,

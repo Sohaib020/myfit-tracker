@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       who: { description: 'coaches (json list)', required: false, default: '["trainer_m","trainer_f","nutri_m","nutri_f"]' }
+      clips: { description: 'only these clips (comma list, empty = all)', required: false, default: '' }
 permissions: { contents: write }
 jobs:
   plan:
@@ -16,11 +17,13 @@ jobs:
       - id: m
         run: |
           WHO='${{ github.event.inputs.who }}'; [ -z "$WHO" ] && WHO='["trainer_m","trainer_f","nutri_m","nutri_f"]'
-          python3 - "$WHO" <<'PY' >> $GITHUB_OUTPUT
+          ONLY='${{ github.event.inputs.clips }}'
+          python3 - "$WHO" "$ONLY" <<'PY' >> $GITHUB_OUTPUT
           import json, sys
           T = ['portrait','idle','wave','talk','thumbsup','cheer','squat','pushup','lunge','press','plank','stretch','dance','victory','fistpump']
           N = ['portrait','idle','wave','talk','thumbsup','cheer','plate','bottle','tablet','think','dance','victory','fistpump']
-          inc = [{'who': w, 'clip': c} for w in json.loads(sys.argv[1]) for c in (T if w.startswith('trainer') else N)]
+          only = [x for x in sys.argv[2].split(',') if x]
+          inc = [{'who': w, 'clip': c} for w in json.loads(sys.argv[1]) for c in (T if w.startswith('trainer') else N) if not only or c in only]
           print('matrix=' + json.dumps({'include': inc}))
           PY
   render:
@@ -65,6 +68,8 @@ jobs:
           pip install -q pillow numpy
           mkdir -p merged pub rel && for d in parts/*/; do cp -rn "$d"* merged/; done
           for W in $(ls merged); do
+            # partial re-render: start from the published pack so untouched clips are kept
+            mkdir -p pub/$W && curl -fsSL -o old.zip "https://github.com/${{ github.repository }}/releases/download/coach3d-v1/$W.zip" && unzip -oq old.zip -d pub/$W || true
             python tools/coach3d/pack.py merged/$W pub/$W | tail -20
             (cd pub/$W && zip -q -r ../../rel/$W.zip . -x '*.png')
             echo "::notice::$W pack $(du -k rel/$W.zip | cut -f1) KB"
