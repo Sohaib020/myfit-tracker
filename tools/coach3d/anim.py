@@ -16,31 +16,35 @@ SIDES = ('L', 'R')
 
 
 def mirror(p):
-    """Mirror a pose dict across the body: .L ↔ .R, flipping Y/Z rotations."""
+    """Mirror a pose dict across the body: .L <-> .R, flipping Y/Z rotations and twist."""
     out = {}
-    for k, (x, y, z) in p.items():
-        if k.endswith('.L'): k2 = k[:-2] + '.R'
-        elif k.endswith('.R'): k2 = k[:-2] + '.L'
-        else: k2 = k
-        out[k2] = (x, -y, -z)
+    for k, v in p.items():
+        x, y, z, tw = _v4(v)
+        k2 = k[:-2] + '.R' if k.endswith('.L') else k[:-2] + '.L' if k.endswith('.R') else k
+        out[k2] = (x, -y, -z, -tw)
     return out
 
 
-def both(name, x=0, y=0, z=0):
-    """Same anatomical move on both sides (Y/Z mirrored)."""
-    return {f'{name}.L': (x, y, z), f'{name}.R': (x, -y, -z)}
+def both(name, x=0, y=0, z=0, tw=0):
+    """Same anatomical move on both sides (Y/Z/twist mirrored)."""
+    return {f'{name}.L': (x, y, z, tw), f'{name}.R': (x, -y, -z, -tw)}
 
 
-def side(name, s, x=0, y=0, z=0):
-    return {f'{name}.{s}': (x, y if s == 'L' else -y, z if s == 'L' else -z)}
+def side(name, s, x=0, y=0, z=0, tw=0):
+    m = 1 if s == 'L' else -1
+    return {f'{name}.{s}': (x, y * m, z * m, tw * m)}
+
+
+def _v4(v):
+    v = tuple(v); return v + (0.0,) * (4 - len(v))
 
 
 def merge(*ps):
     out = {}
     for p in ps:
         for k, v in p.items():
-            if k in out: out[k] = tuple(a + b for a, b in zip(out[k], v))
-            else: out[k] = tuple(v)
+            v = _v4(v)
+            out[k] = tuple(a + b for a, b in zip(out[k], v)) if k in out else v
     return out
 
 
@@ -48,9 +52,14 @@ def _rest_q(arm, name):
     return (arm.matrix_world.to_quaternion() @ arm.data.bones[name].matrix_local.to_quaternion()).normalized()
 
 
-def to_local(arm, name, rx, ry, rz):
-    """World-axis rest-frame rotation → pose-bone local quaternion."""
+def to_local(arm, name, rx, ry, rz, tw=0.0):
+    """World-axis rest-frame rotation → pose-bone local quaternion. tw = twist about the bone's own rest direction
+    (applied first): + turns the thumb side of a left hand forward→up, mirrored for .R via the pose helpers."""
     qw = Quaternion((0, 0, 1), math.radians(rz)) @ Quaternion((0, 1, 0), math.radians(ry)) @ Quaternion((1, 0, 0), math.radians(rx))
+    if tw:
+        b = arm.data.bones[name]
+        d = (arm.matrix_world.to_3x3() @ (b.tail_local - b.head_local)).normalized()
+        qw = qw @ Quaternion(d, math.radians(tw))
     B = _rest_q(arm, name)
     return (B.inverted() @ qw @ B).normalized()
 
@@ -121,7 +130,7 @@ class Clip:
             ff = f - self.lag.get(b, 0)
             p0, p1, p2, p3, u, ease = self._seg(ff)
             ue = _ease(u, ease)
-            g = lambda k: Vector(k[1].get(b, (0, 0, 0)))
+            g = lambda k: Vector(_v4(k[1].get(b, (0, 0, 0, 0))))
             out[b] = tuple(_catmull(g(p0), g(p1), g(p2), g(p3), ue))
         p0, p1, p2, p3, u, ease = self._seg(f)
         ue = _ease(u, ease)
@@ -132,10 +141,10 @@ class Clip:
         br = math.sin(t * 2 * math.pi / 3.8) * self.breath
         for b, v in (('Chest', (-1.2 * br, 0, 0)), ('UpperChest', (-0.8 * br, 0, 0)), ('Neck', (0.9 * br, 0, 0)),
                      ('Shoulder.L', (0, 0, 0.8 * br)), ('Shoulder.R', (0, 0, -0.8 * br))):
-            out[b] = tuple(a + c for a, c in zip(out.get(b, (0, 0, 0)), v))
+            out[b] = tuple(a + c for a, c in zip(out.get(b, (0, 0, 0, 0)), _v4(v)))
         sw = self.noise
-        out['Spine'] = tuple(a + c for a, c in zip(out.get('Spine', (0, 0, 0)), (0, 0.6 * sw * math.sin(t * 0.9), 0.5 * sw * math.sin(t * 0.7 + 1))))
-        out['Head'] = tuple(a + c for a, c in zip(out.get('Head', (0, 0, 0)), (0.7 * sw * math.sin(t * 0.8 + 2), 0, 0.9 * sw * math.sin(t * 0.55))))
+        out['Spine'] = tuple(a + c for a, c in zip(_v4(out.get('Spine', (0, 0, 0))), (0, 0.6 * sw * math.sin(t * 0.9), 0.5 * sw * math.sin(t * 0.7 + 1), 0)))
+        out['Head'] = tuple(a + c for a, c in zip(_v4(out.get('Head', (0, 0, 0))), (0.7 * sw * math.sin(t * 0.8 + 2), 0, 0.9 * sw * math.sin(t * 0.55), 0)))
         return out, hips, hr
 
 
@@ -145,23 +154,23 @@ def bake(arm, clip, scale=1.0):
     arm.animation_data_create(); arm.animation_data.action = act
     for pb in arm.pose.bones: pb.rotation_mode = 'QUATERNION'
     hip_h = arm.data.bones['Hips'].head_local.z
-    k = hip_h / 0.93 * scale         # offsets are authored for a ~0.93 m hip height and scaled per character
+    k = 1.0 if getattr(clip, 'abs_hips', False) else hip_h / 0.93 * scale   # authored for ~0.93 m hips, scaled per character
     B = arm.data.bones['Hips']
     Bq = _rest_q(arm, 'Hips'); Bm = Bq.to_matrix()
     for f in range(clip.frames + (0 if clip.loop else 1)):
         pose, hips, hr = clip.eval(float(f))
-        for b, (x, y, z) in pose.items():
-            if b not in arm.pose.bones: continue
-            pb = arm.pose.bones[b]
-            pb.rotation_quaternion = to_local(arm, b, x, y, z)
+        for pb in arm.pose.bones:                      # every bone, every frame: nothing leaks between clips
+            if pb.name == 'Hips': continue
+            v = pose.get(pb.name)
+            pb.rotation_quaternion = to_local(arm, pb.name, *_v4(v)) if v is not None else Quaternion()
             pb.keyframe_insert('rotation_quaternion', frame=f)
         hb = arm.pose.bones['Hips']
         # hips location is in the bone's rest frame: convert the world offset
         hb.location = Bm.inverted() @ (Vector(hips) * k)
         hb.keyframe_insert('location', frame=f)
-        if hr.length > 1e-6:
-            hb.rotation_quaternion = to_local(arm, 'Hips', *hr) @ hb.rotation_quaternion
-            hb.keyframe_insert('rotation_quaternion', frame=f)
+        base = to_local(arm, 'Hips', *_v4(pose['Hips'])) if 'Hips' in pose else Quaternion()
+        hb.rotation_quaternion = to_local(arm, 'Hips', hr.x, hr.y, hr.z) @ base
+        hb.keyframe_insert('rotation_quaternion', frame=f)
     s = bpy.context.scene; s.frame_start = 0; s.frame_end = clip.frames - (1 if clip.loop else 0); s.render.fps = clip.fps
     return act
 
