@@ -94,7 +94,8 @@ private fun lit(x: Float, y: Float, w: Float, h: Float): Float =
 /** Ink for a pattern element at (x, y): white that warms into the accent near the glow. */
 private fun ink(th: FitTheme, x: Float, y: Float, w: Float, h: Float, base: Float = 0.035f, extra: Float = 0.075f): Color {
     val l = lit(x, y, w, h)
-    return lerp(Color.White, th.accentBright, (l * l * 0.7f)).copy(alpha = base + extra * l * l)
+    // R20 tune: patterns read ~45 % stronger so the craft shows on real screens
+    return lerp(Color.White, th.accentBright, (l * l * 0.7f)).copy(alpha = (base * 1.5f + extra * 1.35f * l * l).coerceAtMost(0.3f))
 }
 
 private fun polar(c: Offset, r: Float, a: Float) = Offset(c.x + r * cos(a), c.y + r * sin(a))
@@ -146,7 +147,7 @@ internal fun DrawScope.culture(th: FitTheme, t: Float, w: Float, h: Float) {
     blob(th.accent, Offset(w * (0.1f + 0.08f * sin(t * 0.1f)), h * 0.92f), w * 0.7f, 0.13f)
     blob(th.blobs[3], Offset(w * 0.12f, h * 0.48f), w * 0.5f, 0.09f)
     // keep the middle calm so cards and text always read cleanly
-    drawRect(Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.18f), Color.Transparent), Offset(w / 2, h * 0.5f), max(w, h) * 0.55f), size = Size(w, h))
+    drawRect(Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.12f), Color.Transparent), Offset(w / 2, h * 0.5f), max(w, h) * 0.55f), size = Size(w, h))
     drawRect(Brush.radialGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)), Offset(w / 2, h * 0.45f), max(w, h) * 0.9f), size = Size(w, h))
 }
 
@@ -173,8 +174,8 @@ private fun DrawScope.jaali(th: FitTheme, w: Float, h: Float) {
     }
     // hero: one large lit star medallion bottom-right
     val m = Offset(w * 0.92f, h * 0.8f)
-    drawPath(star(m, 8, w * 0.42f, w * 0.3f, PI.toFloat() / 8), th.accent.copy(alpha = 0.10f), style = Stroke(w * 0.008f))
-    drawPath(star(m, 8, w * 0.3f, w * 0.21f, 0f), Color.White.copy(alpha = 0.05f), style = Stroke(w * 0.005f))
+    drawPath(star(m, 8, w * 0.42f, w * 0.3f, PI.toFloat() / 8), th.accent.copy(alpha = 0.18f), style = Stroke(w * 0.008f))
+    drawPath(star(m, 8, w * 0.3f, w * 0.21f, 0f), Color.White.copy(alpha = 0.08f), style = Stroke(w * 0.005f))
 }
 
 /** India — block-print bandhani dots and a large lotus mandala rising from the corner. */

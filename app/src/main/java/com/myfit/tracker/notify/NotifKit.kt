@@ -168,7 +168,7 @@ object NotifKit {
                 p.shader = null; p.color = faint; pill(x0, x1, p)
                 val part = (filled - i).coerceIn(0f, 1f)
                 if (part > 0f) {
-                    p.shader = LinearGradient(x0, 0f, x1, 0f, (col and 0x00FFFFFF) or 0xB3000000.toInt(), col, Shader.TileMode.CLAMP)
+                    p.shader = null; p.color = col
                     pill(x0, maxOf(x0 + barH, x0 + segW * part), p)
                 }
             }
@@ -177,8 +177,8 @@ object NotifKit {
             val x = left + (right - left) * f
             p.color = faint; pill(left, right, p)
             if (f > 0f) {
-                p.shader = LinearGradient(left, 0f, maxOf(x, left + barH), 0f, (col and 0x00FFFFFF) or 0x99000000.toInt(), col, Shader.TileMode.CLAMP)
-                pill(left, maxOf(x, left + barH), p); p.shader = null
+                p.shader = null; p.color = col
+                pill(left, maxOf(x, left + barH), p)
                 // glowing tip
                 p.color = (col and 0x00FFFFFF) or 0x55000000; cv.drawCircle(maxOf(x, left + barH / 2), cy, h / 2f, p)
                 p.color = 0xFFFFFFFF.toInt(); cv.drawCircle(maxOf(x, left + barH / 2), cy, barH * 0.42f, p)
