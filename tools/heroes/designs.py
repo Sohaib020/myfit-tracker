@@ -1,7 +1,7 @@
 """Hero designs: per-character outfits at 3 tiers on the Quaternius bodies, with real garment details.
 Characters: blaze (male), nova (female), valor (female, hijab/modest), frost_armour / frost_hybrid (snow-leopard champion).
 Every garment is a fitted shell (outfit.shell) or a rigid detail riding one bone, so all library animations work."""
-import bpy, bmesh, math, random
+import bpy, bmesh, math, random, os
 from mathutils import Vector
 import heroes as H, outfit as O
 from outfit import mat, shell, boundary_ring, blob, torus, tube, bone_head, bone_tail
@@ -17,7 +17,7 @@ def P():   # key anatomy points (rest T-pose)
 def mats(accent, second='#14151A'):
     M = dict(
         acc=mat('acc', accent, rough=0.72, sheen=0.12, weave=0.15),
-        accd=mat('accd', accent, rough=0.35, coat=0.6),
+        accd=mat('accd', accent, rough=0.78, sheen=0.2, weave=0.3),
         fab=mat('fab', '#0C0D10', rough=0.9, sheen=0.22, weave=0.25),
         fab2=mat('fab2', '#2B2E35', rough=0.9, sheen=0.25, weave=0.25),
         fab3=mat('fab3', second, rough=0.9, sheen=0.2, weave=0.25),
@@ -76,17 +76,15 @@ def hand_wraps(M, p, lv, color_m):
         if lv >= 2:   # gold knuckle plate
             blob('Knuckle' + hb, (w.x + s * 0.07, w.y - 0.005, w.z + 0.022), (0.022, 0.035, 0.009), M['gold'], hb)
 
-def top_tee(M, p, accent_m, trim, long=False, lift=0.012, female=False):
+def top_tee(M, p, accent_m, trim, long=False, lift=0.012, female=False, raglan=True):
     sleeve = p['wr_l'].x - 0.04 if long else p['sh_l'].x + (p['el_l'].x - p['sh_l'].x) * 0.55
     tee = shell('Tee', [((0, 0, p['hip'].z - (0.06 if long else 0.03)), (0, 0, 1)), ((sleeve, 0, 0), (-1, 0, 0)), ((-sleeve, 0, 0), (1, 0, 0)),
                         ((0, -0.08, p['neck'].z - 0.03), (0, 0.45, -1))], lift, 0.006, M['fab'], rim=M['fab'], drape=2)
     for s in (1, -1):
         boundary_ring(tee, (s * sleeve, p['sh_l'].y, p['sh_l'].z), (1, 0, 0), M['rib'] if trim is None else trim, minor=0.008, bone='lowerarm_l' if long and s > 0 else ('lowerarm_r' if long else ('upperarm_l' if s > 0 else 'upperarm_r')))
     boundary_ring(tee, (0, 0.0, p['hip'].z - (0.06 if long else 0.03)), (0, 0, 1), M['rib'], minor=0.01, bone='pelvis')
-    # ribbed crew collar = trim ring fitted to the neckline edge itself
-    boundary_ring(tee, (0, -0.02, p['neck'].z - 0.05), (0, 0.35, 1), M['rib'], minor=0.007, bone='spine_03', grow=0.002)
     # raglan accent panels from collar to underarm + shoulder seams
-    shell('Raglan', [((0, 0, p['sh_l'].z - 0.015), (0, 0, 1)), ((sleeve - 0.01, 0, 0), (-1, 0, 0)), ((-sleeve + 0.01, 0, 0), (1, 0, 0)),
+    if raglan: shell('Raglan', [((0, 0, p['sh_l'].z - 0.015), (0, 0, 1)), ((sleeve - 0.01, 0, 0), (-1, 0, 0)), ((-sleeve + 0.01, 0, 0), (1, 0, 0)),
                      ((0, -0.08, p['neck'].z - 0.03), (0, 0.45, -1))], lift + 0.004, 0.003, accent_m, rim=trim or M['rib'], drape=2)
     return tee
 
@@ -314,3 +312,180 @@ def frost_hybrid(lv, spec):
             if o.name == 'Suit': o.hide_render = True
 
 BUILD = dict(blaze=blaze, nova=nova, valor=valor, frost_armour=frost_armour, frost_hybrid=frost_hybrid)
+
+
+# =====================================================================================================================
+# FINAL SYSTEM — generic human builder (roster-driven), luxe Legendary, sporty-glam women, refined hijab
+# =====================================================================================================================
+def front_strip(gap, zmin=-9, zmax=9):
+    def cut(bm):
+        kill = [f for f in bm.faces if (lambda c: c.y < -0.005 and abs(c.x) < gap and zmin < c.z < zmax)(f.calc_center_median())]
+        bmesh.ops.delete(bm, geom=kill, context='FACES')
+    return cut
+
+def zip_edges(ob, gap, lift, m, bone='spine_02'):
+    """Gold zip tapes along both front edges of an open jacket (traced from the shell's own cut edge)."""
+    bm = bmesh.new(); bm.from_mesh(ob.data)
+    for sx in (1, -1):
+        pts = sorted({(round(v.co.z, 3), v.co.copy().freeze()) for e in bm.edges if e.is_boundary for v in e.verts
+                      if abs(v.co.x - sx * gap) < 0.012 and v.co.y < 0}, key=lambda t: t[0])
+        if len(pts) < 4: continue
+        step = max(1, len(pts) // 7); sel = [Vector(c) for _, c in pts[::step]]
+        sel = [Vector((c.x, c.y - lift - 0.004, c.z)) for c in sel]
+        tube(ob.name + '_zip%d' % sx, sel, 0.004, m, bone)
+    bm.free()
+
+def jacket(name, M, p, hem_z, sleeve_x, color_m, trim_m, gap=0.04, lift=0.03, collar=False, drape=3):
+    neck = p['neck']
+    ob = shell(name, [((0, 0, hem_z), (0, 0, 1)), ((sleeve_x, 0, 0), (-1, 0, 0)), ((-sleeve_x, 0, 0), (1, 0, 0)),
+                      ((0, -0.08, neck.z + 0.0), (0, 0.35, -1))], lift, 0.008, color_m, rim=trim_m, drape=drape, extra=front_strip(gap))
+    for s in (1, -1):
+        boundary_ring(ob, (s * sleeve_x, p['wr_l'].y, p['wr_l'].z), (1, 0, 0), trim_m, minor=0.01,
+                      bone=('lowerarm_l' if s > 0 else 'lowerarm_r') if sleeve_x > p['el_l'].x else ('upperarm_l' if s > 0 else 'upperarm_r'))
+    zip_edges(ob, gap, lift, M['gold'])
+    if collar:   # stand collar, open at the front
+        for sx in (1, -1):
+            tube(name + '_collar%d' % sx, [Vector((sx * 0.03, -0.1, neck.z - 0.02)), Vector((sx * 0.075, -0.05, neck.z + 0.0)), Vector((sx * 0.085, 0.03, neck.z + 0.01)), Vector((0.0, 0.08, neck.z + 0.01))], 0.012, color_m, 'spine_03')
+    return ob
+
+def champ_belt(M, p, accent_m):
+    h = p['hip'].z + 0.04
+    torus('BeltStrap', (0, 0.0, h), 0.165, 0.022, mat('leather', '#1A1412', rough=0.5, coat=0.4), 'pelvis', scale=(1.0, 0.76, 1.0))
+    blob('TitlePlate', (0, -0.14, h), (0.085, 0.02, 0.066), M['gold'], 'pelvis')
+    torus('TitleRing', (0, -0.158, h), 0.052, 0.006, M['gold'], 'pelvis', rot=(math.radians(90), 0, 0))
+    blob('TitleGem', (0, -0.162, h), (0.028, 0.008, 0.028), accent_m, 'pelvis')
+    for sx in (1, -1):
+        blob('TitleSide%d' % sx, (sx * 0.11, -0.115, h), (0.035, 0.016, 0.04), M['gold'], 'pelvis', rot=(0, 0, math.radians(sx * 25)))
+
+def chain(M, p, female=False):
+    if female:
+        torus('Choker', (0, 0.0, p['neck'].z + 0.0), 0.058, 0.005, M['gold'], 'neck_01', scale=(1.0, 0.95, 1.0))
+        blob('ChokerGem', (0, -0.06, p['neck'].z - 0.01), (0.009, 0.005, 0.012), M['glow'], 'neck_01')
+    else:
+        torus('Chain', (0, -0.035, p['neck'].z - 0.075), 0.115, 0.007, M['gold'], 'spine_03', rot=(math.radians(-40), 0, 0), scale=(1.0, 0.9, 1.0))
+        blob('Pendant', (0, -0.16, p['neck'].z - 0.175), (0.026, 0.008, 0.034), M['gold'], 'spine_03')
+        blob('PendantGem', (0, -0.167, p['neck'].z - 0.175), (0.012, 0.004, 0.016), M['glow'], 'spine_03')
+
+def lashes(M):
+    """Upper lashes + a small liner wing on each eye (built from the eye mesh's own rest position)."""
+    eyes = next((o for o in H.S.objects if o.type == 'MESH' and o.name.startswith('Eyes')), None)
+    if not eyes: return
+    vs = [eyes.matrix_world @ v.co for v in eyes.data.vertices]
+    black = mat('lash', '#0A0808', rough=0.4)
+    for sx in (1, -1):
+        e = [v for v in vs if v.x * sx > 0]
+        if not e: continue
+        cx = sum(v.x for v in e) / len(e); cz = sum(v.z for v in e) / len(e); fy = min(v.y for v in e)
+        rx = (max(v.x for v in e) - min(v.x for v in e)) / 2; rz = (max(v.z for v in e) - min(v.z for v in e)) / 2
+        inner, outer = cx - sx * rx * 0.95, cx + sx * rx * 1.05
+        pts = [Vector((inner, fy + 0.003, cz + rz * 0.35)), Vector((cx, fy - 0.002, cz + rz * 0.95)), Vector((outer, fy + 0.006, cz + rz * 0.5))]
+        tube('Lash%d' % sx, pts, 0.0016, black, 'Head')
+        tube('Wing%d' % sx, [Vector((outer - sx * 0.002, fy + 0.006, cz + rz * 0.45)), Vector((outer + sx * 0.008, fy + 0.009, cz + rz * 0.75))], 0.0011, black, 'Head')
+
+def hair_mat(color):
+    m = bpy.data.materials.get('hair_' + color)
+    if m: return m
+    m = mat('hair_' + color, color, rough=0.38, sheen=0.4, coat=0.2)
+    nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    tc = nt.nodes.new('ShaderNodeTexCoord'); w = nt.nodes.new('ShaderNodeTexWave'); w.wave_type = 'BANDS'; w.bands_direction = 'Z'
+    w.inputs['Scale'].default_value = 140; w.inputs['Distortion'].default_value = 6.0
+    nt.links.new(tc.outputs['Object'], w.inputs['Vector'])
+    bm = nt.nodes.new('ShaderNodeBump'); bm.inputs['Strength'].default_value = 0.4; bm.inputs['Distance'].default_value = 0.002
+    nt.links.new(w.outputs['Fac'], bm.inputs['Height']); nt.links.new(bm.outputs['Normal'], b.inputs['Normal'])
+    return m
+
+def ponytail(M, p, color, high=True):
+    hc = p['head']; hm = hair_mat(color)
+    z0 = hc.z + (0.17 if high else 0.1); y0 = hc.y + (0.075 if high else 0.1)
+    torus('PonyTie', (0, y0 + 0.01, z0), 0.022, 0.009, M['gold'] if False else mat('tie', '#111111', rough=0.4), 'Head', rot=(math.radians(-60 if high else -20), 0, 0))
+    pts = [Vector((0, y0 + 0.01, z0)), Vector((0, y0 + 0.07, z0 + 0.03)), Vector((0.005, y0 + 0.12, z0 - 0.06)), Vector((0.012, y0 + 0.11, z0 - 0.2)),
+           Vector((0.0, y0 + 0.07, z0 - 0.33))]
+    t = tube('Ponytail', pts, 0.034, hm, 'Head'); t.data.bevel_resolution = 6
+    taper = bpy.data.curves.new('ptaper', 'CURVE'); taper.dimensions = '2D'; sp = taper.splines.new('POLY'); sp.points.add(3)
+    for pt, xy in zip(sp.points, ((0, 0.55), (0.2, 1.0), (0.7, 0.7), (1.0, 0.12))): pt.co = (xy[0], xy[1], 0, 1)
+    to = bpy.data.objects.new('ptaperobj', taper); H.S.collection.objects.link(to); to.hide_render = True; t.data.taper_object = to
+    return t
+
+def hijab2(M, p, color_m, trim_m):
+    """Wrapped sports hijab: moulded over the head, framing the face with a soft fabric fold, draping over shoulders and chest."""
+    hc = p['head']; nose_y = -0.11; eye_z = hc.z + 0.105; fz = eye_z - 0.02
+    def face_cut(bm):
+        kill = []
+        for f in bm.faces:
+            c = f.calc_center_median()
+            if c.y < hc.y - 0.03 and ((c.x / 0.06) ** 2 + ((c.z - fz) / 0.086) ** 2) < 1.0: kill.append(f)
+        bmesh.ops.delete(bm, geom=kill, context='FACES')
+    sh = p['sh_l']
+    h = shell('Hijab', [((0, 0, sh.z - 0.06), (0, 0, 1)), ((0.21, 0, 0), (-1, 0, 0)), ((-0.21, 0, 0), (1, 0, 0))], 0.02, 0.006, color_m, rim=color_m, drape=6, extra=face_cut, sub=0)
+    boundary_ring(h, (0, nose_y + 0.01, fz), (0, -1, 0.1), color_m, minor=0.011, bone='Head', grow=0.006)   # soft fold framing the face
+    blob('HijabVol', (0, hc.y + 0.075, hc.z + 0.12), (0.088, 0.078, 0.082), color_m, 'Head')
+    blob('HijabCrown', (0, hc.y + 0.005, hc.z + 0.175), (0.094, 0.098, 0.052), color_m, 'Head')
+    shell('HijabDrape', [((0, 0, sh.z - 0.2), (0, 0, 1)), ((0, 0, p['neck'].z - 0.02), (0, 0, -1)), ((0.16, 0, 0), (-1, 0, 0)), ((-0.16, 0, 0), (1, 0, 0)),
+                          ((0, -0.02, 0), (0, -1, 0))], 0.036, 0.006, color_m, rim=trim_m, drape=8)
+    # side pleat falling from the temple
+    blob('Cap', (0, hc.y - 0.072, eye_z + 0.068), (0.064, 0.024, 0.013), trim_m, 'Head')
+    return h
+
+def glam_face(spec, p):
+    """Feminine brows, lip colour and a soft skin glow (women)."""
+    base = os.environ.get('HERO_ASSETS_UBC')
+    if base:
+        for o in list(H.S.objects):
+            if o.type == 'MESH' and o.name.startswith('Eyebrows') and o.parent_type != 'BONE': o.hide_render = True
+        H.add_hair(base, 'Eyebrows_Female')
+        for o in H.S.objects:
+            if o.type == 'MESH' and o.name.startswith('Eyebrows') and o.parent_type == 'BONE': O.tint(o, spec.get('hair_col', '#1A1310'))
+    body = H.BODY; sk = body.material_slots[0].material
+    b = next(n for n in sk.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
+    b.inputs['Subsurface Weight'].default_value = 0.12; b.inputs['Subsurface Radius'].default_value = (1.0, 0.4, 0.25); b.inputs['Subsurface Scale'].default_value = 0.01
+    lip = sk.copy(); lip.name = 'lips'; O.tint_mat(lip, spec.get('lip', '#B5455A'), 0.75); body.data.materials.append(lip); li = len(body.data.materials) - 1
+    hc = p['head']; mz = hc.z + 0.017
+    for poly in body.data.polygons:
+        c = body.matrix_world @ poly.center
+        if c.y < hc.y - 0.095 and abs(c.x) < 0.024 and abs(c.z - mz) < 0.011: poly.material_index = li
+
+def human(lv, spec):
+    p = P(); female = spec['body'] == 'female'; hij = bool(spec.get('hijab'))
+    M = mats(spec['accent'], spec.get('second', '#14151A'))
+    gold = M['gold']; trim = gold if lv >= 2 else M['acc']
+    # hair / face extras
+    if female:
+        glam_face(spec, p)
+    if female and not hij:
+        if spec.get('pony'): ponytail(M, p, spec.get('hair_col', '#1C1512'), high=spec['pony'] == 'high')
+        lashes(M)
+    if hij:
+        lashes(M); hijab2(M, p, mat('hijab', spec['hijab'], rough=0.88, sheen=0.35, weave=0.3), trim)
+    # legs
+    joggers(M, p, lv, trim, legging=female and not hij)
+    sh = p['sh_l']; long_x = p['wr_l'].x - 0.04
+    if lv == 1:
+        top_tee(M, p, M['acc'], M['rib'], long=hij, female=female, raglan=hij or not female)
+        if female and not hij:
+            jacket('CropJacket', M, p, sh.z - 0.2, long_x, M['fab3'], M['acc'], gap=0.07, lift=0.026)
+        hand_wraps(M, p, lv, M['wrap'])
+    elif lv == 2:
+        top_tee(M, p, M['acc'], gold, long=hij, female=female, raglan=not female or hij)
+        if female and not hij:
+            jacket('Bomber', M, p, p['hip'].z + 0.02, long_x, M['accd'], gold, gap=0.065, lift=0.028)
+        else:
+            zip_vest(M, p, lv, M['accd'])
+        hand_wraps(M, p, lv, M['fab']); chain(M, p, female)
+    else:   # pro-athlete luxe
+        top_tee(M, p, mat('luxeinner', '#121316', rough=0.8, weave=0.25), gold, long=hij, female=female, raglan=False)
+        jacket('TechJacket', M, p, p['hip'].z - 0.04, long_x, mat('luxe', spec.get('luxe', spec['accent']), rough=0.82, sheen=0.05, weave=0.25), gold, gap=0.06, lift=0.026)
+        pass
+        for s, ua in ((1, 'upperarm_l'), (-1, 'upperarm_r')):   # gold piping down the sleeves
+            u0 = bone_head(ua); l0 = bone_head('lowerarm_l' if s > 0 else 'lowerarm_r')
+            tube('Piping' + ua, [u0 + Vector((s * 0.02, -0.0, 0.07)), u0 + Vector((s * 0.15, 0, 0.065)), l0 + Vector((s * 0.0, 0, 0.055))], 0.0035, gold, ua)
+        champ_belt(M, p, M['glow']); chain(M, p, female); hand_wraps(M, p, lv, M['dark'])
+    sneakers(M, p, lv, trim)
+
+for _n in ('blaze', 'nova', 'valor'):
+    pass
+BUILD_FINAL = human
+
+def build_any(who, lv, spec):
+    if spec.get('type') == 'animal':
+        import animals; return animals.build(lv, spec)
+    return human(lv, spec)

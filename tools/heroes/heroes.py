@@ -72,10 +72,10 @@ def studio(res=(560, 700), samples=32, bg=(0.012, 0.014, 0.012)):
     k = hgt * hgt
     area('key', (-1.2, -1.9, 1.9), 260 * k, 1.2 * hgt, (1.0, 0.96, 0.92))
     area('fill', (1.6, -1.4, 0.9), 70 * k, 1.6 * hgt, (0.85, 0.9, 1.0))
-    area('rimL', (-1.3, 1.6, 1.6), 200 * k, 0.6 * hgt, (0.72, 1.0, 0.3))
-    area('rimR', (1.3, 1.5, 1.5), 150 * k, 0.6 * hgt, (1.0, 0.25, 0.32))
+    area('rimL', (-1.3, 1.6, 1.6), 200 * k, 0.6 * hgt, (0.85, 1.0, 0.7))
+    area('rimR', (1.3, 1.5, 1.5), 150 * k, 0.6 * hgt, (1.0, 0.72, 0.75))
     bpy.ops.mesh.primitive_plane_add(size=40 * hgt); fl = bpy.context.object
-    fm = bpy.data.materials.new('floor'); fm.use_nodes = True; fm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = srgb('#050505')
+    fm = bpy.data.materials.new('floor'); fm.use_nodes = True; fm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = srgb('#030303')
     fm.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 0.8; fl.data.materials.append(fm)
     cd = bpy.data.cameras.new('cam'); cd.lens = 60; cam = bpy.data.objects.new('cam', cd); sc.collection.objects.link(cam); sc.camera = cam
     t = bpy.data.objects.new('t', None); t.location = (0, 0, hgt * 0.52); sc.collection.objects.link(t)

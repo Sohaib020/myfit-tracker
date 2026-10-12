@@ -1,7 +1,22 @@
 {
- "blaze":        {"body": "male",   "hair": "Hair_SimpleParted", "beard": true, "skin": "#C8916C", "hair_col": "#211A16", "accent": "#7A0A18"},
- "nova":         {"body": "female", "hair": "Hair_Buns", "skin": "#D9A07C", "hair_col": "#1C1512", "accent": "#0B5F73"},
- "valor":        {"body": "female", "hair": null, "skin": "#C08A66", "hair_col": "#1C1512", "accent": "#4B2A7A", "hijab": "#15161C"},
- "frost_armour": {"body": "male",   "hair": null, "skin": "#C8916C", "hair_col": "#211A16", "accent": "#0B3D66"},
- "frost_hybrid": {"body": "male",   "hair": null, "skin": "#FFFFFF", "hair_col": "#211A16", "accent": "#0B3D66"}
+ "blaze":  {"type": "human", "body": "male",   "hair": "Hair_SimpleParted", "beard": true, "skin": "#C8916C", "hair_col": "#1E1714", "accent": "#8E1426", "luxe": "#4A0A14"},
+ "titan":  {"type": "human", "body": "male",   "hair": "Hair_Buzzed", "beard": true, "skin": "#7A4E35", "hair_col": "#120E0C", "accent": "#C88A12", "luxe": "#2A1F0E"},
+ "kairo":  {"type": "human", "body": "male",   "hair": "Hair_SimpleParted", "skin": "#E6BFA0", "hair_col": "#100D0C", "accent": "#0E7C86", "luxe": "#0B2F3A"},
+ "raze":   {"type": "human", "body": "male",   "hair": "Hair_Buzzed", "beard": true, "skin": "#EBC2A6", "hair_col": "#5A3A22", "accent": "#2F6BFF", "luxe": "#0F1E4A"},
+ "onyx":   {"type": "human", "body": "male",   "hair": "Hair_SimpleParted", "beard": true, "skin": "#B78462", "hair_col": "#14100E", "accent": "#16A34A", "luxe": "#0F2A18"},
+ "vortex": {"type": "human", "body": "male",   "hair": "Hair_Buzzed", "skin": "#C99673", "hair_col": "#2A1C14", "accent": "#E2551B", "luxe": "#3A1608"},
+ "apex":   {"type": "human", "body": "male",   "hair": "Hair_SimpleParted", "skin": "#A87653", "hair_col": "#120E0C", "accent": "#8B5CF6", "luxe": "#251144"},
+ "steel":  {"type": "human", "body": "male",   "hair": "Hair_Buzzed", "beard": true, "skin": "#6E4630", "hair_col": "#0E0B0A", "accent": "#AAB3C0", "luxe": "#1D232B"},
+ "nova":   {"type": "human", "body": "female", "hair": "Hair_BuzzedFemale", "pony": "high", "skin": "#D9A07C", "hair_col": "#1A1310", "accent": "#0B6E85", "luxe": "#0A2C36"},
+ "valor":  {"type": "human", "body": "female", "hair": null, "hijab": "#16171D", "skin": "#C08A66", "hair_col": "#1A1310", "accent": "#5B2D91", "luxe": "#24113D"},
+ "aria":   {"type": "human", "body": "female", "hair": "Hair_Long", "skin": "#F0CDB5", "hair_col": "#B8894A", "accent": "#C2185B", "luxe": "#4A0B25"},
+ "luna":   {"type": "human", "body": "female", "hair": "Hair_BuzzedFemale", "pony": "low", "skin": "#EECBAE", "hair_col": "#0F0C0B", "accent": "#3B82F6", "luxe": "#10224A"},
+ "siren":  {"type": "human", "body": "female", "hair": "Hair_Long", "skin": "#7B4A32", "hair_col": "#120D0B", "accent": "#F59E0B", "luxe": "#3A2606"},
+ "viper":  {"type": "human", "body": "female", "hair": "Hair_BuzzedFemale", "pony": "high", "skin": "#C8916E", "hair_col": "#3A2416", "accent": "#10B981", "luxe": "#0A3326"},
+ "echo":   {"type": "human", "body": "female", "hair": "Hair_Long", "skin": "#C9977A", "hair_col": "#24170F", "accent": "#EF4444", "luxe": "#40100F"},
+ "lyra":   {"type": "human", "body": "female", "hair": "Hair_BuzzedFemale", "pony": "low", "skin": "#B98262", "hair_col": "#0F0B0A", "accent": "#A855F7", "luxe": "#2A1145"},
+ "rex":    {"type": "animal", "species": "jaguar", "body": "male", "accent": "#C8A24A", "luxe": "#1A1410"},
+ "taurus": {"type": "animal", "species": "bull", "body": "male", "accent": "#B91C1C", "luxe": "#2A0A0A"},
+ "howl":   {"type": "animal", "species": "wolf", "body": "male", "accent": "#38BDF8", "luxe": "#0B1E2E"},
+ "frost":  {"type": "animal", "species": "snowleopard", "body": "female", "accent": "#7DD3FC", "luxe": "#0D2233"}
 }

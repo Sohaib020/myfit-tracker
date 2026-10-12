@@ -8,10 +8,10 @@ permissions: { contents: write }
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 300
     strategy:
       fail-fast: false
-      matrix: { hero: [blaze, nova, valor], level: [1, 2, 3], shard: [0, 1] }
+      matrix: { hero: [blaze, titan, kairo, raze, onyx, vortex, apex, steel, nova, valor, aria, luna, siren, viper, echo, lyra], level: [1, 2, 3] }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -22,11 +22,11 @@ jobs:
         run: |
           sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 libxrender1 libxxf86vm1 libxfixes3 >/dev/null
           pip install -q bpy==4.2.0 pillow numpy
-          L=${{ matrix.level }}; S=${{ matrix.shard }}; export HERO=${{ matrix.hero }}
-          python tools/heroes/render_clips.py assets $L out/$HERO/l$L/frames $S 2 2>&1 | grep -E "RENDER_DONE|Error|Traceback" | head || true
-          if [ "$S" = 0 ]; then python tools/heroes/render_clips.py assets $L out/$HERO/l$L/stills --stills 2>&1 | grep -E "RENDER_DONE|Error|Traceback" | head || true; fi
+          L=${{ matrix.level }}; export HERO=${{ matrix.hero }}
+          python tools/heroes/render_clips.py assets $L out/$HERO/l$L/frames 0 1 2>&1 | grep -E "RENDER_DONE|Error|Traceback" | head || true
+          python tools/heroes/render_clips.py assets $L out/$HERO/l$L/stills --stills 2>&1 | grep -E "RENDER_DONE|Error|Traceback" | head || true
       - uses: actions/upload-artifact@v4
-        with: { name: 'r-${{ matrix.hero }}-${{ matrix.level }}-${{ matrix.shard }}', path: out }
+        with: { name: 'r-${{ matrix.hero }}-${{ matrix.level }}', path: out }
   pack:
     needs: render
     if: always()
@@ -39,13 +39,14 @@ jobs:
         run: |
           pip install -q pillow numpy
           mkdir -p merged pub && for d in parts/*/; do cp -rn "$d"* merged/; done
-          for HR in blaze nova valor; do
+          for HR in blaze titan kairo raze onyx vortex apex steel nova valor aria luna siren viper echo lyra; do
             for L in 1 2 3; do
               python tools/char3d/pack.py merged/$HR/l$L/frames pub/$HR/l$L | tail -1
               mkdir -p pub/$HR/l$L/stills && cp merged/$HR/l$L/stills/*.png pub/$HR/l$L/stills/ 2>/dev/null || true
             done
             python tools/heroes/ladder.py pub/$HR pub/$HR/ladder.gif
           done
+          python tools/heroes/roster_sheet.py pub pub/roster.jpg
       - name: Publish to hero-out
         run: |
           cd pub && git init -q && git checkout -q -b hero-out && git add -A

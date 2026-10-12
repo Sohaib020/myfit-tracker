@@ -24,6 +24,14 @@ def mat(name, color, rough=0.5, metal=0.0, coat=0.0, sheen=0.0, emit=0.0, weave=
         nt.links.new(w.outputs['Fac'], bm.inputs['Height']); nt.links.new(bm.outputs['Normal'], b.inputs['Normal'])
     return m
 
+def tint_mat(m, color, strength=1.0):
+    nt = m.node_tree; b = next(n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED')
+    src = b.inputs['Base Color'].links[0].from_socket if b.inputs['Base Color'].links else None
+    mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MULTIPLY'; mix.inputs[0].default_value = strength
+    if src: nt.links.new(src, mix.inputs[6])
+    else: mix.inputs[6].default_value = b.inputs['Base Color'].default_value
+    mix.inputs[7].default_value = H.srgb(color); nt.links.new(mix.outputs[2], b.inputs['Base Color'])
+
 def tint(obj, color, strength=1.0):
     """Multiply an object's base colour (texture) by a tint — skin tones, hair colour."""
     for sl in obj.material_slots:
@@ -77,8 +85,19 @@ def shell(name, planes, lift, thick, m, rim=None, sub=1, extra=None, drape=0):
     bmesh.ops.dissolve_degenerate(bm, dist=0.0015, edges=bm.edges[:])
     # weld the cut edge: merge near-coincident verts created by successive planes
     bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=0.0015)
+    tiny = [f for f in bm.faces if f.calc_area() < 1e-9]
+    if tiny: bmesh.ops.delete(bm, geom=tiny, context='FACES')
+    wire = [e for e in bm.edges if not e.link_faces]
+    if wire: bmesh.ops.delete(bm, geom=wire, context='EDGES')
     loose = [v for v in bm.verts if not v.link_faces]
     if loose: bmesh.ops.delete(bm, geom=loose, context='VERTS')
+    # drop slivers of 1-2 faces left dangling by cuts (non-manifold fans crash the renderer)
+    for _ in range(2):
+        lone = [f for f in bm.faces if sum(1 for e in f.edges if len(e.link_faces) > 1) <= 1]
+        if lone: bmesh.ops.delete(bm, geom=lone, context='FACES')
+        loose = [v for v in bm.verts if not v.link_faces]
+        if loose: bmesh.ops.delete(bm, geom=loose, context='VERTS')
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     bm.to_mesh(me); bm.free()
     me.materials.clear(); me.materials.append(m)
     if rim: me.materials.append(rim)

@@ -3,19 +3,20 @@ usage: python render_clips.py <assets_dir> <level> <out_dir> [shard nshards] [--
 import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import heroes as H, outfit as O, designs as Dz, bpy
+os.environ.setdefault('HERO_ASSETS_UBC', os.path.join(sys.argv[1], 'ubc'))
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
 AS, lv, OUT = args[0], int(args[1]), args[2]
 SH, NSH = (int(args[3]), int(args[4])) if len(args) > 4 else (0, 1)
 STILLS = '--stills' in sys.argv
 ROSTER = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'roster.json')))
 who = os.environ.get('HERO', 'blaze'); spec = ROSTER[who]
-H.load(os.path.join(AS, 'ubc'), os.path.join(AS, 'ual', 'UAL1_Standard.glb'), spec['body'], hair=spec.get('hair'))
-O.tint(H.BODY, spec['skin'])
+H.load(os.path.join(AS, 'ubc'), os.path.join(AS, 'ual', 'UAL1_Standard.glb'), spec['body'], hair=spec.get('hair') if spec.get('type', 'human') == 'human' else None)
+O.tint(H.BODY, spec.get('skin', '#FFFFFF'))
 if spec.get('beard'): H.add_hair(os.path.join(AS, 'ubc'), 'Hair_Beard')
 for o in H.S.objects:
     if o.type == 'MESH' and ('Hair' in o.name or 'Eyebrow' in o.name or o.name.startswith('Face')): O.tint(o, spec.get('hair_col', '#2A211C'))
 O.prep_muscle(lv)
-Dz.BUILD[who](lv, spec)
+Dz.build_any(who, lv, spec)
 if STILLS:
     H.studio(res=(560, 700), samples=32)
     os.makedirs(OUT, exist_ok=True)
