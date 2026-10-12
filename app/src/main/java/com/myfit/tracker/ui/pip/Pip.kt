@@ -30,10 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameMillis
-import androidx.compose.runtime.withFrameNanos
-import kotlinx.coroutines.flow.first
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -71,7 +68,7 @@ import kotlin.random.Random
 
 /**
  * Pip v4 — a real 3D plush (modelled and lit in Blender from the character sheet) played back as
- * smooth pre-rendered animations. Pip tilts toward your finger in 2.5D, reacts to every tap with a
+ * smooth pre-rendered animations. Pip reacts to every tap with a
  * different emote, hugs when long-pressed, giggles when stroked and lip-syncs while talking.
  */
 enum class PipMood {
@@ -120,67 +117,6 @@ private data class Fx(val born: Float, val x: Float, val y: Float, val vx: Float
 
 private val CHEEK = Color(0xFFFF8FAB)
 private val confettiColors = listOf(Color(0xFFFF5C8A), Color(0xFFFFD34D), Color(0xFF4FC3FF), Color(0xFF7CFFB2), Color(0xFFB57CFF))
-
-/**
- * Look-at stills: a 13×13 grid, assets/pip/look/look_RR_CC.webp. Row 0 = finger above Pip, col 0 = finger to
- * his left (screen left), 06_06 = neutral. Frames are decoded lazily (only the ones the head passes
- * through) into a byte-capped LRU shared by every Pip, and dropped when no Pip is on screen.
- */
-private object LookFrames {
-    /** Grid size comes from the active buddy (Pip 13×13, character packs 7×7). */
-    val N: Int get() = Buddy.lookN
-    val MID: Float get() = (N - 1) / 2f
-    init { Buddy.onChange += { cache.evictAll() } }
-    private const val MAX_BYTES = 14 * 1024 * 1024   // ≈17 full-res or ≈70 half-res frames (only the ones near the gaze are kept)
-    private val cache = object : android.util.LruCache<Int, ImageBitmap>(MAX_BYTES) {
-        override fun sizeOf(key: Int, value: ImageBitmap) = value.width * value.height * 4
-    }
-    private val pending = java.util.Collections.synchronizedSet(HashSet<Int>())
-    @Volatile private var sample = 1
-    var users = 0   // Pips in composition (main thread only)
-
-    /** inSampleSize for the current on-screen size: small Pips use half-res (224 px) frames. */
-    fun setSample(px: Int) {
-        val s = if (px in 1..260) 2 else 1
-        if (s != sample) { sample = s; cache.evictAll() }
-    }
-
-    operator fun get(idx: Int): ImageBitmap? = cache.get(idx * 4 + sample)
-
-    /** Decodes [idx] in the background if needed; [onLoaded] runs on the caller's (main) scope. */
-    fun request(ctx: android.content.Context, scope: kotlinx.coroutines.CoroutineScope, idx: Int, onLoaded: () -> Unit) {
-        val s = sample
-        val key = idx * 4 + s
-        if (cache.get(key) != null || !pending.add(key)) return
-        scope.launch {
-            try {
-                val bmp = withContext(Dispatchers.IO) {
-                    runCatching {
-                        val opts = BitmapFactory.Options().apply { inSampleSize = s }
-                        Buddy.open(ctx, "look/look_%02d_%02d.webp".format(idx / N, idx % N)).use { BitmapFactory.decodeStream(it, null, opts) }?.asImageBitmap()
-                    }.getOrNull()
-                }
-                if (bmp != null && s == sample) { cache.put(key, bmp); onLoaded() }
-            } finally { pending.remove(key) }
-        }
-    }
-
-    fun release() { cache.evictAll() }
-}
-
-/** Critically-damped spring state for the head's (row, col) in the look grid. */
-private class LookSpring {
-    var r = LookFrames.MID; var c = LookFrames.MID
-    var vr = 0f; var vc = 0f
-}
-
-/** One exact critically-damped step toward [target]; returns (pos, vel). ω=40 settles in ≈120 ms. */
-private fun critStep(x: Float, v: Float, target: Float, dt: Float, w: Float = 40f): Pair<Float, Float> {
-    val e = x - target
-    val ex = kotlin.math.exp(-w * dt)
-    val tmp = (v + w * e) * dt
-    return Pair(target + (e + tmp) * ex, (v - w * tmp) * ex)
-}
 
 /** Talking mouth frames (idle pose, mouth closed → wide open), decoded once and shared. */
 private object TalkFrames {
@@ -237,17 +173,10 @@ private fun PipBody(
     var hugging by remember { mutableStateOf(false) }
     var lastHeart by remember { mutableFloatStateOf(0f) }
     var boxPx by remember { mutableStateOf(IntSize(1, 1)) }
-    val tiltX = remember { Animatable(0f) }
-    val tiltY = remember { Animatable(0f) }
     var talkFrames by remember { mutableStateOf(TalkFrames.frames) }
     var redraw by remember { mutableIntStateOf(0) }
     var replay by remember { mutableIntStateOf(0) }
     var resting by remember { mutableStateOf(false) }
-    var lookOn by remember { mutableStateOf(false) }          // finger down, or head easing back to centre
-    var lookR by remember { mutableFloatStateOf(LookFrames.MID) }
-    var lookC by remember { mutableFloatStateOf(LookFrames.MID) }
-    var lookLoaded by remember { mutableIntStateOf(0) }
-    val lookSpring = remember { LookSpring() }
     val motion = com.myfit.tracker.ui.theme.LocalSettings.current.motion
 
     fun burst(kind: Int, n: Int, cx: Float, cy: Float, spread: Float = 1f) {
@@ -275,7 +204,6 @@ private fun PipBody(
     val baseAnim = animFor(effMood).let { if (it !in LOOPS && baseDone) "idle" else it }
     val anim = reaction ?: baseAnim
     val showTalk = talking && reaction == null && anim == "idle" && talkFrames != null
-    val looking = lookOn && reaction == null && !hugging && !showTalk
 
     // ---- the animated clip currently playing
     var drawable by remember { mutableStateOf<Drawable?>(null) }
@@ -307,54 +235,6 @@ private fun PipBody(
     }
     DisposableEffect(Unit) { onDispose { stopClip(drawable) } }
     LaunchedEffect(talking) { if (talking && talkFrames == null) talkFrames = TalkFrames.load(ctx) }
-    DisposableEffect(Unit) {
-        LookFrames.users++
-        onDispose { if (--LookFrames.users <= 0) { LookFrames.users = 0; LookFrames.release() } }
-    }
-    // ---- smooth look-follow: finger → continuous (row, col) → critically-damped spring → the 4 nearest
-    // stills cross-faded. Runs per frame only while the finger moves or the head is still settling.
-    fun lookTarget(p: Offset?): Pair<Float, Float> {
-        if (p == null) return Pair(LookFrames.MID, LookFrames.MID)
-        val n = LookFrames.N
-        val row = ((p.y / boxPx.height - 0.12f) / 0.82f * n - 0.5f).coerceIn(0f, n - 1f)
-        val col = (p.x / boxPx.width * n - 0.5f).coerceIn(0f, n - 1f)
-        return Pair(row, col)
-    }
-    fun requestLook(r: Float, c: Float) {
-        val n = LookFrames.N
-        val r0 = r.toInt().coerceIn(0, n - 2); val c0 = c.toInt().coerceIn(0, n - 2)
-        for (dr in 0..1) for (dc in 0..1) LookFrames.request(ctx, scope, (r0 + dr) * n + c0 + dc) { lookLoaded++ }
-    }
-    LaunchedEffect(pointer != null) {
-        if (pointer == null && !lookOn) return@LaunchedEffect
-        if (!Buddy.hasLook) return@LaunchedEffect          // head-follow is Pip's alone; other buddies keep playing their move
-        LookFrames.setSample(boxPx.width)
-        val sp = lookSpring
-        if (!lookOn) { sp.r = LookFrames.MID; sp.c = LookFrames.MID; sp.vr = 0f; sp.vc = 0f; lookR = sp.r; lookC = sp.c }
-        requestLook(sp.r, sp.c)
-        lookOn = true
-        var last = withFrameNanos { it }
-        while (true) {
-            if (reaction != null || hugging) { lookOn = false; break }   // a tap/hug took over
-            val p = pointer
-            val (tr, tc) = lookTarget(p)
-            val settled = abs(sp.r - tr) < 0.01f && abs(sp.c - tc) < 0.01f && abs(sp.vr) < 0.05f && abs(sp.vc) < 0.05f
-            if (settled) {
-                sp.r = tr; sp.c = tc; sp.vr = 0f; sp.vc = 0f; lookR = tr; lookC = tc
-                if (p == null) { lookOn = false; break }                   // back at centre: hand over to the clip
-                snapshotFlow { pointer }.first { it != p }                   // finger resting: no per-frame work
-                last = withFrameNanos { it }
-                continue
-            }
-            val now = withFrameNanos { it }
-            val dt = ((now - last) / 1e9f).coerceIn(0f, 0.05f); last = now
-            critStep(sp.r, sp.vr, tr, dt).let { (x, v) -> sp.r = x; sp.vr = v }
-            critStep(sp.c, sp.vc, tc, dt).let { (x, v) -> sp.c = x; sp.vc = v }
-            lookR = sp.r; lookC = sp.c
-            requestLook(sp.r, sp.c)
-            requestLook(tr, tc)   // prefetch where the head is heading
-        }
-    }
     // idle breathing plays, rests 3–6 s on its last frame, then plays again (never in Battery saver)
     LaunchedEffect(resting, motion) {
         if (resting && motion != 2) { delay(3000L + Random.nextLong(3000L)); resting = false; replay++ }
@@ -388,13 +268,6 @@ private fun PipBody(
                 else -> { withFrameMillis { }; step(); delay(400) }                       // nothing moving: almost free
             }
         }
-    }
-    LaunchedEffect(pointer) {
-        val p = pointer
-        val tx = if (p == null) 0f else ((p.y / boxPx.height - 0.45f) * -6f).coerceIn(-5f, 5f)
-        val ty = if (p == null) 0f else ((p.x / boxPx.width - 0.5f) * 10f).coerceIn(-6f, 6f)
-        launch { tiltX.animateTo(tx, spring(0.6f, 300f)) }
-        tiltY.animateTo(ty, spring(0.6f, 300f))
     }
 
     Box(
@@ -438,23 +311,19 @@ private fun PipBody(
                 Offset(w * 0.24f, w * 0.905f), Size(w * 0.52f, w * 0.07f),
             )
         }
-        // the plush, with a gentle 2.5D tilt toward the finger and a squash on tap
+        // the plush, with a squash on tap
         Canvas(
             Modifier.fillMaxSize().graphicsLayer {
                 val s = squash.value
                 scaleX = 2f - s; scaleY = s
                 transformOrigin = TransformOrigin(0.5f, 0.92f)
-                rotationX = tiltX.value; rotationY = tiltY.value
-                cameraDistance = 12f * density
                 if (showTalk) translationY = -abs(sin(t * 7f)) * this.size.height * 0.006f
             }
         ) {
             redraw // re-draw whenever the clip advances a frame
             val w = this.size.width.toInt(); val h = this.size.height.toInt()
             val talkF = talkFrames
-            if (looking && drawLook(lookR, lookC, lookLoaded, w, h)) {
-                // drawn: bilinear cross-fade of the 4 nearest look stills
-            } else if (showTalk && talkF != null) {
+            if (showTalk && talkF != null) {
                 val lv = if (level < 0f) 0.25f + 0.6f * abs(sin(t * 11f) * sin(t * 4.3f + 1f)) else level
                 val idx = (lv.coerceIn(0f, 1f) * (talkF.size - 1) + 0.4f).toInt().coerceIn(0, talkF.size - 1)
                 drawImage(talkF[idx], dstOffset = IntOffset.Zero, dstSize = IntSize(w, h))
@@ -503,34 +372,6 @@ private fun PipBody(
             }
         }
     }
-}
-
-/**
- * Draws the head at continuous grid position ([r], [c]) by blending the 4 surrounding stills with
- * bilinear weights. Frames are drawn heaviest first, each with alpha = w / Σw-so-far, so overlapping
- * opaque pixels end up as an exact weighted average and the silhouette stays fully opaque.
- * Returns false if none of the needed frames is decoded yet (caller falls back to the clip).
- */
-private fun DrawScope.drawLook(r: Float, c: Float, @Suppress("UNUSED_PARAMETER") loaded: Int, w: Int, h: Int): Boolean {
-    val n = LookFrames.N
-    val r0 = r.toInt().coerceIn(0, n - 2); val c0 = c.toInt().coerceIn(0, n - 2)
-    val fr = (r - r0).coerceIn(0f, 1f); val fc = (c - c0).coerceIn(0f, 1f)
-    val parts = ArrayList<Pair<ImageBitmap, Float>>(4)
-    fun add(rr: Int, cc: Int, wt: Float) { if (wt > 0.004f) LookFrames[rr * n + cc]?.let { parts += it to wt } }
-    add(r0, c0, (1 - fr) * (1 - fc)); add(r0, c0 + 1, (1 - fr) * fc)
-    add(r0 + 1, c0, fr * (1 - fc)); add(r0 + 1, c0 + 1, fr * fc)
-    if (parts.isEmpty()) {
-        // nothing around here decoded yet: show the nearest frame we do have, if any
-        val near = LookFrames[(r + 0.5f).toInt().coerceIn(0, n - 1) * n + (c + 0.5f).toInt().coerceIn(0, n - 1)] ?: return false
-        parts += near to 1f
-    }
-    parts.sortByDescending { it.second }
-    var acc = 0f
-    for ((bmp, wt) in parts) {
-        acc += wt
-        drawImage(bmp, srcOffset = IntOffset.Zero, srcSize = IntSize(bmp.width, bmp.height), dstOffset = IntOffset.Zero, dstSize = IntSize(w, h), alpha = wt / acc)
-    }
-    return true
 }
 
 /** End-callbacks of clips that were replaced; muted so a late "animation ended" can't act on the new clip. */
