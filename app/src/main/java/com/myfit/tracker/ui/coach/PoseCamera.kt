@@ -14,6 +14,7 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -188,13 +189,13 @@ private fun PoseModelPrompt(accent: Color, modifier: Modifier, onReady: () -> Un
                 Text("${(p * 100).toInt()}%", style = FitType.caption, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(top = 6.dp))
             } else {
                 error?.let { Text(it, style = FitType.caption, color = Color(0xFFFF8A80), modifier = Modifier.padding(bottom = 10.dp)) }
-                com.myfit.tracker.ui.theme.AccentButton("Download (${PoseModels.SIZE_MB} MB)", { start() }, icon = com.myfit.tracker.ui.theme.Duo.Download)
+                com.myfit.tracker.ui.theme.AccentButton("Download (${PoseModels.SIZE_MB} MB)", { start() }, icon = com.myfit.tracker.ui.theme.Duo.Camera)
             }
         }
     }
 }
 
-private fun Modifier.fillMaxWidthCompat() = this.then(androidx.compose.foundation.layout.fillMaxWidth())
+private fun Modifier.fillMaxWidthCompat(): Modifier = this.fillMaxWidth()
 
 @Composable
 private fun PoseCameraLive(front: Boolean, accent: Color, highlight: Set<Int>, onPose: (FormGuide.Pose, Long) -> Unit, modifier: Modifier) {
