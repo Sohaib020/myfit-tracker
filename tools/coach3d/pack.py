@@ -1,26 +1,57 @@
-"""PNG frames -> animated WebP (looping), trimmed to the union bounding box of all clips of a coach so every clip
-shares the same canvas.  python pack.py <coach_frames_dir> <out_dir>"""
+"""PNG frames -> looping animated WebP, cropped tight to the coach.
+Standing clips share ONE crop box per coach (union of every frame of every standing clip), so the coach keeps the same
+size and position whichever move plays; floor moves (pushup, plank) get their own box.  python pack.py <frames_dir> <out>"""
 import sys, os, glob
 from PIL import Image
 
 src, out = sys.argv[1], sys.argv[2]
 os.makedirs(out, exist_ok=True)
+FLOOR = {'pushup', 'plank'}
+H_OUT = 720                       # output height for standing clips (px)
 clips = sorted(d for d in os.listdir(src) if os.path.isdir(os.path.join(src, d)) and d != 'portrait')
+
+
+def frames(c): return sorted(glob.glob(os.path.join(src, c, '0*.png')))
+
+
+def union_box(cs):
+    box = None
+    for c in cs:
+        for f in frames(c)[::2]:
+            b = Image.open(f).getchannel('A').point(lambda v: 255 if v > 10 else 0).getbbox()
+            if not b: continue
+            box = b if box is None else (min(box[0], b[0]), min(box[1], b[1]), max(box[2], b[2]), max(box[3], b[3]))
+    return box
+
+
+def pad(b, W, H, m=0.03):
+    w, h = b[2] - b[0], b[3] - b[1]; px, py = int(w * m) + 4, int(h * m) + 4
+    return (max(0, b[0] - px), max(0, b[1] - py), min(W, b[2] + px), min(H, b[3] + py))
+
+
+stand = [c for c in clips if c not in FLOOR]
+sample = Image.open(frames(stand[0])[0]); W, H = sample.size
+sbox = pad(union_box(stand), W, H)
 total = 0
 for c in clips:
-    fs = sorted(glob.glob(os.path.join(src, c, '0*.png')))
+    fs = frames(c)
     if not fs: continue
-    meta = open(os.path.join(src, c, 'meta.txt')).read().split()
-    fps = int(meta[2])
-    ims = [Image.open(f).convert('RGBA') for f in fs]
-    # 400x720 render -> 300x540 (sharper than rendering small; keeps file size sane)
-    ims = [im.resize((300, 540), Image.LANCZOS) for im in ims]
+    fps = int(open(os.path.join(src, c, 'meta.txt')).read().split()[2])
+    box = sbox if c not in FLOOR else pad(union_box([c]), W, H)
+    bw, bh = box[2] - box[0], box[3] - box[1]
+    if c in FLOOR:
+        ow = int((sbox[2] - sbox[0]) * H_OUT / (sbox[3] - sbox[1]) * 1.6); oh = max(2, int(ow * bh / bw))
+    else:
+        oh = H_OUT; ow = max(2, int(bw * H_OUT / bh))
+    ims = [Image.open(f).convert('RGBA').crop(box).resize((ow, oh), Image.LANCZOS) for f in fs]
     p = os.path.join(out, f'{c}.webp')
-    ims[0].save(p, save_all=True, append_images=ims[1:], duration=round(1000 / fps), loop=0, quality=78, method=6, lossless=False)
+    ims[0].save(p, save_all=True, append_images=ims[1:], duration=round(1000 / fps), loop=0, quality=82, method=4, lossless=False)
     total += os.path.getsize(p)
-    print(c, len(ims), os.path.getsize(p) // 1024, 'KB')
+    print(c, len(ims), f'{ow}x{oh}', os.path.getsize(p) // 1024, 'KB')
 pd = os.path.join(src, 'portrait')
 if os.path.isdir(pd):
-    Image.open(os.path.join(pd, 'portrait.png')).convert('RGBA').resize((320, 320), Image.LANCZOS).save(os.path.join(out, 'portrait.webp'), quality=88, method=6)
-    Image.open(os.path.join(pd, 'stand.png')).convert('RGBA').resize((300, 540), Image.LANCZOS).save(os.path.join(out, 'stand.webp'), quality=85, method=6)
+    st = Image.open(os.path.join(pd, 'stand.png')).convert('RGBA')
+    b = pad(st.getchannel('A').point(lambda v: 255 if v > 10 else 0).getbbox(), *st.size)
+    st = st.crop(b); st = st.resize((int(st.width * H_OUT / st.height), H_OUT), Image.LANCZOS)
+    st.save(os.path.join(out, 'stand.webp'), quality=88, method=6)
 print('TOTAL', total // 1024, 'KB')

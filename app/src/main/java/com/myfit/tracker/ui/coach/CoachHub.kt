@@ -67,7 +67,7 @@ fun CoachHub(container: AppContainer) {
                 Box(Modifier.fillMaxWidth().height(260.dp).clip(RoundedCornerShape(30.dp))
                     .background(Brush.linearGradient(listOf(th.accent.copy(alpha = 0.3f), th.accent.copy(alpha = 0.04f))))) {
                     Row(Modifier.fillMaxSize()) {
-                        CoachFigure(cp.look.id, heroPose, Modifier.weight(1f).fillMaxHeight().padding(top = 10.dp), container.pipVoice.level)
+                        CoachStage(cp.look.id, heroPose, Modifier.weight(1f).fillMaxHeight().padding(top = 10.dp), container.pipVoice.level)
                         Column(Modifier.weight(1.1f).fillMaxHeight().padding(16.dp), verticalArrangement = Arrangement.Center) {
                             Text("Hey, I'm ${cp.name}!", style = FitType.title, color = th.text)
                             Spacer(Modifier.height(6.dp))

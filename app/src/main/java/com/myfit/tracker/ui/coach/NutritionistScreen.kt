@@ -185,7 +185,7 @@ fun NutritionistScreen(container: AppContainer) {
         Box(Modifier.fillMaxWidth().height(210.dp).padding(horizontal = 16.dp).clip(RoundedCornerShape(30.dp))
             .background(Brush.linearGradient(listOf(th.success.copy(alpha = 0.22f), th.accent.copy(alpha = 0.06f))))) {
             Row(Modifier.fillMaxSize()) {
-                CoachFigure(cp.nLook.id, npose, Modifier.weight(0.9f).fillMaxSize().padding(top = 10.dp), voice.level)
+                CoachStage(cp.nLook.id, npose, Modifier.weight(0.9f).fillMaxSize().padding(top = 10.dp), voice.level)
                 Column(Modifier.weight(1.1f).fillMaxSize().padding(top = 16.dp, end = 14.dp, bottom = 12.dp), verticalArrangement = Arrangement.SpaceBetween) {
                     Column(Modifier.clip(RoundedCornerShape(18.dp)).background(th.text.copy(alpha = 0.08f)).padding(12.dp)) {
                         Text(headline?.title ?: "Hi, I'm ${cp.nName}!", style = FitType.label, color = th.text, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)

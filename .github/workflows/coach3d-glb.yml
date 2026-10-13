@@ -1,0 +1,48 @@
+name: Coach 3D real-time GLBs
+# Owner's Meshy coaches (branch coach3d-assets) + tools/coach3d/export_glb.py -> one animated GLB per coach
+# (idle, talk + tap emotes) -> release coach3d-glb-v1 (<who>.glb). Used by the in-app 3D viewer on capable phones.
+on:
+  push:
+    branches: [ coach3d-glb-run ]
+  workflow_dispatch:
+permissions: { contents: write }
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: { who: [trainer_m, trainer_f, nutri_m, nutri_f] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { ref: coach3d-assets, path: assets }
+      - name: UAL
+        run: git fetch -q origin hero-assets && git show origin/hero-assets:ual/UAL1_Standard.glb > ual.glb
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Export
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 libxrender1 libxxf86vm1 libxfixes3 >/dev/null
+          pip install -q bpy==4.2.0 pillow numpy
+          mkdir -p out
+          for try in 1 2; do
+            python tools/coach3d/export_glb.py assets/glb ual.glb ${{ matrix.who }} out/${{ matrix.who }}.glb 1024 60000 > log.txt 2>&1 || true
+            grep -q EXPORT_DONE log.txt && break
+          done
+          grep -E "baked|decimated|EXPORT_DONE|Error|Traceback" log.txt | head -30
+          grep -q EXPORT_DONE log.txt || { tail -30 log.txt | sed 's/^/::error::/'; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with: { name: 'glb-${{ matrix.who }}', path: out, retention-days: 3 }
+  release:
+    needs: export
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: parts }
+      - name: Release coach3d-glb-v1
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          gh release view coach3d-glb-v1 >/dev/null 2>&1 || gh release create coach3d-glb-v1 --title "Coach 3D real-time models" --notes "Animated GLBs for the 3D coach viewer (R21)" --prerelease
+          for f in parts/*/*.glb; do echo "::notice::$(basename $f) $(du -k $f | cut -f1) KB"; gh release upload coach3d-glb-v1 "$f" --clobber; done

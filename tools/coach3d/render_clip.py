@@ -2,7 +2,7 @@
 Render one coach clip to PNG frames (transparent) for CI.
   python render_clip.py <glb_dir> <ual.glb> <who> <clip|portrait> <out_dir> [fps=20] [samples=40]
 Camera: one fixed 3/4 framing for every standing clip (so the coach never jumps in size between moves), a wider side
-framing for floor moves. Frame size 400x720 (portrait 512x512).
+framing for floor moves. Frame size 600x1080 (portrait 512x512); pack.py crops tight to the coach.
 """
 import sys, os, bpy, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -16,7 +16,7 @@ os.makedirs(out, exist_ok=True)
 arm, body = rig.load(who, glb)
 look.refine(body, subdiv=0)
 rig.bulk(arm, who)
-s = studio.setup(res=720, samples=samples)
+s = studio.setup(res=1080, samples=samples)
 s.render.image_settings.file_format = 'PNG'; s.render.image_settings.color_mode = 'RGBA'
 
 if clip == 'portrait':
@@ -27,13 +27,13 @@ if clip == 'portrait':
     studio.camera(target=(head.x, head.y, head.z + 0.02), dist=1.75, yaw=-14, pitch=3, lens=70)
     studio.render(os.path.join(out, 'portrait.png'))
     # full-figure still (APK fallback while the animated pack downloads)
-    s.render.resolution_x = 400; s.render.resolution_y = 720
+    s.render.resolution_x = 600; s.render.resolution_y = 1080
     studio.camera(target=(0, 0, 1.05), dist=4.3, yaw=-16, pitch=4, lens=60)
     studio.render(os.path.join(out, 'stand.png'))
     print('RENDER_DONE portrait'); sys.exit(0)
 
 c = clips.build(who, clip, arm, glb, ual)
-s.render.resolution_x = 400; s.render.resolution_y = 720
+s.render.resolution_x = 600; s.render.resolution_y = 1080
 floor = clip in ('pushup', 'plank')
 if floor:
     studio.camera(target=(0, -0.72, 0.40), dist=6.2, yaw=-62, pitch=8, lens=60)
