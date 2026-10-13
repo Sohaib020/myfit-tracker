@@ -287,6 +287,8 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 com.myfit.tracker.ui.theme.AccentButton("Backup & restore", { navB.push(com.myfit.tracker.ui.nav.Overlay.Backup) }, Modifier.fillMaxWidth(), icon = com.myfit.tracker.ui.theme.Duo.Cloud, height = 44.dp)
                 Spacer(Modifier.height(14.dp))
                 LiveNotifRow()
+                Spacer(Modifier.height(10.dp))
+                Coach3DRow()
             }
         }
         if (settings.devMode && !com.myfit.tracker.update.Store.isStoreBuild) item {
@@ -973,6 +975,18 @@ private fun AiProvidersCard(container: AppContainer) {
     }
 }
 
+
+/** R21: real-time 3D coaches (on by default only on phones that run it smoothly). */
+@androidx.compose.runtime.Composable
+private fun Coach3DRow() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val capable = androidx.compose.runtime.remember { com.myfit.tracker.ui.coach.Coach3D.capable(ctx) }
+    var on by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.myfit.tracker.ui.coach.Coach3D.enabled(ctx)) }
+    ToggleRow("3D coaches", if (capable) "Spin your trainer and nutritionist with a finger, tap them for a reaction. Downloads a few MB per coach."
+        else "Live 3D for the trainer and nutritionist. Your phone may run it slowly or warm up; animated clips are used when off.", on) { v ->
+        on = v; com.myfit.tracker.ui.coach.Coach3D.setEnabled(ctx, v)
+    }
+}
 
 /** Live notifications are automatic (Now Bar on Android 16 phones that allow it, else MyFit's live card) + daily goals card toggle. */
 @androidx.compose.runtime.Composable

@@ -175,6 +175,11 @@ dependencies {
     // Google code scanner: barcode scanning UI without a camera permission
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     implementation("com.google.zxing:core:3.5.3")
+    // R21 real-time 3D coaches (capable phones only; GLBs download on demand)
+    val filament = "1.56.0"
+    implementation("com.google.android.filament:filament-android:$filament")
+    implementation("com.google.android.filament:gltfio-android:$filament")
+    implementation("com.google.android.filament:filament-utils-android:$filament")
     // food camera: live preview, on-device food detection
     val camerax = "1.4.2"
     implementation("androidx.camera:camera-core:$camerax")
