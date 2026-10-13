@@ -24,7 +24,9 @@ object CoachPacks {
     private val running = java.util.Collections.synchronizedSet(HashSet<String>())
 
     private fun dir(c: Context, p: String) = File(c.filesDir, "coach3d/$p")
-    fun isInstalled(c: Context, lookId: String) = File(dir(c, pack(lookId)), ".complete").exists()
+    /** Bump when the release packs are re-rendered so phones replace their old copy (v2 = R21 720p tight crops). */
+    private const val VER = "2"
+    fun isInstalled(c: Context, lookId: String) = File(dir(c, pack(lookId)), ".complete").let { it.exists() && it.readText().trim() == VER }
 
     /** Old pose names from the 2D coaches -> 3D clip names (anything else is already a clip name). */
     fun clipFor(pose: String): String = when (pose) {
@@ -66,7 +68,7 @@ object CoachPacks {
                     out.outputStream().use { zip.copyTo(it) }
                 }
             }
-            if (File(d, "idle.webp").exists()) { File(d, ".complete").writeText("1"); installed.value++; true } else false
+            if (File(d, "idle.webp").exists()) { File(d, ".complete").writeText(VER); installed.value++; true } else false
         } catch (t: Throwable) { false } finally { running.remove(p) }
     }
 
