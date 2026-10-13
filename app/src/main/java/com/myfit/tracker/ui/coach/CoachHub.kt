@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +57,9 @@ fun CoachHub(container: AppContainer) {
     remember { Coach.load(ctx); 0 }
     val cp by Coach.prefs.collectAsState()
     val active by container.workoutRepo.inProgress.collectAsState(initial = null)
+    // R21: the coach waves hello, then settles into a relaxed idle
+    var heroPose by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("wave") }
+    androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.delay(3400); heroPose = "idle" }
     Column(Modifier.fillMaxSize()) {
         OverlayTopBar(cp.name, { nav.pop() }, "Your personal trainer")
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 40.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -63,7 +67,7 @@ fun CoachHub(container: AppContainer) {
                 Box(Modifier.fillMaxWidth().height(260.dp).clip(RoundedCornerShape(30.dp))
                     .background(Brush.linearGradient(listOf(th.accent.copy(alpha = 0.3f), th.accent.copy(alpha = 0.04f))))) {
                     Row(Modifier.fillMaxSize()) {
-                        CoachFigure(cp.look.id, "stand", Modifier.weight(1f).fillMaxHeight().padding(top = 10.dp), container.pipVoice.level)
+                        CoachFigure(cp.look.id, heroPose, Modifier.weight(1f).fillMaxHeight().padding(top = 10.dp), container.pipVoice.level)
                         Column(Modifier.weight(1.1f).fillMaxHeight().padding(16.dp), verticalArrangement = Arrangement.Center) {
                             Text("Hey, I'm ${cp.name}!", style = FitType.title, color = th.text)
                             Spacer(Modifier.height(6.dp))

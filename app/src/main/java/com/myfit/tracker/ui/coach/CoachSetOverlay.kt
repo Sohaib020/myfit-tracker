@@ -254,12 +254,13 @@ fun CoachSetOverlay(cur: WorkoutExerciseView, list: List<WorkoutExerciseView>, v
     }
 
     val pose = when (stage) {
-        Stage.INTRO -> if (speaking) (if (cueIdx % 2 == 0) "clipboard" else "demo") else "stand"
-        Stage.SETUP -> "point"
-        Stage.COUNTDOWN -> "point"
-        Stage.WORK -> if (reps >= goalReps - 2 && !timed) "cheer" else "point"
+        // R21: 3D coach moves — demos the actual exercise when it has one
+        Stage.INTRO -> if (speaking) (if (cueIdx % 2 == 0) "talk" else Coach.demoFor(cur.exercise.name)) else "idle"
+        Stage.SETUP -> "talk"
+        Stage.COUNTDOWN -> "thumbsup"
+        Stage.WORK -> if (reps >= goalReps - 2 && !timed) "fistpump" else "talk"
         Stage.DONE -> "cheer"
-        Stage.REST -> "rest"
+        Stage.REST -> "idle"
     }
 
     // ---------------------------------------------------------------- layout

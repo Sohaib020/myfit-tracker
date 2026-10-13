@@ -1,0 +1,104 @@
+name: Coach 3D clips
+# Owner's Meshy coaches (branch coach3d-assets) + tools/coach3d -> every clip (one job per coach x clip) ->
+# animated WebP packs -> release coach3d-v1 (<who>.zip) + preview branch coach3d-out.
+on:
+  push:
+    branches: [ coach3d-run ]
+  workflow_dispatch:
+    inputs:
+      who: { description: 'coaches (json list)', required: false, default: '["trainer_m","trainer_f","nutri_m","nutri_f"]' }
+      clips: { description: 'only these clips (comma list, empty = all)', required: false, default: '' }
+permissions: { contents: write }
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs: { matrix: '${{ steps.m.outputs.matrix }}' }
+    steps:
+      - id: m
+        run: |
+          WHO='${{ github.event.inputs.who }}'; [ -z "$WHO" ] && WHO='["trainer_m","trainer_f","nutri_m","nutri_f"]'
+          ONLY='${{ github.event.inputs.clips }}'
+          python3 - "$WHO" "$ONLY" <<'PY' >> $GITHUB_OUTPUT
+          import json, sys
+          T = ['portrait','idle','wave','talk','thumbsup','cheer','squat','pushup','lunge','press','plank','stretch','dance','victory','fistpump']
+          N = ['portrait','idle','wave','talk','thumbsup','cheer','plate','bottle','tablet','think','dance','victory','fistpump']
+          only = [x for x in sys.argv[2].split(',') if x]
+          inc = [{'who': w, 'clip': c} for w in json.loads(sys.argv[1]) for c in (T if w.startswith('trainer') else N) if not only or c in only]
+          print('matrix=' + json.dumps({'include': inc}))
+          PY
+  render:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { ref: coach3d-assets, path: assets }
+      - name: UAL
+        run: git fetch -q origin hero-assets && git show origin/hero-assets:ual/UAL1_Standard.glb > ual.glb
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Render
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 libxrender1 libxxf86vm1 libxfixes3 >/dev/null
+          pip install -q bpy==4.2.0 pillow numpy
+          W=${{ matrix.who }}; C=${{ matrix.clip }}
+          for try in 1 2; do
+            python tools/coach3d/render_clip.py assets/glb ual.glb $W $C out/$W/$C 20 40 > log.txt 2>&1 || true
+            grep -q RENDER_DONE log.txt && break
+          done
+          grep -E "RENDER_DONE|Error|Traceback|line [0-9]+" log.txt | head -20
+          grep -q RENDER_DONE log.txt || { tail -30 log.txt | sed 's/^/::error::/'; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with: { name: 'c-${{ matrix.who }}-${{ matrix.clip }}', path: out, retention-days: 3 }
+  pack:
+    needs: render
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: parts }
+      - name: Pack
+        run: |
+          pip install -q pillow numpy
+          mkdir -p merged pub rel && for d in parts/*/; do cp -rn "$d"* merged/; done
+          for W in $(ls merged); do
+            # partial re-render: start from the published pack so untouched clips are kept
+            mkdir -p pub/$W && curl -fsSL -o old.zip "https://github.com/${{ github.repository }}/releases/download/coach3d-v1/$W.zip" && unzip -oq old.zip -d pub/$W || true
+            python tools/coach3d/pack.py merged/$W pub/$W | tail -20
+            (cd pub/$W && zip -q -r ../../rel/$W.zip . -x '*.png')
+            echo "::notice::$W pack $(du -k rel/$W.zip | cut -f1) KB"
+          done
+          python3 - <<'PY'
+          # contact sheet: middle frame of every clip per coach
+          import os, glob
+          from PIL import Image
+          rows = []
+          for w in sorted(os.listdir('merged')):
+              cs = sorted(d for d in os.listdir(f'merged/{w}') if d != 'portrait')
+              ims = []
+              for c in cs:
+                  fs = sorted(glob.glob(f'merged/{w}/{c}/0*.png'))
+                  if fs: ims.append(Image.open(fs[len(fs) // 3]).convert('RGBA').resize((150, 270)))
+              row = Image.new('RGBA', (150 * max(1, len(ims)), 270), (240, 242, 245, 255))
+              for i, im in enumerate(ims): row.alpha_composite(im, (150 * i, 0))
+              rows.append(row)
+          if rows:
+              W = Image.new('RGBA', (max(r.width for r in rows), 270 * len(rows)), (240, 242, 245, 255))
+              for i, r in enumerate(rows): W.alpha_composite(r, (0, 270 * i))
+              W.convert('RGB').save('pub/sheet.jpg', quality=88)
+          PY
+      - name: Release coach3d-v1
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          gh release view coach3d-v1 >/dev/null 2>&1 || gh release create coach3d-v1 --title "Coach 3D packs" --notes "Animated coach clips (R21)" --prerelease
+          for z in rel/*.zip; do gh release upload coach3d-v1 "$z" --clobber; done
+      - name: Publish preview branch
+        run: |
+          cd pub && git init -q && git checkout -q -b coach3d-out && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "coach clips ${{ github.run_number }}" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" coach3d-out

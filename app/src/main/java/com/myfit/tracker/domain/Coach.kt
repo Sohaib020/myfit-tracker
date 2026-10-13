@@ -5,15 +5,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Pro trainer & nutritionist personas: stylised cartoon characters (Coach Bolt, Chef Zest — names editable),
- * drawn in assets/coach. Everything is stored on this phone.
+ * Pro trainer & nutritionist personas (Coach Bolt, Chef Zest — names editable). R21: 3D characters — a portrait and a
+ * standing still ship in assets/coach (<id>_portrait / <id>_stand); the animated moves come in a small pack per
+ * character (ui/coach/CoachPacks). Everything is stored on this phone.
  */
 object Coach {
     /** Trainer looks. Art files: assets/coach/<id>_<pose>.webp (pose = portrait, stand, demo, cheer). */
     enum class Look(val id: String, val male: Boolean, val label: String, val defaultName: String) {
         M("m", true, "Male coach", "Coach Bolt"),
         F("f", false, "Female coach", "Coach Bolt"),
-        FH("fh", false, "Female coach (hijab)", "Coach Bolt"),
     }
 
     /** Nutritionist looks. Art: assets/coach/<id>_<pose>.webp (pose = portrait, plate). */
@@ -45,7 +45,8 @@ object Coach {
     fun load(c: Context): Prefs {
         if (loaded) return _prefs.value
         val p = sp(c)
-        val look = Look.entries.firstOrNull { it.id == p.getString("look", null) } ?: Look.M
+        // R21: the hijab look was retired with the 3D characters — those users move to the female coach
+        val look = Look.entries.firstOrNull { it.id == p.getString("look", null) } ?: if (p.getString("look", null) == "fh") Look.F else Look.M
         val nLook = NLook.entries.firstOrNull { it.id == p.getString("nlook", null) } ?: NLook.F
         // R16: the old defaults sounded like real people — move anyone still on them to the new character names
         val oldDefaults = setOf("Coach Zarak", "Coach Inaya", "Areesha", "Faraz")
@@ -71,6 +72,20 @@ object Coach {
         sp(c).edit().putString("look", n.look.id).putString("name", n.name).putString("nlook", n.nLook.id).putString("nname", n.nName)
             .putBoolean("urdu", n.urdu).putBoolean("camera", n.camera).putBoolean("voice", n.voice).putInt("push", n.push.ordinal)
             .putBoolean("front", n.frontCamera).apply()
+    }
+
+    /** Exercise-specific demo clip for the camera coach (falls back to explaining). */
+    fun demoFor(exercise: String?): String {
+        val n = exercise?.lowercase() ?: return "talk"
+        return when {
+            "squat" in n -> "squat"
+            "push-up" in n || "push up" in n || "pushup" in n || "press-up" in n -> "pushup"
+            "lunge" in n || "split squat" in n -> "lunge"
+            "plank" in n -> "plank"
+            "shoulder press" in n || "overhead press" in n || "military press" in n || "arnold" in n -> "press"
+            "stretch" in n || "mobility" in n || "yoga" in n -> "stretch"
+            else -> "talk"
+        }
     }
 
     /** Asset path of a pose, or null when the art isn't bundled. */

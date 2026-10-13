@@ -21,7 +21,11 @@ class SystemEventsReceiver : BroadcastReceiver() {
         val app = context.applicationContext
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
-            try { ReminderScheduler.rescheduleNow(app) } catch (_: Throwable) {} finally { runCatching { pending.finish() } }
+            try {
+                ReminderScheduler.rescheduleNow(app)
+                // R21: an app update invalidates the offline brain's caches — rebuild them now, not on the first question
+                if (intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) runCatching { com.myfit.tracker.ai.ondevice.BrainWarmup.schedule(app) }
+            } catch (_: Throwable) {} finally { runCatching { pending.finish() } }
         }
     }
 }

@@ -979,11 +979,21 @@ private fun AiProvidersCard(container: AppContainer) {
 private fun LiveNotifRow() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val th = com.myfit.tracker.ui.theme.LocalFitTheme.current
-    val native = androidx.compose.runtime.remember { com.myfit.tracker.notify.LiveUpdates.nativeStyle(ctx) }
+    val capable = androidx.compose.runtime.remember { com.myfit.tracker.notify.LiveUpdates.nowBarCapable(ctx) }
+    var nowBar by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.myfit.tracker.notify.LiveUpdates.useNowBar(ctx)) }
     var daily by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.myfit.tracker.notify.LiveUpdates.dailyOn(ctx)) }
     androidx.compose.material3.Text("Live notifications", style = com.myfit.tracker.ui.theme.FitType.label, color = th.text)
-    com.myfit.tracker.ui.components.Caption(if (native) "Automatic: this phone shows workouts, rest, runs and fasts live in the Now Bar and on the lock screen."
-        else "Automatic: this phone shows workouts, rest, runs and fasts as a live card with a moving progress track.")
+    if (capable) {
+        com.myfit.tracker.ui.components.Caption("Workouts, rest, runs and fasts while they run. Pick the look:")
+        Spacer(Modifier.height(8.dp))
+        androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+            com.myfit.tracker.ui.theme.GlassChip("MyFit card", !nowBar, { nowBar = false; com.myfit.tracker.notify.LiveUpdates.setUseNowBar(ctx, false) })
+            com.myfit.tracker.ui.theme.GlassChip("Now Bar", nowBar, { nowBar = true; com.myfit.tracker.notify.LiveUpdates.setUseNowBar(ctx, true) })
+        }
+        Spacer(Modifier.height(4.dp))
+        com.myfit.tracker.ui.components.Caption(if (nowBar) "Android's own Live Update: status-bar chip and Now Bar, in the system's style." else "MyFit's full card: big clock, progress ring, exercise bar and stats. Not shown in the Now Bar.",
+            color = th.textFaint)
+    } else com.myfit.tracker.ui.components.Caption("Automatic: workouts, rest, runs and fasts show as a live card with a big clock and progress.")
     Spacer(Modifier.height(6.dp))
     ToggleRow("Daily goals card", "A quiet card with today's steps, water and calories. Swipe it away any time.", daily) { v ->
         daily = v; com.myfit.tracker.notify.LiveUpdates.setDailyOn(ctx, v)

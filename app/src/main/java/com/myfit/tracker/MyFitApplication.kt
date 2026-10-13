@@ -71,5 +71,9 @@ class MyFitApplication : Application() {
         if (!java.io.File(filesDir, "voice/" + com.myfit.tracker.ai.voice.VoicePack.MODEL + "/.complete").exists())
             com.myfit.tracker.ai.voice.VoicePackWorker.schedule(this)
         com.myfit.tracker.ai.FoodRecognizer.schedule(this)   // offline food recogniser, Wi-Fi only
+        com.myfit.tracker.ai.ondevice.BrainWarmup.schedule(this)   // R21: offline brain first-start prep after install/update
+        // R21: when Pip will answer from the phone (offline, or phone-brain mode), load it now so the first message is instant
+        if (!com.myfit.tracker.ai.Net.online(this) || com.myfit.tracker.ai.BrainMode.get(this) == com.myfit.tracker.ai.BrainMode.PHONE)
+            com.myfit.tracker.ai.ondevice.OnDeviceAi.get(this).llm.prewarm()
     }
 }

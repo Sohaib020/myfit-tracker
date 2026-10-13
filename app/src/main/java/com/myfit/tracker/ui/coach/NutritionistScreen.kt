@@ -181,7 +181,7 @@ fun NutritionistScreen(container: AppContainer) {
         OverlayTopBar(cp.nName, { voice.stop(); nav.pop() }, "Your nutrition coach")
         // ---------------- hero: the character on a stage with today's headline in a speech bubble
         val headline = tips.firstOrNull()
-        val npose = when (tab) { 0 -> if (headline?.good == true) "thumbs" else "stand"; 1 -> "think"; 2 -> "cart"; else -> "portrait" }
+        val npose = when (tab) { 0 -> if (headline?.good == true) "thumbsup" else "idle"; 1 -> "think"; 2 -> "plate"; else -> "tablet" }
         Box(Modifier.fillMaxWidth().height(210.dp).padding(horizontal = 16.dp).clip(RoundedCornerShape(30.dp))
             .background(Brush.linearGradient(listOf(th.success.copy(alpha = 0.22f), th.accent.copy(alpha = 0.06f))))) {
             Row(Modifier.fillMaxSize()) {
