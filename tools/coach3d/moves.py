@@ -111,10 +111,10 @@ def thumbs_up():
 
 def cheer():
     c = Clip('cheer', 56); c.lag = {'Hand.L': 2, 'Hand.R': 2, 'Head': 2, 'ForeArm.L': 1, 'ForeArm.R': 1}
-    upA = P(both('UpperArm', x=-18, y=-150), both('ForeArm', x=-12), fist('L'), fist('R'),
+    upA = P(both('UpperArm', x=-18, y=-150), both('ForeArm', x=-12), both('Hand', x=12), open_hand('L', 1.2), open_hand('R', 1.2),
             {'Spine': (-4, 0, 0), 'Chest': (-6, 0, 0), 'Head': (-12, 0, 0)}, both('UpLeg', x=-6), both('Leg', x=10))
     c.key(0, P())
-    c.key(8, P(both('UpperArm', x=-10, y=-10), both('ForeArm', x=-60), fist('L', .7), fist('R', .7), {'Spine': (8, 0, 0), 'Head': (6, 0, 0)},
+    c.key(8, P(both('UpperArm', x=-10, y=-10), both('ForeArm', x=-60), fist('L', .4), fist('R', .4), {'Spine': (8, 0, 0), 'Head': (6, 0, 0)},
                both('UpLeg', x=-22), both('Leg', x=40), both('Foot', x=-16)), hips=(0, 0.02, -0.07), ease='in')        # crouch
     c.key(15, upA, hips=(0, 0, 0.03), ease='snap')                                                 # explode up
     c.key(22, merge(upA, both('UpperArm', y=8)), hips=(0, 0, 0.0))
@@ -126,10 +126,10 @@ def cheer():
 
 def fist_pump():
     c = Clip('fistpump', 56); c.lag = {'Hand.R': 1, 'Head': 2}
-    pull = P(side('UpperArm', 'R', x=-8, y=-28), side('ForeArm', 'R', x=-120), fist('R'),
+    pull = P(side('UpperArm', 'R', x=-8, y=-28), side('ForeArm', 'R', x=-120), fist('R', .55),
              {'Spine': (10, -3, -10), 'Chest': (6, 0, -6), 'Head': (8, 0, -6)}, both('UpLeg', x=-12), both('Leg', x=22), both('Foot', x=-10))
     c.key(0, P())
-    c.key(8, P(side('UpperArm', 'R', x=-40, y=-55), side('ForeArm', 'R', x=-70), fist('R'), {'Spine': (-3, 0, 4)}), ease='in')
+    c.key(8, P(side('UpperArm', 'R', x=-40, y=-55), side('ForeArm', 'R', x=-70), fist('R', .55), {'Spine': (-3, 0, 4)}), ease='in')
     c.key(15, pull, hips=(0, 0.01, -0.05), ease='snap')           # "yes!" pull down
     c.key(22, merge(pull, side('ForeArm', 'R', x=10)), hips=(0, 0.01, -0.04))
     c.key(28, pull, hips=(0, 0.01, -0.05), ease='snap')           # second smaller pump
@@ -222,7 +222,7 @@ def hold_plate():
     c = Clip('plate', 96); c.lag = {'Head': 3, 'Hand.R': 2}
     hold = P(side('UpperArm', 'L', x=-14, y=-6, tw=18), side('ForeArm', 'L', x=-60, tw=PALM_UP), side('Hand', 'L', x=4), open_hand('L', .3),
              side('ForeArm', 'R', x=-18), {'Spine': (0, 0, 3), 'Head': (8, 0, 6)})
-    present = merge(hold, side('UpperArm', 'R', x=-30, y=-18, tw=-10), side('ForeArm', 'R', x=-55, tw=PALM_UP * 0.6), open_hand('R'),
+    present = merge(hold, side('UpperArm', 'R', x=-22, y=-24, tw=-10), side('ForeArm', 'R', x=-28, tw=PALM_UP * 0.6), open_hand('R'),
                     {'Head': (-2, 0, -2)})
     c.key(0, hold); c.key(26, merge(hold, {'Head': (12, 2, 10)})); c.key(44, present, ease='out'); c.key(70, present); c.key(88, hold)
     c.props = [('plate', 'Hand.L')]

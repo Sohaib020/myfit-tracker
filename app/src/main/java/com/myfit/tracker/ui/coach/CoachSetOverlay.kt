@@ -338,14 +338,14 @@ fun CoachSetOverlay(cur: WorkoutExerciseView, list: List<WorkoutExerciseView>, v
                             modifier = Modifier.align(Alignment.TopEnd).padding(14.dp).clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha = 0.45f)).padding(horizontal = 10.dp, vertical = 4.dp))
                         if (stage == Stage.SETUP) SetupChecklist(setup, pattern, Modifier.align(Alignment.TopStart).padding(12.dp))
                         // small coach in the corner while the camera runs
-                        CoachPortrait(cp.look.id, speaking, 58.dp, Modifier.align(Alignment.BottomEnd).padding(12.dp), voice.level)
+                        CoachPortrait(cp.look.id, speaking, 58.dp, Modifier.align(Alignment.BottomEnd).padding(12.dp), voice.level, tapToEmote = false)
                     } else when (stage) {
                         Stage.WORK -> Box(Modifier.fillMaxSize()) {
                             ExerciseImage(ex, Modifier.fillMaxSize().padding(12.dp).clip(RoundedCornerShape(24.dp)), animate = true, periodMs = 900)
-                            CoachPortrait(cp.look.id, speaking, 58.dp, Modifier.align(Alignment.BottomEnd).padding(12.dp), voice.level)
+                            CoachPortrait(cp.look.id, speaking, 58.dp, Modifier.align(Alignment.BottomEnd).padding(12.dp), voice.level, tapToEmote = false)
                         }
                         Stage.INTRO -> Row(Modifier.fillMaxSize()) {
-                            CoachFigure(cp.look.id, pose, Modifier.weight(1f).fillMaxHeight().padding(top = 8.dp), voice.level)
+                            CoachFigure(cp.look.id, pose, Modifier.weight(1f).fillMaxHeight().padding(top = 8.dp), voice.level, tapToEmote = false)
                             if (wide) Column(Modifier.weight(0.9f).fillMaxHeight().padding(12.dp), verticalArrangement = Arrangement.Center) {
                                 ExerciseImage(ex, Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(22.dp)), animate = true, periodMs = 1000)
                                 Spacer(Modifier.height(10.dp))
@@ -354,10 +354,10 @@ fun CoachSetOverlay(cur: WorkoutExerciseView, list: List<WorkoutExerciseView>, v
                             }
                         }
                         Stage.DONE -> Row(Modifier.fillMaxSize()) {
-                            CoachFigure(cp.look.id, pose, Modifier.weight(1f).fillMaxHeight().padding(top = 8.dp), voice.level)
+                            CoachFigure(cp.look.id, pose, Modifier.weight(1f).fillMaxHeight().padding(top = 8.dp), voice.level, tapToEmote = false)
                             SetSummary(reps, timed, elapsed, summary, Modifier.weight(1f).fillMaxHeight().padding(12.dp))
                         }
-                        else -> CoachFigure(cp.look.id, pose, Modifier.fillMaxSize().padding(top = 8.dp), voice.level)
+                        else -> CoachFigure(cp.look.id, pose, Modifier.fillMaxSize().padding(top = 8.dp), voice.level, tapToEmote = false)
                     }
                     // counters / overlays
                     if (stage == Stage.WORK || stage == Stage.REST) {

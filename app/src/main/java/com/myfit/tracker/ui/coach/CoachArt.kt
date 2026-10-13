@@ -24,6 +24,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -91,13 +93,28 @@ private val remember0 = MutableStateFlow(0f)
  * pops into each new pose with a springy entrance.
  */
 @Composable
-fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level: MutableStateFlow<Float>? = null, spotlight: Boolean = true) {
+fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level: MutableStateFlow<Float>? = null, spotlight: Boolean = true,
+                tapToEmote: Boolean = true) {
     val th = LocalFitTheme.current
+    // tap → a random fitting emote (never the same twice in a row), played once, then back to the screen's pose
+    var tapPose by androidx.compose.runtime.remember(look) { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    var lastEmote by androidx.compose.runtime.remember(look) { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    val shown = tapPose ?: pose
     val lv by (level ?: remember0).collectAsState()
     val t = rememberInfiniteTransition(label = "breath")
     val b by t.animateFloat(0f, 1f, infiniteRepeatable(tween(1900), RepeatMode.Reverse), label = "b")
     val sway by t.animateFloat(-1f, 1f, infiniteRepeatable(tween(3400), RepeatMode.Reverse), label = "s")
-    Box(modifier, contentAlignment = Alignment.BottomCenter) {
+    val tapMod = if (!tapToEmote) Modifier else Modifier.clickable(
+        interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null,
+    ) {
+        if (tapPose == null) { val e = CoachEmotes.pick(look, lastEmote); lastEmote = e; tapPose = e }
+    }
+    // stills (no pack yet / Android 8) have no end callback: hold the emote briefly, then return
+    val ctx0 = LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(tapPose) {
+        if (tapPose != null && (android.os.Build.VERSION.SDK_INT < 28 || !CoachPacks.isInstalled(ctx0, look))) { kotlinx.coroutines.delay(2200); tapPose = null }
+    }
+    Box(modifier.then(tapMod), contentAlignment = Alignment.BottomCenter) {
         if (spotlight) Canvas(Modifier.fillMaxSize()) {
             drawOval(Brush.radialGradient(listOf(th.accent.copy(alpha = 0.35f), Color.Transparent), center = Offset(size.width / 2, size.height * 0.92f), radius = size.width * 0.5f),
                 topLeft = Offset(size.width * 0.12f, size.height * 0.84f), size = androidx.compose.ui.geometry.Size(size.width * 0.76f, size.height * 0.14f))
@@ -108,7 +125,7 @@ fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level
         val packs by CoachPacks.installed.collectAsState()
         // first appearance of this coach: fetch the animated moves in the background (the still shows meanwhile)
         androidx.compose.runtime.LaunchedEffect(look) { if (!CoachPacks.isInstalled(ctx, look)) CoachPacks.ensure(ctx, look) }
-        AnimatedContent(pose, Modifier.fillMaxSize(), transitionSpec = {
+        AnimatedContent(shown, Modifier.fillMaxSize(), transitionSpec = {
             (scaleIn(spring(0.55f, 380f), initialScale = 0.96f) + fadeIn(tween(180)))
                 .togetherWith(fadeOut(tween(140)))
         }, label = "pose") { p ->
@@ -118,7 +135,9 @@ fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                 if (clip != null) {
                     // the animation carries its own breathing and motion; only bob gently with the voice
-                    CoachClip(clip, Modifier.fillMaxSize().graphicsLayer { transformOrigin = TransformOrigin(0.5f, 1f); translationY = -lv * 6f })
+                    val once = tapPose != null && p == tapPose
+                    CoachClip(clip, Modifier.fillMaxSize().graphicsLayer { transformOrigin = TransformOrigin(0.5f, 1f); translationY = -lv * 6f },
+                        loop = !once, onEnd = { if (tapPose == p) tapPose = null })
                 } else {
                     val img = rememberCoachImage(look, p)
                     if (img != null) Image(img, null, Modifier.fillMaxSize().graphicsLayer {
@@ -140,20 +159,54 @@ fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level
  * which avoids the stale-bounds double image some Android 11 MediaTek phones showed when drawing into Compose.
  */
 @Composable
-private fun CoachClip(file: java.io.File, modifier: Modifier) {
+private fun CoachClip(file: java.io.File, modifier: Modifier, loop: Boolean = true, onEnd: (() -> Unit)? = null) {
+    val end = androidx.compose.runtime.rememberUpdatedState(onEnd)
     androidx.compose.ui.viewinterop.AndroidView(
-        factory = { c -> android.widget.ImageView(c).apply { scaleType = android.widget.ImageView.ScaleType.FIT_END; adjustViewBounds = false } },
+        factory = { c -> BottomFitImageView(c) },
         modifier = modifier,
         update = { iv ->
-            if (iv.tag != file.path && android.os.Build.VERSION.SDK_INT >= 28) {
-                iv.tag = file.path
+            val key = file.path + loop
+            if (iv.tag != key && android.os.Build.VERSION.SDK_INT >= 28) {
+                iv.tag = key
                 runCatching {
                     val d = android.graphics.ImageDecoder.decodeDrawable(android.graphics.ImageDecoder.createSource(file))
                     iv.setImageDrawable(d)
-                    (d as? android.graphics.drawable.AnimatedImageDrawable)?.apply { repeatCount = android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE; start() }
+                    (d as? android.graphics.drawable.AnimatedImageDrawable)?.apply {
+                        repeatCount = if (loop) android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE else 0
+                        if (!loop) registerAnimationCallback(object : android.graphics.drawable.Animatable2.AnimationCallback() {
+                            override fun onAnimationEnd(drawable: android.graphics.drawable.Drawable?) { end.value?.invoke() }
+                        })
+                        start()
+                    }
                 }
             }
         },
-        onRelease = { iv -> ((iv.drawable as? android.graphics.drawable.Animatable))?.stop(); iv.setImageDrawable(null) },
+        onRelease = { iv ->
+            if (android.os.Build.VERSION.SDK_INT >= 28) (iv.drawable as? android.graphics.drawable.AnimatedImageDrawable)?.clearAnimationCallbacks()
+            ((iv.drawable as? android.graphics.drawable.Animatable))?.stop(); iv.setImageDrawable(null)
+        },
     )
+}
+
+/** Emotes a tap can trigger, per coach kind. */
+object CoachEmotes {
+    private val TRAINER = listOf("wave", "thumbsup", "fistpump", "cheer", "victory")
+    private val NUTRI = listOf("wave", "thumbsup", "think", "bottle")
+    fun list(look: String) = if (look.startsWith("n")) NUTRI else TRAINER
+    fun pick(look: String, last: String?): String = list(look).filter { it != last }.random()
+}
+
+/** Scales the frame to fit the box and stands it on the bottom edge, centred horizontally (feet on the floor). */
+private class BottomFitImageView(c: android.content.Context) : android.widget.ImageView(c) {
+    init { scaleType = ScaleType.MATRIX }
+    private fun fit() {
+        val d = drawable ?: return
+        val dw = d.intrinsicWidth.toFloat(); val dh = d.intrinsicHeight.toFloat()
+        val vw = (width - paddingLeft - paddingRight).toFloat(); val vh = (height - paddingTop - paddingBottom).toFloat()
+        if (dw <= 0f || dh <= 0f || vw <= 0f || vh <= 0f) return
+        val s = minOf(vw / dw, vh / dh)
+        imageMatrix = android.graphics.Matrix().apply { setScale(s, s); postTranslate((vw - dw * s) / 2f, vh - dh * s) }
+    }
+    override fun setFrame(l: Int, t: Int, r: Int, b: Int): Boolean = super.setFrame(l, t, r, b).also { fit() }
+    override fun setImageDrawable(drawable: android.graphics.drawable.Drawable?) { super.setImageDrawable(drawable); fit() }
 }

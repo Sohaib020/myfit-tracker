@@ -112,9 +112,9 @@ def victory():
     load = P(both('UpperArm', x=20, y=8), both('ForeArm', x=-30), {'Spine': (22, 0, 0), 'Head': (8, 0, 0)},
              both('UpLeg', x=-60), both('Leg', x=95), both('Foot', x=-35), moves.fist('L', .6), moves.fist('R', .6))
     air = P(both('UpperArm', x=-20, y=-150), both('ForeArm', x=-10), both('Hand', x=18), {'Spine': (-8, 0, 0), 'Chest': (-6, 0, 0), 'Head': (-14, 0, 0)},
-            both('UpLeg', x=-28), both('Leg', x=55), both('Foot', x=30), moves.fist('L'), moves.fist('R'))
+            both('UpLeg', x=-28), both('Leg', x=55), both('Foot', x=30), moves.open_hand('L', 1.2), moves.open_hand('R', 1.2))
     land = P(both('UpperArm', x=-10, y=-62, tw=-70), both('ForeArm', x=-115), {'Spine': (14, 0, 0), 'Head': (-6, 0, 0)}, both('UpLeg', x=-50), both('Leg', x=80), both('Foot', x=-25),
-             moves.fist('L'), moves.fist('R'))
+             moves.fist('L', .5), moves.fist('R', .5))
     c.key(0, P()); c.key(10, load, hips=(0, 0.04, -0.26), ease='in')
     c.key(16, air, hips=(0, 0, 0.30), ease='out')
     c.key(22, air, hips=(0, 0, 0.36))
