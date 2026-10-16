@@ -160,7 +160,7 @@ fun PipChatScreen(container: AppContainer) {
         val ctxB = androidx.compose.ui.platform.LocalContext.current
         val brain by com.myfit.tracker.ai.BrainMode.flow.collectAsState()
         val brainNow = brain ?: com.myfit.tracker.ai.BrainMode.get(ctxB)
-        OverlayTopBar(Buddy.active.collectAsState().value.label.substringBefore(' '), { nav.pop() },
+        OverlayTopBar(Buddy.active.collectAsState().value.label, { nav.pop() },
             when { speaking -> "Speaking…"; thinking -> "Thinking…"; else -> "Your AI buddy" }) {
             // brain chip: Auto / Online / On this phone
             Glass(Modifier.height(40.dp), shape = RoundedCornerShape(20.dp), onClick = { showBrain = true }) {
@@ -183,7 +183,7 @@ fun PipChatScreen(container: AppContainer) {
         }
         if (messages.isEmpty() && !imeOpen) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Hi! I'm ${com.myfit.tracker.ui.pip.Buddy.name} " + (if (Buddy.active.collectAsState().value == com.myfit.tracker.ui.arena.Mascot.PIP) "🌱" else "👋"), style = FitType.title, color = th.text)
+                Text("Hi! I'm ${com.myfit.tracker.ui.pip.Buddy.name} " + (if (Buddy.active.collectAsState().value.isPip) "🌱" else "👋"), style = FitType.title, color = th.text)
                 Spacer(Modifier.height(6.dp))
                 Caption("Ask about your training, food, sleep or steps — or tap the mic and just talk. Tap me, stroke me, or long-press for a hug.")
             }

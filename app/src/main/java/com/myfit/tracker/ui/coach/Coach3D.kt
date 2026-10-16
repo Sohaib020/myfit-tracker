@@ -245,6 +245,12 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
     private var prev = -1; private var prevTime = 0f; private var fadeStart = 0L
     private var lastEmote: String? = null
     private var once = false
+    // external mode (Home buddy): Pip's clip logic says what to play; a play-once move holds its last frame and reports the end
+    private var external = false
+    private var extLoop = true
+    private var extEnd: (() -> Unit)? = null
+    private var extEndFired = false
+    var resolve: (String) -> String = { it }
     private var center = floatArrayOf(0f, 0f, 0f); private var unit = 1f
     private var running = false
     private var dead = false
@@ -334,9 +340,20 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
         cur = i; curStart = now
     }
 
+    /** Home buddy: play [name] (looping or once). Unknown names go through [resolve]. */
+    fun playExternal(name: String, loop: Boolean, onEnd: (() -> Unit)?) {
+        if (dead) return
+        external = true
+        val n = name.takeIf { idx(it) >= 0 } ?: resolve(name).takeIf { idx(it) >= 0 } ?: "idle"
+        extLoop = loop; extEnd = onEnd; extEndFired = false
+        if (idx(n) == cur) { curStart = System.nanoTime(); return }        // same move again: restart it
+        play(n, force = true)
+    }
+
     private fun timeOf(i: Int, now: Long): Float {
         val an = animator ?: return 0f
         val t = (now - curStart) / 1e9f; val d = an.getAnimationDuration(i).coerceAtLeast(0.01f)
+        if (external && i == cur) return if (extLoop) t % d else t.coerceAtMost(d)
         return if (names[i] in Coach3D.LOOPS && !(once && i == cur)) t % d else t.coerceAtMost(d)
     }
 
@@ -365,8 +382,9 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
             val now = System.nanoTime()
             val d = an.getAnimationDuration(cur)
             val t = (now - curStart) / 1e9f
-            if ((once || names[cur] !in Coach3D.LOOPS) && t >= d) play(pickBase())
-            else if (!once && names[cur] in Coach3D.LOOPS && t >= d && (Coach3D.VARIANTS[base]?.size ?: 0) > 1) play(pickBase(), force = true)
+            if (external) { if (!extLoop && t >= d && !extEndFired) { extEndFired = true; extEnd?.invoke() } }
+            else if ((once || names[cur] !in Coach3D.LOOPS) && t >= d) play(pickBase())
+            else if (!external && !once && names[cur] in Coach3D.LOOPS && t >= d && (Coach3D.VARIANTS[base]?.size ?: 0) > 1) play(pickBase(), force = true)
             an.applyAnimation(cur, timeOf(cur, now))
             val fade = (now - fadeStart) / 1e9f / 0.3f
             if (prev >= 0 && fade < 1f) an.applyCrossFade(prev, prevTime, fade.coerceIn(0f, 1f))
@@ -398,5 +416,100 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
         scene?.let { runCatching { e.destroyScene(it) } }; scene = null
         if (camEntity != 0) runCatching { e.destroyCameraComponent(camEntity); EntityManager.get().destroy(camEntity) }
         camera = null; camEntity = 0; uiHelper = null
+    }
+}
+
+// ---------------------------------------------------------------- R24 champions (Home buddy) in real-time 3D
+
+/** Champion looks as real-time models (release champ3d-v1/<id>.glb, every move of the tier). */
+object ChampModels {
+    private const val BASE = "https://github.com/Sohaib020/myfit-tracker/releases/download/champ3d-v1"
+    private const val VER = 1
+    private val busy = HashSet<String>()
+    private fun file(c: Context, id: String) = File(c.filesDir, "champ3d/${id}_v$VER.glb")
+    fun installed(c: Context, id: String) = file(c, id).let { it.exists() && it.length() > 100_000 }
+
+    suspend fun ensure(c: Context, id: String): Boolean = withContext(Dispatchers.IO) {
+        if (installed(c, id)) return@withContext true
+        synchronized(busy) { if (!busy.add(id)) return@withContext false }
+        try {
+            val f = file(c, id); f.parentFile?.mkdirs()
+            f.parentFile?.listFiles()?.filter { it.name.startsWith(id + "_") && it.name != f.name }?.forEach { it.delete() }
+            val tmp = File(f.parentFile, "$id.part")
+            var conn = URL("$BASE/$id.glb").openConnection() as HttpURLConnection
+            conn.connectTimeout = 15_000; conn.readTimeout = 30_000
+            var hops = 0
+            while (conn.responseCode in 300..399 && hops++ < 5) {
+                val loc = conn.getHeaderField("Location") ?: break
+                conn.disconnect(); conn = URL(loc).openConnection() as HttpURLConnection; conn.connectTimeout = 15_000; conn.readTimeout = 30_000
+            }
+            if (conn.responseCode != 200) return@withContext false
+            conn.inputStream.use { i -> tmp.outputStream().use { o -> i.copyTo(o) } }
+            if (tmp.length() < 100_000 || !tmp.renameTo(f)) { tmp.delete(); return@withContext false }
+            Coach3D.ready.value++; true
+        } catch (_: Exception) { false } finally { synchronized(busy) { busy.remove(id) } }
+    }
+
+    fun read(c: Context, id: String): ByteBuffer? = runCatching {
+        val b = file(c, id).readBytes()
+        ByteBuffer.allocateDirect(b.size).order(ByteOrder.nativeOrder()).put(b).also { it.rewind() }
+    }.getOrNull()
+}
+
+/** Lets Pip's clip logic drive a 3D champion: play(name, loop, onEnd) is queued until the model is up. */
+class Champ3DController {
+    internal var scene: Any? = null
+    private var pending: Triple<String, Boolean, (() -> Unit)?>? = null
+    val shown = androidx.compose.runtime.mutableStateOf(false)
+    fun play(name: String, loop: Boolean, onEnd: (() -> Unit)?) {
+        val sc = scene as? CoachScene
+        if (sc == null) pending = Triple(name, loop, onEnd) else sc.playExternal(name, loop, onEnd)
+    }
+    internal fun attached(sc: Any) { scene = sc; pending?.let { (n, l, e) -> (sc as CoachScene).playExternal(n, l, e) }; pending = null }
+    internal fun detached() { scene = null }
+}
+
+/**
+ * The Home buddy champion as a live 3D model (drawn behind Pip's effects layer). Drag to spin (springs back), no zoom;
+ * taps go to Pip's own tap handling. Calls [onFail] if the model can't be shown (Pip then plays the clip pack).
+ */
+@Composable
+fun Champ3DLayer(id: String, tierRank: Int, ctl: Champ3DController, modifier: Modifier, onFail: () -> Unit) {
+    val ctx = LocalContext.current
+    var glb by remember(id) { mutableStateOf<ByteBuffer?>(null) }
+    LaunchedEffect(id) { glb = withContext(Dispatchers.IO) { ChampModels.read(ctx, id) }; if (glb == null) onFail() }
+    val buf = glb ?: return
+    val scope = rememberCoroutineScope()
+    val yaw = remember(id) { Animatable(0f) }
+    var springJob by remember { mutableStateOf<Job?>(null) }
+    val holder = remember(id, buf) {
+        CoachScene("champ", buf).also { sc ->
+            val tier = com.myfit.tracker.ui.pip.Tier.entries[tierRank]
+            sc.resolve = { n -> com.myfit.tracker.ui.pip.Buddy.path("$n.webp", com.myfit.tracker.ui.pip.BuddyChar(com.myfit.tracker.ui.pip.Champion.BLAZE, tier))
+                .substringAfterLast('/').removeSuffix(".webp") }
+        }
+    }
+    val shown by holder.shown
+    LaunchedEffect(shown) { ctl.shown.value = shown }
+    Box(modifier) {
+        AndroidView(
+            factory = { c -> TextureView(c).also { tv -> if (!holder.attach(tv)) onFail() else ctl.attached(holder) } },
+            modifier = Modifier.fillMaxSize(),
+            onRelease = { ctl.detached(); holder.destroy() },
+        )
+        DisposableEffect(holder) { onDispose { ctl.detached(); holder.destroy() } }
+        Box(Modifier.fillMaxSize().pointerInput(holder) {
+            detectHorizontalDragGestures(
+                onDragStart = { springJob?.cancel() },
+                onDragEnd = {
+                    springJob = scope.launch {
+                        delay(3000)
+                        val home = Math.round(yaw.value / 360f) * 360f
+                        yaw.animateTo(home, spring(Spring.DampingRatioLowBouncy, Spring.StiffnessVeryLow)) { holder.yawDeg = value }
+                        yaw.snapTo(0f); holder.yawDeg = 0f
+                    }
+                },
+            ) { ch, dx -> ch.consume(); scope.launch { yaw.snapTo(yaw.value + dx * 0.45f); holder.yawDeg = yaw.value } }
+        })
     }
 }

@@ -202,25 +202,40 @@ private fun PipBody(
 
     val effMood = if (hugging) PipMood.LOVE else mood
     val baseAnim = animFor(effMood).let { if (it !in LOOPS && baseDone) "idle" else it }
-    val anim = reaction ?: baseAnim
-    val showTalk = talking && reaction == null && anim == "idle" && talkFrames != null
+    // champions (realistic faces, no mouth frames) play their "talk" clip while speaking
+    val clipTalk = talking && reaction == null && baseAnim == "idle" && Buddy.talksWithClip
+    val anim = reaction ?: if (clipTalk) "talk" else baseAnim
+    val showTalk = talking && reaction == null && anim == "idle" && talkFrames != null && !Buddy.talksWithClip
+
+    // ---- R24: a champion on a capable phone is a live 3D model; Pip's clip logic below drives it
+    val me = remember { Buddy.active.value }
+    val threeDOn = remember(me) { !me.isPip && com.myfit.tracker.ui.coach.Coach3D.enabled(ctx) }
+    val c3dTick by com.myfit.tracker.ui.coach.Coach3D.ready.collectAsState()
+    var failed3d by remember(me) { mutableStateOf(false) }
+    val use3d = threeDOn && !failed3d && remember(me, c3dTick) { com.myfit.tracker.ui.coach.ChampModels.installed(ctx, me.id) }
+    LaunchedEffect(me, threeDOn) { if (threeDOn && !com.myfit.tracker.ui.coach.ChampModels.installed(ctx, me.id)) com.myfit.tracker.ui.coach.ChampModels.ensure(ctx, me.id) }
+    val ctl3d = remember(me) { com.myfit.tracker.ui.coach.Champ3DController() }
+    val shown3d by ctl3d.shown
 
     // ---- the animated clip currently playing
     var drawable by remember { mutableStateOf<Drawable?>(null) }
     var still by remember { mutableStateOf<ImageBitmap?>(null) }
-    val loopNow = reaction == null && anim in LOOPS
-    DisposableEffect(anim, loopNow, replay) {
+    val loopNow = reaction == null && (anim in LOOPS || anim == "talk")
+    DisposableEffect(anim, loopNow, replay, use3d) {
         var alive = true
         val clip = anim
+        val ends = {
+            if (reaction == clip) reaction = null
+            else if (clip == "idle") resting = true
+            else if (clip == baseAnim) baseDone = true
+        }
+        if (use3d) ctl3d.play(clip, loopNow) { scope.launch { ends() } }
         val job = scope.launch {
             val d = withContext(Dispatchers.IO) { if (Build.VERSION.SDK_INT >= 28) runCatching { decode(ctx, clip) }.getOrNull() else null }
             if (!alive) return@launch
             if (d != null && Build.VERSION.SDK_INT >= 28 && runCatching {
-                start(d, loop = loopNow, onEnd = {
-                    if (reaction == clip) reaction = null
-                    else if (clip == "idle") resting = true            // hold still a moment, then breathe again
-                    else if (clip == baseAnim) baseDone = true
-                }, invalidate = { redraw++ })
+                // with 3D the model reports the ends; the clip only covers the moment before it appears
+                start(d, loop = loopNow || use3d, onEnd = { if (!use3d) ends() }, invalidate = { redraw++ })
             }.isSuccess) {
                 stopClip(drawable)
                 drawable = d
@@ -234,7 +249,7 @@ private fun PipBody(
         onDispose { alive = false; job.cancel() }
     }
     DisposableEffect(Unit) { onDispose { stopClip(drawable) } }
-    LaunchedEffect(talking) { if (talking && talkFrames == null) talkFrames = TalkFrames.load(ctx) }
+    LaunchedEffect(talking) { if (talking && talkFrames == null && !Buddy.talksWithClip) talkFrames = TalkFrames.load(ctx) }
     // idle breathing plays, rests 3–6 s on its last frame, then plays again (never in Battery saver)
     LaunchedEffect(resting, motion) {
         if (resting && motion != 2) { delay(3000L + Random.nextLong(3000L)); resting = false; replay++ }
@@ -311,6 +326,7 @@ private fun PipBody(
                 Offset(w * 0.24f, w * 0.905f), Size(w * 0.52f, w * 0.07f),
             )
         }
+        if (use3d) com.myfit.tracker.ui.coach.Champ3DLayer(me.id, me.tier.ordinal, ctl3d, Modifier.fillMaxSize(), onFail = { failed3d = true })
         // the plush, with a squash on tap
         Canvas(
             Modifier.fillMaxSize().graphicsLayer {
@@ -328,7 +344,7 @@ private fun PipBody(
                 val idx = (lv.coerceIn(0f, 1f) * (talkF.size - 1) + 0.4f).toInt().coerceIn(0, talkF.size - 1)
                 drawImage(talkF[idx], dstOffset = IntOffset.Zero, dstSize = IntSize(w, h))
             } else {
-                val d = drawable
+                val d = drawable.takeUnless { use3d && shown3d }
                 if (d != null && w > 0 && h > 0) {
                     d.setBounds(0, 0, w, h)
                     if (SoftClip.needed) {
