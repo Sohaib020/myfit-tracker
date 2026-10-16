@@ -1,0 +1,303 @@
+{
+ "blaze_street": {
+  "src": "Orange_Fit_Trainer_1013074714",
+  "champion": "BLAZE",
+  "tier": "street",
+  "animal": false,
+  "female": false
+ },
+ "blaze_epic": {
+  "src": "Ember_Runner_1013082318",
+  "champion": "BLAZE",
+  "tier": "epic",
+  "animal": false,
+  "female": false
+ },
+ "blaze_legendary": {
+  "src": "Golden_Stride_1014091541",
+  "champion": "BLAZE",
+  "tier": "legendary",
+  "animal": false,
+  "female": false
+ },
+ "titan_street": {
+  "src": "Fitness_Coach_Portrai_1013074800",
+  "champion": "TITAN",
+  "tier": "street",
+  "animal": false,
+  "female": false
+ },
+ "titan_legendary": {
+  "src": "Titan_Vanguard_1014091731",
+  "champion": "TITAN",
+  "tier": "legendary",
+  "animal": false,
+  "female": false
+ },
+ "kairo_street": {
+  "src": "Crimson_Pulse_Fitness_1013074825",
+  "champion": "KAIRO",
+  "tier": "street",
+  "animal": false,
+  "female": false
+ },
+ "kairo_epic": {
+  "src": "Crimson_Combatant_1013083618",
+  "champion": "KAIRO",
+  "tier": "epic",
+  "animal": false,
+  "female": false
+ },
+ "kairo_legendary": {
+  "src": "The_Fighter_1014092037",
+  "champion": "KAIRO",
+  "tier": "legendary",
+  "animal": false,
+  "female": false
+ },
+ "raze_street": {
+  "src": "Pulse_Vanguard_1013074838",
+  "champion": "RAZE",
+  "tier": "street",
+  "animal": false,
+  "female": false
+ },
+ "raze_epic": {
+  "src": "Neon_Pulse_Guardian_1013083639",
+  "champion": "RAZE",
+  "tier": "epic",
+  "animal": false,
+  "female": false
+ },
+ "raze_legendary": {
+  "src": "Neon_Vanguard_1014092708",
+  "champion": "RAZE",
+  "tier": "legendary",
+  "animal": false,
+  "female": false
+ },
+ "onyx_street": {
+  "src": "Neon_Titan_1013074854",
+  "champion": "ONYX",
+  "tier": "street",
+  "animal": false,
+  "female": false
+ },
+ "onyx_epic": {
+  "src": "Pulse_Titan_1013083602",
+  "champion": "ONYX",
+  "tier": "epic",
+  "animal": false,
+  "female": false
+ },
+ "onyx_legendary": {
+  "src": "Neon_Titan_1014092234",
+  "champion": "ONYX",
+  "tier": "legendary",
+  "animal": false,
+  "female": false
+ },
+ "nova_street": {
+  "src": "Pink_Pulse_Fitness_Co_1013074700",
+  "champion": "NOVA",
+  "tier": "street",
+  "animal": false,
+  "female": true
+ },
+ "nova_epic": {
+  "src": "Pink_Pulse_Fitness_Po_1013085320",
+  "champion": "NOVA",
+  "tier": "epic",
+  "animal": false,
+  "female": true
+ },
+ "nova_legendary": {
+  "src": "Neon_Pulse_Champion_1014094047",
+  "champion": "NOVA",
+  "tier": "legendary",
+  "animal": false,
+  "female": true
+ },
+ "valor_street": {
+  "src": "Athletic_Hijab_Portra_1013075946",
+  "champion": "VALOR",
+  "tier": "street",
+  "animal": false,
+  "female": true
+ },
+ "valor_epic": {
+  "src": "Emerald_Motion_1013085342",
+  "champion": "VALOR",
+  "tier": "epic",
+  "animal": false,
+  "female": true
+ },
+ "valor_legendary": {
+  "src": "Emerald_Velocity_1014094040",
+  "champion": "VALOR",
+  "tier": "legendary",
+  "animal": false,
+  "female": true
+ },
+ "aria_street": {
+  "src": "Purple_Pulse_Trainer_1013081006",
+  "champion": "ARIA",
+  "tier": "street",
+  "animal": false,
+  "female": true
+ },
+ "aria_epic": {
+  "src": "Violet_Vanguard_1013085330",
+  "champion": "ARIA",
+  "tier": "epic",
+  "animal": false,
+  "female": true
+ },
+ "aria_legendary": {
+  "src": "Violet_Vanguard_1014094123",
+  "champion": "ARIA",
+  "tier": "legendary",
+  "animal": false,
+  "female": true
+ },
+ "luna_street": {
+  "src": "Pink_Power_Fitness_1013080137",
+  "champion": "LUNA",
+  "tier": "street",
+  "animal": false,
+  "female": true
+ },
+ "luna_epic": {
+  "src": "Pink_Power_Pulse_1013085352",
+  "champion": "LUNA",
+  "tier": "epic",
+  "animal": false,
+  "female": true
+ },
+ "luna_legendary": {
+  "src": "Fitness_Champion_1014094157",
+  "champion": "LUNA",
+  "tier": "legendary",
+  "animal": false,
+  "female": true
+ },
+ "rex_street": {
+  "src": "Jaguar_Titan_1013081909",
+  "champion": "REX",
+  "tier": "street",
+  "animal": true,
+  "female": false
+ },
+ "rex_epic": {
+  "src": "Jaguar_Titan_1013085405",
+  "champion": "REX",
+  "tier": "epic",
+  "animal": true,
+  "female": false
+ },
+ "rex_legendary": {
+  "src": "Jaguar_Champion_1014094205",
+  "champion": "REX",
+  "tier": "legendary",
+  "animal": true,
+  "female": false
+ },
+ "taurus_street": {
+  "src": "Iron_Pulse_Bull_1013074648",
+  "champion": "TAURUS",
+  "tier": "street",
+  "animal": true,
+  "female": false
+ },
+ "taurus_epic": {
+  "src": "Ironhorn_Champion_1013085415",
+  "champion": "TAURUS",
+  "tier": "epic",
+  "animal": true,
+  "female": false
+ },
+ "taurus_legendary": {
+  "src": "Ironheart_Minotaur_1014094225",
+  "champion": "TAURUS",
+  "tier": "legendary",
+  "animal": true,
+  "female": false
+ },
+ "howl_street": {
+  "src": "Wolfstride_1013081919",
+  "champion": "HOWL",
+  "tier": "street",
+  "animal": true,
+  "female": false
+ },
+ "howl_epic": {
+  "src": "Ironwolf_Athlete_1014070843",
+  "champion": "HOWL",
+  "tier": "epic",
+  "animal": true,
+  "female": false
+ },
+ "howl_legendary": {
+  "src": "Cyberwolf_Vanguard_1014094217",
+  "champion": "HOWL",
+  "tier": "legendary",
+  "animal": true,
+  "female": false
+ },
+ "kodiak_street": {
+  "src": "Gym_Bear_1013081928",
+  "champion": "KODIAK",
+  "tier": "street",
+  "animal": true,
+  "female": false
+ },
+ "kodiak_epic": {
+  "src": "Ironclaw_Champion_1014070547",
+  "champion": "KODIAK",
+  "tier": "epic",
+  "animal": true,
+  "female": false
+ },
+ "kodiak_legendary": {
+  "src": "Emerald_Ursine_Guardi_1014094754",
+  "champion": "KODIAK",
+  "tier": "legendary",
+  "animal": true,
+  "female": false
+ },
+ "frost_street": {
+  "src": "Snowstride_Trainer_1013081937",
+  "champion": "FROST",
+  "tier": "street",
+  "animal": true,
+  "female": true
+ },
+ "frost_epic": {
+  "src": "Arctic_Pulse_Mascot_1014071126",
+  "champion": "FROST",
+  "tier": "epic",
+  "animal": true,
+  "female": true
+ },
+ "frost_legendary": {
+  "src": "Snow_Leopard_Champion_1014094619",
+  "champion": "FROST",
+  "tier": "legendary",
+  "animal": true,
+  "female": true
+ },
+ "saba_street": {
+  "src": "Lioness_Athlete_1013081957",
+  "champion": "SABA",
+  "tier": "street",
+  "animal": true,
+  "female": true
+ },
+ "saba_epic": {
+  "src": "Crimson_Lioness_Athle_1014071406",
+  "champion": "SABA",
+  "tier": "epic",
+  "animal": true,
+  "female": true
+ }
+}
