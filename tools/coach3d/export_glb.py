@@ -18,8 +18,10 @@ max_tex = int(sys.argv[5]) if len(sys.argv) > 5 else 1024
 max_tris = int(sys.argv[6]) if len(sys.argv) > 6 else 60000
 
 REALTIME = {
-    'trainer': ['idle', 'talk', 'wave', 'thumbsup', 'cheer', 'fistpump', 'victory', 'dance'],
-    'nutri': ['idle', 'talk', 'wave', 'thumbsup', 'cheer', 'fistpump', 'think', 'dance'],
+    'trainer': ['idle', 'idle2', 'talk', 'talk2', 'talk3', 'wave', 'thumbsup', 'cheer', 'fistpump', 'victory', 'clap', 'rally', 'jump',
+                'nod', 'happy', 'acknowledge', 'dance', 'dance2', 'dance3'],
+    'nutri': ['idle', 'idle2', 'talk', 'talk2', 'talk3', 'think', 'wave', 'thumbsup', 'cheer', 'fistpump', 'clap', 'nod', 'happy',
+              'acknowledge', 'sigh', 'dance', 'dance2'],
 }
 
 arm, body = rig.load(who, glb)

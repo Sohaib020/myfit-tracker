@@ -74,16 +74,30 @@ def tablet():
     return _join([b, s], 'tablet')
 
 
-MAKERS = {'dumbbell': dumbbell, 'plate': plate, 'bottle': bottle, 'tablet': tablet}
+def phone():
+    body = _mat('phone', (0.08, 0.09, 0.1), 0.3, 0.6); screen = _mat('pscreen', (0.05, 0.12, 0.1), 0.2, emission=(0.1, 0.55, 0.42))
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0)); b = bpy.context.active_object; b.scale = (0.072, 0.15, 0.008); b.data.materials.append(body)
+    bev = b.modifiers.new('b', 'BEVEL'); bev.width = 0.006; bev.segments = 4; bpy.ops.object.modifier_apply(modifier='b')
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(0, 0, 0.0042)); s = bpy.context.active_object; s.scale = (0.064, 0.138, 1); s.data.materials.append(screen)
+    return _join([b, s], 'phone')
+
+
+MAKERS = {'dumbbell': dumbbell, 'plate': plate, 'bottle': bottle, 'tablet': tablet, 'phone': phone}
 
 # world-space placement at the clip's hold frame: (palm point along the hand 0..1, offset from it in world metres,
 # world rotation euler deg). The prop is then parented to the hand, so it follows every later move naturally.
 PLACE = {
     'dumbbell': (0.55, (0, 0, 0), None),          # None = follow the hand's own orientation (grip axis across the fist)
     'plate': (0.62, (0, 0, 0.035), (0, 0, 0)),    # lying flat on the palm
-    'bottle': (0.5, (0, 0, 0.03), (0, 0, 0)),     # standing in the fist
+    'bottle': (0.8, (0, 0, 0), 'grip'),           # mocap drinking: bottle axis through the fist, follows the hand
+    'phone': (0.75, (0, 0, 0), 'palm'),           # mocap texting: lying in the palm, long side along the fingers
     'tablet': (0.7, (0, -0.02, 0.05), (-58, 0, 0)),
 }
+
+
+import os
+GRIP_AXIS = os.environ.get('GRIP_AXIS', 'z')   # z: upright in the fist, tips to the lips (checked on the Drinking mocap)
+PALM_OFF = {'bottle': 0.0, 'phone': -0.03}       # metres along the hand's z axis (sign chosen from the preview)
 
 
 def attach(name, arm, bone, frame=0):
@@ -96,7 +110,18 @@ def attach(name, arm, bone, frame=0):
     head = hm.translation; tail = arm.matrix_world @ pb.tail
     along, off, rot = PLACE[name]
     pos = head.lerp(tail, along) + Vector(off)
-    if rot is None:
+    if rot in ('grip', 'palm'):
+        H = hm.to_quaternion().to_matrix()
+        x, y, z = H.col[0], H.col[1], H.col[2]          # hand bone: y along the hand, x/z across it
+        if rot == 'grip':                                # prop Z -> across the fist (bone x), prop Y -> along the hand
+            M = Matrix.Identity(3)
+            ax = {'x': x, '-x': -x, 'z': z, '-z': -z}[GRIP_AXIS]; M.col[2] = ax; M.col[1] = y; M.col[0] = y.cross(ax).normalized()
+            # (columns = where the prop's X, Y, Z axes go)
+        else:                                            # prop Z -> palm normal (bone z), prop Y -> along the fingers
+            M = Matrix.Identity(3); M.col[0] = x; M.col[1] = y; M.col[2] = z
+        R = M.to_4x4()
+        pos = pos + (z * PALM_OFF.get(name, 0.0))
+    elif rot is None:
         R = hm.to_quaternion().to_matrix().to_4x4()
         # dumbbell handle runs across the fist (perpendicular to the hand bone and the palm normal)
         R = R @ Matrix.Rotation(math.radians(90), 4, 'Z')

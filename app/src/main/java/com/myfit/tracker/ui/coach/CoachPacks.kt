@@ -24,8 +24,8 @@ object CoachPacks {
     private val running = java.util.Collections.synchronizedSet(HashSet<String>())
 
     private fun dir(c: Context, p: String) = File(c.filesDir, "coach3d/$p")
-    /** Bump when the release packs are re-rendered so phones replace their old copy (v2 = R21 720p tight crops). */
-    private const val VER = "2"
+    /** Bump when the release packs are re-rendered so phones replace their old copy (v3 = R22 Mixamo mocap). */
+    private const val VER = "3"
     fun isInstalled(c: Context, lookId: String) = File(dir(c, pack(lookId)), ".complete").let { it.exists() && it.readText().trim() == VER }
 
     /** Old pose names from the 2D coaches -> 3D clip names (anything else is already a clip name). */

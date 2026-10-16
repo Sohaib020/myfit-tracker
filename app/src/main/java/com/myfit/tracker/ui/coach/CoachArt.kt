@@ -190,8 +190,8 @@ private fun CoachClip(file: java.io.File, modifier: Modifier, loop: Boolean = tr
 
 /** Emotes a tap can trigger, per coach kind. */
 object CoachEmotes {
-    private val TRAINER = listOf("wave", "thumbsup", "fistpump", "cheer", "victory")
-    private val NUTRI = listOf("wave", "thumbsup", "think", "bottle")
+    private val TRAINER = listOf("wave", "thumbsup", "fistpump", "cheer", "victory", "clap", "rally", "jump")
+    private val NUTRI = listOf("wave", "thumbsup", "cheer", "clap", "nod", "happy")
     fun list(look: String) = if (look.startsWith("n")) NUTRI else TRAINER
     fun pick(look: String, last: String?): String = list(look).filter { it != last }.random()
 }

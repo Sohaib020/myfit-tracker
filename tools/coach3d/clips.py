@@ -8,8 +8,27 @@ from mathutils import Vector, Matrix, Quaternion, Euler
 import anim, moves, props, clips_src as cs, rig
 from anim import Clip, both, side, merge
 
-TRAINER = ['idle', 'wave', 'talk', 'thumbsup', 'cheer', 'squat', 'pushup', 'lunge', 'press', 'plank', 'stretch', 'dance', 'victory', 'fistpump']
-NUTRI = ['idle', 'wave', 'talk', 'thumbsup', 'cheer', 'plate', 'bottle', 'tablet', 'think', 'dance', 'victory', 'fistpump']
+TRAINER = ['idle', 'wave', 'talk', 'thumbsup', 'cheer', 'squat', 'pushup', 'lunge', 'press', 'plank', 'stretch', 'dance', 'victory', 'fistpump',
+           'clap', 'rally', 'nod', 'jump']
+NUTRI = ['idle', 'wave', 'talk', 'thumbsup', 'cheer', 'plate', 'bottle', 'tablet', 'think', 'dance', 'victory', 'fistpump',
+         'clap', 'nod', 'happy']
+# R22: these come from the owner's Mixamo mocap (tools/coach3d/mocap.py → <assets>/../mocap/<who>.blend); the rest stay
+# hand-keyed (press, pushup, lunge, plank, plate — no mocap for them, plank/push-up need exact floor contact)
+MOCAP_CLIPS = {'idle', 'idle2', 'talk', 'talk2', 'talk3', 'think', 'tablet', 'dance', 'dance2', 'dance3', 'wave', 'thumbsup', 'cheer',
+               'fistpump', 'victory', 'jump', 'clap', 'rally', 'happy', 'nod', 'acknowledge', 'headshake', 'sigh', 'cocky', 'bottle',
+               'squat', 'stretch'}
+# props held during a mocap move: (prop, hand bone, fraction of the clip where the grip is placed)
+MOCAP_PROPS = {'bottle': [('bottle', 'Hand.L', 0.05)], 'tablet': [('phone', 'Hand.R', 0.3)]}
+
+
+class MocapClip:
+    def __init__(self, name, act):
+        self.name, self.frames, self.loop, self.fps = name, int(act['frames']), bool(act['loop']), 24
+        self.keys, self.props = [], []
+
+
+def mocap_blend(who, assets):
+    return os.path.join(os.path.dirname(os.path.abspath(assets)), 'mocap', who + '.blend')
 CLIPS = {'trainer_m': TRAINER, 'trainer_f': TRAINER, 'nutri_m': NUTRI, 'nutri_f': NUTRI}
 # whose Meshy dance each coach performs (the female nutritionist borrows one)
 DANCE = {'trainer_m': ('trainer_m_rig.glb', 'All_Night_Dance', rig.RIGIFY), 'trainer_f': ('trainer_f_rig.glb', 'All_Night_Dance', rig.MIXAMO),
@@ -63,6 +82,15 @@ def build(who, name, arm, assets, ual_path):
     _clear_contacts(arm)
     if arm.animation_data: arm.animation_data.action = None
     for pb in arm.pose.bones: pb.location = (0, 0, 0); pb.rotation_mode = 'QUATERNION'; pb.rotation_quaternion = Quaternion()
+    if name in MOCAP_CLIPS:
+        import mocap
+        act = mocap.load(mocap_blend(who, assets), name)
+        if act is not None:
+            arm.animation_data_create(); arm.animation_data.action = act
+            c = MocapClip(name, act); _scene_range(c)
+            for pname, bone, at in MOCAP_PROPS.get(name, []):
+                props.attach(pname, arm, bone, frame=int(c.frames * at))
+            return c
     if name == 'dance':
         f, a, m = DANCE[who]
         src, acts = cs.import_source(os.path.join(assets, f))
