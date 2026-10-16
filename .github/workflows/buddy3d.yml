@@ -1,0 +1,95 @@
+name: Champions (buddy packs + 3D)
+# Rigged champions (branch buddy3d-assets/rigged) + motion pack -> per champion/tier:
+#   buddy clip pack  -> release champs-v1/<id>.zip   (animated WebPs named like Pip's moves + portrait/stand)
+#   real-time model  -> release champ3d-v1/<id>.glb  (every move of the tier)
+#   portraits + contact sheet -> branch champs-out (portraits get bundled in the APK)
+on:
+  push:
+    branches: [ buddy3d-run ]
+  workflow_dispatch:
+    inputs:
+      ids: { description: 'only these ids (comma list, empty = all)', required: false, default: '' }
+permissions: { contents: write }
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs: { matrix: '${{ steps.m.outputs.matrix }}' }
+    steps:
+      - uses: actions/checkout@v4
+      - id: m
+        run: |
+          python3 - "${{ github.event.inputs.ids }}" <<'PY' >> $GITHUB_OUTPUT
+          import json, sys
+          r = json.load(open('tools/buddy3d/roster.json'))
+          only = [x for x in sys.argv[1].split(',') if x]
+          inc = [{'id': k, 'tier': v['tier']} for k, v in r.items() if not only or k in only]
+          print('matrix=' + json.dumps({'include': inc}))
+          PY
+  build:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { ref: buddy3d-assets, path: assets }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Render + pack + 3D
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 libxrender1 libxxf86vm1 libxfixes3 >/dev/null
+          pip install -q bpy==4.2.0 pillow numpy
+          ID=${{ matrix.id }}; T=${{ matrix.tier }}
+          for try in 1 2; do
+            python tools/buddy3d/render_champ.py assets/rigged/$ID.glb assets/motion.json.gz $T frames 12 16 > log.txt 2>&1 || true
+            grep -q RENDER_DONE log.txt && break
+          done
+          grep -E "CLIP|RENDER_DONE|Error|Traceback" log.txt | head -30
+          grep -q RENDER_DONE log.txt || { tail -30 log.txt | sed 's/^/::error::/'; exit 1; }
+          python tools/buddy3d/pack_champ.py frames pack/$ID
+          mkdir -p out && (cd pack/$ID && zip -q -r ../../out/$ID.zip .)
+          for try in 1 2; do
+            python tools/buddy3d/export_champ_glb.py assets/rigged/$ID.glb assets/motion.json.gz $T out/$ID.glb > glog.txt 2>&1 || true
+            grep -q EXPORT_DONE glog.txt && break
+          done
+          grep -q EXPORT_DONE glog.txt || { tail -20 glog.txt | sed 's/^/::error::/'; exit 1; }
+          mkdir -p out/portraits && cp pack/$ID/portrait.webp out/portraits/$ID.webp && cp frames/idle/0010.png out/portraits/${ID}_idle.png || true
+          echo "::notice::$ID pack $(du -k out/$ID.zip | cut -f1) KB, 3D $(du -k out/$ID.glb | cut -f1) KB"
+      - uses: actions/upload-artifact@v4
+        with: { name: 'champ-${{ matrix.id }}', path: out, retention-days: 3 }
+  release:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: parts }
+      - name: Releases
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          gh release view champs-v1 >/dev/null 2>&1 || gh release create champs-v1 --title "Champion buddy packs" --notes "Animated buddy clips per champion/tier (R24)" --prerelease
+          gh release view champ3d-v1 >/dev/null 2>&1 || gh release create champ3d-v1 --title "Champion 3D models" --notes "Real-time GLBs per champion/tier (R24)" --prerelease
+          for z in parts/*/*.zip; do gh release upload champs-v1 "$z" --clobber; done
+          for g in parts/*/*.glb; do gh release upload champ3d-v1 "$g" --clobber; done
+      - name: Portraits + sheet branch
+        run: |
+          pip install -q pillow
+          mkdir -p pub && cp parts/*/portraits/*.webp pub/ 2>/dev/null || true
+          python3 - <<'PY'
+          import glob
+          from PIL import Image
+          fs = sorted(glob.glob('parts/*/portraits/*_idle.png'))
+          if fs:
+              cols = 9; W = 224
+              S = Image.new('RGB', (cols * W, ((len(fs) + cols - 1) // cols) * W), (36, 54, 46))
+              for i, f in enumerate(fs):
+                  im = Image.open(f).convert('RGBA').resize((W, W)); S.paste(im, ((i % cols) * W, (i // cols) * W), im)
+              S.save('pub/sheet.jpg', quality=85)
+          PY
+          cd pub && git init -q && git checkout -q -b champs-out && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "champions ${{ github.run_number }}" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" champs-out
