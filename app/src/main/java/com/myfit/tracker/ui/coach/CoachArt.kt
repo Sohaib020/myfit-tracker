@@ -25,7 +25,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -104,17 +105,14 @@ fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level
     val t = rememberInfiniteTransition(label = "breath")
     val b by t.animateFloat(0f, 1f, infiniteRepeatable(tween(1900), RepeatMode.Reverse), label = "b")
     val sway by t.animateFloat(-1f, 1f, infiniteRepeatable(tween(3400), RepeatMode.Reverse), label = "s")
-    val tapMod = if (!tapToEmote) Modifier else Modifier.clickable(
-        interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null,
-    ) {
-        if (tapPose == null) { val e = CoachEmotes.pick(look, lastEmote); lastEmote = e; tapPose = e }
-    }
+    val onTap = { if (tapPose == null) { val e = CoachEmotes.pick(look, lastEmote); lastEmote = e; tapPose = e } }
     // stills (no pack yet / Android 8) have no end callback: hold the emote briefly, then return
     val ctx0 = LocalContext.current
     androidx.compose.runtime.LaunchedEffect(tapPose) {
         if (tapPose != null && (android.os.Build.VERSION.SDK_INT < 28 || !CoachPacks.isInstalled(ctx0, look))) { kotlinx.coroutines.delay(2200); tapPose = null }
+        else if (tapPose != null) { kotlinx.coroutines.delay(8000); tapPose = null }   // safety: never stay stuck on an emote
     }
-    Box(modifier.then(tapMod), contentAlignment = Alignment.BottomCenter) {
+    Box(modifier, contentAlignment = Alignment.BottomCenter) {
         if (spotlight) Canvas(Modifier.fillMaxSize()) {
             drawOval(Brush.radialGradient(listOf(th.accent.copy(alpha = 0.35f), Color.Transparent), center = Offset(size.width / 2, size.height * 0.92f), radius = size.width * 0.5f),
                 topLeft = Offset(size.width * 0.12f, size.height * 0.84f), size = androidx.compose.ui.geometry.Size(size.width * 0.76f, size.height * 0.14f))
@@ -150,6 +148,8 @@ fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level
                 }
             }
         }
+        // touch layer on top of the animation (an AndroidView underneath would otherwise swallow the tap)
+        if (tapToEmote) Box(Modifier.fillMaxSize().pointerInput(look) { detectTapGestures { onTap() } })
     }
 }
 
