@@ -22,7 +22,7 @@ MOCAP = {
     'talk2':     ('Talking (1)', True, None, {}),
     'talk3':     ('Talking (2)', True, None, {}),
     'think':     ('Thinking', True, None, {}),
-    'tablet':    ('Texting While Standing', True, 7.0, {}),
+    'tablet':    ('Texting While Standing', True, 6.0, {'start': 2.0}),
     'dance':     ('Hip Hop Dancing', True, 7.0, {'travel': 0.15}),
     'dance2':    ('Silly Dancing', True, 7.0, {'travel': 0.15}),
     'dance3':    ('Dancing Running Man', True, 7.0, {'travel': 0.15}),
@@ -135,6 +135,9 @@ def bake(who, glb_dir, fbx_dir, out_dir):
         if not os.path.exists(path): print('MISSING', stem); continue
         src, sact = _import_fbx(path)
         f0, f1 = sact.frame_range
+        if opt.get('start'):                      # skip a wind-up (e.g. raising the phone) so loops stay in the pose
+            sact.use_frame_range = True; sact.frame_start = f0 + opt['start'] * SRC_FPS; sact.frame_end = f1
+            f0, f1 = sact.frame_range
         dur = (f1 - f0) / SRC_FPS
         if max_s: dur = min(dur, max_s)
         step = SRC_FPS / OUT_FPS

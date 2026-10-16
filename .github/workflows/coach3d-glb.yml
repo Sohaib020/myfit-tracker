@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      matrix: { who: [trainer_m, trainer_f, nutri_m, nutri_f] }
+      matrix: { who: [trainer_m, trainer_f, nutri_f] }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4

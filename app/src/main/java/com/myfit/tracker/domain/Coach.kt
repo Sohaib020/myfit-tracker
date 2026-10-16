@@ -18,8 +18,7 @@ object Coach {
 
     /** Nutritionist looks. Art: assets/coach/<id>_<pose>.webp (pose = portrait, plate). */
     enum class NLook(val id: String, val male: Boolean, val label: String, val defaultName: String) {
-        F("nf", false, "Female nutritionist", "Chef Zest"),
-        M("nm", true, "Male nutritionist", "Chef Zest"),
+        F("nf", false, "Female nutritionist", "Chef Zest"),   // R23: the only nutritionist (male look retired; "nm" migrates here)
     }
 
     enum class Push(val label: String) { CALM("Calm"), STEADY("Steady"), HARD("Push me hard") }
