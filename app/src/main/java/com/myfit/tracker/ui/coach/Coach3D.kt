@@ -31,9 +31,6 @@ import com.google.android.filament.LightManager
 import com.google.android.filament.Renderer
 import com.google.android.filament.View
 import com.google.android.filament.android.UiHelper
-import com.google.android.filament.utils.Manipulator
-import com.google.android.filament.utils.ModelViewer
-import com.google.android.filament.utils.Utils
 import com.myfit.tracker.ai.ondevice.DeviceTier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -102,8 +99,18 @@ object Coach3D {
     fun emotes(look: String) = if (look.startsWith("n")) listOf("wave", "thumbsup", "cheer", "fistpump")
         else listOf("wave", "thumbsup", "fistpump", "cheer", "victory")
 
-    @Volatile private var inited = false
-    fun init() { if (!inited) { Utils.init(); inited = true } }
+    /**
+     * One Filament engine + material provider + glTF loader for the whole app, created on first use and never torn
+     * down (creating/destroying an engine per screen visit stalls the UI thread and was the S23 crash). Main thread only.
+     */
+    private var shared: Shared? = null
+    class Shared(val engine: Engine, val materials: com.google.android.filament.gltfio.UbershaderProvider, val loader: com.google.android.filament.gltfio.AssetLoader)
+    fun shared(): Shared = shared ?: run {
+        com.google.android.filament.gltfio.Gltfio.init()
+        val e = Engine.create()
+        val m = com.google.android.filament.gltfio.UbershaderProvider(e)
+        Shared(e, m, com.google.android.filament.gltfio.AssetLoader(e, m, EntityManager.get())).also { shared = it }
+    }
 }
 
 /**
@@ -128,38 +135,66 @@ private fun Coach3DView(look: String, pose: String, modifier: Modifier, onFail: 
     val scope = rememberCoroutineScope()
     val yaw = remember(look) { Animatable(0f) }
     var springJob by remember { mutableStateOf<Job?>(null) }
-    val holder = remember(look) { CoachScene(ctx, look) }
-    val poseNow by rememberUpdatedState(pose)
-    LaunchedEffect(pose) { holder.setPose(pose) }
-    DisposableEffect(holder) { onDispose { holder.destroy() } }
+    // read the GLB off the UI thread first (a few MB)
+    var glb by remember(look) { mutableStateOf<ByteBuffer?>(null) }
+    LaunchedEffect(look) { glb = withContext(Dispatchers.IO) { Coach3D.readGlb(ctx, look) }; if (glb == null) onFail() }
+    val buf = glb
     Box(modifier) {
-        AndroidView(factory = { c ->
-            TextureView(c).also { tv -> if (!holder.attach(tv)) onFail(); holder.setPose(poseNow) }
-        }, modifier = Modifier.fillMaxSize(), update = { holder.yawDeg = yaw.value })
+        if (buf == null) CoachFigure(look, pose, Modifier.fillMaxSize(), tapToEmote = false)
+        else Scene3D(look, pose, buf, onFail, scope, yaw, { springJob }, { springJob = it })
+    }
+}
+
+@Composable
+private fun Scene3D(look: String, pose: String, buf: ByteBuffer, onFail: () -> Unit, scope: kotlinx.coroutines.CoroutineScope,
+                    yaw: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>, getJob: () -> Job?, setJob: (Job?) -> Unit) {
+    Box(Modifier.fillMaxSize()) {
+        val holder = remember(look, buf) { CoachScene(look, buf) }
+        LaunchedEffect(holder, pose) { holder.setPose(pose) }
+        val poseNow by rememberUpdatedState(pose)
+        AndroidView(
+            factory = { c -> TextureView(c).also { tv -> if (!holder.attach(tv)) onFail() else holder.setPose(poseNow) } },
+            modifier = Modifier.fillMaxSize(),
+            onRelease = { holder.destroy() },
+        )
+        DisposableEffect(holder) { onDispose { holder.destroy() } }
         Box(Modifier.fillMaxSize()
-            .pointerInput(look) {
+            .pointerInput(holder) {
                 detectHorizontalDragGestures(
-                    onDragStart = { springJob?.cancel() },
+                    onDragStart = { getJob()?.cancel() },
                     onDragEnd = {
-                        springJob = scope.launch {
+                        setJob(scope.launch {
                             delay(3000)
                             val home = Math.round(yaw.value / 360f) * 360f
                             yaw.animateTo(home, spring(Spring.DampingRatioLowBouncy, Spring.StiffnessVeryLow)) { holder.yawDeg = value }
                             yaw.snapTo(0f); holder.yawDeg = 0f
-                        }
+                        })
                     },
                 ) { ch, dx -> ch.consume(); scope.launch { yaw.snapTo(yaw.value + dx * 0.45f); holder.yawDeg = yaw.value } }
             }
-            .pointerInput(look) { detectTapGestures { holder.tapEmote() } })
+            .pointerInput(holder) { detectTapGestures { holder.tapEmote() } })
     }
 }
 
-/** One Filament scene: the coach GLB, studio lights, transparent background, our own yaw + clip blending. */
-private class CoachScene(private val ctx: Context, private val look: String) : Choreographer.FrameCallback {
+/**
+ * One coach on screen: its own renderer / view / scene / camera / swap chain on the shared engine, the GLB asset,
+ * studio lights on a transparent background, our own yaw and clip blending. [destroy] is idempotent and tears down in
+ * dependency order (swap chain first, engine never), so leaving the screen can't touch freed native objects.
+ */
+private class CoachScene(private val look: String, private val glb: ByteBuffer) : Choreographer.FrameCallback {
     @Volatile var yawDeg = 0f
-    private var engine: Engine? = null
-    private var viewer: ModelViewer? = null
+    private var sh: Coach3D.Shared? = null
+    private var renderer: Renderer? = null
+    private var view: View? = null
+    private var scene: com.google.android.filament.Scene? = null
+    private var camera: com.google.android.filament.Camera? = null
+    private var camEntity = 0
+    private var swap: com.google.android.filament.SwapChain? = null
     private var uiHelper: UiHelper? = null
+    private var resLoader: com.google.android.filament.gltfio.ResourceLoader? = null
+    private var asset: com.google.android.filament.gltfio.FilamentAsset? = null
+    private var animator: com.google.android.filament.gltfio.Animator? = null
+    private var added = false
     private val lights = ArrayList<Int>()
     private var ibl: IndirectLight? = null
     private var names: List<String> = emptyList()
@@ -169,35 +204,62 @@ private class CoachScene(private val ctx: Context, private val look: String) : C
     private var lastEmote: String? = null
     private var center = floatArrayOf(0f, 0f, 0f); private var unit = 1f
     private var running = false
+    private var dead = false
 
     fun attach(tv: TextureView): Boolean = runCatching {
-        Coach3D.init()
-        val e = Engine.create(); engine = e
-        val ui = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).apply { isOpaque = false }; uiHelper = ui
-        val manip = Manipulator.Builder().targetPosition(0f, 0f, -4f).orbitHomePosition(0f, 0.25f, 0f).viewport(1, 1).build(Manipulator.Mode.ORBIT)
-        val v = ModelViewer(tv, e, ui, manip); viewer = v
-        v.cameraFocalLength = 38f
-        v.view.blendMode = View.BlendMode.TRANSLUCENT
-        v.renderer.clearOptions = Renderer.ClearOptions().apply { clear = true; clearColor = floatArrayOf(0f, 0f, 0f, 0f) }
-        v.view.multiSampleAntiAliasingOptions = v.view.multiSampleAntiAliasingOptions.apply { enabled = true; sampleCount = 4 }
-        v.scene.skybox = null
+        check(!dead)
+        val s = Coach3D.shared(); sh = s; val e = s.engine
+        renderer = e.createRenderer().apply { clearOptions = Renderer.ClearOptions().apply { clear = true; clearColor = floatArrayOf(0f, 0f, 0f, 0f) } }
+        val sc = e.createScene(); scene = sc
+        camEntity = EntityManager.get().create()
+        val cam = e.createCamera(camEntity); camera = cam
+        cam.setExposure(16f, 1f / 125f, 100f)
+        view = e.createView().apply {
+            scene = sc; camera = cam
+            blendMode = View.BlendMode.TRANSLUCENT
+            multiSampleAntiAliasingOptions = multiSampleAntiAliasingOptions.apply { enabled = true; sampleCount = 4 }
+        }
         // soft studio: even ambient + a warm key from the front-left + a cool rim from behind
-        ibl = IndirectLight.Builder().irradiance(1, floatArrayOf(0.95f, 0.95f, 1.0f)).intensity(32_000f).build(e).also { v.scene.indirectLight = it }
+        ibl = IndirectLight.Builder().irradiance(1, floatArrayOf(0.95f, 0.95f, 1.0f)).intensity(32_000f).build(e).also { sc.indirectLight = it }
         fun dir(r: Float, g: Float, b: Float, lux: Float, x: Float, y: Float, z: Float) {
             val l = EntityManager.get().create()
             LightManager.Builder(LightManager.Type.DIRECTIONAL).color(r, g, b).intensity(lux).direction(x, y, z).castShadows(false).build(e, l)
-            v.scene.addEntity(l); lights += l
+            sc.addEntity(l); lights += l
         }
         dir(1f, 0.96f, 0.9f, 60_000f, 0.45f, -0.55f, -0.7f)
         dir(0.8f, 0.88f, 1f, 35_000f, -0.3f, -0.2f, 0.9f)
-        val buf = Coach3D.readGlb(ctx, look) ?: error("no glb")
-        v.loadModelGlb(buf)
-        val asset = v.asset ?: error("bad glb")
-        val bb = asset.boundingBox
+
+        glb.rewind()
+        val a = s.loader.createAsset(glb) ?: error("bad glb"); asset = a
+        resLoader = com.google.android.filament.gltfio.ResourceLoader(e).also { it.asyncBeginLoad(a) }
+        a.releaseSourceData()
+        animator = a.instance.animator
+        val an = animator
+        names = if (an != null) (0 until an.animationCount).map { an.getAnimationName(it) } else emptyList()
+        val bb = a.boundingBox
         center = bb.center.copyOf(); val h = bb.halfExtent
         unit = 1f / maxOf(h[0], h[1], h[2]).coerceAtLeast(0.01f)
-        val an = v.animator
-        names = if (an != null) (0 until an.animationCount).map { an.getAnimationName(it) } else emptyList()
+
+        val ui = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).apply { isOpaque = false }; uiHelper = ui
+        ui.renderCallback = object : UiHelper.RendererCallback {
+            override fun onNativeWindowChanged(surface: android.view.Surface) {
+                if (dead) return
+                swap?.let { e.destroySwapChain(it) }
+                swap = e.createSwapChain(surface, ui.swapChainFlags)
+            }
+            override fun onDetachedFromSurface() {
+                swap?.let { e.destroySwapChain(it); e.flushAndWait() }
+                swap = null
+            }
+            override fun onResized(width: Int, height: Int) {
+                if (dead) return
+                view?.viewport = com.google.android.filament.Viewport(0, 0, width, height)
+                val aspect = width.toDouble() / height.coerceAtLeast(1)
+                camera?.setLensProjection(38.0, aspect, 0.05, 50.0)
+            }
+        }
+        ui.attachTo(tv)
+        cam.lookAt(0.0, 0.25, 0.0, 0.0, 0.0, -4.0, 0.0, 1.0, 0.0)
         applyRoot()
         running = true
         Choreographer.getInstance().postFrameCallback(this)
@@ -207,12 +269,14 @@ private class CoachScene(private val ctx: Context, private val look: String) : C
     private fun idx(n: String) = names.indexOf(n)
 
     fun setPose(pose: String) {
+        if (dead) return
         val p = CoachPacks.clipFor(pose)
         base = when (p) { "plate", "tablet", "bottle" -> "talk"; in Coach3D.LOOPS -> p; else -> "idle" }
         if (p !in Coach3D.LOOPS && idx(p) >= 0) play(p) else if (cur < 0 || names.getOrNull(cur) in Coach3D.LOOPS) play(base)
     }
 
     fun tapEmote() {
+        if (dead) return
         val pick = Coach3D.emotes(look).filter { it != lastEmote && idx(it) >= 0 }.randomOrNull() ?: return
         lastEmote = pick; play(pick)
     }
@@ -225,53 +289,63 @@ private class CoachScene(private val ctx: Context, private val look: String) : C
     }
 
     private fun timeOf(i: Int, now: Long): Float {
-        val an = viewer?.animator ?: return 0f
+        val an = animator ?: return 0f
         val t = (now - curStart) / 1e9f; val d = an.getAnimationDuration(i).coerceAtLeast(0.01f)
         return if (names[i] in Coach3D.LOOPS) t % d else t.coerceAtMost(d)
     }
 
     private fun applyRoot() {
-        val v = viewer ?: return; val asset = v.asset ?: return
-        val tm = v.engine.transformManager
+        val a = asset ?: return; val e = sh?.engine ?: return
+        val tm = e.transformManager
         val m = FloatArray(16); android.opengl.Matrix.setIdentityM(m, 0)
         android.opengl.Matrix.translateM(m, 0, 0f, 0f, -4f)
         android.opengl.Matrix.rotateM(m, 0, yawDeg, 0f, 1f, 0f)
         android.opengl.Matrix.scaleM(m, 0, unit, unit, unit)
         android.opengl.Matrix.translateM(m, 0, -center[0], -center[1], -center[2])
-        tm.setTransform(tm.getInstance(asset.root), m)
+        tm.setTransform(tm.getInstance(a.root), m)
     }
 
     override fun doFrame(frameTimeNanos: Long) {
-        if (!running) return
+        if (!running || dead) return
         Choreographer.getInstance().postFrameCallback(this)
-        val v = viewer ?: return
-        runCatching {
-            val an = v.animator
-            if (an != null && cur >= 0) {
-                val now = System.nanoTime()
-                val d = an.getAnimationDuration(cur)
-                if (names[cur] !in Coach3D.LOOPS && (now - curStart) / 1e9f >= d) play(base)
-                an.applyAnimation(cur, timeOf(cur, now))
-                val fade = (now - fadeStart) / 1e9f / 0.3f
-                if (prev >= 0 && fade < 1f) an.applyCrossFade(prev, prevTime, fade.coerceIn(0f, 1f))
-                an.updateBoneMatrices()
-            }
-            applyRoot()
-            v.render(frameTimeNanos)
+        val a = asset ?: return; val r = renderer ?: return; val v = view ?: return
+        // textures finish loading in the background; show the coach only once they're ready (no grey flash)
+        resLoader?.let { rl ->
+            rl.asyncUpdateLoad()
+            if (!added && rl.asyncGetLoadProgress() >= 1f) { scene?.addEntities(a.entities); added = true }
         }
+        val an = animator
+        if (an != null && cur >= 0) {
+            val now = System.nanoTime()
+            val d = an.getAnimationDuration(cur)
+            if (names[cur] !in Coach3D.LOOPS && (now - curStart) / 1e9f >= d) play(base)
+            an.applyAnimation(cur, timeOf(cur, now))
+            val fade = (now - fadeStart) / 1e9f / 0.3f
+            if (prev >= 0 && fade < 1f) an.applyCrossFade(prev, prevTime, fade.coerceIn(0f, 1f))
+            an.updateBoneMatrices()
+        }
+        applyRoot()
+        val sc = swap ?: return
+        if (uiHelper?.isReadyToRender == true && r.beginFrame(sc, frameTimeNanos)) { r.render(v); r.endFrame() }
     }
 
     fun destroy() {
-        running = false
+        if (dead) return
+        dead = true; running = false
         Choreographer.getInstance().removeFrameCallback(this)
-        val e = engine ?: return
-        runCatching {
-            viewer?.destroyModel()
-            uiHelper?.detach()
-            ibl?.let { e.destroyIndirectLight(it) }
-            lights.forEach { e.destroyEntity(it); EntityManager.get().destroy(it) }
-            e.destroy()
-        }
-        engine = null; viewer = null; uiHelper = null; lights.clear(); ibl = null
+        val s = sh ?: return; val e = s.engine
+        // 1) swap chain (via the UiHelper callback) while everything it renders still exists
+        runCatching { uiHelper?.detach() }
+        swap?.let { runCatching { e.destroySwapChain(it); e.flushAndWait() } }; swap = null
+        // 2) content, 3) per-view objects. The shared engine, materials and loader stay alive.
+        asset?.let { a -> runCatching { scene?.removeEntities(a.entities); s.loader.destroyAsset(a) } }; asset = null; animator = null
+        runCatching { resLoader?.destroy() }; resLoader = null
+        lights.forEach { l -> runCatching { scene?.removeEntity(l); e.destroyEntity(l); EntityManager.get().destroy(l) } }; lights.clear()
+        ibl?.let { runCatching { e.destroyIndirectLight(it) } }; ibl = null
+        renderer?.let { runCatching { e.destroyRenderer(it) } }; renderer = null
+        view?.let { runCatching { e.destroyView(it) } }; view = null
+        scene?.let { runCatching { e.destroyScene(it) } }; scene = null
+        if (camEntity != 0) runCatching { e.destroyCameraComponent(camEntity); EntityManager.get().destroy(camEntity) }
+        camera = null; camEntity = 0; uiHelper = null
     }
 }
