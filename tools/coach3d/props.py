@@ -90,14 +90,14 @@ PLACE = {
     'dumbbell': (0.55, (0, 0, 0), None),          # None = follow the hand's own orientation (grip axis across the fist)
     'plate': (0.62, (0, 0, 0.035), (0, 0, 0)),    # lying flat on the palm
     'bottle': (0.8, (0, 0, 0), 'grip'),           # mocap drinking: bottle axis through the fist, follows the hand
-    'phone': (0.75, (0, 0, 0), 'palm'),           # mocap texting: lying in the palm, long side along the fingers
+    'phone': (0.7, (0, 0, 0), 'face'),            # mocap texting: in the hand, screen turned to her eyes
     'tablet': (0.7, (0, -0.02, 0.05), (-58, 0, 0)),
 }
 
 
 import os
 GRIP_AXIS = os.environ.get('GRIP_AXIS', 'z')   # z: upright in the fist, tips to the lips (checked on the Drinking mocap)
-PALM_OFF = {'bottle': 0.0, 'phone': -0.03}       # metres along the hand's z axis (sign chosen from the preview)
+PALM_OFF = {'bottle': 0.0, 'phone': float(os.environ.get('PHONE_OFF', '-0.03'))}       # metres along the hand's z axis (sign chosen from the preview)
 
 
 def attach(name, arm, bone, frame=0):
@@ -110,7 +110,15 @@ def attach(name, arm, bone, frame=0):
     head = hm.translation; tail = arm.matrix_world @ pb.tail
     along, off, rot = PLACE[name]
     pos = head.lerp(tail, along) + Vector(off)
-    if rot in ('grip', 'palm'):
+    if rot == 'face':
+        H = hm.to_quaternion().to_matrix(); y = H.col[1]
+        eye = arm.matrix_world @ arm.pose.bones['Head'].head + Vector((0, -0.08, 0.06))
+        zz = (eye - pos).normalized()                       # screen normal looks at the face
+        yy = (y - zz * y.dot(zz)).normalized()               # long side along the hand, square to the screen
+        M = Matrix.Identity(3); M.col[0] = yy.cross(zz); M.col[1] = yy; M.col[2] = zz
+        R = M.to_4x4()
+        pos = pos + zz * 0.012
+    elif rot in ('grip', 'palm'):
         H = hm.to_quaternion().to_matrix()
         x, y, z = H.col[0], H.col[1], H.col[2]          # hand bone: y along the hand, x/z across it
         if rot == 'grip':                                # prop Z -> across the fist (bone x), prop Y -> along the hand

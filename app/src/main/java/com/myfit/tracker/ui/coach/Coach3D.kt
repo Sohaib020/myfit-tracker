@@ -21,6 +21,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -92,10 +93,26 @@ object Coach3D {
         } catch (_: Exception) { false } finally { synchronized(busy) { busy.remove(pack) } }
     }
 
-    fun readGlb(c: Context, lookId: String): ByteBuffer? = runCatching {
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, ByteBuffer>()
+    fun readGlb(c: Context, lookId: String): ByteBuffer? = cache[CoachPacks.pack(lookId)]?.duplicate()?.also { it.rewind() } ?: runCatching {
         val b = file(c, lookId).readBytes()
-        ByteBuffer.allocateDirect(b.size).order(ByteOrder.nativeOrder()).put(b).also { it.rewind() }
+        ByteBuffer.allocateDirect(b.size).order(ByteOrder.nativeOrder()).put(b).also { it.rewind(); cache[CoachPacks.pack(lookId)] = it }.duplicate()
     }.getOrNull()
+
+    /**
+     * R23: called once after launch. Creates the shared engine on the main thread while it's idle and reads the trainer's
+     * and nutritionist's GLBs into memory, so opening their screens shows the 3D coach almost at once instead of a
+     * frozen clip for several seconds. Also removes files of the retired male nutritionist.
+     */
+    fun prewarm(c: Context, looks: List<String>) {
+        val app = c.applicationContext
+        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+            runCatching { File(app.filesDir, "coach3d/nutri_m").deleteRecursively(); File(app.filesDir, "coach3d_glb").listFiles()?.filter { it.name.startsWith("nutri_m") }?.forEach { it.delete() } }
+            if (!enabled(app)) return@launch
+            looks.distinct().forEach { l -> if (installed(app, l)) readGlb(app, l) else ensure(app, l) }
+        }
+        if (enabled(app)) android.os.Looper.getMainLooper().queue.addIdleHandler { runCatching { shared() }; false }
+    }
 
     /** Animations baked into every GLB (see tools/coach3d/export_glb.py). */
     val LOOPS = setOf("idle", "idle2", "talk", "talk2", "talk3", "think", "dance", "dance2", "dance3")
@@ -123,8 +140,9 @@ object Coach3D {
  * [pose] is the screen's mood (idle, talk, wave, thumbsup, think, plate, tablet…).
  */
 @Composable
-fun CoachStage(look: String, pose: String, modifier: Modifier = Modifier, level: MutableStateFlow<Float>? = null) {
+fun CoachStage(look: String, poseIn: String, modifier: Modifier = Modifier, level: MutableStateFlow<Float>? = null) {
     val ctx = LocalContext.current
+    val pose = rememberSequence(poseIn)
     val tick by Coach3D.ready.collectAsState()
     val on = remember(tick) { Coach3D.enabled(ctx) }
     val have = remember(tick, look) { Coach3D.installed(ctx, look) }
@@ -132,6 +150,18 @@ fun CoachStage(look: String, pose: String, modifier: Modifier = Modifier, level:
     var failed by remember(look) { mutableStateOf(false) }
     if (on && have && !failed) Coach3DView(look, pose, modifier, onFail = { failed = true })
     else CoachFigure(look, pose, modifier, level)
+}
+
+/** "a>b>c" plays a, then b (one-shots, timed to their clips), then stays on c. Plain names pass through. */
+private val SEQ_MS = mapOf("nod" to 2600L, "happy" to 2950L, "wave" to 4700L, "thumbsup" to 4200L, "acknowledge" to 1950L)
+
+@Composable
+private fun rememberSequence(pose: String): String {
+    if ('>' !in pose) return pose
+    val parts = remember(pose) { pose.split('>') }
+    var i by remember(pose) { mutableStateOf(0) }
+    LaunchedEffect(pose) { for (k in 0 until parts.size - 1) { i = k; delay(SEQ_MS[parts[k]] ?: 2500L) }; i = parts.size - 1 }
+    return parts[i]
 }
 
 @Composable
@@ -156,6 +186,10 @@ private fun Scene3D(look: String, pose: String, buf: ByteBuffer, onFail: () -> U
     Box(Modifier.fillMaxSize()) {
         val holder = remember(look, buf) { CoachScene(look, buf) }
         LaunchedEffect(holder, pose) { holder.setPose(pose) }
+        // the animated clip keeps playing underneath until the 3D coach has actually drawn, then fades out (no frozen start)
+        val shown by holder.shown
+        val fade by androidx.compose.animation.core.animateFloatAsState(if (shown) 0f else 1f, androidx.compose.animation.core.tween(350), label = "c3d")
+        if (fade > 0.01f) CoachFigure(look, pose, Modifier.fillMaxSize().graphicsLayer { alpha = fade }, tapToEmote = false)
         val poseNow by rememberUpdatedState(pose)
         AndroidView(
             factory = { c -> TextureView(c).also { tv -> if (!holder.attach(tv)) onFail() else holder.setPose(poseNow) } },
@@ -187,6 +221,9 @@ private fun Scene3D(look: String, pose: String, buf: ByteBuffer, onFail: () -> U
  * dependency order (swap chain first, engine never), so leaving the screen can't touch freed native objects.
  */
 private class CoachScene(private val look: String, private val glb: ByteBuffer) : Choreographer.FrameCallback {
+    /** True once the coach (with textures) has been on screen for a few frames — the clip underneath can fade out. */
+    val shown = androidx.compose.runtime.mutableStateOf(false)
+    private var framesSinceAdd = 0
     @Volatile var yawDeg = 0f
     private var sh: Coach3D.Shared? = null
     private var renderer: Renderer? = null
@@ -337,7 +374,10 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
         }
         applyRoot()
         val sc = swap ?: return
-        if (uiHelper?.isReadyToRender == true && r.beginFrame(sc, frameTimeNanos)) { r.render(v); r.endFrame() }
+        if (uiHelper?.isReadyToRender == true && r.beginFrame(sc, frameTimeNanos)) {
+            r.render(v); r.endFrame()
+            if (added && !shown.value && ++framesSinceAdd >= 3) shown.value = true
+        }
     }
 
     fun destroy() {

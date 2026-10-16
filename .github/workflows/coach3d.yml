@@ -6,7 +6,7 @@ on:
     branches: [ coach3d-run ]
   workflow_dispatch:
     inputs:
-      who: { description: 'coaches (json list)', required: false, default: '["trainer_m","trainer_f","nutri_m","nutri_f"]' }
+      who: { description: 'coaches (json list)', required: false, default: '["trainer_m","trainer_f","nutri_f"]' }
       clips: { description: 'only these clips (comma list, empty = all)', required: false, default: '' }
 permissions: { contents: write }
 jobs:
@@ -16,7 +16,7 @@ jobs:
     steps:
       - id: m
         run: |
-          WHO='${{ github.event.inputs.who }}'; [ -z "$WHO" ] && WHO='["trainer_m","trainer_f","nutri_m","nutri_f"]'
+          WHO='${{ github.event.inputs.who }}'; [ -z "$WHO" ] && WHO='["trainer_m","trainer_f","nutri_f"]'
           ONLY='${{ github.event.inputs.clips }}'
           python3 - "$WHO" "$ONLY" <<'PY' >> $GITHUB_OUTPUT
           import json, sys

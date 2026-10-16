@@ -18,7 +18,7 @@ MOCAP_CLIPS = {'idle', 'idle2', 'talk', 'talk2', 'talk3', 'think', 'tablet', 'da
                'fistpump', 'victory', 'jump', 'clap', 'rally', 'happy', 'nod', 'acknowledge', 'headshake', 'sigh', 'cocky', 'bottle',
                'squat', 'stretch'}
 # props held during a mocap move: (prop, hand bone, fraction of the clip where the grip is placed)
-MOCAP_PROPS = {'bottle': [('bottle', 'Hand.L', 0.05)], 'tablet': [('phone', 'Hand.R', 0.3)]}
+MOCAP_PROPS = {'bottle': [('bottle', 'Hand.L', 0.05)], 'tablet': [('phone', 'Hand.L', 0.3)]}
 
 
 class MocapClip:

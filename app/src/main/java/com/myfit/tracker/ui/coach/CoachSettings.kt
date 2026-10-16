@@ -71,9 +71,6 @@ fun ProTeamCard(container: AppContainer) {
         }
         NameField("Trainer's name", cp.name) { n -> Coach.update(ctx) { it.copy(name = n) } }
         Text("NUTRITIONIST", style = FitType.overline, color = th.textDim, modifier = Modifier.padding(top = 14.dp, bottom = 6.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Coach.NLook.entries.forEach { l -> GlassChip(l.label, cp.nLook == l, { Coach.update(ctx) { it.copy(nLook = l) } }, icon = if (l.male) Duo.Male else Duo.Female) }
-        }
         NameField("Nutritionist's name", cp.nName) { n -> Coach.update(ctx) { it.copy(nName = n) } }
         Caption("They're fictional characters — call them whatever you like.", Modifier.padding(top = 4.dp))
 

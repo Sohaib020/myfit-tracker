@@ -72,6 +72,8 @@ class MyFitApplication : Application() {
             com.myfit.tracker.ai.voice.VoicePackWorker.schedule(this)
         com.myfit.tracker.ai.FoodRecognizer.schedule(this)   // offline food recogniser, Wi-Fi only
         com.myfit.tracker.ai.ondevice.BrainWarmup.schedule(this)   // R21: offline brain first-start prep after install/update
+        // R23: warm the 3D coach engine + load the trainer/nutritionist models, so their screens don't start frozen
+        runCatching { val cp = com.myfit.tracker.domain.Coach.load(this); com.myfit.tracker.ui.coach.Coach3D.prewarm(this, listOf(cp.look.id, cp.nLook.id)) }
         // R21: when Pip will answer from the phone (offline, or phone-brain mode), load it now so the first message is instant
         if (!com.myfit.tracker.ai.Net.online(this) || com.myfit.tracker.ai.BrainMode.get(this) == com.myfit.tracker.ai.BrainMode.PHONE)
             com.myfit.tracker.ai.ondevice.OnDeviceAi.get(this).llm.prewarm()

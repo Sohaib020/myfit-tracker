@@ -17,7 +17,7 @@ object CoachPacks {
     private const val BASE = "https://github.com/Sohaib020/myfit-tracker/releases/download/coach3d-v1"
 
     /** Coach look id (Coach.Look / NLook) -> pack name. */
-    fun pack(lookId: String) = when (lookId) { "m" -> "trainer_m"; "f" -> "trainer_f"; "nm" -> "nutri_m"; "nf" -> "nutri_f"; else -> "trainer_m" }
+    fun pack(lookId: String) = when (lookId) { "m" -> "trainer_m"; "f" -> "trainer_f"; "nm", "nf" -> "nutri_f"; else -> "trainer_m" }
 
     /** Bumps whenever a pack finishes installing, so screens switch from the still to the animation. */
     val installed = MutableStateFlow(0)
@@ -25,8 +25,11 @@ object CoachPacks {
 
     private fun dir(c: Context, p: String) = File(c.filesDir, "coach3d/$p")
     /** Bump when the release packs are re-rendered so phones replace their old copy (v3 = R22 Mixamo mocap). */
-    private const val VER = "3"
-    fun isInstalled(c: Context, lookId: String) = File(dir(c, pack(lookId)), ".complete").let { it.exists() && it.readText().trim() == VER }
+    private const val VER_DEFAULT = "3"
+    /** Per-pack bumps, so re-rendering one coach doesn't make every coach re-download (R23: nutritionist phone fix). */
+    private val VER = mapOf("nutri_f" to "4")
+    private fun ver(p: String) = VER[p] ?: VER_DEFAULT
+    fun isInstalled(c: Context, lookId: String) = File(dir(c, pack(lookId)), ".complete").let { it.exists() && it.readText().trim() == ver(pack(lookId)) }
 
     /** Old pose names from the 2D coaches -> 3D clip names (anything else is already a clip name). */
     fun clipFor(pose: String): String = when (pose) {
@@ -68,7 +71,7 @@ object CoachPacks {
                     out.outputStream().use { zip.copyTo(it) }
                 }
             }
-            if (File(d, "idle.webp").exists()) { File(d, ".complete").writeText(VER); installed.value++; true } else false
+            if (File(d, "idle.webp").exists()) { File(d, ".complete").writeText(ver(p)); installed.value++; true } else false
         } catch (t: Throwable) { false } finally { running.remove(p) }
     }
 
