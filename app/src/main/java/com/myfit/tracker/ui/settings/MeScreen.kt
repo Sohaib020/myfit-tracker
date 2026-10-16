@@ -649,10 +649,10 @@ private fun PipEntryCard(container: AppContainer) {
     val installed by androidx.compose.runtime.produceState(false) { value = com.myfit.tracker.ai.ondevice.OnDeviceAi.get(ctx).models.installedFile() != null }
     GlassCard(onClick = { nav.push(com.myfit.tracker.ui.nav.Overlay.PipChat) }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            com.myfit.tracker.ui.arena.CastImage(buddy, 64.dp)
+            com.myfit.tracker.ui.pip.BuddyAvatar(buddy, 64.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("${buddy.label.substringBefore(' ')} · AI buddy", style = FitType.section, color = th.text)
+                Text("${buddy.label} · AI buddy", style = FitType.section, color = th.text)
                 Caption("Brain: ${com.myfit.tracker.ai.BrainMode.label(mode)} · voice ${if (settings.pipVoice) "on" else "off"} · on-phone brain ${if (installed) "downloaded" else "not downloaded"}")
             }
         }
@@ -982,8 +982,8 @@ private fun Coach3DRow() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val capable = androidx.compose.runtime.remember { com.myfit.tracker.ui.coach.Coach3D.capable(ctx) }
     var on by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.myfit.tracker.ui.coach.Coach3D.enabled(ctx)) }
-    ToggleRow("3D coaches", if (capable) "Spin your trainer and nutritionist with a finger, tap them for a reaction. Downloads a few MB per coach."
-        else "Live 3D for the trainer and nutritionist. Your phone may run it slowly or warm up; animated clips are used when off.", on) { v ->
+    ToggleRow("3D coaches & buddies", if (capable) "Spin your trainer, nutritionist and champion buddy with a finger, tap them for a reaction. Downloads a few MB each."
+        else "Live 3D for the trainer, nutritionist and champion buddy. Your phone may run it slowly or warm up; animated clips are used when off.", on) { v ->
         on = v; com.myfit.tracker.ui.coach.Coach3D.setEnabled(ctx, v)
     }
 }
