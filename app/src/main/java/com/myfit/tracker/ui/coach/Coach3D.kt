@@ -64,7 +64,9 @@ object Coach3D {
     fun enabled(c: Context): Boolean = c.getSharedPreferences(P, Context.MODE_PRIVATE).getBoolean("on", capable(c))
     fun setEnabled(c: Context, on: Boolean) { c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putBoolean("on", on).apply(); ready.value++ }
 
-    private fun file(c: Context, lookId: String) = File(c.filesDir, "coach3d_glb/${CoachPacks.pack(lookId)}.glb")
+    /** Bump with each re-export of the release GLBs so phones fetch the new one (v2 = R22 Mixamo mocap). */
+    private const val GLB_VER = 2
+    private fun file(c: Context, lookId: String) = File(c.filesDir, "coach3d_glb/${CoachPacks.pack(lookId)}_v$GLB_VER.glb")
     fun installed(c: Context, lookId: String) = file(c, lookId).let { it.exists() && it.length() > 100_000 }
 
     /** Downloads the coach's GLB once (a few MB). Safe to call repeatedly. */
@@ -74,6 +76,7 @@ object Coach3D {
         synchronized(busy) { if (!busy.add(pack)) return@withContext false }
         try {
             val f = file(c, lookId); f.parentFile?.mkdirs()
+            f.parentFile?.listFiles()?.filter { it.name.startsWith("${pack}") && it.name != f.name }?.forEach { it.delete() }   // old versions
             val tmp = File(f.parentFile, "$pack.part")
             var conn = URL("$BASE/$pack.glb").openConnection() as HttpURLConnection
             repeat(5) {
@@ -95,9 +98,11 @@ object Coach3D {
     }.getOrNull()
 
     /** Animations baked into every GLB (see tools/coach3d/export_glb.py). */
-    val LOOPS = setOf("idle", "talk", "think", "dance")
-    fun emotes(look: String) = if (look.startsWith("n")) listOf("wave", "thumbsup", "cheer", "fistpump")
-        else listOf("wave", "thumbsup", "fistpump", "cheer", "victory")
+    val LOOPS = setOf("idle", "idle2", "talk", "talk2", "talk3", "think", "dance", "dance2", "dance3")
+    fun emotes(look: String) = if (look.startsWith("n")) listOf("wave", "thumbsup", "cheer", "clap", "nod", "happy", "acknowledge", "dance", "dance2")
+        else listOf("wave", "thumbsup", "fistpump", "cheer", "victory", "clap", "rally", "jump", "dance", "dance2", "dance3")
+    /** Talking/idle variety: a new variant each time the loop comes round. */
+    val VARIANTS = mapOf("talk" to listOf("talk", "talk2", "talk3"), "idle" to listOf("idle", "idle", "idle2"))
 
     /**
      * One Filament engine + material provider + glTF loader for the whole app, created on first use and never torn
@@ -202,6 +207,7 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
     private var cur = -1; private var curStart = 0L
     private var prev = -1; private var prevTime = 0f; private var fadeStart = 0L
     private var lastEmote: String? = null
+    private var once = false
     private var center = floatArrayOf(0f, 0f, 0f); private var unit = 1f
     private var running = false
     private var dead = false
@@ -278,20 +284,23 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
     fun tapEmote() {
         if (dead) return
         val pick = Coach3D.emotes(look).filter { it != lastEmote && idx(it) >= 0 }.randomOrNull() ?: return
-        lastEmote = pick; play(pick)
+        lastEmote = pick; play(pick, once = true)
     }
 
-    private fun play(n: String) {
-        val i = idx(n); if (i < 0 || i == cur) return
+    private fun pickBase(): String = Coach3D.VARIANTS[base]?.filter { idx(it) >= 0 }?.randomOrNull() ?: base
+
+    private fun play(n: String, once: Boolean = false, force: Boolean = false) {
+        val i = idx(n); if (i < 0 || (i == cur && !once && !force)) return
         val now = System.nanoTime()
         if (cur >= 0) { prev = cur; prevTime = timeOf(cur, now); fadeStart = now }
+        this.once = once
         cur = i; curStart = now
     }
 
     private fun timeOf(i: Int, now: Long): Float {
         val an = animator ?: return 0f
         val t = (now - curStart) / 1e9f; val d = an.getAnimationDuration(i).coerceAtLeast(0.01f)
-        return if (names[i] in Coach3D.LOOPS) t % d else t.coerceAtMost(d)
+        return if (names[i] in Coach3D.LOOPS && !(once && i == cur)) t % d else t.coerceAtMost(d)
     }
 
     private fun applyRoot() {
@@ -318,7 +327,9 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
         if (an != null && cur >= 0) {
             val now = System.nanoTime()
             val d = an.getAnimationDuration(cur)
-            if (names[cur] !in Coach3D.LOOPS && (now - curStart) / 1e9f >= d) play(base)
+            val t = (now - curStart) / 1e9f
+            if ((once || names[cur] !in Coach3D.LOOPS) && t >= d) play(pickBase())
+            else if (!once && names[cur] in Coach3D.LOOPS && t >= d && (Coach3D.VARIANTS[base]?.size ?: 0) > 1) play(pickBase(), force = true)
             an.applyAnimation(cur, timeOf(cur, now))
             val fade = (now - fadeStart) / 1e9f / 0.3f
             if (prev >= 0 && fade < 1f) an.applyCrossFade(prev, prevTime, fade.coerceIn(0f, 1f))

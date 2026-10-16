@@ -20,8 +20,8 @@ jobs:
           ONLY='${{ github.event.inputs.clips }}'
           python3 - "$WHO" "$ONLY" <<'PY' >> $GITHUB_OUTPUT
           import json, sys
-          T = ['portrait','idle','wave','talk','thumbsup','cheer','squat','pushup','lunge','press','plank','stretch','dance','victory','fistpump']
-          N = ['portrait','idle','wave','talk','thumbsup','cheer','plate','bottle','tablet','think','dance','victory','fistpump']
+          T = ['portrait','idle','wave','talk','thumbsup','cheer','squat','pushup','lunge','press','plank','stretch','dance','victory','fistpump','clap','rally','nod','jump']
+          N = ['portrait','idle','wave','talk','thumbsup','cheer','plate','bottle','tablet','think','dance','victory','fistpump','clap','nod','happy']
           only = [x for x in sys.argv[2].split(',') if x]
           inc = [{'who': w, 'clip': c} for w in json.loads(sys.argv[1]) for c in (T if w.startswith('trainer') else N) if not only or c in only]
           print('matrix=' + json.dumps({'include': inc}))

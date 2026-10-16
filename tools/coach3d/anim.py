@@ -200,7 +200,7 @@ def world_head(arm, bone):
 
 # ---------------------------------------------------------------- retargeting mocap
 
-def retarget(src_arm, src_map, src_action, tgt_arm, name, frames=None, step=1.0, hip_scale=None, fix=None, travel=1.0):
+def retarget(src_arm, src_map, src_action, tgt_arm, name, frames=None, step=1.0, hip_scale=None, fix=None, travel=1.0, own_rest=()):
     """Copies a mocap action from another rig onto the canonical skeleton by matching WORLD bone directions frame by
     frame (rest poses may differ: T vs A pose). src_map: canonical -> source bone name. fix(f, pose) may add offsets."""
     src_arm.animation_data_create(); src_arm.animation_data.action = src_action
@@ -221,7 +221,9 @@ def retarget(src_arm, src_map, src_action, tgt_arm, name, frames=None, step=1.0,
         if not sb or sb not in src_arm.data.bones: continue
         sd = (src_arm.matrix_world.to_3x3() @ (src_arm.data.bones[sb].tail_local - src_arm.data.bones[sb].head_local)).normalized()
         td = (tgt_arm.matrix_world.to_3x3() @ (tgt_arm.data.bones[b].tail_local - tgt_arm.data.bones[b].head_local)).normalized()
-        C[b] = td.rotation_difference(sd)
+        # own_rest bones (spine/neck/head for mocap) follow the source motion from their OWN rest direction, so the
+        # face keeps its natural angle even when the bone sits differently inside the head than on the source rig
+        C[b] = Quaternion() if b in own_rest else td.rotation_difference(sd)
     src_rest = {b: (src_arm.matrix_world.to_quaternion() @ src_arm.data.bones[src_map[b]].matrix_local.to_quaternion()) for b in C}
     hip0 = None
     for i in range(n + 1):
