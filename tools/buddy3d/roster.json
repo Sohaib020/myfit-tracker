@@ -27,6 +27,13 @@
   "animal": false,
   "female": false
  },
+ "titan_epic": {
+  "src": "Blue_Titan_1014115938",
+  "champion": "TITAN",
+  "tier": "epic",
+  "animal": false,
+  "female": false
+ },
  "titan_legendary": {
   "src": "Titan_Vanguard_1014091731",
   "champion": "TITAN",
@@ -297,6 +304,13 @@
   "src": "Crimson_Lioness_Athle_1014071406",
   "champion": "SABA",
   "tier": "epic",
+  "animal": true,
+  "female": true
+ },
+ "saba_legendary": {
+  "src": "Crimson_Lioness_Champ_1014120128",
+  "champion": "SABA",
+  "tier": "legendary",
   "animal": true,
   "female": true
  }
