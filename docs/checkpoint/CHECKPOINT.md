@@ -312,3 +312,10 @@ Owner decisions: keep everything built into the APK (no first-use downloads); ke
 10 ✅ Arena → Champions tab: your champion (live), battle ladder (10 AI rivals, rung by rung, ★3 per win, 3 paid wins/day), friend battles (friends' published champion + real stats; ★5 once per friend per day; the friend sees the result), roster. Battles: 3 rounds (best of 3), stat + 0–20 roll, seeded by day + rival. Share cards (champion, battle) via FileProvider.
 11 ✅ Firestore rules: arenaProfile allows champ (≤24) + champStats (4 ints 0–100); new /battles/{id} (attacker creates against a friend, both read, either deletes).
 Pending CI: full coach3d (3 coaches × all clips), coach3d-glb, buddy3d (45 looks × 3 parts) → then copy champs-out stand stills into assets/champ/<id>/stand.webp.
+
+## Round 27 (18 Oct) — branch agent/r27 — camera coach performance
+Owner report: S23 Ultra stutters, system UI restarted when the camera coach opened. Owner decisions: optimise (not back to ML Kit), head direction from body points, models built into the APK, solid buttons while the camera runs.
+Causes found: Pose Landmarker HEAVY every frame (53 ms vs Full 25 / Lite 20 on Google's figures, ~1 point more accurate than Full) + Face Landmarker every 3rd frame, both on the GPU delegate alongside the UI's glass/blur and the TextureView preview (GPU overload → UI reset); two new bitmaps per frame (toBitmap + rotate).
+1 ✅ PoseModels: Full (strong phones: ≥7 GB RAM, 8 cores, API 30+) or Lite, bundled in assets/pose (fetched at build by app/build.gradle.kts fetchPoseModels; noCompress task); old downloaded heavy+face files deleted on first use.
+2 ✅ PoseCamera: CPU delegate (XNNPACK), no face model, head yaw/pitch/roll from nose/eyes/ears (smoothed), reused RGBA + upright bitmaps (matrix rotate into a reused canvas), 24 fps analysis cap (15 when thermal SEVERE), auto step-down Full → Lite when average inference > 38 ms or the phone is hot; status chip shows model + fps.
+3 ✅ UiPerf.camera: every Glass panel draws flat while the camera coach runs.
