@@ -12,6 +12,7 @@ from PIL import Image
 
 CRF = 21
 MAX_W, MAX_H = 1920, 1280
+MAX_PX = 1920 * 1080
 
 
 def _even(v): return max(2, int(v) // 2 * 2)
@@ -23,7 +24,8 @@ def encode(frames, out, fps, box=None, size=None, crf=CRF):
     if box is None: box = (0, 0) + first.size
     if size is None: size = (box[2] - box[0], box[3] - box[1])
     w, h = size
-    k = min(1.0, MAX_W / (2.0 * w), MAX_H / float(h))   # stay inside what every phone's decoder takes
+    # stay inside what every phone's decoder takes: 1920 wide, 1280 tall and no more pixels than 1080p (8160 macroblocks)
+    k = min(1.0, MAX_W / (2.0 * w), MAX_H / float(h), (MAX_PX / (2.0 * w * h)) ** 0.5)
     w, h = _even(w * k), _even(h * k)
     cmd = ['ffmpeg', '-loglevel', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{w * 2}x{h}', '-r', str(fps), '-i', '-',
            '-c:v', 'libx264', '-preset', 'slow', '-crf', str(crf), '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.2',
