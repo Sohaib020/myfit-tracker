@@ -287,6 +287,10 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
     val full: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
     val half: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(1) }
 
+    val ctxG = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) { com.myfit.tracker.ui.game.GameMode.load(ctxG) }
+    val gameOn by com.myfit.tracker.ui.game.GameMode.on.collectAsState()
+    var gameAsked by remember { mutableStateOf(com.myfit.tracker.ui.game.GameMode.asked(ctxG)) }
     Box(Modifier.fillMaxSize().onGloballyPositioned { rootTopLeft = it.boundsInRoot().topLeft }) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -298,6 +302,13 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
         ) {
             item(key = "greeting", span = full) { Box(Modifier.statusBarsPadding()) { Greeting(state) } }
             item(key = "firstweek", span = full) { Box(Modifier.animateItem()) { FirstWeekCard(container, goTab) } }
+            // R25 Game Mode: your champion's hero card, or a one-time invitation
+            if (gameOn) item(key = "hero", span = full) {
+                Box(Modifier.animateItem()) {
+                    com.myfit.tracker.ui.game.HeroCard(container, state.steps, state.stepTarget, state.activeMin, state.waterMl, state.waterTarget,
+                        state.done.isNotEmpty())
+                }
+            } else if (!gameAsked) item(key = "gameinvite", span = full) { Box(Modifier.animateItem()) { GameInvite { gameAsked = true } } }
             if (settings.diabetesType == "unset" && !settings.diabetesAsked && !settings.glucoseEnabled) {
                 item(key = "personalise", span = full) { Box(Modifier.animateItem()) { PersonaliseCard(container) } }
             }
@@ -535,6 +546,29 @@ private fun PersonaliseCard(container: AppContainer) {
         }
         Spacer(Modifier.height(8.dp))
         Caption("Change it any time in Me → Health features. MyFit isn't a medical device.", color = th.textFaint)
+    }
+}
+
+// ------------------------------------------------------------------ Game Mode invitation (shown once)
+
+@Composable
+private fun GameInvite(onDone: () -> Unit) {
+    val th = LocalFitTheme.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    Glass(Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.myfit.tracker.ui.pip.BuddyAvatar(com.myfit.tracker.ui.pip.BuddyChar(com.myfit.tracker.ui.pip.Champion.BLAZE), 64.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Turn workouts into a champion?", style = FitType.section, color = th.text)
+                Caption("Game Mode: your training powers a 3D champion, earns stars and unlocks looks. You can switch it off any time in Settings.")
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    com.myfit.tracker.ui.theme.AccentButton("Turn on", { com.myfit.tracker.ui.game.GameMode.setOn(ctx, true); onDone() }, height = 40.dp)
+                    com.myfit.tracker.ui.theme.GlassButton("Not now", { com.myfit.tracker.ui.game.GameMode.markAsked(ctx); onDone() }, height = 40.dp)
+                }
+            }
+        }
     }
 }
 

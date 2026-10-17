@@ -108,9 +108,6 @@ fun PipSettingsContent(container: AppContainer, onClearChat: () -> Unit) {
     Text("Pip settings", style = FitType.title, color = th.text)
     Caption("Questions about your own logs are always answered on the phone, from your data.")
 
-    SectionTitle(Duo.Person, "Personality", th.fat)
-    BuddyChooser()
-
     SectionTitle(Duo.AutoAwesome, "Brain", th.accentBright)
     BrainPicker(container)
 

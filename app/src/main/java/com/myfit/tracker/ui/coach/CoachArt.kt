@@ -159,7 +159,7 @@ fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level
  * which avoids the stale-bounds double image some Android 11 MediaTek phones showed when drawing into Compose.
  */
 @Composable
-private fun CoachClip(file: java.io.File, modifier: Modifier, loop: Boolean = true, onEnd: (() -> Unit)? = null) {
+internal fun CoachClip(file: java.io.File, modifier: Modifier, loop: Boolean = true, onEnd: (() -> Unit)? = null) {
     val end = androidx.compose.runtime.rememberUpdatedState(onEnd)
     androidx.compose.ui.viewinterop.AndroidView(
         factory = { c -> BottomFitImageView(c) },

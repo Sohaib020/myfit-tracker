@@ -208,6 +208,9 @@ fun MyFitRoot(container: AppContainer) {
                         else MainShell(container, s)
                     }
                 }
+                // R25: "Game Mode on" intro plays above everything
+                val gameIntro by com.myfit.tracker.ui.game.GameMode.intro.collectAsState()
+                if (gameIntro) com.myfit.tracker.ui.game.GameModeIntro { com.myfit.tracker.ui.game.GameMode.intro.value = false }
                 ToastHost(toaster, Modifier.align(Alignment.TopCenter))
             }
         }
@@ -372,6 +375,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.Today -> com.myfit.tracker.ui.activity.TodayScreen(container)
                         Overlay.Stopwatch -> com.myfit.tracker.ui.activity.StopwatchScreen(container)
                         Overlay.PipChat -> com.myfit.tracker.ui.pip.PipChatScreen(container)
+                        Overlay.Champion -> com.myfit.tracker.ui.game.ChampionScreen(container)
                         Overlay.Archive -> com.myfit.tracker.ui.exercises.ArchiveScreen(container)
                         Overlay.Me -> MeScreen(container) { sheet = it }
                         Overlay.ArrangeDash -> com.myfit.tracker.ui.dashboard.ArrangeDashScreen(container)

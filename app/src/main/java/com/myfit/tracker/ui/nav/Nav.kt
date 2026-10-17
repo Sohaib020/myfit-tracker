@@ -17,6 +17,7 @@ sealed interface Overlay {
     /** Timed activity with MET calories (Start activity). */
     data object Stopwatch : Overlay
     data object PipChat : Overlay
+    data object Champion : Overlay
     data object Archive : Overlay
     data object Me : Overlay
     data object ArrangeDash : Overlay
