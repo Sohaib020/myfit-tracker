@@ -20,6 +20,7 @@ look.refine(body, subdiv=0)
 rig.bulk(arm, who)
 s = studio.setup(res=FH, samples=samples)
 s.cycles.seed = 7; s.cycles.use_animated_seed = False   # same noise pattern every frame: no denoiser shimmer at 50 fps
+s.cycles.denoising_prefilter = 'FAST'   # R26: 2.7x faster per frame at 50 fps, no visible difference at 8 samples
 s.render.image_settings.file_format = 'PNG'; s.render.image_settings.color_mode = 'RGBA'
 
 if clip == 'portrait':

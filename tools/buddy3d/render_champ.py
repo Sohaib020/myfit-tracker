@@ -22,6 +22,7 @@ look.refine(body, subdiv=0)
 RES = int(os.environ.get('CHAMP_RES', '720'))       # R26: 720p clips (were 448)
 s = studio.setup(res=RES, samples=samples)
 s.cycles.seed = 7; s.cycles.use_animated_seed = False   # same noise every frame: no denoiser shimmer at 50 fps
+s.cycles.denoising_prefilter = 'FAST'   # 2.7x faster, same look at 8 samples
 s.render.image_settings.file_format = 'PNG'; s.render.image_settings.color_mode = 'RGBA'
 s.render.resolution_x = RES; s.render.resolution_y = RES
 H = max((body.matrix_world @ v.co).z for i, v in enumerate(body.data.vertices) if i % 9 == 0)

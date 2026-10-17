@@ -51,7 +51,7 @@ jobs:
           echo "part $P: $ONLY"
           export STAND=$([ "$P" = 0 ] && echo 1 || echo 0)
           for try in 1 2; do
-            python tools/buddy3d/render_champ.py assets/rigged/$ID.glb assets/motion.json.gz $T frames 50 12 "$ONLY" > log.txt 2>&1 || true
+            python tools/buddy3d/render_champ.py assets/rigged/$ID.glb assets/motion.json.gz $T frames 50 8 "$ONLY" > log.txt 2>&1 || true
             grep -q RENDER_DONE log.txt && break
           done
           grep -E "CLIP|RENDER_DONE|Error|Traceback" log.txt | head -30

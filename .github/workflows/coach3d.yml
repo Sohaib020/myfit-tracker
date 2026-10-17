@@ -48,7 +48,7 @@ jobs:
           pip install -q bpy==4.2.0 pillow numpy
           W=${{ matrix.who }}; C=${{ matrix.clip }}
           for try in 1 2; do
-            python tools/coach3d/render_clip.py assets/glb ual.glb $W $C out/$W/$C 50 14 > log.txt 2>&1 || true
+            python tools/coach3d/render_clip.py assets/glb ual.glb $W $C out/$W/$C 50 8 > log.txt 2>&1 || true
             grep -q RENDER_DONE log.txt && break
           done
           grep -E "RENDER_DONE|Error|Traceback|line [0-9]+" log.txt | head -20
