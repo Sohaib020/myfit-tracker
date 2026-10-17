@@ -401,7 +401,7 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
         DashCard.CHECKIN -> CheckInTile(state) { open(Sheet.CheckIn()) }
         DashCard.BODY -> BodyTile(state) { nav.push(Overlay.Body) }
         DashCard.GOALS -> GoalsTile(state, null)
-        DashCard.VITALS -> if (small) com.myfit.tracker.ui.vitals.VitalsTile(container) { nav.push(Overlay.Vitals) } else VitalsCard(container)
+        DashCard.VITALS -> if (small) com.myfit.tracker.ui.vitals.VitalsHeroTile(container) else VitalsCard(container)
         DashCard.MIND -> if (small) com.myfit.tracker.ui.mind.MindTile(container) { nav.push(Overlay.Mind) } else MindCard(container)
         DashCard.CYCLE -> if (small) com.myfit.tracker.ui.cycle.CycleTile(container) { nav.push(Overlay.Cycle) } else CycleCard(container)
         DashCard.GLUCOSE -> com.myfit.tracker.ui.glucose.GlucoseTile(container) { nav.push(Overlay.Glucose) }
