@@ -58,7 +58,7 @@ private fun rememberLastPulse(container: AppContainer): Pair<Int?, String> {
     }
     val rest = days.lastOrNull { it.restingHr != null }?.restingHr
     val avg = days.lastOrNull { it.avgHr != null }?.avgHr
-    return (rest ?: avg) to (if (rest != null) "Resting · from your watch" else if (avg != null) "Average · from your watch" else "No reading yet")
+    return (rest ?: avg)?.toInt() to (if (rest != null) "Resting · from your watch" else if (avg != null) "Average · from your watch" else "No reading yet")
 }
 
 /** Heart shape centred in a w×h box. */
