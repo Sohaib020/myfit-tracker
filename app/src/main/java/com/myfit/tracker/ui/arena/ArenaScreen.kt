@@ -334,7 +334,7 @@ private fun DuelsPane(container: AppContainer, award: (String, Int, String) -> U
         GlassCard(padding = 14.dp) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(96.dp).height(64.dp)) {
-                    CastImage(Mascot.SHAHEEN, 64.dp)
+                    CastImage(Mascot.MONAL, 64.dp)
                     CastImage(Mascot.ZARA, 64.dp, Modifier.offset(x = 34.dp))
                 }
                 Spacer(Modifier.width(8.dp))
