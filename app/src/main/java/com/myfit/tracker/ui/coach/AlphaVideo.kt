@@ -84,7 +84,7 @@ class AlphaVideoView(context: Context) : TextureView(context), TextureView.Surfa
 
     override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
         player?.release(); player = null
-        gl?.quit(); gl = null
+        gl?.shutdown(); gl = null
         return true
     }
 
@@ -121,7 +121,7 @@ class AlphaVideoView(context: Context) : TextureView(context), TextureView.Surfa
         fun setView(w: Int, h: Int) { vw = w; vh = h; if (::handler.isInitialized) handler.post { draw(update = false) } }
         fun setVideo(w: Int, h: Int) { fw = w / 2; fh = h }
 
-        fun quit() {
+        fun shutdown() {
             if (!::handler.isInitialized) { quitSafely(); return }
             handler.post {
                 runCatching { video?.release(); videoSurface?.release() }
