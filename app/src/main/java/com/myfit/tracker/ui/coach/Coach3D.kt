@@ -322,11 +322,15 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
         val rm = e.renderableManager; val tm = e.transformManager
         val lo = floatArrayOf(Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE); val hi = floatArrayOf(-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE)
         val box = com.google.android.filament.Box(); val w = FloatArray(16); val p = FloatArray(4); val q = FloatArray(4)
+        // skinned meshes (all our characters): the vertices are already in bind/world space — glTF ignores the mesh
+        // node's transform and Filament compensates for it in the joint matrices — so the node transform must NOT
+        // be applied (our exporter's root carries the hip-height offset, which pushed characters half off the card)
+        val skinned = runCatching { a.instance.skinCount > 0 }.getOrDefault(true)
         for (ent in a.renderableEntities) {
             val ri = rm.getInstance(ent); if (ri == 0) continue
             rm.getAxisAlignedBoundingBox(ri, box)
             val ti = tm.getInstance(ent)
-            if (ti != 0) tm.getWorldTransform(ti, w) else android.opengl.Matrix.setIdentityM(w, 0)
+            if (ti != 0 && !skinned) tm.getWorldTransform(ti, w) else android.opengl.Matrix.setIdentityM(w, 0)
             val c = box.center; val h = box.halfExtent
             for (sx in -1..1 step 2) for (sy in -1..1 step 2) for (sz in -1..1 step 2) {
                 p[0] = c[0] + sx * h[0]; p[1] = c[1] + sy * h[1]; p[2] = c[2] + sz * h[2]; p[3] = 1f
