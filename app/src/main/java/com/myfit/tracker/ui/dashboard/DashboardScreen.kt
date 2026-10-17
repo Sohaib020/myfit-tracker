@@ -306,7 +306,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
             if (gameOn) item(key = "hero", span = full) {
                 Box(Modifier.animateItem()) {
                     com.myfit.tracker.ui.game.HeroCard(container, state.steps, state.stepTarget, state.activeMin, state.waterMl, state.waterTarget,
-                        state.done.isNotEmpty())
+                        state.workout.done.isNotEmpty())
                 }
             } else if (!gameAsked) item(key = "gameinvite", span = full) { Box(Modifier.animateItem()) { GameInvite { gameAsked = true } } }
             if (settings.diabetesType == "unset" && !settings.diabetesAsked && !settings.glucoseEnabled) {
