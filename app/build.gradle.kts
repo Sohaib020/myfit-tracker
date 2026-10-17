@@ -1,4 +1,5 @@
 import java.net.URI
+import java.net.URI
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -145,7 +146,7 @@ val fetchPoseModels by tasks.registering {
             val f = File(dir, name)
             if (f.exists() && f.length() > 100_000) return@forEach
             val tmp = File(dir, "$name.part")
-            java.net.URI(url).toURL().openStream().use { input -> tmp.outputStream().use { input.copyTo(it) } }
+            URI(url).toURL().openStream().use { input -> tmp.outputStream().use { input.copyTo(it) } }
             tmp.renameTo(f)
             logger.lifecycle("Fetched $name (${f.length() / 1024} KB)")
         }
