@@ -70,21 +70,24 @@ fun ChampStage(b: BuddyChar, pose: String, modifier: Modifier = Modifier, onEnd:
     }
 }
 
-private val stillCache = android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(24)
+private val stillCache = android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(40)
 
 /**
  * R26: a champion look as a full-body 3D still (bundled champ/<id>/stand.webp, rendered from the model) — the glimpse
  * of a look you haven't unlocked yet. No animation and nothing downloads until it's yours.
  */
 @Composable
-fun ChampStill(b: BuddyChar, modifier: Modifier = Modifier, locked: Boolean = false) {
+fun ChampStill(b: BuddyChar, modifier: Modifier = Modifier, locked: Boolean = false, full: Boolean = false) {
     val ctx = LocalContext.current
     val path = Buddy.standAsset(b)
-    val bmp by androidx.compose.runtime.produceState(stillCache.get(path), path) {
-        value = stillCache.get(path) ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    val key = "$path@$full"
+    val bmp by androidx.compose.runtime.produceState(stillCache.get(key), key) {
+        value = stillCache.get(key) ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            // thumbnails decode at half size (360 px) so a roster of stills stays light on memory
+            val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = if (full) 1 else 2 }
             (runCatching { ctx.assets.open(path) }.getOrNull() ?: runCatching { ctx.assets.open(Buddy.portraitAsset(b)) }.getOrNull())
-                ?.use { android.graphics.BitmapFactory.decodeStream(it) }?.asImageBitmap()
-        }?.also { stillCache.put(path, it) }
+                ?.use { android.graphics.BitmapFactory.decodeStream(it, null, opts) }?.asImageBitmap()
+        }?.also { stillCache.put(key, it) }
     }
     Box(modifier, contentAlignment = Alignment.BottomCenter) {
         bmp?.let {

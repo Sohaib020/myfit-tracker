@@ -156,7 +156,7 @@ fun ChampionScreen(container: AppContainer) {
                             .padding(horizontal = 12.dp, vertical = 8.dp)) { Text("Tap: show a move", style = FitType.caption, color = Color.White) }
                     } else {
                         // R26: a look you don't own yet is a still glimpse — the animations download once it's yours
-                        ChampStill(view, Modifier.fillMaxSize().padding(top = 70.dp, bottom = 6.dp), locked = true)
+                        ChampStill(view, Modifier.fillMaxSize().padding(top = 70.dp, bottom = 6.dp), locked = true, full = true)
                         Row(Modifier.align(Alignment.BottomStart).padding(14.dp).clip(RoundedCornerShape(14.dp)).background(Color.Black.copy(alpha = 0.40f))
                             .padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Duo.Lock, null, tint = Color.White, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(6.dp))

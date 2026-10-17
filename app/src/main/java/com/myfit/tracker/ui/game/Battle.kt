@@ -336,7 +336,7 @@ fun BattleDialog(container: AppContainer, me: Fighter, them: Fighter, onClose: (
                     }
                     Text("VS", style = FitType.hero.copy(fontSize = 34.sp), color = Color.White, modifier = Modifier.align(Alignment.CenterVertically))
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        ChampStill(them.look, Modifier.fillMaxWidth().weight(1f).graphicsLayer { scaleX = -1f })
+                        ChampStill(them.look, Modifier.fillMaxWidth().weight(1f).graphicsLayer { scaleX = -1f }, full = true)
                         Text(them.look.label, style = FitType.label, color = them.look.color); Caption("${them.name} · ${them.rating}", color = Color.White.copy(alpha = 0.7f))
                     }
                 }
@@ -389,7 +389,7 @@ private fun BattleBar(f: Float, color: Color, v: Int) {
 fun ShareChampionDialog(me: Fighter, onClose: () -> Unit) {
     ShareDialog("myfit_champion.png", "Share your champion", onClose) {
         ShareCardFrame(me.look.color) {
-            ChampStill(me.look, Modifier.fillMaxWidth().height(260.dp))
+            ChampStill(me.look, Modifier.fillMaxWidth().height(260.dp), full = true)
             Text(me.look.label.uppercase(), style = FitType.hero.copy(fontSize = 40.sp), color = Color.White)
             Text("${me.look.tier.label} champion · Rating ${me.rating}", style = FitType.label, color = me.look.color)
             Spacer(Modifier.height(10.dp))
