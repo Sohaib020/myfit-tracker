@@ -50,8 +50,9 @@ object Coach {
         // R16: the old defaults sounded like real people — move anyone still on them to the new character names
         val oldDefaults = setOf("Coach Zarak", "Coach Inaya", "Areesha", "Faraz")
         _prefs.value = Prefs(
-            look, p.getString("name", null)?.takeIf { it.isNotBlank() && it !in oldDefaults } ?: look.defaultName,
-            nLook, p.getString("nname", null)?.takeIf { it.isNotBlank() && it !in oldDefaults } ?: nLook.defaultName,
+            // R28: names are fixed to each character (renaming was removed)
+            look, look.defaultName,
+            nLook, nLook.defaultName,
             p.getBoolean("urdu", false), p.getBoolean("camera", false), p.getBoolean("voice", true),
             Push.entries.getOrNull(p.getInt("push", 1)) ?: Push.STEADY, p.getBoolean("front", true),
         )
@@ -63,10 +64,8 @@ object Coach {
         load(c)
         val old = _prefs.value
         var n = f(old)
-        // switching look keeps a custom name, but swaps a default one
-        if (n.look != old.look && old.name == old.look.defaultName) n = n.copy(name = n.look.defaultName)
-        if (n.nLook != old.nLook && old.nName == old.nLook.defaultName) n = n.copy(nName = n.nLook.defaultName)
-        n = n.copy(name = n.name.trim().take(24).ifBlank { n.look.defaultName }, nName = n.nName.trim().take(24).ifBlank { n.nLook.defaultName })
+        // R28: each character keeps its own name (no renaming)
+        n = n.copy(name = n.look.defaultName, nName = n.nLook.defaultName)
         _prefs.value = n
         sp(c).edit().putString("look", n.look.id).putString("name", n.name).putString("nlook", n.nLook.id).putString("nname", n.nName)
             .putBoolean("urdu", n.urdu).putBoolean("camera", n.camera).putBoolean("voice", n.voice).putInt("push", n.push.ordinal)

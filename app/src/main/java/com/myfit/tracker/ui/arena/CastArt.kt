@@ -104,13 +104,7 @@ fun CastLocked(m: Mascot, size: Dp, modifier: Modifier = Modifier) {
 fun CharacterPreview(m: Mascot, level: Int, onDismiss: () -> Unit, onUse: (() -> Unit)? = null) {
     val th = com.myfit.tracker.ui.theme.LocalFitTheme.current
     val locked = level < m.unlock
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        androidx.compose.foundation.layout.Column(
-            Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(30.dp))
-                .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(m.accent.copy(alpha = 0.9f), androidx.compose.ui.graphics.Color(0xFF15171F))))
-                .padding(20.dp),
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-        ) {
+    com.myfit.tracker.ui.theme.GlassDialog(onDismiss, m.accent) {
             CastAnim(m, CastClip.WAVE, 190.dp)
             androidx.compose.material3.Text(m.label, style = com.myfit.tracker.ui.theme.FitType.title, color = androidx.compose.ui.graphics.Color.White)
             androidx.compose.material3.Text("“${m.tagline}”", style = com.myfit.tracker.ui.theme.FitType.body, color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.85f))
@@ -122,6 +116,5 @@ fun CharacterPreview(m: Mascot, level: Int, onDismiss: () -> Unit, onUse: (() ->
             } else if (onUse != null) com.myfit.tracker.ui.theme.AccentButton("Use ${m.label.substringBefore(' ')}", { onUse(); onDismiss() }, Modifier.fillMaxWidth(), height = 46.dp)
             androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
             com.myfit.tracker.ui.theme.GlassButton("Close", onDismiss, Modifier.fillMaxWidth(), height = 42.dp)
-        }
     }
 }

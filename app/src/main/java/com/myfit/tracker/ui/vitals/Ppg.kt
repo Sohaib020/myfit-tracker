@@ -115,11 +115,11 @@ object Ppg {
     /** Full estimate from the whole recording. */
     fun estimate(t: DoubleArray, v: DoubleArray): Result {
         val u = resample(t, v)
-        if (u.size < FS * 15) return Result(null, 0.0, "Not enough signal — keep your finger on the lens for the whole 30 seconds.")
+        if (u.size < FS * 8) return Result(null, 0.0, "Not enough signal — keep your finger on the lens until the ring is full.")
         // skip the first 2 s (exposure settling)
-        val f = filter(u.copyOfRange((FS * 2).toInt(), u.size))
+        val f = filter(u.copyOfRange((FS * 1).toInt(), u.size))
         val pk = peaks(f)
-        if (pk.size < 8) return Result(null, 0.0, "We couldn't find a steady pulse. Press a little lighter and stay very still.")
+        if (pk.size < 6) return Result(null, 0.0, "We couldn't find a steady pulse. Press a little lighter and stay very still.")
         val intervals = pk.zipWithNext { a, b -> (b - a) / FS }
         val sorted = intervals.sorted()
         val median = sorted[sorted.size / 2]
@@ -142,7 +142,7 @@ object Ppg {
     /** Rough live estimate (for display only while measuring) over the last ~10 s. */
     fun liveBpm(t: DoubleArray, v: DoubleArray): Int? {
         val u = resample(t, v)
-        if (u.size < FS * 8) return null
+        if (u.size < FS * 4) return null
         val f = filter(u)
         val ac = autocorrBpm(f) ?: return null
         return if (ac.second >= 0.3) ac.first.roundToInt() else null

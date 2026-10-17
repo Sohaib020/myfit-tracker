@@ -88,8 +88,10 @@ import java.util.concurrent.Executors
 import kotlin.math.max
 import kotlin.math.min
 
-private const val MEASURE_SEC = 30.0
-private const val WARMUP_SEC = 2.0
+// R28: ~15 s check. Finishes as soon as two readings in a row agree (usually 10–15 s), never longer than 22 s.
+private const val TARGET_SEC = 13.5
+private const val MEASURE_SEC = 20.0
+private const val WARMUP_SEC = 1.5
 
 /** Estimate from brightness and from red chroma; keep whichever signal is cleaner. */
 private fun bestEstimate(b: PpgBuffer): Ppg.Result {
@@ -236,7 +238,7 @@ internal fun CameraHrContent(container: AppContainer) {
                         Spacer(Modifier.height(10.dp))
                         Step(1, "Rest your hand on a table and sit still for a moment.")
                         Step(2, "Cover the back camera and the flash with your fingertip — gently, don't press hard.")
-                        Step(3, "Stay still while the flash is on — it usually takes 15–30 seconds.")
+                        Step(3, "Stay still while the flash is on — it takes about 15 seconds.")
                         Spacer(Modifier.height(14.dp))
                         AccentButton("Start measuring", { start() }, Modifier.fillMaxWidth(), icon = Duo.PlayArrow, height = 50.dp)
                     }
@@ -405,17 +407,20 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
             finger = buffer.finger
             val dur = buffer.duration()
             settling = dur < WARMUP_SEC
-            progress = ((dur - WARMUP_SEC) / MEASURE_SEC).toFloat().coerceIn(0f, 1f)
+            // the ring fills over the usual ~15 s (eases out near the end if the pulse needs longer), so the wait feels short
+            val x = ((dur - WARMUP_SEC) / TARGET_SEC).toFloat().coerceAtLeast(0f)
+            progress = if (x <= 0.85f) x else (0.85f + 0.13f * (1f - kotlin.math.exp(-(x - 0.85f) * 3f))).coerceAtMost(0.98f)
             if (dur >= WARMUP_SEC + MEASURE_SEC) {
+                progress = 1f
                 onDone(withContext(Dispatchers.Default) { bestEstimate(buffer) })
                 break
             }
-            // finish early once the pulse is clearly steady (usually 15–20 s)
-            if (dur >= WARMUP_SEC + 15.0 && tick % 20 == 0) {
+            // finish early once the pulse is clearly steady (usually 10–15 s)
+            if (dur >= WARMUP_SEC + 8.5 && tick % 10 == 0) {
                 val r = withContext(Dispatchers.Default) { bestEstimate(buffer) }
                 val b = r.bpm
-                if (b != null && r.quality >= 0.8) {
-                    if (early != null && kotlin.math.abs(early!! - b) <= 3) { onDone(r); break }
+                if (b != null && r.quality >= 0.75) {
+                    if (early != null && kotlin.math.abs(early!! - b) <= 3) { progress = 1f; delay(250); onDone(r); break }
                     early = b
                 } else early = null
             }
@@ -437,8 +442,8 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
                         }
                     }
                 }
-                if (tick % 20 == 0 && dur >= 10.0) {
-                    val (t2, v2) = buffer.snapshot(10.0)
+                if (tick % 10 == 0 && dur >= 4.5) {
+                    val (t2, v2) = buffer.snapshot(8.0)
                     liveBpm = withContext(Dispatchers.Default) { Ppg.liveBpm(t2, v2) }
                 }
             } else {
@@ -449,7 +454,8 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
 
     GlassCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            ProgressRing(progress, th.danger, size = 150.dp, stroke = 10.dp) {
+            val shown by androidx.compose.animation.core.animateFloatAsState(progress, androidx.compose.animation.core.tween(240, easing = androidx.compose.animation.core.LinearEasing), label = "ring")
+            ProgressRing(shown, th.danger, size = 150.dp, stroke = 10.dp) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Duo.Favorite, null, tint = th.danger, modifier = Modifier.size(44.dp).scale(beat.value))
                     Spacer(Modifier.height(4.dp))
@@ -474,7 +480,7 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
             cameraError -> "Couldn't open the camera. Close other camera apps and try again."
             !finger -> "Cover the back camera and flash with your fingertip, stay still"
             settling -> "Finding your pulse…"
-            progress < 1f -> "Measuring… stay still · ${(MEASURE_SEC * (1f - progress)).toInt()} s left"
+            progress < 1f -> "Measuring… stay still · about ${(TARGET_SEC * (1f - progress)).toInt().coerceAtLeast(1)} s"
             else -> "Working it out…"
         }
         Text(status, style = FitType.body, color = th.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())

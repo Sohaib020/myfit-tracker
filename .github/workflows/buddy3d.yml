@@ -1,7 +1,7 @@
 name: Champions (buddy packs + 3D)
 # Rigged champions (branch buddy3d-assets/rigged) + motion pack -> per champion/tier:
-#   clip pack        -> release champs-v2/<id>.zip   (R26: 720p 50 fps side-by-side-alpha MP4 per move + portrait/stand)
-#   real-time model  -> release champ3d-v2/<id>.glb  (every move of the tier)
+#   clip pack        -> release champs-v3/<id>.zip   (R26: 720p 50 fps side-by-side-alpha MP4 per move + portrait/stand)
+#   real-time model  -> release champ3d-v3/<id>.glb  (every move of the tier)
 # Each look renders in 3 parts (moves split round-robin) so no job runs for hours.
 #   portraits + contact sheet -> branch champs-out (portraits get bundled in the APK)
 on:
@@ -51,7 +51,7 @@ jobs:
           echo "part $P: $ONLY"
           export STAND=$([ "$P" = 0 ] && echo 1 || echo 0)
           for try in 1 2; do
-            python tools/buddy3d/render_champ.py assets/rigged/$ID.glb assets/motion.json.gz $T frames 50 8 "$ONLY" > log.txt 2>&1 || true
+            python tools/buddy3d/render_champ.py assets/rigged/$ID.glb assets/motion.json.gz $T frames 60 8 "$ONLY" > log.txt 2>&1 || true
             grep -q RENDER_DONE log.txt && break
           done
           grep -E "CLIP|RENDER_DONE|Error|Traceback" log.txt | head -30
@@ -80,13 +80,13 @@ jobs:
       - name: Releases
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |
-          gh release view champs-v2 >/dev/null 2>&1 || gh release create champs-v2 --title "Champion clip packs v2" --notes "720p 50 fps side-by-side-alpha MP4 per move (R26)" --prerelease
-          gh release view champ3d-v2 >/dev/null 2>&1 || gh release create champ3d-v2 --title "Champion 3D models v2" --notes "Real-time GLBs per champion/tier (R26 idle)" --prerelease
+          gh release view champs-v3 >/dev/null 2>&1 || gh release create champs-v3 --title "Champion clip packs v2" --notes "tight-cropped 60 fps side-by-side-alpha MP4 per move (R28)" --prerelease
+          gh release view champ3d-v3 >/dev/null 2>&1 || gh release create champ3d-v3 --title "Champion 3D models v2" --notes "Real-time GLBs per champion/tier (R26 idle)" --prerelease
           mkdir -p merged zips
           for d in parts/*/pack/*/; do id=$(basename $d); mkdir -p merged/$id; cp -n $d* merged/$id/; done
           for d in merged/*/; do id=$(basename $d); [ -f $d/idle.mp4 ] || { echo "::warning::$id has no idle"; continue; }; (cd $d && zip -q -r ../../zips/$id.zip .); done
-          for z in zips/*.zip; do gh release upload champs-v2 "$z" --clobber; done
-          for g in parts/*/*.glb; do gh release upload champ3d-v2 "$g" --clobber; done
+          for z in zips/*.zip; do gh release upload champs-v3 "$z" --clobber; done
+          for g in parts/*/*.glb; do gh release upload champ3d-v3 "$g" --clobber; done
       - name: Portraits + sheet branch
         run: |
           pip install -q pillow

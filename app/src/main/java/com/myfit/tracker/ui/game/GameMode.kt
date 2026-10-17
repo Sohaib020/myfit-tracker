@@ -25,11 +25,14 @@ object GameMode {
     val champ = MutableStateFlow(BuddyChar(Champion.BLAZE))
     /** Set to play the full-screen "Game Mode on" intro (hosted at the root). */
     val intro = MutableStateFlow(false)
+    /** Whether the one-time Home invitation has been answered (observable, so Home hides the card at once). */
+    val askedFlow = MutableStateFlow(false)
     @Volatile private var loaded = false
 
     fun load(c: Context) {
         if (loaded) return
         on.value = p(c).getBoolean("on", false)
+        askedFlow.value = p(c).getBoolean("asked", false)
         val saved = BuddyChar.parse(p(c).getString("champ", "blaze_street"))
         champ.value = saved.champion?.let { if (Champions.owns(c, it, saved.tier)) saved else null } ?: BuddyChar(Champion.BLAZE)
         loaded = true
@@ -38,12 +41,12 @@ object GameMode {
     fun setOn(c: Context, v: Boolean) {
         load(c)
         p(c).edit().putBoolean("on", v).putBoolean("asked", true).apply()
-        on.value = v
+        on.value = v; askedFlow.value = true
         if (v) intro.value = true
     }
 
     fun asked(c: Context) = p(c).getBoolean("asked", false)
-    fun markAsked(c: Context) = p(c).edit().putBoolean("asked", true).apply()
+    fun markAsked(c: Context) { p(c).edit().putBoolean("asked", true).apply(); askedFlow.value = true }
 
     fun choose(c: Context, b: BuddyChar) {
         p(c).edit().putString("champ", b.id).apply(); champ.value = b

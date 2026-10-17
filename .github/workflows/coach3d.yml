@@ -1,6 +1,6 @@
 name: Coach 3D clips
 # Owner's Meshy coaches (branch coach3d-assets) + tools/coach3d -> every clip (one job per coach x clip) ->
-# 720p/50 fps side-by-side-alpha MP4 packs (R26) -> release coach3d-v2 (<who>.zip) + preview branch coach3d-out.
+# 720p/50 fps side-by-side-alpha MP4 packs (R26) -> release coach3d-v3 (<who>.zip) + preview branch coach3d-out.
 on:
   push:
     branches: [ coach3d-run ]
@@ -48,7 +48,7 @@ jobs:
           pip install -q bpy==4.2.0 pillow numpy
           W=${{ matrix.who }}; C=${{ matrix.clip }}
           for try in 1 2; do
-            python tools/coach3d/render_clip.py assets/glb ual.glb $W $C out/$W/$C 50 8 > log.txt 2>&1 || true
+            python tools/coach3d/render_clip.py assets/glb ual.glb $W $C out/$W/$C 60 8 > log.txt 2>&1 || true
             grep -q RENDER_DONE log.txt && break
           done
           grep -E "RENDER_DONE|Error|Traceback|line [0-9]+" log.txt | head -20
@@ -70,7 +70,7 @@ jobs:
           mkdir -p merged pub rel && for d in parts/*/; do cp -rn "$d"* merged/; done
           for W in $(ls merged); do
             # partial re-render: start from the published pack so untouched clips are kept
-            mkdir -p pub/$W && curl -fsSL -o old.zip "https://github.com/${{ github.repository }}/releases/download/coach3d-v2/$W.zip" && unzip -oq old.zip -d pub/$W || true
+            mkdir -p pub/$W && curl -fsSL -o old.zip "https://github.com/${{ github.repository }}/releases/download/coach3d-v3/$W.zip" && unzip -oq old.zip -d pub/$W || true
             python tools/coach3d/pack.py merged/$W pub/$W | tail -20
             (cd pub/$W && zip -q -r ../../rel/$W.zip . -i '*.mp4' 'stand.webp')
             echo "::notice::$W pack $(du -k rel/$W.zip | cut -f1) KB"
@@ -94,11 +94,11 @@ jobs:
               for i, r in enumerate(rows): W.alpha_composite(r, (0, 270 * i))
               W.convert('RGB').save('pub/sheet.jpg', quality=88)
           PY
-      - name: Release coach3d-v2
+      - name: Release coach3d-v3
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |
-          gh release view coach3d-v2 >/dev/null 2>&1 || gh release create coach3d-v2 --title "Coach clip packs v2" --notes "720p 50 fps coach clips, side-by-side alpha MP4 (R26)" --prerelease
-          for z in rel/*.zip; do gh release upload coach3d-v2 "$z" --clobber; done
+          gh release view coach3d-v3 >/dev/null 2>&1 || gh release create coach3d-v3 --title "Coach clip packs v2" --notes "60 fps coach clips (R28), side-by-side alpha MP4 (R26)" --prerelease
+          for z in rel/*.zip; do gh release upload coach3d-v3 "$z" --clobber; done
       - name: Publish preview branch
         run: |
           cd pub && git init -q && git checkout -q -b coach3d-out && git add -A

@@ -56,7 +56,7 @@ import com.myfit.tracker.ui.theme.rememberTick
 import kotlin.math.roundToInt
 
 private fun iconFor(c: DashCard): ImageVector = when (c) {
-    DashCard.PIP -> Duo.AutoAwesome; DashCard.SNAP -> Duo.Camera; DashCard.WORKOUT -> Duo.FitnessCenter
+    DashCard.PIP -> Duo.AutoAwesome; DashCard.HERO -> Duo.EmojiEvents; DashCard.SNAP -> Duo.Camera; DashCard.WORKOUT -> Duo.FitnessCenter
     DashCard.RINGS -> Duo.TrackChanges; DashCard.NUTRITION -> Duo.ForkKnife; DashCard.BODY -> Duo.MonitorWeight
     DashCard.HYDRATION -> Duo.WaterDrop; DashCard.RECOVERY -> Duo.Bedtime; DashCard.STEPS -> Duo.DirectionsWalk
     DashCard.CHECKIN -> Duo.Mood; DashCard.GOALS -> Duo.Flag; DashCard.SOCIAL -> Duo.EmojiEvents
@@ -64,7 +64,7 @@ private fun iconFor(c: DashCard): ImageVector = when (c) {
 }
 
 private fun colorFor(c: DashCard, th: FitTheme): Color = when (c) {
-    DashCard.PIP -> th.accentBright; DashCard.SNAP -> th.accent; DashCard.WORKOUT -> th.accent
+    DashCard.PIP -> th.accentBright; DashCard.HERO -> th.warning; DashCard.SNAP -> th.accent; DashCard.WORKOUT -> th.accent
     DashCard.RINGS -> th.success; DashCard.NUTRITION -> th.protein; DashCard.BODY -> th.fat
     DashCard.HYDRATION -> th.water; DashCard.RECOVERY -> th.sleep; DashCard.STEPS -> th.steps
     DashCard.CHECKIN -> th.warning; DashCard.GOALS -> th.carbs; DashCard.SOCIAL -> th.warning

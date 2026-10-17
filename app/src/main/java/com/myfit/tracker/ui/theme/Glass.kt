@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -327,5 +329,33 @@ object OpenOrigin {
         val r = rect.takeIf { android.os.SystemClock.uptimeMillis() - at < 700 }
         rect = null
         return r
+    }
+}
+
+/**
+ * R28: a dialog that really is glass — the window behind it is blurred by the system (Android 12+, when the phone
+ * allows cross-window blur), dimmed a little, and the card itself is a translucent tinted pane with a light edge.
+ * Older phones get the same card on a plain dim.
+ */
+@Composable
+fun GlassDialog(onDismiss: () -> Unit, tint: Color, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        val view = androidx.compose.ui.platform.LocalView.current
+        androidx.compose.runtime.SideEffect {
+            val w = (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window ?: return@SideEffect
+            w.setDimAmount(0.35f)
+            if (Build.VERSION.SDK_INT >= 31 && !lowFx) {
+                w.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                w.attributes = w.attributes.apply { blurBehindRadius = 64 }
+            }
+        }
+        androidx.compose.foundation.layout.Column(
+            Modifier.clip(RoundedCornerShape(30.dp))
+                .background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.55f), Color(0xB315171F))))
+                .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f))), RoundedCornerShape(30.dp))
+                .padding(20.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+            content = content,
+        )
     }
 }

@@ -319,6 +319,40 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
     private fun idx(n: String) = names.indexOf(n)
 
     private fun bodyBounds(e: com.google.android.filament.Engine, a: com.google.android.filament.gltfio.FilamentAsset): Pair<FloatArray, FloatArray> {
+        jointBounds(e, a)?.let { return it }
+        return boxBounds(e, a)
+    }
+
+    /**
+     * R28: body size from the skeleton at rest — feet to head joint, extended to the crown — so every model (whatever
+     * its mesh/box bookkeeping) is measured the same way. The renderable boxes of skinned meshes weren't reliable: a
+     * box from the joints alone made the champion page overflow its card.
+     */
+    private fun jointBounds(e: com.google.android.filament.Engine, a: com.google.android.filament.gltfio.FilamentAsset): Pair<FloatArray, FloatArray>? = runCatching {
+        val inst = a.instance
+        if (inst.skinCount < 1) return@runCatching null
+        val tm = e.transformManager
+        val joints = inst.getJointsAt(0)
+        val w = FloatArray(16)
+        var minY = Float.MAX_VALUE; var minX = Float.MAX_VALUE; var maxX = -Float.MAX_VALUE; var minZ = Float.MAX_VALUE; var maxZ = -Float.MAX_VALUE
+        var headY = Float.NaN; var hipX = Float.NaN; var hipZ = Float.NaN
+        for (j in joints) {
+            val ti = tm.getInstance(j); if (ti == 0) continue
+            tm.getWorldTransform(ti, w)
+            val x = w[12]; val y = w[13]; val z = w[14]
+            minY = minOf(minY, y); minX = minOf(minX, x); maxX = maxOf(maxX, x); minZ = minOf(minZ, z); maxZ = maxOf(maxZ, z)
+            when (a.getName(j)) { "Head" -> headY = y; "Hips" -> { hipX = x; hipZ = z } }
+        }
+        if (headY.isNaN() || minY == Float.MAX_VALUE || headY <= minY) return@runCatching null
+        val floor = minY - (headY - minY) * 0.03f          // toe/ankle joints sit a little above the floor
+        val top = floor + (headY - floor) / 0.865f          // head joint (skull base) is ~86% of standing height
+        val cx = if (hipX.isNaN()) (minX + maxX) / 2 else hipX
+        val cz = if (hipZ.isNaN()) (minZ + maxZ) / 2 else hipZ
+        val half = (top - floor) * 0.2f
+        floatArrayOf(cx - half, floor, cz - half) to floatArrayOf(cx + half, top, cz + half)
+    }.getOrNull()
+
+    private fun boxBounds(e: com.google.android.filament.Engine, a: com.google.android.filament.gltfio.FilamentAsset): Pair<FloatArray, FloatArray> {
         val rm = e.renderableManager; val tm = e.transformManager
         val lo = floatArrayOf(Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE); val hi = floatArrayOf(-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE)
         val box = com.google.android.filament.Box(); val w = FloatArray(16); val p = FloatArray(4); val q = FloatArray(4)

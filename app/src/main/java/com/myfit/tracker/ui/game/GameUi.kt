@@ -54,6 +54,46 @@ internal fun rememberStats(container: AppContainer): ChampStats {
 
 // ------------------------------------------------------------------ Home hero card
 
+private fun energyOf(steps: Int?, stepTarget: Double?, activeMin: Int?, waterMl: Double?, waterTarget: Double?, workedOut: Boolean): Double {
+    val parts = listOfNotNull(
+        stepTarget?.takeIf { it > 0 }?.let { ((steps ?: 0) / it).coerceIn(0.0, 1.0) },
+        ((activeMin ?: 0) / 30.0).coerceIn(0.0, 1.0),
+        waterTarget?.takeIf { it > 0 }?.let { ((waterMl ?: 0.0) / it).coerceIn(0.0, 1.0) },
+        if (workedOut) 1.0 else 0.0,
+    )
+    return if (parts.isEmpty()) 0.0 else parts.average()
+}
+
+/** R28 small Home tile: your champion (live), rating, and a ring for today's energy. Tap opens the champion page. */
+@Composable
+fun HeroSmall(container: AppContainer, steps: Int?, stepTarget: Double?, activeMin: Int?, waterMl: Double?, waterTarget: Double?, workedOut: Boolean) {
+    val th = LocalFitTheme.current
+    val nav = LocalNav.current
+    val ctx = LocalContext.current
+    LaunchedEffect(Unit) { GameMode.load(ctx) }
+    val b by GameMode.champ.collectAsState()
+    val ch = b.champion ?: Champion.BLAZE
+    val stats = rememberStats(container)
+    val energy = energyOf(steps, stepTarget, activeMin, waterMl, waterTarget, workedOut).toFloat()
+    val ring by androidx.compose.animation.core.animateFloatAsState(energy, tween(900), label = "energy")
+    Glass(Modifier.fillMaxSize(), onClick = { nav.push(Overlay.Champion) }, tint = ch.color.copy(alpha = 0.16f)) {
+        ChampStage(b, if (energy >= 0.999f) "celebrate" else "idle", Modifier.fillMaxSize().padding(top = 26.dp, bottom = 4.dp))
+        Column(Modifier.align(Alignment.TopStart).padding(12.dp)) {
+            Text(ch.tag, style = FitType.label.copy(fontWeight = FontWeight.Black), color = th.text)
+            Caption("Rating ${stats.rating}", color = ch.color)
+        }
+        Box(Modifier.align(Alignment.BottomEnd).padding(10.dp).size(46.dp), contentAlignment = Alignment.Center) {
+            androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                val sw = 5.dp.toPx()
+                drawArc(th.text.copy(alpha = 0.14f), 0f, 360f, false, style = androidx.compose.ui.graphics.drawscope.Stroke(sw))
+                drawArc(Brush.sweepGradient(listOf(ch.color.copy(alpha = 0.6f), ch.color, ch.color.copy(alpha = 0.6f))), -90f, 360f * ring, false,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(sw, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+            }
+            Text("${(energy * 100).toInt()}%", style = FitType.caption.copy(fontWeight = FontWeight.Bold), color = th.text)
+        }
+    }
+}
+
 /**
  * Home hero card (Game Mode): your champion on a stage, today's energy bar (steps, active minutes, water, a
  * workout) and the four stats. The champion reacts to your day: celebrates when the bar is full, trains while you're

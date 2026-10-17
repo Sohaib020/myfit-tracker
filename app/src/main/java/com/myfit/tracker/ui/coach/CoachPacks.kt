@@ -14,7 +14,7 @@ import java.util.zip.ZipInputStream
  * that coach appears — the APK only carries each coach's portrait and a standing still.
  */
 object CoachPacks {
-    private const val BASE = "https://github.com/Sohaib020/myfit-tracker/releases/download/coach3d-v2"
+    private const val BASE = "https://github.com/Sohaib020/myfit-tracker/releases/download/coach3d-v3"
 
     /** Coach look id (Coach.Look / NLook) -> pack name. */
     fun pack(lookId: String) = when (lookId) { "m" -> "trainer_m"; "f" -> "trainer_f"; "nm", "nf" -> "nutri_f"; else -> "trainer_m" }
@@ -25,7 +25,7 @@ object CoachPacks {
 
     private fun dir(c: Context, p: String) = File(c.filesDir, "coach3d/$p")
     /** Bump when the release packs are re-rendered so phones replace their old copy (v3 = R22 Mixamo mocap). */
-    private const val VER_DEFAULT = "5"            // R26: new high-res coaches, 720p 50 fps video clips (release coach3d-v2)
+    private const val VER_DEFAULT = "6"            // R28: 60 fps video clips (release coach3d-v3)
     /** Per-pack bumps, so re-rendering one coach doesn't make every coach re-download. */
     private val VER = mapOf<String, String>()
     private fun ver(p: String) = VER[p] ?: VER_DEFAULT

@@ -40,6 +40,39 @@ if os.environ.get('STAND', '1') == '1':
     motion.apply(arm, pack, 'idle'); s.frame_set(0)
     studio.render(os.path.join(out, 'stand.png'))
 
+# R28 tight framing: the union of where the body goes in EVERY clip of this tier (same in every render part, so all
+# clips of a look share one crop and the character never jumps in size), rendered with a crop border at a
+# resolution where the body is ~TARGET px tall. Square frames left lots of empty space and looked tiny in cards.
+def envelope():
+    from bpy_extras.object_utils import world_to_camera_view
+    cam = s.camera; lo = [1e9, 1e9]; hi = [-1e9, -1e9]
+    for name in motion.moves_for(tier):
+        if name not in motion.CLIP_SET: continue
+        act, n, loop = motion.apply(arm, pack, name)
+        for k in range(11):
+            s.frame_set(int(n * k / 10))
+            dg = bpy.context.evaluated_depsgraph_get()
+            ev = body.evaluated_get(dg); me = ev.to_mesh(); mw = ev.matrix_world
+            for i in range(0, len(me.vertices), 23):
+                c = world_to_camera_view(s, cam, mw @ me.vertices[i].co)
+                lo[0] = min(lo[0], c.x); lo[1] = min(lo[1], c.y); hi[0] = max(hi[0], c.x); hi[1] = max(hi[1], c.y)
+            ev.to_mesh_clear()
+    return lo, hi
+
+TARGET = int(os.environ.get('CHAMP_PX', '960'))
+for _ in range(4):            # back the camera off until no move leaves the frame (jumps, arms overhead, horns)
+    lo, hi = envelope()
+    if min(lo) > 0.01 and max(hi) < 0.99: break
+    FULL['dist'] *= 1.2; studio.camera(**FULL)
+mx = (hi[0] - lo[0]) * 0.04; my = (hi[1] - lo[1]) * 0.03
+lo = [max(0.0, lo[0] - mx), max(0.0, lo[1] - my * 0.5)]; hi = [min(1.0, hi[0] + mx), min(1.0, hi[1] + my)]
+R = max(720, min(1800, int(round(TARGET / max(0.2, hi[1] - lo[1]) / 2)) * 2))
+s.render.resolution_x = R; s.render.resolution_y = R
+s.render.use_border = True; s.render.use_crop_to_border = True
+s.render.border_min_x, s.render.border_max_x = lo[0], hi[0]
+s.render.border_min_y, s.render.border_max_y = lo[1], hi[1]
+print('CROP', R, [round(v, 3) for v in lo + hi], flush=True)
+
 for name in motion.moves_for(tier):
     if name not in (only or motion.CLIP_SET): continue
     act, n, loop = motion.apply(arm, pack, name)

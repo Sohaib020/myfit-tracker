@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.combinedClickable
 import com.myfit.tracker.AppContainer
 import com.myfit.tracker.domain.Clock
 import com.myfit.tracker.domain.Fmt
@@ -120,7 +121,7 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                                 StarPill(total)
                             }
                             Spacer(Modifier.height(10.dp))
-                            LevelHero(lvl, partner) { tab = 3 }
+                            ArenaHeroTiles(lvl, partner, { tab = 3 }, { tab = 4 }) { s, l, onLong, onClick -> LevelHero(l, partner, s, onLong, onClick) }
                         }
                     }
                     item(key = "tabs") {
@@ -179,7 +180,8 @@ private fun mix(a: Color, b: Color, t: Float) = Color(a.red + (b.red - a.red) * 
 
 /** Tier card: slowly flowing aurora light in the partner's colours, fine grain and a periodic glass sheen. */
 @Composable
-private fun LevelHero(l: Level, partner: Mascot, onClick: () -> Unit) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun LevelHero(l: Level, partner: Mascot, small: Boolean = false, onLong: () -> Unit = {}, onClick: () -> Unit) {
     val inf = rememberInfiniteTransition(label = "hero")
     val t by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(22_000, easing = LinearEasing)), label = "aurora")
     val sheen by inf.animateFloat(-0.6f, 1.6f, infiniteRepeatable(tween(7_000, easing = LinearEasing)), label = "sheen")
@@ -188,8 +190,10 @@ private fun LevelHero(l: Level, partner: Mascot, onClick: () -> Unit) {
     val a1 = partner.accent; val a2 = partner.color
     val deep = mix(a1, Color(0xFF07080C), 0.78f)
     val hueB = mix(a1, Color(0xFF6A5CFF), 0.45f)
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(deep)
-        .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(28.dp)).clickableNoRipple(onClick)) {
+    Box(Modifier.fillMaxWidth().then(if (small) Modifier.fillMaxHeight() else Modifier).clip(RoundedCornerShape(28.dp)).background(deep)
+        .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(28.dp))
+        .combinedClickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null,
+            onClick = onClick, onLongClick = onLong)) {
         Canvas(Modifier.matchParentSize()) {
             val w = size.width; val h = size.height; val tau = (2 * Math.PI).toFloat()
             fun blob(cx: Float, cy: Float, r: Float, c: Color, alpha: Float) =
@@ -204,6 +208,24 @@ private fun LevelHero(l: Level, partner: Mascot, onClick: () -> Unit) {
             // diagonal glass sheen sweeping across
             val sx = sheen * w
             drawRect(Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.10f), Color.Transparent), Offset(sx - w * 0.25f, 0f), Offset(sx + w * 0.05f, h)))
+        }
+        if (small) {
+            // R28 small tile (half width, next to the champion tile)
+            Column(Modifier.fillMaxSize().padding(12.dp)) {
+                Text(l.tier.label.uppercase(), style = FitType.overline, color = Color.White.copy(alpha = 0.8f), maxLines = 1)
+                Text("Level ${l.n}", style = FitType.metric.copy(fontSize = 24.sp, lineHeight = 26.sp), color = Color.White, maxLines = 1)
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(84.dp).clip(CircleShape).background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent))), contentAlignment = Alignment.Center) {
+                        CastImage(partner, 80.dp)
+                    }
+                }
+                Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.16f))) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(frac.coerceIn(0.03f, 1f)).clip(CircleShape).background(Brush.horizontalGradient(listOf(Color(0xFFFFE9A3), GOLD))))
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(if (l.n >= MAX_LEVEL) "Max level" else "${l.into}/${l.span} ⭐", style = FitType.caption, color = Color.White, maxLines = 1)
+            }
+            return@Box
         }
         Row(Modifier.padding(start = 12.dp, end = 18.dp, top = 14.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(96.dp).clip(CircleShape).background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent))), contentAlignment = Alignment.Center) {
