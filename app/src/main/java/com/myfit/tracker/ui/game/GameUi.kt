@@ -46,7 +46,7 @@ import kotlinx.coroutines.delay
 object StatsCache { val value = kotlinx.coroutines.flow.MutableStateFlow(ChampStats.EMPTY) }
 
 @Composable
-private fun rememberStats(container: AppContainer): ChampStats {
+internal fun rememberStats(container: AppContainer): ChampStats {
     val s by StatsCache.value.collectAsState()
     LaunchedEffect(Unit) { StatsCache.value.value = ChampStats.compute(container) }
     return s

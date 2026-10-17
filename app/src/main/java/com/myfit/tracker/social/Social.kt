@@ -42,7 +42,12 @@ data class FriendRequest(val uid: String, val name: String, val username: String
 data class ArenaProfile(
     val uid: String, val level: Int, val stars: Int, val mascot: String?, val rewards: List<String>, val journeys: List<String>,
     val weekSteps: Long, val weekActiveMin: Long, val weekWorkouts: Int,
+    /** R26 Game Mode: their champion look id and its stats (Power, Stamina, Agility, Focus), if they play. */
+    val champ: String? = null, val champStats: List<Int> = emptyList(),
 )
+/** R26: a champion battle someone fought against your champion (you see the result in the Arena). */
+data class BattleRecord(val id: String, val attacker: String, val attackerName: String, val attackerChamp: String, val defenderChamp: String,
+                        val attackerWon: Boolean, val score: String, val at: Long)
 data class BoardRow(val uid: String, val name: String, val color: Long, val value: Double, val me: Boolean, val level: Int? = null, val mascot: String? = null,
     val avatar: String = "", val gphoto: String? = null)
 data class Challenge(
@@ -315,7 +320,29 @@ class Social(private val c: AppContainer) {
         @Suppress("UNCHECKED_CAST")
         fun strs(k: String) = (d.get(k) as? List<Any?>)?.filterIsInstance<String>().orEmpty()
         return ArenaProfile(uid, d.getLong("level")?.toInt() ?: 1, d.getLong("stars")?.toInt() ?: 0, d.getString("mascot"), strs("rewards"), strs("journeys"),
-            d.getLong("weekSteps") ?: 0L, d.getLong("weekActiveMin") ?: 0L, d.getLong("weekWorkouts")?.toInt() ?: 0)
+            d.getLong("weekSteps") ?: 0L, d.getLong("weekActiveMin") ?: 0L, d.getLong("weekWorkouts")?.toInt() ?: 0,
+            d.getString("champ"), (d.get("champStats") as? List<*>)?.mapNotNull { (it as? Number)?.toInt() }.orEmpty())
+    }
+
+    // ------------------------------------------------------------------ R26 champion battles
+
+    /** Records a battle you fought against a friend's champion (they see it in their Arena). */
+    suspend fun postBattle(defender: String, attackerChamp: String, defenderChamp: String, attackerWon: Boolean, score: String) {
+        val u = auth.currentUser ?: return
+        val name = profile(u.uid)?.name ?: "Athlete"
+        db.collection("battles").add(mapOf(
+            "attacker" to u.uid, "defender" to defender, "aName" to name.take(24), "aChamp" to attackerChamp.take(24), "dChamp" to defenderChamp.take(24),
+            "aWon" to attackerWon, "score" to score.take(5), "at" to FieldValue.serverTimestamp(),
+        )).await()
+    }
+
+    /** Battles friends fought against your champion, newest first. */
+    suspend fun battlesAgainstMe(limit: Long = 15): List<BattleRecord> {
+        val me = auth.currentUser?.uid ?: return emptyList()
+        return db.collection("battles").whereEqualTo("defender", me).limit(40).get().await().documents.map { d ->
+            BattleRecord(d.id, d.getString("attacker") ?: "", d.getString("aName") ?: "A friend", d.getString("aChamp") ?: "", d.getString("dChamp") ?: "",
+                d.getBoolean("aWon") ?: false, d.getString("score") ?: "", d.getTimestamp("at")?.toDate()?.time ?: 0L)
+        }.sortedByDescending { it.at }.take(limit.toInt())
     }
 
     /**
@@ -542,7 +569,7 @@ class Social(private val c: AppContainer) {
                 "journeys" to com.myfit.tracker.ui.arena.ArenaPrefs.finished(ctx).take(20).toList(),
                 "weekSteps" to week.sumOf { it.steps }, "weekActiveMin" to week.sumOf { it.activeMin }, "weekWorkouts" to workouts.coerceIn(0, 200),
                 "updatedAt" to FieldValue.serverTimestamp(),
-            ) + (MyAvatar.photoForUpload(ctx)?.let { mapOf("photo" to it) } ?: emptyMap())).await()
+            ) + (MyAvatar.photoForUpload(ctx)?.let { mapOf("photo" to it) } ?: emptyMap()) + champCard()).await()
         }
         runCatching { uploadAvatar() }
         // activity feed: a few milestones friends can see (idempotent ids — re-syncing never duplicates)
@@ -558,6 +585,15 @@ class Social(private val c: AppContainer) {
         up.edit().putString("sig", sig).putLong("sigAt", now).apply()
         lastSync.value = "Synced ${java.time.LocalTime.now().withNano(0).withSecond(0)}"
         return lastSync.value
+    }
+
+    /** R26: with Game Mode on, friends can battle your champion — publish its look and real 7-day stats. */
+    private suspend fun champCard(): Map<String, Any> {
+        val gm = com.myfit.tracker.ui.game.GameMode
+        gm.load(ctx)
+        if (!gm.on.value) return emptyMap()
+        val st = runCatching { com.myfit.tracker.ui.game.ChampStats.compute(c) }.getOrNull() ?: return emptyMap()
+        return mapOf("champ" to gm.champ.value.id.take(24), "champStats" to listOf(st.power, st.stamina, st.agility, st.focus).map { it.coerceIn(0, 100) })
     }
 
     // ---------------------------------------------------------------- activity feed
