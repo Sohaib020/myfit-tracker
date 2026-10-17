@@ -90,18 +90,29 @@ private class MediaPipeTracker(ctx: Context, val model: PoseModels.Model) {
 
     /** Head yaw / pitch / roll (degrees) from nose (0), eyes (2, 5) and ears (7, 8), smoothed. */
     private fun head(p: FloatArray): FormGuide.Head? {
-        fun ok(i: Int) = p[i * 3 + 2] > 0.5f
-        fun x(i: Int) = p[i * 3]; fun y(i: Int) = p[i * 3 + 1]
-        if (!ok(0) || !ok(2) || !ok(5)) { lastHead = null; return null }
-        val eyeD = kotlin.math.hypot(x(2) - x(5), y(2) - y(5)).coerceAtLeast(1f)
-        val yaw = ((x(0) - (x(2) + x(5)) / 2) / eyeD) * 70f
-        val earY = when { ok(7) && ok(8) -> (y(7) + y(8)) / 2; ok(7) -> y(7); ok(8) -> y(8); else -> (y(2) + y(5)) / 2 + 0.15f * eyeD }
-        val pitch = ((earY - y(0)) / eyeD + 0.3f) * 60f
-        val roll = Math.toDegrees(atan2((y(2) - y(5)).toDouble(), (x(2) - x(5)).toDouble())).toFloat()
+        val nose = 0; val le = 2; val re = 5; val lear = 7; val rear = 8
+        val vis = { i: Int -> p[i * 3 + 2] > 0.5f }
+        val px = { i: Int -> p[i * 3] }
+        val py = { i: Int -> p[i * 3 + 1] }
+        if (!vis(nose) || !vis(le) || !vis(re)) {
+            lastHead = null
+            return null
+        }
+        val eyeD = kotlin.math.hypot(px(le) - px(re), py(le) - py(re)).coerceAtLeast(1f)
+        val yaw = ((px(nose) - (px(le) + px(re)) / 2f) / eyeD) * 70f
+        val earY = when {
+            vis(lear) && vis(rear) -> (py(lear) + py(rear)) / 2f
+            vis(lear) -> py(lear)
+            vis(rear) -> py(rear)
+            else -> (py(le) + py(re)) / 2f + 0.15f * eyeD
+        }
+        val pitch = ((earY - py(nose)) / eyeD + 0.3f) * 60f
+        val roll = Math.toDegrees(atan2((py(le) - py(re)).toDouble(), (px(le) - px(re)).toDouble())).toFloat()
         val prev = lastHead
-        return (if (prev == null) FormGuide.Head(yaw, pitch, roll)
-        else FormGuide.Head(prev.yaw + 0.35f * (yaw - prev.yaw), prev.pitch + 0.35f * (pitch - prev.pitch), prev.roll + 0.35f * (roll - prev.roll)))
-            .also { lastHead = it }
+        val next = if (prev == null) FormGuide.Head(yaw, pitch, roll)
+        else FormGuide.Head(prev.yaw + 0.35f * (yaw - prev.yaw), prev.pitch + 0.35f * (pitch - prev.pitch), prev.roll + 0.35f * (roll - prev.roll))
+        lastHead = next
+        return next
     }
 
     fun close() { runCatching { pose.close() } }
