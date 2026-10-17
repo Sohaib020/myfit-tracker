@@ -53,101 +53,90 @@ private val BONES = listOf(
     0 to 2, 0 to 5, 2 to 7, 5 to 8, 9 to 10,
 )
 
-/** MediaPipe face-oval landmark indices (forehead → right → chin → left), drawn as the head outline. */
-private val FACE_OVAL = intArrayOf(10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109)
-
-/** One analysed frame: 33 body points (x, y, visibility) in upright image pixels, optional face outline + head pose. */
-private class Frame(val pts: FloatArray, val w: Int, val h: Int, val face: FloatArray?, val head: FormGuide.Head?)
+/** One analysed frame: 33 body points (x, y, visibility) in upright image pixels + head direction from body points. */
+private class Frame(val pts: FloatArray, val w: Int, val h: Int, val head: FormGuide.Head?)
 
 /**
- * The body tracker. R17: MediaPipe Pose Landmarker **heavy** (33 3-D body points incl. hands, feet, eyes, ears and mouth)
- * plus the Face Landmarker for the head — its outline and yaw / pitch / roll — every few frames.
- * GPU first, CPU if the GPU path fails. R20: models are downloaded once on first use ([PoseModels]); the ML Kit
- * fallback was removed (≈ 30–40 MB) — if MediaPipe can't start, the camera says so instead.
+ * R27 body tracker: MediaPipe Pose Landmarker **Full** (strong phones) or **Lite** (others), bundled in the APK, on the
+ * CPU (XNNPACK) so it never competes with the screen for the GPU — the R17 Heavy + Face models on the GPU could
+ * overload it badly enough to restart the phone's UI. Head direction now comes from the body's own face points
+ * (nose, eyes, ears), so no second model runs. Frames are analysed in place (reused bitmaps, no per-frame copies).
  */
-private interface Tracker {
-    val label: String
-    fun analyse(bmp: Bitmap, tsMs: Long, wantFace: Boolean): Frame?
-    fun close()
-}
-
-private class MediaPipeTracker(ctx: Context) : Tracker {
-    override val label = "MediaPipe heavy"
-    private val pose: com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
-    private val face: com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker?
+private class MediaPipeTracker(ctx: Context, val model: PoseModels.Model) {
+    val label = "MediaPipe ${model.label}"
+    private val pose = com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker.createFromOptions(ctx,
+        com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker.PoseLandmarkerOptions.builder()
+            .setBaseOptions(com.google.mediapipe.tasks.core.BaseOptions.builder().setModelAssetPath(model.asset)
+                .setDelegate(com.google.mediapipe.tasks.core.Delegate.CPU).build())
+            .setRunningMode(com.google.mediapipe.tasks.vision.core.RunningMode.VIDEO)
+            .setNumPoses(1).setMinPoseDetectionConfidence(0.5f).setMinPosePresenceConfidence(0.5f).setMinTrackingConfidence(0.6f)
+            .build())
     private var lastHead: FormGuide.Head? = null
-    private var lastFace: FloatArray? = null
 
-    init {
-        fun base(name: String, gpu: Boolean) = com.google.mediapipe.tasks.core.BaseOptions.builder()
-            .setModelAssetBuffer(PoseModels.buffer(ctx, name) ?: error("model $name missing"))
-            .setDelegate(if (gpu) com.google.mediapipe.tasks.core.Delegate.GPU else com.google.mediapipe.tasks.core.Delegate.CPU).build()
-        fun makePose(gpu: Boolean) = com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker.createFromOptions(ctx,
-            com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker.PoseLandmarkerOptions.builder()
-                .setBaseOptions(base(POSE_MODEL, gpu))
-                .setRunningMode(com.google.mediapipe.tasks.vision.core.RunningMode.VIDEO)
-                .setNumPoses(1).setMinPoseDetectionConfidence(0.5f).setMinPosePresenceConfidence(0.5f).setMinTrackingConfidence(0.6f)
-                .build())
-        pose = runCatching { makePose(true) }.getOrElse { makePose(false) }
-        fun makeFace(gpu: Boolean) = com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker.createFromOptions(ctx,
-            com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker.FaceLandmarkerOptions.builder()
-                .setBaseOptions(base(FACE_MODEL, gpu))
-                .setRunningMode(com.google.mediapipe.tasks.vision.core.RunningMode.VIDEO)
-                .setNumFaces(1).setMinFaceDetectionConfidence(0.5f).setMinTrackingConfidence(0.5f)
-                .build())
-        face = runCatching { makeFace(true) }.recoverCatching { makeFace(false) }.getOrNull()
-    }
-
-    override fun analyse(bmp: Bitmap, tsMs: Long, wantFace: Boolean): Frame? {
-        val img = com.google.mediapipe.framework.image.BitmapImageBuilder(bmp).build()
-        val r = pose.detectForVideo(img, tsMs)
+    fun analyse(bmp: Bitmap, w: Int, h: Int, tsMs: Long): Frame? {
+        val r = pose.detectForVideo(com.google.mediapipe.framework.image.BitmapImageBuilder(bmp).build(), tsMs)
         val lm = r.landmarks().firstOrNull()
-        if (lm == null || lm.size < 33) return null
-        val w = bmp.width; val h = bmp.height
+        if (lm == null || lm.size < 33) { lastHead = null; return null }
+        val bw = bmp.width; val bh = bmp.height
         val pts = FloatArray(33 * 3)
         for (i in 0 until 33) {
             val l = lm[i]
-            pts[i * 3] = l.x() * w; pts[i * 3 + 1] = l.y() * h
-            pts[i * 3 + 2] = l.visibility().orElse(0f).let { v -> if (l.x() in -0.05f..1.05f && l.y() in -0.05f..1.05f) v else 0f }
+            val x = l.x() * bw; val y = l.y() * bh
+            pts[i * 3] = x; pts[i * 3 + 1] = y
+            pts[i * 3 + 2] = l.visibility().orElse(0f).let { v -> if (x in -0.05f * w..1.05f * w && y in -0.05f * h..1.05f * h) v else 0f }
         }
-        if (wantFace && face != null) {
-            val fr = runCatching { face?.detectForVideo(img, tsMs) }.getOrNull()
-            val f = fr?.faceLandmarks()?.firstOrNull()
-            if (f != null && f.size >= 468) {
-                fun px(i: Int) = f[i].x() * w
-                fun py(i: Int) = f[i].y() * h
-                lastFace = FloatArray(FACE_OVAL.size * 2).also { a -> FACE_OVAL.forEachIndexed { k, i -> a[k * 2] = px(i); a[k * 2 + 1] = py(i) } }
-                // head pose from stable face points: eye corners (33, 263), nose tip (1), chin (152), forehead (10)
-                val ex = (px(33) + px(263)) / 2; val ey = (py(33) + py(263)) / 2
-                val eyeD = kotlin.math.hypot(px(263) - px(33), py(263) - py(33)).coerceAtLeast(1f)
-                val yaw = ((px(1) - ex) / eyeD) * 95f
-                val faceH = (py(152) - py(10)).coerceAtLeast(1f)
-                val pitch = (0.52f - (py(1) - py(10)) / faceH) * 160f
-                val roll = Math.toDegrees(atan2((py(263) - py(33)).toDouble(), (px(263) - px(33)).toDouble())).toFloat()
-                val prev = lastHead
-                lastHead = if (prev == null) FormGuide.Head(yaw, pitch, roll)
-                else FormGuide.Head(prev.yaw + 0.5f * (yaw - prev.yaw), prev.pitch + 0.5f * (pitch - prev.pitch), prev.roll + 0.5f * (roll - prev.roll))
-            } else if (f == null) { lastFace = null; lastHead = null }
-        }
-        return Frame(pts, w, h, lastFace, lastHead)
+        return Frame(pts, w, h, head(pts))
     }
 
-    override fun close() { runCatching { pose.close() }; runCatching { face?.close() } }
-
-    companion object {
-        const val POSE_MODEL = PoseModels.POSE
-        const val FACE_MODEL = PoseModels.FACE
-        fun available(ctx: Context) = PoseModels.installed(ctx)
+    /** Head yaw / pitch / roll (degrees) from nose (0), eyes (2, 5) and ears (7, 8), smoothed. */
+    private fun head(p: FloatArray): FormGuide.Head? {
+        fun ok(i: Int) = p[i * 3 + 2] > 0.5f
+        fun x(i: Int) = p[i * 3]; fun y(i: Int) = p[i * 3 + 1]
+        if (!ok(0) || !ok(2) || !ok(5)) { lastHead = null; return null }
+        val eyeD = kotlin.math.hypot(x(2) - x(5), y(2) - y(5)).coerceAtLeast(1f)
+        val yaw = ((x(0) - (x(2) + x(5)) / 2) / eyeD) * 70f
+        val earY = when { ok(7) && ok(8) -> (y(7) + y(8)) / 2; ok(7) -> y(7); ok(8) -> y(8); else -> (y(2) + y(5)) / 2 + 0.15f * eyeD }
+        val pitch = ((earY - y(0)) / eyeD + 0.3f) * 60f
+        val roll = Math.toDegrees(atan2((y(2) - y(5)).toDouble(), (x(2) - x(5)).toDouble())).toFloat()
+        val prev = lastHead
+        return (if (prev == null) FormGuide.Head(yaw, pitch, roll)
+        else FormGuide.Head(prev.yaw + 0.35f * (yaw - prev.yaw), prev.pitch + 0.35f * (pitch - prev.pitch), prev.roll + 0.35f * (roll - prev.roll)))
+            .also { lastHead = it }
     }
+
+    fun close() { runCatching { pose.close() } }
 }
 
-/** CameraX frame → upright bitmap (front-camera frames stay un-mirrored; the overlay mirrors when drawing). */
-private fun ImageProxy.upright(): Bitmap {
-    val b = toBitmap()
-    val rot = imageInfo.rotationDegrees
-    if (rot == 0) return b
-    val m = Matrix().apply { postRotate(rot.toFloat()) }
-    return Bitmap.createBitmap(b, 0, 0, b.width, b.height, m, true).also { if (it !== b) b.recycle() }
+/** Reused buffers: the camera's RGBA frame and its upright copy (rotated with a matrix, no new bitmaps per frame). */
+private class FrameBuffers {
+    private var src: Bitmap? = null
+    private var up: Bitmap? = null
+    private var canvas: android.graphics.Canvas? = null
+    private val m = Matrix()
+    private val paint = android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG)
+
+    /** Returns the upright bitmap plus the real (unpadded) upright width/height. */
+    fun upright(proxy: ImageProxy): Triple<Bitmap, Int, Int> {
+        val plane = proxy.planes[0]
+        val rowPx = plane.rowStride / plane.pixelStride
+        val w = proxy.width; val h = proxy.height
+        val s = src?.takeIf { it.width == rowPx && it.height == h } ?: Bitmap.createBitmap(rowPx, h, Bitmap.Config.ARGB_8888).also { src?.recycle(); src = it }
+        plane.buffer.rewind()
+        if (plane.buffer.remaining() >= plane.rowStride * h) s.copyPixelsFromBuffer(plane.buffer)
+        else {   // a few devices trim the last row's padding: fall back to CameraX's own conversion (rare)
+            val b = proxy.toBitmap(); android.graphics.Canvas(s).drawBitmap(b, 0f, 0f, null); b.recycle()
+        }
+        val rot = proxy.imageInfo.rotationDegrees
+        if (rot == 0) return Triple(s, w, h)
+        val uw = if (rot % 180 == 0) w else h; val uh = if (rot % 180 == 0) h else w
+        val u = up?.takeIf { it.width == uw && it.height == uh } ?: Bitmap.createBitmap(uw, uh, Bitmap.Config.ARGB_8888).also { up?.recycle(); up = it; canvas = android.graphics.Canvas(it) }
+        m.reset(); m.postRotate(rot.toFloat())
+        when (rot) { 90 -> m.postTranslate(h.toFloat(), 0f); 180 -> m.postTranslate(w.toFloat(), h.toFloat()); 270 -> m.postTranslate(0f, w.toFloat()) }
+        canvas!!.drawBitmap(s, m, paint)
+        return Triple(u, uw, uh)
+    }
+
+    fun release() { src?.recycle(); up?.recycle(); src = null; up = null }
 }
 
 /**
@@ -156,79 +145,63 @@ private fun ImageProxy.upright(): Bitmap {
  */
 @Composable
 fun PoseCamera(front: Boolean, accent: Color, highlight: Set<Int>, onPose: (FormGuide.Pose, Long) -> Unit, modifier: Modifier = Modifier) {
-    val ctx = LocalContext.current
-    var ready by remember { mutableStateOf(PoseModels.installed(ctx)) }
-    if (!ready) { PoseModelPrompt(accent, modifier) { ready = true }; return }
+    DisposableEffect(Unit) { com.myfit.tracker.ui.theme.UiPerf.camera.value = true; onDispose { com.myfit.tracker.ui.theme.UiPerf.camera.value = false } }
     PoseCameraLive(front, accent, highlight, onPose, modifier)
 }
-
-/** First use: one-time download of the tracking models (starts by itself on Wi-Fi). */
-@Composable
-private fun PoseModelPrompt(accent: Color, modifier: Modifier, onReady: () -> Unit) {
-    val ctx = LocalContext.current
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
-    val prog by PoseModels.progress.collectAsState()
-    var error by remember { mutableStateOf<String?>(null) }
-    fun start() {
-        error = null
-        scope.launch { if (PoseModels.download(ctx)) onReady() else error = "Download didn't finish — check your connection and try again." }
-    }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        val cm = ctx.getSystemService(android.net.ConnectivityManager::class.java)
-        if (cm != null && !cm.isActiveNetworkMetered) start()
-    }
-    Box(modifier.background(Color(0xFF0B0D10)), contentAlignment = Alignment.Center) {
-        androidx.compose.foundation.layout.Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Camera coach setup", style = FitType.title, color = Color.White)
-            Text("One-time download of the body-tracking model (about ${PoseModels.SIZE_MB} MB). It runs fully on your phone — video is never stored or uploaded.",
-                style = FitType.caption, color = Color.White.copy(alpha = 0.75f), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.padding(top = 6.dp, bottom = 16.dp))
-            val p = prog
-            if (p != null) {
-                androidx.compose.material3.LinearProgressIndicator({ p }, Modifier.padding(horizontal = 12.dp).fillMaxWidthCompat(), color = accent, trackColor = Color.White.copy(alpha = 0.15f))
-                Text("${(p * 100).toInt()}%", style = FitType.caption, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(top = 6.dp))
-            } else {
-                error?.let { Text(it, style = FitType.caption, color = Color(0xFFFF8A80), modifier = Modifier.padding(bottom = 10.dp)) }
-                com.myfit.tracker.ui.theme.AccentButton("Download (${PoseModels.SIZE_MB} MB)", { start() }, icon = com.myfit.tracker.ui.theme.Duo.Camera)
-            }
-        }
-    }
-}
-
-private fun Modifier.fillMaxWidthCompat(): Modifier = this.fillMaxWidth()
 
 @Composable
 private fun PoseCameraLive(front: Boolean, accent: Color, highlight: Set<Int>, onPose: (FormGuide.Pose, Long) -> Unit, modifier: Modifier) {
     val ctx = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val main = remember { ContextCompat.getMainExecutor(ctx) }
-    val preview = remember { PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER; implementationMode = PreviewView.ImplementationMode.COMPATIBLE } }
+    val preview = remember { PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER; implementationMode = PreviewView.ImplementationMode.COMPATIBLE   // TextureView: keeps the rounded clip; 30 fps preview } }
     var frame by remember { mutableStateOf<Frame?>(null) }
     var engine by remember { mutableStateOf("") }
     val cb by rememberUpdatedState(onPose)
 
+    var fps by remember { mutableStateOf(0) }
     DisposableEffect(front) {
         val exec = Executors.newSingleThreadExecutor()
-        var tracker: Tracker? = null
+        var tracker: MediaPipeTracker? = null
         var failed = false
-        var frameNo = 0L
         var lastTs = 0L
+        var lastRun = 0L
+        val bufs = FrameBuffers()
+        PoseModels.cleanupOld(ctx)
+        var model = PoseModels.pick(ctx)
+        val pm = ctx.getSystemService(android.os.PowerManager::class.java)
+        // adaptive: average inference time; Full -> Lite if the phone can't keep ~24 fps or gets hot
+        var avgMs = 0f; var samples = 0
+        var shown = 0; var fpsT0 = System.currentTimeMillis()
         val analysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-            .setResolutionSelector(ResolutionSelector.Builder().setResolutionStrategy(ResolutionStrategy(android.util.Size(640, 480), ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER)).build())
+            .setResolutionSelector(ResolutionSelector.Builder().setResolutionStrategy(ResolutionStrategy(model.size, ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER)).build())
             .build()
         analysis.setAnalyzer(exec) { proxy ->
             try {
-                val t = tracker ?: runCatching { MediaPipeTracker(ctx) }.getOrNull()
+                val now = System.currentTimeMillis()
+                val hot = (pm?.currentThermalStatus ?: 0) >= android.os.PowerManager.THERMAL_STATUS_SEVERE
+                val minGap = if (hot) 66L else 40L                       // ~24 fps cap, ~15 fps when the phone is hot
+                if (now - lastRun < minGap) return@setAnalyzer
+                lastRun = now
+                if (tracker != null && model == PoseModels.Model.FULL && (hot || (samples >= 30 && avgMs > 38f)) && PoseModels.has(ctx, PoseModels.Model.LITE)) {
+                    tracker?.close(); tracker = null; model = PoseModels.Model.LITE; samples = 0; avgMs = 0f
+                }
+                val t = tracker ?: runCatching { MediaPipeTracker(ctx, model) }.getOrNull()
                     ?.also { tracker = it; val l = it.label; main.execute { engine = l } }
                 if (t == null) { if (!failed) { failed = true; main.execute { engine = "Body tracking couldn't start on this phone" } }; return@setAnalyzer }
-                val bmp = proxy.upright()
-                val ts = maxOf(System.currentTimeMillis(), lastTs + 1).also { lastTs = it }
-                val f = runCatching { t.analyse(bmp, ts, wantFace = frameNo++ % 3 == 0L) }.getOrNull()
-                bmp.recycle()
+                val (bmp, w, h) = bufs.upright(proxy)
+                val ts = maxOf(now, lastTs + 1).also { lastTs = it }
+                val t0 = android.os.SystemClock.elapsedRealtime()
+                val f = runCatching { t.analyse(bmp, w, h, ts) }.getOrNull()
+                val dt = (android.os.SystemClock.elapsedRealtime() - t0).toFloat()
+                avgMs = if (samples == 0) dt else avgMs * 0.9f + dt * 0.1f; samples++
+                shown++
+                val fpsNow = if (now - fpsT0 >= 1000) { val v = shown; shown = 0; fpsT0 = now; v } else -1
                 main.execute {
                     frame = f
+                    if (fpsNow >= 0) fps = fpsNow
                     if (f != null) cb(FormGuide.Pose(f.pts, f.w, f.h, f.head), ts)
                 }
             } finally { proxy.close() }
@@ -250,7 +223,7 @@ private fun PoseCameraLive(front: Boolean, accent: Color, highlight: Set<Int>, o
             disposed = true
             analysis.clearAnalyzer()
             runCatching { provider?.unbindAll() }
-            exec.execute { tracker?.close(); tracker = null }
+            exec.execute { tracker?.close(); tracker = null; bufs.release() }
             exec.shutdown()
         }
     }
@@ -274,30 +247,23 @@ private fun PoseCameraLive(front: Boolean, accent: Color, highlight: Set<Int>, o
                 }
             }
             (11..32).forEach { i -> if (ok(i)) drawCircle(if (i in highlight) accent else Color.White, if (i in highlight) 11f else if (i > 16 && i < 23 || i > 28) 5f else 7f, pt(i)) }
-            // head: face outline from the face model, else a circle from the body's face points
-            val face = f.face
-            if (face != null) {
-                val path = Path()
-                for (k in 0 until face.size / 2) { val o = map(face[k * 2], face[k * 2 + 1]); if (k == 0) path.moveTo(o.x, o.y) else path.lineTo(o.x, o.y) }
-                path.close()
-                drawPath(path, accent.copy(alpha = 0.85f), style = Stroke(4f))
-                val hd = f.head
-                if (hd != null && ok(0)) {
-                    // direction the face points, drawn from the nose
-                    val n = pt(0)
-                    val yawPx = (if (front) -hd.yaw else hd.yaw) / 90f * 70f
-                    drawLine(accent, n, Offset(n.x - yawPx, n.y - hd.pitch / 90f * 70f), 5f, cap = StrokeCap.Round)
-                }
-            } else if (ok(0) && ok(7) && ok(8)) {
+            // head: a circle from the body's face points, plus the direction the face points
+            if (ok(0) && ok(7) && ok(8)) {
                 val r = kotlin.math.hypot(pt(7).x - pt(8).x, pt(7).y - pt(8).y) * 0.75f
-                drawCircle(Color.White.copy(alpha = 0.8f), r, pt(0), style = Stroke(4f))
+                drawCircle(accent.copy(alpha = 0.85f), r, pt(0), style = Stroke(4f))
+            }
+            val hd = f.head
+            if (hd != null && ok(0)) {
+                val n = pt(0)
+                val yawPx = (if (front) -hd.yaw else hd.yaw) / 90f * 70f
+                drawLine(accent, n, Offset(n.x - yawPx, n.y - hd.pitch / 90f * 70f), 5f, cap = StrokeCap.Round)
             }
         }
         // small status chip: tracking engine + head direction
         val f = frame
         val hd = f?.head
         if (engine.isNotEmpty()) Text(
-            if (f == null) "Looking for you… · $engine" else if (hd != null) "Head ${hd.describe()} · ${abs(hd.yaw).toInt()}° · $engine" else engine,
+            (if (f == null) "Looking for you… · " else if (hd != null) "Head ${hd.describe()} · " else "") + "$engine · $fps fps",
             style = FitType.overline, color = Color.White,
             modifier = Modifier.align(Alignment.BottomStart).padding(10.dp).clip(RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.45f)).padding(horizontal = 8.dp, vertical = 4.dp),
         )

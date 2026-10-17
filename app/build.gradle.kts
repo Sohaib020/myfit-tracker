@@ -128,8 +128,30 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
-// R20: the MediaPipe pose (heavy) + face models are no longer bundled — the app downloads them the first time the
-// camera coach opens (ui/coach/PoseModels.kt), which keeps ~33 MB out of the APK with the same accuracy.
+// R27: camera coach body models (MediaPipe Pose Landmarker Full ~9 MB + Lite ~5.5 MB) are bundled again, fetched into
+// assets/pose at build time (not committed). Heavy + Face (R17-R26) were replaced: too heavy for the GPU.
+val fetchPoseModels by tasks.registering {
+    val dir = file("src/main/assets/pose")
+    val base = "https://storage.googleapis.com/mediapipe-models/pose_landmarker"
+    val models = mapOf(
+        "pose_landmarker_full.task" to "$base/pose_landmarker_full/float16/1/pose_landmarker_full.task",
+        "pose_landmarker_lite.task" to "$base/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+    )
+    outputs.files(models.keys.map { File(dir, it) })
+    doLast {
+        dir.mkdirs()
+        dir.listFiles()?.filter { it.name !in models.keys }?.forEach { it.delete() }
+        models.forEach { (name, url) ->
+            val f = File(dir, name)
+            if (f.exists() && f.length() > 100_000) return@forEach
+            val tmp = File(dir, "$name.part")
+            java.net.URI(url).toURL().openStream().use { input -> tmp.outputStream().use { input.copyTo(it) } }
+            tmp.renameTo(f)
+            logger.lifecycle("Fetched $name (${f.length() / 1024} KB)")
+        }
+    }
+}
+tasks.named("preBuild") { dependsOn(fetchPoseModels) }
 
 
 dependencies {

@@ -1,78 +1,40 @@
 package com.myfit.tracker.ui.coach
 
+import android.app.ActivityManager
 import android.content.Context
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.withContext
+import android.os.Build
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
-import java.nio.ByteBuffer
-import java.nio.channels.FileChannel
 
 /**
- * R20: the camera coach's MediaPipe models (pose heavy ≈ 29 MB + face ≈ 3.6 MB) are downloaded once on first use
- * instead of shipping inside the APK. Same files, same accuracy. Stored in the app's private files.
+ * R27: the camera coach's body models ship INSIDE the APK (assets/pose, fetched at build time):
+ *  - pose_landmarker_full.task (~9 MB) on strong phones
+ *  - pose_landmarker_lite.task (~5.5 MB) on everything else, and as the step-down when a phone runs hot or slow
+ * The old downloaded heavy + face models (R20, ~33 MB in the app's files) are deleted on first use.
+ * Google's figures: Heavy 53 ms/frame, Full 25 ms, Lite 20 ms; Full is within ~1 point of Heavy's accuracy.
  */
 object PoseModels {
-    private const val BASE = "https://storage.googleapis.com/mediapipe-models"
-    const val POSE = "pose_landmarker_heavy.task"
-    const val FACE = "face_landmarker.task"
-    private val urls = mapOf(
-        POSE to "$BASE/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task",
-        FACE to "$BASE/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-    )
-    /** Approximate total download, for the prompt. */
-    const val SIZE_MB = 33
+    const val FULL = "pose/pose_landmarker_full.task"
+    const val LITE = "pose/pose_landmarker_lite.task"
 
-    /** Download progress 0..1 while running, null otherwise. */
-    val progress = MutableStateFlow<Float?>(null)
-
-    private fun dir(c: Context) = File(c.filesDir, "pose").apply { mkdirs() }
-    fun file(c: Context, name: String) = File(dir(c), name)
-
-    /** The pose model is required; the face model is a bonus (head outline / direction). */
-    fun installed(c: Context) = file(c, POSE).let { it.exists() && it.length() > 1_000_000 }
-
-    /** Memory-maps a downloaded model for MediaPipe (no copy into the Java heap). */
-    fun buffer(c: Context, name: String): ByteBuffer? {
-        val f = file(c, name)
-        if (!f.exists() || f.length() < 100_000) return null
-        return java.io.RandomAccessFile(f, "r").use { it.channel.map(FileChannel.MapMode.READ_ONLY, 0, it.length()) }
+    enum class Model(val asset: String, val label: String, val size: android.util.Size) {
+        FULL(PoseModels.FULL, "Full", android.util.Size(640, 480)),
+        LITE(PoseModels.LITE, "Lite", android.util.Size(480, 360)),
     }
 
-    /** Downloads whatever is missing. Returns true when the pose model is ready. */
-    suspend fun download(c: Context): Boolean = withContext(Dispatchers.IO) {
-        if (progress.value != null) return@withContext installed(c)
-        progress.value = 0f
-        try {
-            val todo = urls.filterKeys { k -> !file(c, k).let { it.exists() && it.length() > 100_000 } }
-            val weights = mapOf(POSE to 0.89f, FACE to 0.11f)
-            var doneW = urls.keys.filter { it !in todo }.sumOf { (weights[it] ?: 0f).toDouble() }.toFloat()
-            for ((name, url) in todo) {
-                runCatching {
-                    val conn = (URL(url).openConnection() as HttpURLConnection).apply { connectTimeout = 15_000; readTimeout = 30_000 }
-                    val total = conn.contentLengthLong.takeIf { it > 0 } ?: -1L
-                    val part = File(dir(c), "$name.part")
-                    conn.inputStream.use { input ->
-                        part.outputStream().use { out ->
-                            val buf = ByteArray(64 * 1024); var read = 0L
-                            while (true) {
-                                val n = input.read(buf); if (n < 0) break
-                                out.write(buf, 0, n); read += n
-                                if (total > 0) progress.value = doneW + (weights[name] ?: 0f) * (read.toFloat() / total)
-                            }
-                        }
-                    }
-                    if (total > 0 && part.length() != total) { part.delete(); error("incomplete") }
-                    part.renameTo(file(c, name))
-                }
-                doneW += weights[name] ?: 0f
-            }
-            installed(c)
-        } finally { progress.value = null }
+    fun has(c: Context, m: Model) = runCatching { c.assets.openFd(m.asset).use { it.length > 100_000 } }.getOrDefault(false)
+
+    /** Strong phone (8 GB+ RAM, 8 cores, not a low-RAM device) -> Full; else Lite. */
+    fun pick(c: Context): Model {
+        val am = c.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val ram = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.totalMem
+        val strong = ram >= 7_000_000_000L && Runtime.getRuntime().availableProcessors() >= 8 && !am.isLowRamDevice && Build.VERSION.SDK_INT >= 30
+        val m = if (strong) Model.FULL else Model.LITE
+        return if (has(c, m)) m else Model.entries.firstOrNull { has(c, it) } ?: m
     }
 
-    /** Frees the space (Settings → storage could call this). */
-    fun remove(c: Context) { dir(c).deleteRecursively() }
+    /** True when at least one bundled model is present. */
+    fun installed(c: Context) = Model.entries.any { has(c, it) }
+
+    /** Removes the old downloaded heavy + face models (R20), once. */
+    fun cleanupOld(c: Context) { File(c.filesDir, "pose").takeIf { it.exists() }?.deleteRecursively() }
 }
