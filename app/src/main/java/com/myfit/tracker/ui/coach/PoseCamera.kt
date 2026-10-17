@@ -156,7 +156,8 @@ private class FrameBuffers {
  */
 @Composable
 fun PoseCamera(front: Boolean, accent: Color, highlight: Set<Int>, onPose: (FormGuide.Pose, Long) -> Unit, modifier: Modifier = Modifier) {
-    DisposableEffect(Unit) { com.myfit.tracker.ui.theme.UiPerf.camera.value = true; onDispose { com.myfit.tracker.ui.theme.UiPerf.camera.value = false } }
+    val perf = com.myfit.tracker.ui.theme.UiPerf.camera
+    DisposableEffect(Unit) { perf.value = true; onDispose { perf.value = false } }
     PoseCameraLive(front, accent, highlight, onPose, modifier)
 }
 
@@ -165,7 +166,7 @@ private fun PoseCameraLive(front: Boolean, accent: Color, highlight: Set<Int>, o
     val ctx = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val main = remember { ContextCompat.getMainExecutor(ctx) }
-    val preview = remember { PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER; implementationMode = PreviewView.ImplementationMode.COMPATIBLE   // TextureView: keeps the rounded clip; 30 fps preview } }
+    val preview = remember { PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER; implementationMode = PreviewView.ImplementationMode.COMPATIBLE } }   // TextureView keeps the rounded clip
     var frame by remember { mutableStateOf<Frame?>(null) }
     var engine by remember { mutableStateOf("") }
     val cb by rememberUpdatedState(onPose)
