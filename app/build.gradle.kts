@@ -179,6 +179,8 @@ dependencies {
     val filament = "1.56.0"
     implementation("com.google.android.filament:filament-android:$filament")
     implementation("com.google.android.filament:gltfio-android:$filament")
+    // R26 coach/champion clips: 720p 50 fps H.264 with side-by-side alpha, decoded in hardware, drawn by our shader
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
     // food camera: live preview, on-device food detection
     val camerax = "1.4.2"
     implementation("androidx.camera:camera-core:$camerax")

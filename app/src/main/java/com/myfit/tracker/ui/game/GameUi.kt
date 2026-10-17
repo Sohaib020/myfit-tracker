@@ -147,15 +147,22 @@ fun ChampionScreen(container: AppContainer) {
         OverlayTopBar("Champion", { nav.pop() }, "★ $balance to spend · Arena Lv $level")
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
-                Box(Modifier.fillMaxWidth().height(360.dp).clip(RoundedCornerShape(30.dp))
-                    .background(Brush.verticalGradient(listOf(ch.color.copy(alpha = 0.45f), ch.color.copy(alpha = 0.06f))))) {
+                Glass(Modifier.fillMaxWidth().height(380.dp), shape = RoundedCornerShape(30.dp), tint = ch.color.copy(alpha = 0.18f)) {
                     val owned = remember(view, ver) { Champions.owns(ctx, ch, view.tier) }
-                    if (Champions.unlocked(ctx, ch)) {
+                    if (owned) {
                         ChampStage(view, reaction ?: "idle", Modifier.fillMaxSize().padding(top = 10.dp), onEnd = { reaction = null })
                         Box(Modifier.align(Alignment.BottomStart).padding(14.dp).clip(RoundedCornerShape(14.dp)).background(Color.Black.copy(alpha = 0.35f))
                             .clickableNoRipple { reaction = listOf("wave", "letsgo", "celebrate", "dance", "victory", "combo").filter { it in Champions.clips(view.tier) || it == "victory" && view.tier != Tier.STREET }.random() }
                             .padding(horizontal = 12.dp, vertical = 8.dp)) { Text("Tap: show a move", style = FitType.caption, color = Color.White) }
-                    } else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { BuddyAvatar(view, 170.dp, dim = true) }
+                    } else {
+                        // R26: a look you don't own yet is a still glimpse — the animations download once it's yours
+                        ChampStill(view, Modifier.fillMaxSize().padding(top = 70.dp, bottom = 6.dp), locked = true)
+                        Row(Modifier.align(Alignment.BottomStart).padding(14.dp).clip(RoundedCornerShape(14.dp)).background(Color.Black.copy(alpha = 0.40f))
+                            .padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Duo.Lock, null, tint = Color.White, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(6.dp))
+                            Text(if (Champions.unlocked(ctx, ch)) "Unlock to bring ${ch.tag} to life" else "Unlocks at Arena Lv ${ch.unlock}", style = FitType.caption, color = Color.White)
+                        }
+                    }
                     Column(Modifier.align(Alignment.TopStart).padding(16.dp)) {
                         Text(ch.tag, style = FitType.display.copy(fontSize = 34.sp, fontWeight = FontWeight.Black), color = Color.White)
                         Text("${ch.rarity.label} · ${ch.archetype}", style = FitType.label, color = Color.White.copy(alpha = 0.85f))
@@ -172,7 +179,15 @@ fun ChampionScreen(container: AppContainer) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Tier.entries.forEach { t ->
                                 val have = remember(ch, t, ver) { Champions.owns(ctx, ch, t) }
-                                com.myfit.tracker.ui.theme.GlassChip(if (have || t == Tier.STREET) t.label else "${t.label} ★${t.cost}", view.tier == t, { view = BuddyChar(ch, t) })
+                                val sel = view.tier == t
+                                Glass(Modifier.weight(1f).height(150.dp).border(if (sel) 2.dp else 0.dp, if (sel) ch.color else Color.Transparent, RoundedCornerShape(20.dp)),
+                                    shape = RoundedCornerShape(20.dp), tint = if (sel) ch.color.copy(alpha = 0.22f) else null, onClick = { view = BuddyChar(ch, t) }) {
+                                    ChampStill(BuddyChar(ch, t), Modifier.fillMaxSize().padding(top = 6.dp, bottom = 30.dp), locked = !have)
+                                    Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        if (!have) { Icon(Duo.Lock, null, tint = th.textDim, modifier = Modifier.size(12.dp)); Spacer(Modifier.width(3.dp)) }
+                                        Text(if (have || t == Tier.STREET) t.label else "${t.label} ★${t.cost}", style = FitType.caption, color = if (sel) th.text else th.textDim)
+                                    }
+                                }
                             }
                         }
                         Spacer(Modifier.height(12.dp))
@@ -220,13 +235,13 @@ fun ChampionScreen(container: AppContainer) {
                     items(Champion.entries.toList()) { c ->
                         val open = remember(c, ver) { Champions.unlocked(ctx, c) }
                         val shown = remember(c, ver) { BuddyChar(c, Tier.entries.lastOrNull { Champions.owns(ctx, c, it) } ?: Tier.STREET) }
-                        Column(Modifier.width(84.dp).clip(RoundedCornerShape(18.dp))
-                            .background(if (view.champion == c) c.color.copy(alpha = 0.25f) else th.textFaint.copy(alpha = 0.10f))
-                            .border(if (mine.champion == c) 2.dp else 0.dp, if (mine.champion == c) c.color else Color.Transparent, RoundedCornerShape(18.dp))
-                            .clickableNoRipple { view = shown }.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            BuddyAvatar(shown, 66.dp, dim = !open)
-                            Text(c.tag, style = FitType.caption, color = th.text)
-                            Caption(if (open) c.rarity.label else "Lv ${c.unlock}")
+                        Glass(Modifier.width(92.dp).height(148.dp).border(if (mine.champion == c) 2.dp else 0.dp, if (mine.champion == c) c.color else Color.Transparent, RoundedCornerShape(18.dp)),
+                            shape = RoundedCornerShape(18.dp), tint = if (view.champion == c) c.color.copy(alpha = 0.24f) else null, onClick = { view = shown }) {
+                            Column(Modifier.fillMaxSize().padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                ChampStill(shown, Modifier.fillMaxWidth().weight(1f), locked = !open)
+                                Text(c.tag, style = FitType.caption, color = th.text)
+                                Caption(if (open) c.rarity.label else "Lv ${c.unlock}")
+                            }
                         }
                     }
                 }
@@ -235,45 +250,7 @@ fun ChampionScreen(container: AppContainer) {
     }
 }
 
-// ------------------------------------------------------------------ Game Mode intro
-
-/**
- * Plays when Game Mode is switched on: the screen dims, the champion drops in with its biggest move, the title
- * slams in, then it hands over to the game look. Tap anywhere to skip.
- */
-@Composable
-fun GameModeIntro(onDone: () -> Unit) {
-    val ctx = LocalContext.current
-    LaunchedEffect(Unit) { GameMode.load(ctx) }
-    val b by GameMode.champ.collectAsState()
-    val ch = b.champion ?: Champion.BLAZE
-    val fade = remember { Animatable(0f) }
-    val drop = remember { Animatable(-600f) }
-    val title = remember { Animatable(2.4f) }
-    val move = when (b.tier) { Tier.LEGENDARY -> "combo"; Tier.EPIC -> "victory"; else -> "celebrate" }
-    LaunchedEffect(Unit) {
-        fade.animateTo(1f, tween(280))
-        drop.animateTo(0f, androidx.compose.animation.core.spring(0.55f, 260f))
-        title.animateTo(1f, androidx.compose.animation.core.spring(0.45f, 320f))
-        delay(3600)
-        fade.animateTo(0f, tween(320))
-        onDone()
-    }
-    Box(Modifier.fillMaxSize().graphicsLayer { alpha = fade.value }
-        .background(Brush.radialGradient(listOf(ch.color.copy(alpha = 0.55f), Color(0xF00A0B10))))
-        .clickableNoRipple(onDone), contentAlignment = Alignment.Center) {
-        Box(Modifier.fillMaxWidth().fillMaxHeight(0.62f).graphicsLayer { translationY = drop.value }) {
-            ChampStage(b, move, Modifier.fillMaxSize())
-        }
-        Column(Modifier.align(Alignment.TopCenter).padding(top = 90.dp).graphicsLayer { scaleX = title.value; scaleY = title.value },
-            horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("GAME MODE", style = FitType.hero.copy(fontSize = 46.sp, letterSpacing = 4.sp), color = Color.White)
-            Text("${ch.tag} is ready", style = FitType.title, color = ch.color)
-        }
-        Text("Your workouts power your champion. Win battles, earn stars, unlock looks.", style = FitType.body, color = Color.White.copy(alpha = 0.85f),
-            modifier = Modifier.align(Alignment.BottomCenter).padding(32.dp))
-    }
-}
+// Game Mode intro: see GameIntro.kt (R26 liquid chrome)
 
 /** Arena card: your champion (Game Mode on) or the invitation to turn it on. */
 @Composable

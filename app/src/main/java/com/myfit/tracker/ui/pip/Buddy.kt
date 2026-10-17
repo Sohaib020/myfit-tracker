@@ -23,7 +23,7 @@ import java.util.zip.ZipInputStream
  * [open]/[source]/[openAsset], so it doesn't care where the files live.
  */
 object Buddy {
-    private const val PACKS = "https://github.com/Sohaib020/myfit-tracker/releases/download/champs-v1"
+    private const val PACKS = "https://github.com/Sohaib020/myfit-tracker/releases/download/champs-v2"   // R26: 720p 50 fps MP4 clips
 
     /** The buddy currently shown. */
     val active = MutableStateFlow(BuddyChar.PIP)
@@ -45,7 +45,8 @@ object Buddy {
     private fun dir(c: Context, b: BuddyChar) = File(c.applicationContext.filesDir, "champ/${b.id}")
 
     /** Pip is always installed; a champion look once its pack has been downloaded. */
-    fun installed(c: Context, b: BuddyChar) = b.isPip || File(dir(c, b), ".complete").exists()
+    fun installed(c: Context, b: BuddyChar) = b.isPip || File(dir(c, b), ".complete").let { it.exists() && it.readText().trim() == PACK_VER }
+    private const val PACK_VER = "2"
     val name: String get() = active.value.label
 
     /** How the AI should introduce itself. */
@@ -124,8 +125,8 @@ object Buddy {
                     if (e.isDirectory) out.mkdirs() else { out.parentFile?.mkdirs(); out.outputStream().use { zip.copyTo(it) } }
                 }
             }
-            if (!File(tmp, "idle.webp").exists()) return@withContext "That pack looks incomplete — try again"
-            File(tmp, ".complete").writeText("1")
+            if (!File(tmp, "idle.mp4").exists() && !File(tmp, "idle.webp").exists()) return@withContext "That pack looks incomplete — try again"
+            File(tmp, ".complete").writeText(PACK_VER)
             target.deleteRecursively()
             if (!tmp.renameTo(target)) return@withContext "Couldn't save the pack"
             null
@@ -195,6 +196,15 @@ object Buddy {
     fun hasClip(c: Context, assetPath: String): Boolean =
         !dl(assetPath) || File(c.applicationContext.filesDir, assetPath).exists() ||
             runCatching { c.assets.open(assetPath).close(); true }.getOrDefault(false)
+
+    /** The downloaded clip file for a champion move: the R26 video if the pack has it, else the older WebP. */
+    fun champClip(c: Context, b: BuddyChar, pose: String): File? {
+        val webp = File(c.applicationContext.filesDir, path("$pose.webp", b))
+        return File(webp.path.removeSuffix(".webp") + ".mp4").takeIf { it.exists() } ?: webp.takeIf { it.exists() }
+    }
+
+    /** Bundled full-body still of a champion look (locked-look glimpse, stand-in while loading). */
+    fun standAsset(b: BuddyChar): String = if (b.isPip) "pip/portrait.webp" else "champ/${b.id}/stand.webp"
 
     /** Bundled portrait of any buddy (chooser, chat header, avatars). */
     fun portraitAsset(b: BuddyChar): String = if (b.isPip) "pip/portrait.webp" else "champ/${b.id}/portrait.webp"

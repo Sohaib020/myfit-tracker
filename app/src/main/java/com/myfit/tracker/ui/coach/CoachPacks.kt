@@ -10,11 +10,11 @@ import java.net.URL
 import java.util.zip.ZipInputStream
 
 /**
- * R21: animated 3D coach moves, one small pack per character (≈4–8 MB of animated WebP), downloaded the first time
+ * R21: animated 3D coach moves, one small pack per character (R26: 720p 50 fps video clips, ≈15–25 MB), downloaded the first time
  * that coach appears — the APK only carries each coach's portrait and a standing still.
  */
 object CoachPacks {
-    private const val BASE = "https://github.com/Sohaib020/myfit-tracker/releases/download/coach3d-v1"
+    private const val BASE = "https://github.com/Sohaib020/myfit-tracker/releases/download/coach3d-v2"
 
     /** Coach look id (Coach.Look / NLook) -> pack name. */
     fun pack(lookId: String) = when (lookId) { "m" -> "trainer_m"; "f" -> "trainer_f"; "nm", "nf" -> "nutri_f"; else -> "trainer_m" }
@@ -25,9 +25,9 @@ object CoachPacks {
 
     private fun dir(c: Context, p: String) = File(c.filesDir, "coach3d/$p")
     /** Bump when the release packs are re-rendered so phones replace their old copy (v3 = R22 Mixamo mocap). */
-    private const val VER_DEFAULT = "3"
-    /** Per-pack bumps, so re-rendering one coach doesn't make every coach re-download (R23: nutritionist phone fix). */
-    private val VER = mapOf("nutri_f" to "4")
+    private const val VER_DEFAULT = "5"            // R26: new high-res coaches, 720p 50 fps video clips (release coach3d-v2)
+    /** Per-pack bumps, so re-rendering one coach doesn't make every coach re-download. */
+    private val VER = mapOf<String, String>()
     private fun ver(p: String) = VER[p] ?: VER_DEFAULT
     fun isInstalled(c: Context, lookId: String) = File(dir(c, pack(lookId)), ".complete").let { it.exists() && it.readText().trim() == ver(pack(lookId)) }
 
@@ -41,7 +41,8 @@ object CoachPacks {
     fun clip(c: Context, lookId: String, pose: String): File? {
         if (!isInstalled(c, lookId)) return null
         val d = dir(c, pack(lookId))
-        return File(d, clipFor(pose) + ".webp").takeIf { it.exists() } ?: File(d, "idle.webp").takeIf { it.exists() }
+        val n = clipFor(pose)
+        return listOf("$n.mp4", "$n.webp", "idle.mp4", "idle.webp").map { File(d, it) }.firstOrNull { it.exists() }
     }
 
     /** Downloads and installs a coach's pack once (quietly; retried on the next screen visit if it fails). */
@@ -65,13 +66,13 @@ object CoachPacks {
                 while (true) {
                     val e = zip.nextEntry ?: break
                     val name = File(e.name).name
-                    if (e.isDirectory || !name.endsWith(".webp")) continue
+                    if (e.isDirectory || !(name.endsWith(".webp") || name.endsWith(".mp4"))) continue
                     val out = File(d, name)
                     if (!out.canonicalPath.startsWith(d.canonicalPath)) continue          // zip-slip guard
                     out.outputStream().use { zip.copyTo(it) }
                 }
             }
-            if (File(d, "idle.webp").exists()) { File(d, ".complete").writeText(ver(p)); installed.value++; true } else false
+            if (File(d, "idle.mp4").exists() || File(d, "idle.webp").exists()) { File(d, ".complete").writeText(ver(p)); installed.value++; true } else false
         } catch (t: Throwable) { false } finally { running.remove(p) }
     }
 

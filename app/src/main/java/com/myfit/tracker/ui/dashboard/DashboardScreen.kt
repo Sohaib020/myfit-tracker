@@ -302,13 +302,18 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
         ) {
             item(key = "greeting", span = full) { Box(Modifier.statusBarsPadding()) { Greeting(state) } }
             item(key = "firstweek", span = full) { Box(Modifier.animateItem()) { FirstWeekCard(container, goTab) } }
-            // R25 Game Mode: your champion's hero card, or a one-time invitation
-            if (gameOn) item(key = "hero", span = full) {
-                Box(Modifier.animateItem()) {
-                    com.myfit.tracker.ui.game.HeroCard(container, state.steps, state.stepTarget, state.activeMin, state.waterMl, state.waterTarget,
-                        state.workout.done.isNotEmpty())
-                }
-            } else if (!gameAsked) item(key = "gameinvite", span = full) { Box(Modifier.animateItem()) { GameInvite { gameAsked = true } } }
+            // R25 Game Mode: your champion's hero card, or a one-time invitation. R26: it sits right under the AI
+            // calorie (Snap) and Pip cards; at the top only if both of those are hidden.
+            val heroAfter = order.lastOrNull { visible(it) && (it == DashCard.SNAP || it == DashCard.PIP) }
+            val heroItem: () -> Unit = {
+                if (gameOn) item(key = "hero", span = full) {
+                    Box(Modifier.animateItem()) {
+                        com.myfit.tracker.ui.game.HeroCard(container, state.steps, state.stepTarget, state.activeMin, state.waterMl, state.waterTarget,
+                            state.workout.done.isNotEmpty())
+                    }
+                } else if (!gameAsked) item(key = "gameinvite", span = full) { Box(Modifier.animateItem()) { GameInvite { gameAsked = true } } }
+            }
+            if (heroAfter == null) heroItem()
             if (settings.diabetesType == "unset" && !settings.diabetesAsked && !settings.glucoseEnabled) {
                 item(key = "personalise", span = full) { Box(Modifier.animateItem()) { PersonaliseCard(container) } }
             }
@@ -337,6 +342,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
                         }
                     }
                 }
+                if (c == heroAfter) heroItem()
             }
             item(key = "arrangeHint", span = full) {
                 Text("Long-press any card to resize it, hide it or bring hidden cards back", style = FitType.caption, color = LocalFitTheme.current.textFaint,
