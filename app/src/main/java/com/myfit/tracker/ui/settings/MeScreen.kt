@@ -289,6 +289,8 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 LiveNotifRow()
                 Spacer(Modifier.height(10.dp))
                 Coach3DRow()
+                Spacer(Modifier.height(10.dp))
+                GameModeRow()
             }
         }
         if (settings.devMode && !com.myfit.tracker.update.Store.isStoreBuild) item {
@@ -675,7 +677,6 @@ private fun PipSettingsCard(container: AppContainer, dev: Boolean) {
     var testing by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
     GlassCard {
-        if (!dev) { com.myfit.tracker.ui.pip.BuddyChooser(); Spacer(Modifier.height(12.dp)) }
         CardHeader(Duo.AutoAwesome, "Pip · AI buddy", th.accentBright)
         Spacer(Modifier.height(10.dp))
         Caption("Questions about your logs are answered offline from your own data. General health & fitness questions go to an online AI with only a short, question-specific summary — never your full history or notes. Online answers are tagged.")
@@ -975,6 +976,17 @@ private fun AiProvidersCard(container: AppContainer) {
     }
 }
 
+
+/** R25: Game Mode — champions, stats, looks and battles (off = a clean tracker). Turning it on plays the intro. */
+@androidx.compose.runtime.Composable
+private fun GameModeRow() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) { com.myfit.tracker.ui.game.GameMode.load(ctx) }
+    val on by com.myfit.tracker.ui.game.GameMode.on.collectAsState()
+    ToggleRow("Game Mode", "Your workouts power a 3D champion: a Home hero card, stats, looks to unlock with stars, and Arena battles.", on) { v ->
+        com.myfit.tracker.ui.game.GameMode.setOn(ctx, v)
+    }
+}
 
 /** R21: real-time 3D coaches (on by default only on phones that run it smoothly). */
 @androidx.compose.runtime.Composable

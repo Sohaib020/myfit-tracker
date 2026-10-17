@@ -59,10 +59,17 @@ object Buddy {
 
     /** Call once at start-up. */
     fun init(c: Context) {
+        // R25: Pip is the buddy again; champions live in Game Mode. Someone who had picked a champion keeps it as
+        // their Game Mode champion (Game Mode switched on quietly, no intro).
         val b = BuddyChar.parse(prefs(c).getString("buddy", "pip"))
-        // a look you no longer own (e.g. data cleared) falls back to Pip
-        val ok = b.champion?.let { Champions.owns(c, it, b.tier) } ?: true
-        val m = if (ok) b else BuddyChar.PIP
+        if (b.champion != null) {
+            if (Champions.owns(c, b.champion, b.tier)) {
+                com.myfit.tracker.ui.game.GameMode.choose(c, b)
+                c.applicationContext.getSharedPreferences("game_mode", Context.MODE_PRIVATE).edit().putBoolean("on", true).putBoolean("asked", true).apply()
+            }
+            prefs(c).edit().putString("buddy", "pip").apply()
+        }
+        val m = BuddyChar.PIP
         apply(m)
         if (!installed(c, m)) {
             val app = c.applicationContext

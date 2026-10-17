@@ -496,7 +496,7 @@ private fun RewardsPane(l: Level, days: List<Day>, partner: Mascot, ver: Int, pi
                 }
             }
         }
-        GlassCard(padding = 14.dp) { com.myfit.tracker.ui.pip.BuddyChooser() }
+        GlassCard(padding = 14.dp) { com.myfit.tracker.ui.game.ArenaChampionCard() }
         // level road
         GlassCard(padding = 14.dp) {
             Text("Level road", style = FitType.section, color = th.text)
