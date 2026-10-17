@@ -1,6 +1,6 @@
 name: Coach 3D real-time GLBs
 # Owner's Meshy coaches (branch coach3d-assets) + tools/coach3d/export_glb.py -> one animated GLB per coach
-# (idle, talk + tap emotes) -> release coach3d-glb-v1 (<who>.glb). Used by the in-app 3D viewer on capable phones.
+# (idle, talk + tap emotes) -> release coach3d-glb-v2 (<who>.glb). Used by the in-app 3D viewer on capable phones.
 on:
   push:
     branches: [ coach3d-glb-run ]
@@ -27,7 +27,7 @@ jobs:
           pip install -q bpy==4.2.0 pillow numpy
           mkdir -p out
           for try in 1 2; do
-            python tools/coach3d/export_glb.py assets/glb ual.glb ${{ matrix.who }} out/${{ matrix.who }}.glb 1024 60000 > log.txt 2>&1 || true
+            python tools/coach3d/export_glb.py assets/glb ual.glb ${{ matrix.who }} out/${{ matrix.who }}.glb 2048 90000 > log.txt 2>&1 || true
             grep -q EXPORT_DONE log.txt && break
           done
           grep -E "baked|decimated|EXPORT_DONE|Error|Traceback" log.txt | head -30
@@ -41,8 +41,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with: { path: parts }
-      - name: Release coach3d-glb-v1
+      - name: Release coach3d-glb-v2
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |
-          gh release view coach3d-glb-v1 >/dev/null 2>&1 || gh release create coach3d-glb-v1 --title "Coach 3D real-time models" --notes "Animated GLBs for the 3D coach viewer (R21)" --prerelease
-          for f in parts/*/*.glb; do echo "::notice::$(basename $f) $(du -k $f | cut -f1) KB"; gh release upload coach3d-glb-v1 "$f" --clobber; done
+          gh release view coach3d-glb-v2 >/dev/null 2>&1 || gh release create coach3d-glb-v2 --title "Coach 3D real-time models" --notes "Animated GLBs for the 3D coach viewer (R26: high-res coaches)" --prerelease
+          for f in parts/*/*.glb; do echo "::notice::$(basename $f) $(du -k $f | cut -f1) KB"; gh release upload coach3d-glb-v2 "$f" --clobber; done
