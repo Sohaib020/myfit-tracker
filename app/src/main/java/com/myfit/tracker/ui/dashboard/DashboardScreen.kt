@@ -156,8 +156,13 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
     fun infoOf(c: DashCard): LazyGridItemInfo? = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == keyOf(c) }
     fun boundsOf(i: LazyGridItemInfo) = Rect(i.offset.x.toFloat(), i.offset.y.toFloat(), (i.offset.x + i.size.width).toFloat(), (i.offset.y + i.size.height).toFloat())
 
+    val ctxG = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) { com.myfit.tracker.ui.game.GameMode.load(ctxG) }
+    val gameOn by com.myfit.tracker.ui.game.GameMode.on.collectAsState()
+    val gameAsked by com.myfit.tracker.ui.game.GameMode.askedFlow.collectAsState()
     fun visible(c: DashCard): Boolean = c in cards && c !in com.myfit.tracker.data.prefs.MergedCards && when (c) {
         DashCard.PIP -> settings.pipEnabled
+        DashCard.HERO -> gameOn || !gameAsked          // R28: champion card (Game Mode) or the one-time invitation
         DashCard.CYCLE -> showCycle(state.profile, settings) && (settings.cycleEnabled || !settings.cycleAsked)
         DashCard.GLUCOSE -> showDiabetes(settings)
         DashCard.DEEN -> settings.muslim == "yes"
@@ -287,10 +292,6 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
     val full: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
     val half: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(1) }
 
-    val ctxG = androidx.compose.ui.platform.LocalContext.current
-    LaunchedEffect(Unit) { com.myfit.tracker.ui.game.GameMode.load(ctxG) }
-    val gameOn by com.myfit.tracker.ui.game.GameMode.on.collectAsState()
-    var gameAsked by remember { mutableStateOf(com.myfit.tracker.ui.game.GameMode.asked(ctxG)) }
     Box(Modifier.fillMaxSize().onGloballyPositioned { rootTopLeft = it.boundsInRoot().topLeft }) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -302,18 +303,6 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
         ) {
             item(key = "greeting", span = full) { Box(Modifier.statusBarsPadding()) { Greeting(state) } }
             item(key = "firstweek", span = full) { Box(Modifier.animateItem()) { FirstWeekCard(container, goTab) } }
-            // R25 Game Mode: your champion's hero card, or a one-time invitation. R26: it sits right under the AI
-            // calorie (Snap) and Pip cards; at the top only if both of those are hidden.
-            val heroAfter = order.lastOrNull { visible(it) && (it == DashCard.SNAP || it == DashCard.PIP) }
-            val heroItem: () -> Unit = {
-                if (gameOn) item(key = "hero", span = full) {
-                    Box(Modifier.animateItem()) {
-                        com.myfit.tracker.ui.game.HeroCard(container, state.steps, state.stepTarget, state.activeMin, state.waterMl, state.waterTarget,
-                            state.workout.done.isNotEmpty())
-                    }
-                } else if (!gameAsked) item(key = "gameinvite", span = full) { Box(Modifier.animateItem()) { GameInvite { gameAsked = true } } }
-            }
-            if (heroAfter == null) heroItem()
             if (settings.diabetesType == "unset" && !settings.diabetesAsked && !settings.glucoseEnabled) {
                 item(key = "personalise", span = full) { Box(Modifier.animateItem()) { PersonaliseCard(container) } }
             }
@@ -342,7 +331,6 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
                         }
                     }
                 }
-                if (c == heroAfter) heroItem()
             }
             item(key = "arrangeHint", span = full) {
                 Text("Long-press any card to resize it, hide it or bring hidden cards back", style = FitType.caption, color = LocalFitTheme.current.textFaint,
@@ -394,6 +382,14 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
     val nav = LocalNav.current
     when (c) {
         DashCard.PIP -> if (small) PipSmall(state) else PipCard(state)
+        DashCard.HERO -> {
+            val gameOn by com.myfit.tracker.ui.game.GameMode.on.collectAsState()
+            val asked by com.myfit.tracker.ui.game.GameMode.askedFlow.collectAsState()
+            if (gameOn) {
+                if (small) com.myfit.tracker.ui.game.HeroSmall(container, state.steps, state.stepTarget, state.activeMin, state.waterMl, state.waterTarget, state.workout.done.isNotEmpty())
+                else com.myfit.tracker.ui.game.HeroCard(container, state.steps, state.stepTarget, state.activeMin, state.waterMl, state.waterTarget, state.workout.done.isNotEmpty())
+            } else if (!asked) GameInvite { }
+        }
         DashCard.SNAP -> if (small) SnapSmall() else SnapHeroCard()
         DashCard.WORKOUT -> if (small) WorkoutSmall(state.workout, container) { goTab(Tabs.TRAIN) } else WorkoutCard(state.workout, container)
         DashCard.RINGS -> if (small) RingsSmall(state) { nav.push(Overlay.Today) } else RingsCard(state, open)

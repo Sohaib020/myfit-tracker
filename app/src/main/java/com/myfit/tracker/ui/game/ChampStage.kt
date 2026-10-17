@@ -93,8 +93,8 @@ fun ChampStill(b: BuddyChar, modifier: Modifier = Modifier, locked: Boolean = fa
         bmp?.let {
             androidx.compose.foundation.Image(it, b.label, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 alignment = Alignment.BottomCenter,
-                colorFilter = if (locked) androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0.35f) }) else null,
-                alpha = if (locked) 0.82f else 1f)
+                // R28: locked looks show in full colour — the lock chip on the card says it's locked
+                colorFilter = null, alpha = 1f)
         }
     }
 }

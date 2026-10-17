@@ -25,7 +25,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 enum class DashCard(val label: String) {
     // declaration order = default Home order
-    RINGS("Today's progress"), SNAP("Snap a meal"), PIP("Pip"), VITALS("Vitals"), NUTRITION("Food & hydration"), MIND("Mindfulness"),
+    RINGS("Today's progress"), SNAP("Snap a meal"), PIP("Pip"), HERO("Champion"), VITALS("Vitals"), NUTRITION("Food & hydration"), MIND("Mindfulness"),
     CYCLE("Menstrual cycle"), DEEN("Shariah & Health"), GLUCOSE("Blood sugar"), WORKOUT("Today's workout"), SOCIAL("Friends this week"), STEPS("Steps & activity"),
     RECOVERY("Sleep & recovery"), BODY("Body weight"), GOALS("Today's goals"), STREAKS("Streaks & badges"),
     // merged into RINGS / NUTRITION (kept so saved settings still parse)
@@ -207,7 +207,14 @@ class SettingsStore(private val context: Context) {
             dashOrder = run {
                 val saved = if ((p[K.dashV] ?: 0) < DASH_LAYOUT) emptyList()
                     else p[K.order]?.split(',')?.mapNotNull { n -> runCatching { DashCard.valueOf(n) }.getOrNull() }?.distinct() ?: emptyList()
-                saved + DashCard.entries.filter { it !in saved }
+                // R28: the champion card (new) goes right after Snap / Pip in a saved layout, not at the bottom
+                val missing = DashCard.entries.filter { it !in saved }
+                val out = saved.toMutableList()
+                if (DashCard.HERO in missing) {
+                    val at = out.indexOfLast { it == DashCard.SNAP || it == DashCard.PIP }
+                    out.add(if (at >= 0) at + 1 else 0, DashCard.HERO)
+                }
+                out + missing.filter { it != DashCard.HERO }
             },
             groqKey = sec(p[K.groq]),
             openRouterKey = sec(p[K.orKey]),

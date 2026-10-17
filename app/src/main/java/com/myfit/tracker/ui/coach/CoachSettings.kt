@@ -42,7 +42,7 @@ import com.myfit.tracker.ui.theme.GlassButton
 import com.myfit.tracker.ui.theme.GlassChip
 import com.myfit.tracker.ui.theme.LocalFitTheme
 
-/** Me → Pro trainer & nutritionist: pick looks, rename them, language, push level, camera and voice. */
+/** Me → Pro trainer & nutritionist: pick the trainer, language, push level, camera and voice. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProTeamCard(container: AppContainer) {
@@ -69,10 +69,7 @@ fun ProTeamCard(container: AppContainer) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Coach.Look.entries.forEach { l -> GlassChip(l.label, cp.look == l, { Coach.update(ctx) { it.copy(look = l) } }, icon = if (l.male) Duo.Male else Duo.Female) }
         }
-        NameField("Trainer's name", cp.name) { n -> Coach.update(ctx) { it.copy(name = n) } }
-        Text("NUTRITIONIST", style = FitType.overline, color = th.textDim, modifier = Modifier.padding(top = 14.dp, bottom = 6.dp))
-        NameField("Nutritionist's name", cp.nName) { n -> Coach.update(ctx) { it.copy(nName = n) } }
-        Caption("They're fictional characters — call them whatever you like.", Modifier.padding(top = 4.dp))
+        Caption("${cp.name} and ${cp.nName} are fictional characters.", Modifier.padding(top = 6.dp))
 
         Text("COACHING", style = FitType.overline, color = th.textDim, modifier = Modifier.padding(top = 14.dp, bottom = 6.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
