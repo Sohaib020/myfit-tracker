@@ -319,3 +319,13 @@ Causes found: Pose Landmarker HEAVY every frame (53 ms vs Full 25 / Lite 20 on G
 1 ✅ PoseModels: Full (strong phones: ≥7 GB RAM, 8 cores, API 30+) or Lite, bundled in assets/pose (fetched at build by app/build.gradle.kts fetchPoseModels; noCompress task); old downloaded heavy+face files deleted on first use.
 2 ✅ PoseCamera: CPU delegate (XNNPACK), no face model, head yaw/pitch/roll from nose/eyes/ears (smoothed), reused RGBA + upright bitmaps (matrix rotate into a reused canvas), 24 fps analysis cap (15 when thermal SEVERE), auto step-down Full → Lite when average inference > 38 ms or the phone is hot; status chip shows model + fps.
 3 ✅ UiPerf.camera: every Glass panel draws flat while the camera coach runs.
+
+## Round 28 (18 Oct) — branch agent/r28
+Owner decisions: heart check ~15 s; Vitals = beating heart + ECG; Arena buddy + champion tiles side by side (long-press = full width); small Home champion card = champion + rating + energy ring.
+1 ✅ 60 fps everywhere (coach3d-v3, champs-v3; CoachPacks VER 6, Buddy PACK_VER 3). Champion clips framed tight: render_champ.py computes the union of where the body goes in every clip of the tier (backs the camera off until nothing leaves the frame), then renders with a crop border at ~960 px body height → portrait MP4s (square frames looked tiny in narrow cards).
+2 ✅ 3D framing from the skeleton (Coach3D.jointBounds: feet → Head joint / 0.865, centred on Hips); renderable boxes as fallback.
+3 ✅ Locked looks show in full colour (ChampStill no grey). GlassDialog (system blur behind on Android 12+, translucent tinted pane) for the Arena partner popup.
+4 ✅ DashCard.HERO (move / resize / hide like any card; inserted after Snap/Pip in saved layouts); HeroSmall = live champion + rating + energy ring; GameMode.askedFlow drives the invitation.
+5 ✅ Coach/nutritionist renaming removed (names follow the character).
+6 ✅ Vitals: ui/vitals/VitalsHero.kt — beating heart (lub-dub at your last bpm), ECG sweep, glowing "Check my heart · 15 s", last check time; small tile version. CameraHr: warm-up 1.5 s, early finish from ~10 s when two estimates 0.5 s apart agree within 3 bpm (quality ≥ 0.75), hard stop 21.5 s; ring eases over ~15 s; live bpm from ~5 s; Ppg.estimate needs 8 s (was 15).
+7 ✅ Arena: ArenaHeroTiles — buddy level tile (now has a small mode) + ChampionTile (rotating stadium beams, pulsing floor ring, rising sparks, champion in the spotlight); long-press toggles size (prefs arena_tiles).
