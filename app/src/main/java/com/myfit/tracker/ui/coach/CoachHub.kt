@@ -29,12 +29,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.myfit.tracker.AppContainer
 import com.myfit.tracker.domain.Coach
 import com.myfit.tracker.domain.FormGuide
 import com.myfit.tracker.ui.components.Caption
+import com.myfit.tracker.ui.components.clickableNoRipple
+import kotlinx.coroutines.launch
 import com.myfit.tracker.ui.components.GlassCard
 import com.myfit.tracker.ui.components.OverlayTopBar
 import com.myfit.tracker.ui.components.SectionTitle
@@ -64,8 +67,7 @@ fun CoachHub(container: AppContainer) {
         OverlayTopBar(cp.name, { nav.pop() }, "Your personal trainer")
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 40.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
-                Box(Modifier.fillMaxWidth().height(260.dp).clip(RoundedCornerShape(30.dp))
-                    .background(Brush.linearGradient(listOf(th.accent.copy(alpha = 0.3f), th.accent.copy(alpha = 0.04f))))) {
+                com.myfit.tracker.ui.theme.Glass(Modifier.fillMaxWidth().height(260.dp), shape = RoundedCornerShape(30.dp), tint = th.accent.copy(alpha = 0.16f)) {
                     Row(Modifier.fillMaxSize()) {
                         CoachStage(cp.look.id, heroPose, Modifier.weight(1f).fillMaxHeight().padding(top = 10.dp), container.pipVoice.level)
                         Column(Modifier.weight(1.1f).fillMaxHeight().padding(16.dp), verticalArrangement = Arrangement.Center) {
@@ -99,17 +101,91 @@ fun CoachHub(container: AppContainer) {
                     }
                 }
             }
-            item {
-                SectionTitle("What the camera can watch")
-                Spacer(Modifier.height(8.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FormGuide.cameraList.forEach { (_, label) -> GlassChip(label, false, {}) }
-                }
-                Spacer(Modifier.height(6.dp))
-                Caption("Everything else is coached with voice, tempo and timing. Camera frames never leave your phone.", color = th.textFaint)
-            }
+            item { CameraExercises(container) }
             item { ProTeamCard(container) }
             item { GlassButton("Open ${cp.nName} — nutrition coach", { nav.replace(Overlay.Nutritionist) }, Modifier.fillMaxWidth(), icon = Duo.ForkKnife, height = 46.dp) }
+        }
+    }
+}
+
+
+/** Camera-coach groups: which movement patterns the camera follows, by body area. */
+private val CAM_GROUPS = listOf(
+    "Legs & glutes" to listOf(FormGuide.Pattern.SQUAT, FormGuide.Pattern.LUNGE, FormGuide.Pattern.HINGE, FormGuide.Pattern.GLUTE_BRIDGE, FormGuide.Pattern.CALF_RAISE, FormGuide.Pattern.WALL_SIT),
+    "Push & arms" to listOf(FormGuide.Pattern.PUSHUP, FormGuide.Pattern.OVERHEAD, FormGuide.Pattern.CURL, FormGuide.Pattern.TRICEP, FormGuide.Pattern.RAISE, FormGuide.Pattern.ROW),
+    "Core" to listOf(FormGuide.Pattern.SITUP, FormGuide.Pattern.PLANK, FormGuide.Pattern.SIDE_PLANK, FormGuide.Pattern.MOUNTAIN_CLIMBER),
+    "Cardio" to listOf(FormGuide.Pattern.JUMPING_JACK, FormGuide.Pattern.HIGH_KNEES, FormGuide.Pattern.BURPEE),
+)
+
+/**
+ * R26: the exercises the camera can coach, shown on their own and organised by body area → movement → exercises.
+ * Tap an exercise to start a camera-coached workout with it (or add it to the one you're doing).
+ */
+@Composable
+private fun CameraExercises(container: AppContainer) {
+    val th = LocalFitTheme.current
+    val nav = LocalNav.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val all by container.exerciseRepo.active.collectAsState(initial = emptyList())
+    val active by container.workoutRepo.inProgress.collectAsState(initial = null)
+    // pattern -> camera-ready exercises (classified once per catalogue change)
+    val byPattern = remember(all) {
+        all.groupBy { FormGuide.of(it.name, it.primaryMuscle, it.measurementType) }
+            .filterKeys { FormGuide.cameraCounts(it) || FormGuide.cameraHolds(it) }
+            .mapValues { (_, v) -> v.sortedWith(compareBy({ it.isCustom }, { it.name.length }, { it.name })) }
+    }
+    var group by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var open by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<FormGuide.Pattern?>(null) }
+    val label = remember { FormGuide.cameraList.toMap() }
+    com.myfit.tracker.ui.theme.Glass(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                com.myfit.tracker.ui.components.IconBubble(Duo.Camera, th.accentBright, 34.dp)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Camera coach exercises", style = FitType.section, color = th.text)
+                    Caption("${byPattern.values.sumOf { it.size }} exercises I can watch — reps counted, form scored, holds timed")
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(CAM_GROUPS.size) { i -> GlassChip(CAM_GROUPS[i].first, group == i, { group = i; open = null }) }
+            }
+            Spacer(Modifier.height(10.dp))
+            CAM_GROUPS[group].second.forEach { pat ->
+                val list = byPattern[pat].orEmpty()
+                if (list.isEmpty()) return@forEach
+                val expanded = open == pat
+                Column(Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(16.dp)).background(th.text.copy(alpha = 0.05f))) {
+                    Row(Modifier.fillMaxWidth().clickableNoRipple { open = if (expanded) null else pat }.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(label[pat] ?: pat.name, style = FitType.label, color = th.text)
+                            Caption(if (FormGuide.cameraCounts(pat)) "Counts reps · scores form · ${list.size} exercises" else "Times your hold · checks form · ${list.size} exercises")
+                        }
+                        androidx.compose.material3.Icon(Duo.KeyboardArrowDown, null, tint = th.textDim, modifier = Modifier.graphicsLayer { rotationZ = if (expanded) 180f else 0f })
+                    }
+                    if (expanded) list.take(12).forEach { e ->
+                        Row(Modifier.fillMaxWidth().clickableNoRipple {
+                            scope.launch {
+                                val w = active?.id ?: container.workoutRepo.startEmpty(e.name)
+                                container.workoutRepo.addExercise(w, e.id)
+                                nav.replace(Overlay.Gym(w))
+                            }
+                        }.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            com.myfit.tracker.ui.exercises.ExerciseImage(e, Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)))
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(e.name, style = FitType.body, color = th.text, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                Caption(FormGuide.requiredView(pat).let { v -> "Camera: " + v.name.lowercase().replace('_', ' ') + " view" })
+                            }
+                            androidx.compose.material3.Icon(Duo.PlayArrow, null, tint = th.accentBright, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Caption("Everything else is coached with voice, tempo and timing. Camera frames never leave your phone.", color = th.textFaint)
         }
     }
 }

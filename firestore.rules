@@ -76,7 +76,14 @@ service cloud.firestore {
     match /arenaProfile/{uid} {
       allow read: if isMe(uid) || isFriend(uid);
       allow write: if isMe(uid)
-        && request.resource.data.keys().hasOnly(['level', 'stars', 'mascot', 'rewards', 'journeys', 'weekSteps', 'weekActiveMin', 'weekWorkouts', 'updatedAt', 'photo'])
+        && request.resource.data.keys().hasOnly(['level', 'stars', 'mascot', 'rewards', 'journeys', 'weekSteps', 'weekActiveMin', 'weekWorkouts', 'updatedAt', 'photo', 'champ', 'champStats'])
+        // R26 Game Mode: champion look id + its four stats (0-100), so friends can battle it
+        && (!('champ' in request.resource.data) || (request.resource.data.champ is string && request.resource.data.champ.size() <= 24))
+        && (!('champStats' in request.resource.data) || (request.resource.data.champStats is list && request.resource.data.champStats.size() == 4
+            && request.resource.data.champStats[0] is int && request.resource.data.champStats[0] >= 0 && request.resource.data.champStats[0] <= 100
+            && request.resource.data.champStats[1] is int && request.resource.data.champStats[1] >= 0 && request.resource.data.champStats[1] <= 100
+            && request.resource.data.champStats[2] is int && request.resource.data.champStats[2] >= 0 && request.resource.data.champStats[2] <= 100
+            && request.resource.data.champStats[3] is int && request.resource.data.champStats[3] >= 0 && request.resource.data.champStats[3] <= 100))
         // optional small profile photo (base64 JPEG, ~10 KB) — friends only, like the rest of this document
         && (!('photo' in request.resource.data) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 30000))
         && request.resource.data.level is int && request.resource.data.level >= 1 && request.resource.data.level <= 60
@@ -174,6 +181,22 @@ service cloud.firestore {
           && (!('activeMin' in request.resource.data) || (request.resource.data.activeMin >= 0 && request.resource.data.activeMin <= 43200))
           && (!('distanceM' in request.resource.data) || (request.resource.data.distanceM >= 0 && request.resource.data.distanceM <= 4500000));
       }
+    }
+
+    // R26 champion battles: the attacker records a battle against a FRIEND's champion; only the two of them can read it
+    match /battles/{bid} {
+      allow read: if signedIn() && (resource.data.attacker == request.auth.uid || resource.data.defender == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.attacker == request.auth.uid
+        && request.resource.data.defender is string && request.resource.data.defender != request.auth.uid
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)/friends/$(request.resource.data.defender))
+        && request.resource.data.keys().hasOnly(['attacker', 'defender', 'aName', 'aChamp', 'dChamp', 'aWon', 'score', 'at'])
+        && request.resource.data.aName is string && request.resource.data.aName.size() <= 24
+        && request.resource.data.aChamp is string && request.resource.data.aChamp.size() <= 24
+        && request.resource.data.dChamp is string && request.resource.data.dChamp.size() <= 24
+        && request.resource.data.aWon is bool
+        && request.resource.data.score is string && request.resource.data.score.size() <= 5;
+      allow update: if false;
+      allow delete: if signedIn() && (resource.data.attacker == request.auth.uid || resource.data.defender == request.auth.uid);
     }
 
     // reports about other users (picture, name, behaviour) — write-only for users; reviewed in the Firebase console

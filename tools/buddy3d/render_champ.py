@@ -19,9 +19,12 @@ os.makedirs(out, exist_ok=True)
 pack = motion.load_pack(mpack)
 arm, body = load.load_rigged(glb)
 look.refine(body, subdiv=0)
-s = studio.setup(res=448, samples=samples)
+RES = int(os.environ.get('CHAMP_RES', '720'))       # R26: 720p clips (were 448)
+s = studio.setup(res=RES, samples=samples)
+s.cycles.seed = 7; s.cycles.use_animated_seed = False   # same noise every frame: no denoiser shimmer at 50 fps
+s.cycles.denoising_prefilter = 'FAST'   # 2.7x faster, same look at 8 samples
 s.render.image_settings.file_format = 'PNG'; s.render.image_settings.color_mode = 'RGBA'
-s.render.resolution_x = 448; s.render.resolution_y = 448
+s.render.resolution_x = RES; s.render.resolution_y = RES
 H = max((body.matrix_world @ v.co).z for i, v in enumerate(body.data.vertices) if i % 9 == 0)
 FULL = dict(target=(0, 0, H * 0.52), dist=H * 2.45, yaw=-14, pitch=3, lens=60)   # whole body + headroom for jumps
 
@@ -32,6 +35,10 @@ head = arm.matrix_world @ arm.pose.bones['Head'].head
 studio.camera(target=(head.x, head.y, head.z - H * 0.03), dist=H * 0.95, yaw=-12, pitch=3, lens=70)
 studio.render(os.path.join(out, 'portrait.png'))
 studio.camera(**FULL)
+# full-body still (bundled: the locked-look "glimpse" and the stand-in while a pack downloads)
+if os.environ.get('STAND', '1') == '1':
+    motion.apply(arm, pack, 'idle'); s.frame_set(0)
+    studio.render(os.path.join(out, 'stand.png'))
 
 for name in motion.moves_for(tier):
     if name not in (only or motion.CLIP_SET): continue
@@ -45,7 +52,5 @@ for name in motion.moves_for(tier):
         s.render.filepath = os.path.join(d, f'{i:04d}.png')
         bpy.ops.render.render(write_still=True)
     open(os.path.join(d, 'meta.txt'), 'w').write(f'{name} {k} {fps} {"loop" if loop else "once"}\n')
-    if name == 'idle':
-        s.frame_set(0); studio.render(os.path.join(out, 'stand.png'))
     print('CLIP', name, k, flush=True)
 print('RENDER_DONE')

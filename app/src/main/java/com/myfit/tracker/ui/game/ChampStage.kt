@@ -1,5 +1,6 @@
 package com.myfit.tracker.ui.game
 
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -54,7 +55,7 @@ fun ChampStage(b: BuddyChar, pose: String, modifier: Modifier = Modifier, onEnd:
             LaunchedEffect(ctl, pose) { ctl.play(pose, pose in CHAMP_LOOPS) { end?.invoke() } }
             Champ3DLayer(b.id, b.tier.ordinal, ctl, Modifier.fillMaxSize(), onFail = { failed3d = true })
         } else {
-            val file = remember(b.id, pose, packTick, dl) { File(ctx.filesDir, Buddy.path("$pose.webp", b)).takeIf { it.exists() } }
+            val file = remember(b.id, pose, packTick, dl) { Buddy.champClip(ctx, b, pose) }
             if (file != null && android.os.Build.VERSION.SDK_INT >= 28) {
                 CoachClip(file, Modifier.fillMaxSize(), loop = pose in CHAMP_LOOPS, onEnd = { end?.invoke() })
             } else {
@@ -65,6 +66,35 @@ fun ChampStage(b: BuddyChar, pose: String, modifier: Modifier = Modifier, onEnd:
                     if (b.id in dl || (threeD && !use3d && !failed3d)) CircularProgressIndicator(Modifier.size(136.dp), strokeWidth = 2.dp)
                 }
             }
+        }
+    }
+}
+
+private val stillCache = android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(40)
+
+/**
+ * R26: a champion look as a full-body 3D still (bundled champ/<id>/stand.webp, rendered from the model) — the glimpse
+ * of a look you haven't unlocked yet. No animation and nothing downloads until it's yours.
+ */
+@Composable
+fun ChampStill(b: BuddyChar, modifier: Modifier = Modifier, locked: Boolean = false, full: Boolean = false) {
+    val ctx = LocalContext.current
+    val path = Buddy.standAsset(b)
+    val key = "$path@$full"
+    val bmp by androidx.compose.runtime.produceState(stillCache.get(key), key) {
+        value = stillCache.get(key) ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            // thumbnails decode at half size (360 px) so a roster of stills stays light on memory
+            val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = if (full) 1 else 2 }
+            (runCatching { ctx.assets.open(path) }.getOrNull() ?: runCatching { ctx.assets.open(Buddy.portraitAsset(b)) }.getOrNull())
+                ?.use { android.graphics.BitmapFactory.decodeStream(it, null, opts) }?.asImageBitmap()
+        }?.also { stillCache.put(key, it) }
+    }
+    Box(modifier, contentAlignment = Alignment.BottomCenter) {
+        bmp?.let {
+            androidx.compose.foundation.Image(it, b.label, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                alignment = Alignment.BottomCenter,
+                colorFilter = if (locked) androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0.35f) }) else null,
+                alpha = if (locked) 0.82f else 1f)
         }
     }
 }

@@ -182,8 +182,7 @@ fun NutritionistScreen(container: AppContainer) {
         // ---------------- hero: the character on a stage with today's headline in a speech bubble
         val headline = tips.firstOrNull()
         val npose = when (tab) { 0 -> if (headline?.good == true) "thumbsup" else "idle"; 1 -> "nod>happy>idle"; 2 -> "plate"; else -> "tablet" }
-        Box(Modifier.fillMaxWidth().height(210.dp).padding(horizontal = 16.dp).clip(RoundedCornerShape(30.dp))
-            .background(Brush.linearGradient(listOf(th.success.copy(alpha = 0.22f), th.accent.copy(alpha = 0.06f))))) {
+        Glass(Modifier.fillMaxWidth().height(210.dp).padding(horizontal = 16.dp), shape = RoundedCornerShape(30.dp), tint = th.success.copy(alpha = 0.14f)) {
             Row(Modifier.fillMaxSize()) {
                 CoachStage(cp.nLook.id, npose, Modifier.weight(0.9f).fillMaxSize().padding(top = 10.dp), voice.level)
                 Column(Modifier.weight(1.1f).fillMaxSize().padding(top = 16.dp, end = 14.dp, bottom = 12.dp), verticalArrangement = Arrangement.SpaceBetween) {

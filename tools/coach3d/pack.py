@@ -1,13 +1,15 @@
-"""PNG frames -> looping animated WebP, cropped tight to the coach.
+"""PNG frames -> side-by-side-alpha MP4 per clip (R26, 720 x 1280 class, 50 fps; see vid.py), cropped tight to the coach.
 Standing clips share ONE crop box per coach (union of every frame of every standing clip), so the coach keeps the same
 size and position whichever move plays; floor moves (pushup, plank) get their own box.  python pack.py <frames_dir> <out>"""
 import sys, os, glob
 from PIL import Image
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import vid
 
 src, out = sys.argv[1], sys.argv[2]
 os.makedirs(out, exist_ok=True)
 FLOOR = {'pushup', 'plank'}
-H_OUT = 720                       # output height for standing clips (px)
+H_OUT = 1280                      # output height for standing clips (px): 720p portrait
 clips = sorted(d for d in os.listdir(src) if os.path.isdir(os.path.join(src, d)) and d != 'portrait')
 
 
@@ -43,11 +45,10 @@ for c in clips:
         ow = int((sbox[2] - sbox[0]) * H_OUT / (sbox[3] - sbox[1]) * 1.6); oh = max(2, int(ow * bh / bw))
     else:
         oh = H_OUT; ow = max(2, int(bw * H_OUT / bh))
-    ims = [Image.open(f).convert('RGBA').crop(box).resize((ow, oh), Image.LANCZOS) for f in fs]
-    p = os.path.join(out, f'{c}.webp')
-    ims[0].save(p, save_all=True, append_images=ims[1:], duration=round(1000 / fps), loop=0, quality=82, method=4, lossless=False)
+    p = os.path.join(out, f'{c}.mp4')
+    ow, oh = vid.encode(fs, p, fps, box, (ow, oh))
     total += os.path.getsize(p)
-    print(c, len(ims), f'{ow}x{oh}', os.path.getsize(p) // 1024, 'KB')
+    print(c, len(fs), f'{ow}x{oh}', os.path.getsize(p) // 1024, 'KB')
 pd = os.path.join(src, 'portrait')
 if os.path.isdir(pd):
     st = Image.open(os.path.join(pd, 'stand.png')).convert('RGBA')

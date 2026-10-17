@@ -62,7 +62,7 @@ val Journeys = listOf(
             Stop("Minar-e-Pakistan", 4.0, "Marks where the Lahore Resolution was passed in 1940."),
             Stop("Greater Iqbal Park", 5.0, "One of the largest urban parks in Lahore."),
         )),
-    Journey("kkh", "Karakoram Highway", "Hunza to Khunjerab Pass, Pakistan", JourneyTheme.LEGENDS, 160.0, Mascot.SAKEEN, Scene.K2,
+    Journey("kkh", "Karakoram Highway", "Hunza to Khunjerab Pass, Pakistan", JourneyTheme.LEGENDS, 160.0, Mascot.TAJ, Scene.K2,
         "The old Silk Road route, now one of the highest paved roads on Earth.", listOf(
             Stop("Karimabad", 0.0, "Baltit Fort has watched over the Hunza valley for around 700 years."),
             Stop("Attabad Lake", 20.0, "A turquoise lake formed by a landslide in 2010."),
@@ -101,7 +101,7 @@ val Journeys = listOf(
             Stop("Beijing Knot", 4.5, "The point where three branches of the wall meet."),
             Stop("Mutianyu", 10.0, "A restored section with 23 watchtowers — and a toboggan down."),
         )),
-    Journey("paris", "Paris Icons", "Paris, France", JourneyTheme.CITIES, 13.0, Mascot.LOMRI, Scene.CITY,
+    Journey("paris", "Paris Icons", "Paris, France", JourneyTheme.CITIES, 13.0, Mascot.ZARA, Scene.CITY,
         "From the Eiffel Tower along the Seine to the hilltop of Montmartre.", listOf(
             Stop("Eiffel Tower", 0.0, "Built for the 1889 World's Fair; about 330 m tall today."),
             Stop("Arc de Triomphe", 2.5, "Twelve avenues radiate from it like the points of a star."),
@@ -110,7 +110,7 @@ val Journeys = listOf(
             Stop("Notre-Dame", 8.5, "The Gothic cathedral reopened in December 2024 after the 2019 fire."),
             Stop("Sacré-Cœur", 13.0, "The highest point in Paris, on Montmartre hill."),
         )),
-    Journey("london", "London Marathon Route", "London, United Kingdom", JourneyTheme.CITIES, 42.2, Mascot.SHAHEEN, Scene.CITY,
+    Journey("london", "London Marathon Route", "London, United Kingdom", JourneyTheme.CITIES, 42.2, Mascot.KALA, Scene.CITY,
         "Run the world's most famous marathon course, from Greenwich to The Mall.", listOf(
             Stop("Greenwich", 0.0, "The race starts on Blackheath, near the Prime Meridian."),
             Stop("Cutty Sark", 10.0, "The 19th-century tea clipper — some of the loudest crowds of the race."),

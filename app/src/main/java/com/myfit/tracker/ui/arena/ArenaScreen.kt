@@ -126,8 +126,9 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                     item(key = "tabs") {
                         val tabsState = androidx.compose.foundation.lazy.rememberLazyListState()
                         LazyRow(state = tabsState, modifier = Modifier.fadeEdges(tabsState), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            val tabs = listOf("Challenges", "Journeys", "Battles", "Rewards")
-                            items(tabs.size) { i -> GlassChip(tabs[i], tab == i, { tab = i }) }
+                            // R26: Champions tab (index 4) shown second
+                            val tabs = listOf(0 to "Challenges", 4 to "Champions", 1 to "Journeys", 2 to "Battles", 3 to "Rewards")
+                            items(tabs.size) { i -> GlassChip(tabs[i].second, tab == tabs[i].first, { tab = tabs[i].first }) }
                         }
                     }
                     if (tab == 0) item(key = "friends") { com.myfit.tracker.ui.social.FriendsGlimpse(container) }
@@ -144,7 +145,8 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                         }
                         1 -> item(key = "journeys") { JourneyHub(container, d, partner, ver, { ver++ }) { openJourney = it } }
                         2 -> { item { DuelsPane(container, award) { nav.push(com.myfit.tracker.ui.nav.Overlay.Social) } }; item { Leaderboard(container, lvl, partner) } }
-                        else -> item { RewardsPane(lvl, d, partner, ver) { partner = it; ArenaPrefs.setPartner(ctx, it) } }
+                        3 -> item { RewardsPane(lvl, d, partner, ver) { partner = it; ArenaPrefs.setPartner(ctx, it) } }
+                        else -> item(key = "champions") { com.myfit.tracker.ui.game.ArenaChampions(container) { ver++ } }
                     }
                 }
             }
@@ -334,7 +336,7 @@ private fun DuelsPane(container: AppContainer, award: (String, Int, String) -> U
         GlassCard(padding = 14.dp) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(96.dp).height(64.dp)) {
-                    CastImage(Mascot.SHAHEEN, 64.dp)
+                    CastImage(Mascot.MONAL, 64.dp)
                     CastImage(Mascot.ZARA, 64.dp, Modifier.offset(x = 34.dp))
                 }
                 Spacer(Modifier.width(8.dp))
