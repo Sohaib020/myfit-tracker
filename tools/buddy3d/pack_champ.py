@@ -1,4 +1,4 @@
-"""R26: champion frames -> one side-by-side-alpha MP4 per move (720p, 50 fps; tools/coach3d/vid.py) + portrait/stand stills.
+"""R28: champion frames (already cropped tight by render_champ) -> one side-by-side-alpha MP4 per move (~1000 px tall, 60 fps) + stills.
   python pack_champ.py <frames_dir> <out_dir>"""
 import sys, os, glob
 from PIL import Image
@@ -12,7 +12,7 @@ for d in sorted(glob.glob(os.path.join(src, '*/'))):
     fs = sorted(glob.glob(os.path.join(d, '*.png')))
     if not fs: continue
     mf = os.path.join(d, 'meta.txt')
-    fps = int(open(mf).read().split()[2]) if os.path.exists(mf) else 50
+    fps = int(open(mf).read().split()[2]) if os.path.exists(mf) else 60
     p = os.path.join(out, name + '.mp4')
     w, h = vid.encode(fs, p, fps)
     print('MP4', name, len(fs), f'{w}x{h}', os.path.getsize(p) // 1024, 'KB')

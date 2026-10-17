@@ -23,7 +23,7 @@ import java.util.zip.ZipInputStream
  * [open]/[source]/[openAsset], so it doesn't care where the files live.
  */
 object Buddy {
-    private const val PACKS = "https://github.com/Sohaib020/myfit-tracker/releases/download/champs-v2"   // R26: 720p 50 fps MP4 clips
+    private const val PACKS = "https://github.com/Sohaib020/myfit-tracker/releases/download/champs-v3"   // R28: tight-cropped 60 fps MP4 clips
 
     /** The buddy currently shown. */
     val active = MutableStateFlow(BuddyChar.PIP)
@@ -46,7 +46,7 @@ object Buddy {
 
     /** Pip is always installed; a champion look once its pack has been downloaded. */
     fun installed(c: Context, b: BuddyChar) = b.isPip || File(dir(c, b), ".complete").let { it.exists() && it.readText().trim() == PACK_VER }
-    private const val PACK_VER = "2"
+    private const val PACK_VER = "3"
     val name: String get() = active.value.label
 
     /** How the AI should introduce itself. */
