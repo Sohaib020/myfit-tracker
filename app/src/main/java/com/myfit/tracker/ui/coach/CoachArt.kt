@@ -123,7 +123,16 @@ fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level
         val packs by CoachPacks.installed.collectAsState()
         // first appearance of this coach: fetch the animated moves in the background (the still shows meanwhile)
         androidx.compose.runtime.LaunchedEffect(look) { if (!CoachPacks.isInstalled(ctx, look)) CoachPacks.ensure(ctx, look) }
-        AnimatedContent(shown, Modifier.fillMaxSize(), transitionSpec = {
+        val video = androidx.compose.runtime.remember(look, shown, packs) {
+            if (android.os.Build.VERSION.SDK_INT >= 28) CoachPacks.clip(ctx, look, shown)?.takeIf { it.name.endsWith(".mp4") } else null
+        }
+        if (video != null) {
+            // R26: one video view for every move — switching keeps the last frame up until the next move's first frame,
+            // so there's no blank flash between moves
+            val once = tapPose != null && shown == tapPose
+            CoachClip(video, Modifier.fillMaxSize().graphicsLayer { transformOrigin = TransformOrigin(0.5f, 1f); translationY = -lv * 6f },
+                loop = !once, onEnd = { if (tapPose == shown) tapPose = null })
+        } else AnimatedContent(shown, Modifier.fillMaxSize(), transitionSpec = {
             (scaleIn(spring(0.55f, 380f), initialScale = 0.96f) + fadeIn(tween(180)))
                 .togetherWith(fadeOut(tween(140)))
         }, label = "pose") { p ->
@@ -161,6 +170,15 @@ fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level
 @Composable
 internal fun CoachClip(file: java.io.File, modifier: Modifier, loop: Boolean = true, onEnd: (() -> Unit)? = null) {
     val end = androidx.compose.runtime.rememberUpdatedState(onEnd)
+    if (file.name.endsWith(".mp4")) {
+        // R26: 720p / 50 fps video clip with alpha (hardware decoded)
+        androidx.compose.ui.viewinterop.AndroidView(
+            factory = { c -> AlphaVideoView(c) },
+            modifier = modifier,
+            update = { v -> v.onEnd = { end.value?.invoke() }; v.play(file, loop) },
+        )
+        return
+    }
     androidx.compose.ui.viewinterop.AndroidView(
         factory = { c -> BottomFitImageView(c) },
         modifier = modifier,

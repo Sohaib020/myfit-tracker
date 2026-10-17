@@ -51,7 +51,7 @@ import java.nio.ByteOrder
  * emote. Everyone else keeps the animated clips (with tap-to-emote). Settings → "3D coaches" overrides the default.
  */
 object Coach3D {
-    private const val BASE = "https://github.com/Sohaib020/myfit-tracker/releases/download/coach3d-glb-v1"
+    private const val BASE = "https://github.com/Sohaib020/myfit-tracker/releases/download/coach3d-glb-v2"
     private const val P = "coach3d"
     val ready = MutableStateFlow(0)
     private val busy = HashSet<String>()
@@ -66,7 +66,7 @@ object Coach3D {
     fun setEnabled(c: Context, on: Boolean) { c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putBoolean("on", on).apply(); ready.value++ }
 
     /** Bump with each re-export of the release GLBs so phones fetch the new one (v2 = R22 Mixamo mocap). */
-    private const val GLB_VER = 2
+    private const val GLB_VER = 3   // R26 high-res coaches
     private fun file(c: Context, lookId: String) = File(c.filesDir, "coach3d_glb/${CoachPacks.pack(lookId)}_v$GLB_VER.glb")
     fun installed(c: Context, lookId: String) = file(c, lookId).let { it.exists() && it.length() > 100_000 }
 
@@ -285,9 +285,11 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
         animator = a.instance.animator
         val an = animator
         names = if (an != null) (0 until an.animationCount).map { an.getAnimationName(it) } else emptyList()
-        val bb = a.boundingBox
-        center = bb.center.copyOf(); val h = bb.halfExtent
-        unit = 1f / maxOf(h[0], h[1], h[2]).coerceAtLeast(0.01f)
+        // R26: real body bounds = every renderable's box through its node transform (the asset box can be inflated
+        // by armature/root transforms, which left characters small and floating); normalise to 1 unit tall
+        val (lo, hi) = bodyBounds(e, a)
+        center = floatArrayOf((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2)
+        unit = 1f / (hi[1] - lo[1]).coerceAtLeast(0.01f)
 
         val ui = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).apply { isOpaque = false }; uiHelper = ui
         ui.renderCallback = object : UiHelper.RendererCallback {
@@ -303,12 +305,11 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
             override fun onResized(width: Int, height: Int) {
                 if (dead) return
                 view?.viewport = com.google.android.filament.Viewport(0, 0, width, height)
-                val aspect = width.toDouble() / height.coerceAtLeast(1)
-                camera?.setLensProjection(38.0, aspect, 0.05, 50.0)
+                frame(width.toDouble() / height.coerceAtLeast(1))
             }
         }
         ui.attachTo(tv)
-        cam.lookAt(0.0, 0.25, 0.0, 0.0, 0.0, -4.0, 0.0, 1.0, 0.0)
+        frame(1.0)
         applyRoot()
         running = true
         Choreographer.getInstance().postFrameCallback(this)
@@ -316,6 +317,47 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
     }.getOrElse { destroy(); false }
 
     private fun idx(n: String) = names.indexOf(n)
+
+    private fun bodyBounds(e: com.google.android.filament.Engine, a: com.google.android.filament.gltfio.FilamentAsset): Pair<FloatArray, FloatArray> {
+        val rm = e.renderableManager; val tm = e.transformManager
+        val lo = floatArrayOf(Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE); val hi = floatArrayOf(-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE)
+        val box = com.google.android.filament.Box(); val w = FloatArray(16); val p = FloatArray(4); val q = FloatArray(4)
+        // skinned meshes (all our characters): the vertices are already in bind/world space — glTF ignores the mesh
+        // node's transform and Filament compensates for it in the joint matrices — so the node transform must NOT
+        // be applied (our exporter's root carries the hip-height offset, which pushed characters half off the card)
+        val skinned = runCatching { a.instance.skinCount > 0 }.getOrDefault(true)
+        for (ent in a.renderableEntities) {
+            val ri = rm.getInstance(ent); if (ri == 0) continue
+            rm.getAxisAlignedBoundingBox(ri, box)
+            val ti = tm.getInstance(ent)
+            if (ti != 0 && !skinned) tm.getWorldTransform(ti, w) else android.opengl.Matrix.setIdentityM(w, 0)
+            val c = box.center; val h = box.halfExtent
+            for (sx in -1..1 step 2) for (sy in -1..1 step 2) for (sz in -1..1 step 2) {
+                p[0] = c[0] + sx * h[0]; p[1] = c[1] + sy * h[1]; p[2] = c[2] + sz * h[2]; p[3] = 1f
+                android.opengl.Matrix.multiplyMV(q, 0, w, 0, p, 0)
+                for (k in 0..2) { lo[k] = minOf(lo[k], q[k]); hi[k] = maxOf(hi[k], q[k]) }
+            }
+        }
+        if (lo[0] > hi[0]) { val bb = a.boundingBox; val c = bb.center; val h = bb.halfExtent
+            return floatArrayOf(c[0] - h[0], c[1] - h[1], c[2] - h[2]) to floatArrayOf(c[0] + h[0], c[1] + h[1], c[2] + h[2]) }
+        return lo to hi
+    }
+
+    /**
+     * R26 framing: the whole body fills the view and stands on its bottom edge (like the 2D clips), whatever the
+     * card's shape. The model is normalised to 1 unit tall, centred at (0, 0, -4); we move the camera back just far
+     * enough that body height + headroom (arms up, jumps) and a shoulder-wide envelope both fit.
+     */
+    private fun frame(aspect: Double) {
+        val cam = camera ?: return
+        val lens = 38.0
+        val tanHalf = 12.0 / lens                              // 35 mm film: 24 mm tall
+        val needH = maxOf(1.10, 0.80 / aspect.coerceAtLeast(0.2)) // height incl. headroom, or the width envelope on narrow cards
+        val d = needH / (2 * tanHalf)
+        val yc = -0.5 - 0.02 + needH / 2                         // view bottom just under the feet
+        cam.setLensProjection(lens, aspect, 0.05, 50.0)
+        cam.lookAt(0.0, yc + d * 0.04, -4.0 + d, 0.0, yc, -4.0, 0.0, 1.0, 0.0)
+    }
 
     fun setPose(pose: String) {
         if (dead) return
@@ -423,8 +465,8 @@ private class CoachScene(private val look: String, private val glb: ByteBuffer) 
 
 /** Champion looks as real-time models (release champ3d-v1/<id>.glb, every move of the tier). */
 object ChampModels {
-    private const val BASE = "https://github.com/Sohaib020/myfit-tracker/releases/download/champ3d-v1"
-    private const val VER = 1
+    private const val BASE = "https://github.com/Sohaib020/myfit-tracker/releases/download/champ3d-v2"
+    private const val VER = 2   // R26 weight-shift idle
     private val busy = HashSet<String>()
     private fun file(c: Context, id: String) = File(c.filesDir, "champ3d/${id}_v$VER.glb")
     fun installed(c: Context, id: String) = file(c, id).let { it.exists() && it.length() > 100_000 }

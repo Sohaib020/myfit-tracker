@@ -8,7 +8,7 @@ Fingers are one chain (index..pinky curl together) + a separate thumb, which eve
 
 Usage (bpy 4.2 module):  import rig; arm, body = rig.load('trainer_m', ASSETS)
 """
-import bpy, mathutils, os
+import bpy, mathutils, os, sys
 from mathutils import Vector, Matrix
 
 SIDES = ('L', 'R')
@@ -200,10 +200,15 @@ def split_thumb(mesh, J, s):
 
 
 CHARS = {
-    'trainer_m': ('trainer_m_rig.glb', RIGIFY),
-    'trainer_f': ('trainer_f_rig.glb', MIXAMO),
+    # R26: owner's high-res Meshy coaches, auto-rigged onto the canonical skeleton (tools/buddy3d/autorig.py,
+    # decimated to 150k tris, 2K textures) -> glb/v2/<who>.glb on branch coach3d-assets
+    'trainer_m': ('v2/trainer_m.glb', 'CANON'),
+    'trainer_f': ('v2/trainer_f.glb', 'CANON'),
+    'nutri_f': ('v2/nutri_f.glb', 'CANON'),
+    # R18 models (kept for old branches/tools)
+    'trainer_m_v1': ('trainer_m_rig.glb', RIGIFY),
+    'trainer_f_v1': ('trainer_f_rig.glb', MIXAMO),
     'nutri_m': ('nutri_m_rig.glb', MIXAMO),
-    'nutri_f': ('nutri_f.glb', None),          # no rig: weights transferred from trainer_f
 }
 
 
@@ -211,8 +216,12 @@ def load(who, assets):
     """Returns (armature, mesh) for a coach on the canonical skeleton, in rest pose, feet on z=0, facing -Y."""
     _clear()
     file, names = CHARS[who]
-    if names is None:
-        return _load_unrigged(who, assets)
+    if names == 'CANON':
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'buddy3d'))
+        import load as _bload
+        arm, mesh = _bload.load_rigged(os.path.join(assets, file))
+        mesh.name = who + '_body'
+        return arm, mesh
     src_arm, mesh, objs = _import(os.path.join(assets, file))
     J = _joints(src_arm, names)
     for s in SIDES:
@@ -303,10 +312,10 @@ def _fix_long_hair(mesh, J):
 
 # per-character muscle bulk to match the reference images (lateral scale of each bone; length unchanged)
 BULK = {
-    'trainer_m': {'UpperChest': 1.10, 'Chest': 1.07, 'Neck': 1.10, 'Shoulder': 1.10, 'UpperArm': 1.20, 'ForeArm': 1.12, 'UpLeg': 1.08, 'Leg': 1.06},
-    'trainer_f': {'UpperChest': 1.04, 'Shoulder': 1.06, 'UpperArm': 1.12, 'ForeArm': 1.07, 'UpLeg': 1.08, 'Leg': 1.06},
+    # R26 models are sculpted at the right build: no bulk
+    'trainer_m_v1': {'UpperChest': 1.10, 'Chest': 1.07, 'Neck': 1.10, 'Shoulder': 1.10, 'UpperArm': 1.20, 'ForeArm': 1.12, 'UpLeg': 1.08, 'Leg': 1.06},
+    'trainer_f_v1': {'UpperChest': 1.04, 'Shoulder': 1.06, 'UpperArm': 1.12, 'ForeArm': 1.07, 'UpLeg': 1.08, 'Leg': 1.06},
     'nutri_m': {'Shoulder': 1.03, 'UpperArm': 1.07, 'ForeArm': 1.04},
-    'nutri_f': {},
 }
 
 

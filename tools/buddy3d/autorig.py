@@ -145,6 +145,39 @@ def find_tail(b, J):
     return pts
 
 
+def _unweighted(mesh):
+    return sum(1 for v in mesh.data.vertices if not any(g.weight > 0.01 for g in v.groups)) / max(1, len(mesh.data.vertices))
+
+
+def _proxy_weights(mesh, arm):
+    """Bone heat gave up on this mesh (overlapping cloth shells, degenerate faces after decimation). Solve it on a
+    watertight voxel-remeshed copy instead, then copy the weights back to the real mesh by surface proximity."""
+    print('BONE_HEAT_FALLBACK proxy', flush=True)
+    for g in list(mesh.vertex_groups): mesh.vertex_groups.remove(g)
+    proxy = mesh.copy(); proxy.data = mesh.data.copy(); proxy.name = 'proxy'
+    bpy.context.collection.objects.link(proxy)
+    for m in list(proxy.modifiers): proxy.modifiers.remove(m)
+    proxy.parent = None
+    r = proxy.modifiers.new('remesh', 'REMESH'); r.mode = 'VOXEL'; r.voxel_size = 0.012; r.use_smooth_shade = True
+    for o in bpy.context.view_layer.objects: o.select_set(o is proxy)
+    bpy.context.view_layer.objects.active = proxy
+    bpy.ops.object.modifier_apply(modifier='remesh')
+    proxy.select_set(True); arm.select_set(True); bpy.context.view_layer.objects.active = arm
+    bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+    print('proxy unweighted', round(_unweighted(proxy), 4), flush=True)
+    for b in arm.data.bones:
+        if mesh.vertex_groups.get(b.name) is None: mesh.vertex_groups.new(name=b.name)
+    dt = mesh.modifiers.new('dt', 'DATA_TRANSFER'); dt.object = proxy
+    dt.use_vert_data = True; dt.data_types_verts = {'VGROUP_WEIGHTS'}; dt.vert_mapping = 'POLYINTERP_NEAREST'
+    dt.layers_vgroup_select_src = 'ALL'; dt.layers_vgroup_select_dst = 'NAME'
+    for o in bpy.context.view_layer.objects: o.select_set(o is mesh)
+    bpy.context.view_layer.objects.active = mesh
+    while mesh.modifiers.find('dt') > 0:
+        bpy.ops.object.modifier_move_up(modifier='dt')
+    bpy.ops.object.modifier_apply(modifier='dt')
+    bpy.data.objects.remove(proxy, do_unlink=True)
+
+
 def build(mesh, J, tail):
     arm = rig.build_armature(J, 'buddy')
     if tail:
@@ -160,6 +193,8 @@ def build(mesh, J, tail):
     for o in bpy.context.view_layer.objects: o.select_set(False)
     mesh.select_set(True); arm.select_set(True); bpy.context.view_layer.objects.active = arm
     bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+    if _unweighted(mesh) > 0.2:
+        _proxy_weights(mesh, arm)
     # soften weight borders a little (bone heat can leave hard steps on thin cloth)
     bpy.context.view_layer.objects.active = mesh
     for o in bpy.context.view_layer.objects: o.select_set(o is mesh)

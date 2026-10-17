@@ -20,7 +20,7 @@ OWN_REST = ('Hips', 'Spine', 'Chest', 'UpperChest', 'Neck', 'Head')
 
 # app clip name -> (Mixamo file, loop, max seconds, options). Names match Pip's moves so the app needs no mapping.
 MOVES = {
-    'idle': ('Happy Idle', True, 4.0, {}),
+    'idle': ('weight shift', True, 8.0, {}),        # R26: natural idle (Happy Idle bounced)
     'talk': ('Talking', True, None, {}),
     'wave': ('Waving', False, None, {}),
     'celebrate': ('Cheering', False, None, {'level': False}),

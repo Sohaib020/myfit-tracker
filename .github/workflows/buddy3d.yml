@@ -1,7 +1,8 @@
 name: Champions (buddy packs + 3D)
 # Rigged champions (branch buddy3d-assets/rigged) + motion pack -> per champion/tier:
-#   buddy clip pack  -> release champs-v1/<id>.zip   (animated WebPs named like Pip's moves + portrait/stand)
-#   real-time model  -> release champ3d-v1/<id>.glb  (every move of the tier)
+#   clip pack        -> release champs-v2/<id>.zip   (R26: 720p 50 fps side-by-side-alpha MP4 per move + portrait/stand)
+#   real-time model  -> release champ3d-v2/<id>.glb  (every move of the tier)
+# Each look renders in 3 parts (moves split round-robin) so no job runs for hours.
 #   portraits + contact sheet -> branch champs-out (portraits get bundled in the APK)
 on:
   push:
@@ -22,13 +23,13 @@ jobs:
           import json, sys
           r = json.load(open('tools/buddy3d/roster.json'))
           only = [x for x in sys.argv[1].split(',') if x]
-          inc = [{'id': k, 'tier': v['tier']} for k, v in r.items() if not only or k in only]
+          inc = [{'id': k, 'tier': v['tier'], 'part': p} for k, v in r.items() if not only or k in only for p in range(3)]
           print('matrix=' + json.dumps({'include': inc}))
           PY
   build:
     needs: plan
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 330
     strategy:
       fail-fast: false
       max-parallel: 20
@@ -43,24 +44,31 @@ jobs:
         run: |
           sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 libxrender1 libxxf86vm1 libxfixes3 >/dev/null
           pip install -q bpy==4.2.0 pillow numpy
-          ID=${{ matrix.id }}; T=${{ matrix.tier }}
+          sudo apt-get install -yq ffmpeg >/dev/null
+          ID=${{ matrix.id }}; T=${{ matrix.tier }}; P=${{ matrix.part }}
+          ONLY=$(python3 -c "import sys; sys.path.insert(0,'tools/buddy3d'); import ast,re; src=open('tools/buddy3d/motion.py').read(); \
+            cs=ast.literal_eval(re.search(r'CLIP_SET = (\[.*?\])', src, re.S).group(1)); print(','.join(c for i,c in enumerate(cs) if i % 3 == $P))")
+          echo "part $P: $ONLY"
+          export STAND=$([ "$P" = 0 ] && echo 1 || echo 0)
           for try in 1 2; do
-            python tools/buddy3d/render_champ.py assets/rigged/$ID.glb assets/motion.json.gz $T frames 12 16 > log.txt 2>&1 || true
+            python tools/buddy3d/render_champ.py assets/rigged/$ID.glb assets/motion.json.gz $T frames 50 8 "$ONLY" > log.txt 2>&1 || true
             grep -q RENDER_DONE log.txt && break
           done
           grep -E "CLIP|RENDER_DONE|Error|Traceback" log.txt | head -30
           grep -q RENDER_DONE log.txt || { tail -30 log.txt | sed 's/^/::error::/'; exit 1; }
-          python tools/buddy3d/pack_champ.py frames pack/$ID
-          mkdir -p out && (cd pack/$ID && zip -q -r ../../out/$ID.zip .)
-          for try in 1 2; do
-            python tools/buddy3d/export_champ_glb.py assets/rigged/$ID.glb assets/motion.json.gz $T out/$ID.glb > glog.txt 2>&1 || true
-            grep -q EXPORT_DONE glog.txt && break
-          done
-          grep -q EXPORT_DONE glog.txt || { tail -20 glog.txt | sed 's/^/::error::/'; exit 1; }
-          mkdir -p out/portraits && cp pack/$ID/portrait.webp out/portraits/$ID.webp && cp frames/idle/0010.png out/portraits/${ID}_idle.png || true
-          echo "::notice::$ID pack $(du -k out/$ID.zip | cut -f1) KB, 3D $(du -k out/$ID.glb | cut -f1) KB"
+          [ "$P" = 0 ] || rm -f frames/portrait.png frames/stand.png
+          python tools/buddy3d/pack_champ.py frames out/pack/$ID
+          if [ "$P" = 0 ]; then
+            for try in 1 2; do
+              python tools/buddy3d/export_champ_glb.py assets/rigged/$ID.glb assets/motion.json.gz $T out/$ID.glb > glog.txt 2>&1 || true
+              grep -q EXPORT_DONE glog.txt && break
+            done
+            grep -q EXPORT_DONE glog.txt || { tail -20 glog.txt | sed 's/^/::error::/'; exit 1; }
+            mkdir -p out/portraits && cp out/pack/$ID/portrait.webp out/portraits/$ID.webp && cp out/pack/$ID/stand.webp out/portraits/${ID}_stand.webp && cp frames/stand.png out/portraits/${ID}_idle.png || true
+          fi
+          echo "::notice::$ID part $P $(du -sk out/pack/$ID | cut -f1) KB"
       - uses: actions/upload-artifact@v4
-        with: { name: 'champ-${{ matrix.id }}', path: out, retention-days: 3 }
+        with: { name: 'champ-${{ matrix.id }}-${{ matrix.part }}', path: out, retention-days: 3 }
   release:
     needs: build
     if: always()
@@ -72,10 +80,13 @@ jobs:
       - name: Releases
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |
-          gh release view champs-v1 >/dev/null 2>&1 || gh release create champs-v1 --title "Champion buddy packs" --notes "Animated buddy clips per champion/tier (R24)" --prerelease
-          gh release view champ3d-v1 >/dev/null 2>&1 || gh release create champ3d-v1 --title "Champion 3D models" --notes "Real-time GLBs per champion/tier (R24)" --prerelease
-          for z in parts/*/*.zip; do gh release upload champs-v1 "$z" --clobber; done
-          for g in parts/*/*.glb; do gh release upload champ3d-v1 "$g" --clobber; done
+          gh release view champs-v2 >/dev/null 2>&1 || gh release create champs-v2 --title "Champion clip packs v2" --notes "720p 50 fps side-by-side-alpha MP4 per move (R26)" --prerelease
+          gh release view champ3d-v2 >/dev/null 2>&1 || gh release create champ3d-v2 --title "Champion 3D models v2" --notes "Real-time GLBs per champion/tier (R26 idle)" --prerelease
+          mkdir -p merged zips
+          for d in parts/*/pack/*/; do id=$(basename $d); mkdir -p merged/$id; cp -n $d* merged/$id/; done
+          for d in merged/*/; do id=$(basename $d); [ -f $d/idle.mp4 ] || { echo "::warning::$id has no idle"; continue; }; (cd $d && zip -q -r ../../zips/$id.zip .); done
+          for z in zips/*.zip; do gh release upload champs-v2 "$z" --clobber; done
+          for g in parts/*/*.glb; do gh release upload champ3d-v2 "$g" --clobber; done
       - name: Portraits + sheet branch
         run: |
           pip install -q pillow

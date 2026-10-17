@@ -16,8 +16,8 @@ import rig, anim
 # clip name -> (Mixamo file stem, loop, max seconds or None, options)
 MOCAP = {
     # standing loops
-    'idle':      ('Happy Idle', True, None, {}),
-    'idle2':     ('weight shift', True, 8.0, {}),
+    'idle':      ('weight shift', True, 8.0, {}),      # R26: natural weight-shift idle (Happy Idle bounced)
+    'idle2':     ('Happy Idle', True, None, {}),
     'talk':      ('Talking', True, None, {}),
     'talk2':     ('Talking (1)', True, None, {}),
     'talk3':     ('Talking (2)', True, None, {}),
