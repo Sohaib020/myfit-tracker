@@ -19,6 +19,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -227,4 +229,36 @@ private class BottomFitImageView(c: android.content.Context) : android.widget.Im
     }
     override fun setFrame(l: Int, t: Int, r: Int, b: Int): Boolean = super.setFrame(l, t, r, b).also { fit() }
     override fun setImageDrawable(drawable: android.graphics.drawable.Drawable?) { super.setImageDrawable(drawable); fit() }
+}
+
+/**
+ * R29: a glowing neon disc the character stands on (coaches, nutritionist, champions — 3D and clips alike). The
+ * character is centred and lifted so its feet land on the disc's centre; the disc breathes softly.
+ */
+@Composable
+fun OnPlatform(color: Color, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+    val t = rememberInfiniteTransition(label = "platform")
+    val glow by t.animateFloat(0.75f, 1f, infiniteRepeatable(tween(1800), RepeatMode.Reverse), label = "glow")
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier) {
+        val discW = minOf(maxWidth * 0.86f, maxHeight * 0.62f)
+        val discH = discW * 0.24f
+        Canvas(Modifier.align(Alignment.BottomCenter).padding(bottom = discH * 0.10f).size(discW, discH)) {
+            val w = size.width; val h = size.height
+            // light pooling on the floor
+            drawOval(Brush.radialGradient(listOf(color.copy(alpha = 0.55f * glow), color.copy(alpha = 0.18f * glow), Color.Transparent),
+                Offset(w / 2, h / 2), w / 2), Offset.Zero, androidx.compose.ui.geometry.Size(w, h))
+            // the disc top
+            drawOval(Brush.verticalGradient(listOf(color.copy(alpha = 0.35f), Color.Black.copy(alpha = 0.35f))),
+                Offset(w * 0.12f, h * 0.22f), androidx.compose.ui.geometry.Size(w * 0.76f, h * 0.56f))
+            // bright neon rim
+            drawOval(color.copy(alpha = 0.95f * glow), Offset(w * 0.12f, h * 0.22f), androidx.compose.ui.geometry.Size(w * 0.76f, h * 0.56f),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(2.2.dp.toPx()))
+            drawOval(Color.White.copy(alpha = 0.55f * glow), Offset(w * 0.2f, h * 0.27f), androidx.compose.ui.geometry.Size(w * 0.6f, h * 0.42f),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+            // contact shadow under the feet
+            drawOval(Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.5f), Color.Transparent), Offset(w / 2, h * 0.5f), w * 0.2f),
+                Offset(w * 0.3f, h * 0.38f), androidx.compose.ui.geometry.Size(w * 0.4f, h * 0.24f))
+        }
+        Box(Modifier.fillMaxSize().padding(bottom = discH * 0.48f), contentAlignment = Alignment.BottomCenter, content = content)
+    }
 }

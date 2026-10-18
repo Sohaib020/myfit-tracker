@@ -185,6 +185,7 @@ private fun LevelHero(l: Level, partner: Mascot, small: Boolean = false, onLong:
     val inf = rememberInfiniteTransition(label = "hero")
     val t by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(22_000, easing = LinearEasing)), label = "aurora")
     val sheen by inf.animateFloat(-0.6f, 1.6f, infiniteRepeatable(tween(7_000, easing = LinearEasing)), label = "sheen")
+    val bob by inf.animateFloat(-1f, 1f, infiniteRepeatable(tween(1_800), androidx.compose.animation.core.RepeatMode.Reverse), label = "bob")
     val frac by animateFloatAsState(l.frac, tween(1400), label = "xp")
     val next = Mascot.entries.firstOrNull { it.unlock > l.n }
     val a1 = partner.accent; val a2 = partner.color
@@ -216,7 +217,7 @@ private fun LevelHero(l: Level, partner: Mascot, small: Boolean = false, onLong:
                 Text("Level ${l.n}", style = FitType.metric.copy(fontSize = 24.sp, lineHeight = 26.sp), color = Color.White, maxLines = 1)
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Box(Modifier.size(84.dp).clip(CircleShape).background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent))), contentAlignment = Alignment.Center) {
-                        CastImage(partner, 80.dp)
+                        CastAnim(partner, CastClip.WAVE, 80.dp, Modifier.graphicsLayer { translationY = bob * 4.dp.toPx() })
                     }
                 }
                 Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.16f))) {
@@ -229,7 +230,7 @@ private fun LevelHero(l: Level, partner: Mascot, small: Boolean = false, onLong:
         }
         Row(Modifier.padding(start = 12.dp, end = 18.dp, top = 14.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(96.dp).clip(CircleShape).background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent))), contentAlignment = Alignment.Center) {
-                CastImage(partner, 92.dp)
+                CastAnim(partner, CastClip.WAVE, 92.dp, Modifier.graphicsLayer { translationY = bob * 4.dp.toPx() })
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
