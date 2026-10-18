@@ -41,6 +41,8 @@ object Buddy {
         "yawn" to "sleepy", "meditate" to "sleepy", "sneeze" to "sleepy", "bow" to "wave", "peekaboo" to "wave",
     )
 
+    private val PIP_TRIMMED = setOf("facepalm", "shy", "pout", "dizzy", "blowkiss", "highfive", "bow", "peekaboo", "sneeze", "yawn", "concerned", "meditate", "curious", "surprised", "point", "salute", "laugh", "hearteyes", "grumpy", "wink")
+
     private fun prefs(c: Context) = c.applicationContext.getSharedPreferences("buddy", Context.MODE_PRIVATE)
     private fun dir(c: Context, b: BuddyChar) = File(c.applicationContext.filesDir, "champ/${b.id}")
 
@@ -143,7 +145,11 @@ object Buddy {
 
     /** Asset-relative path for a Pip-relative file ("idle.webp", "talk/0.webp") of [m]. */
     fun path(rel: String, m: BuddyChar = active.value): String {
-        if (m.isPip) return "pip/$rel"
+        if (m.isPip) {
+            // R29: Pip's 20 least-used moves were trimmed from the APK (−9 MB); they play their closest kept move
+            val clip = rel.removeSuffix(".webp")
+            return if (clip in PIP_TRIMMED) "pip/${FALLBACK[clip] ?: "idle"}.webp" else "pip/$rel"
+        }
         val base = "champ/${m.id}/"
         if (rel.startsWith("talk/") || rel.startsWith("look/")) return base + "portrait.webp"
         val clip = rel.removeSuffix(".webp")

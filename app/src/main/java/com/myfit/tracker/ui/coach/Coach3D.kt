@@ -148,8 +148,11 @@ fun CoachStage(look: String, poseIn: String, modifier: Modifier = Modifier, leve
     val have = remember(tick, look) { Coach3D.installed(ctx, look) }
     LaunchedEffect(on, look) { if (on && !Coach3D.installed(ctx, look)) Coach3D.ensure(ctx, look) }
     var failed by remember(look) { mutableStateOf(false) }
-    if (on && have && !failed) Coach3DView(look, pose, modifier, onFail = { failed = true })
-    else CoachFigure(look, pose, modifier, level)
+    // R29: centred on a glowing platform, 3D or clip
+    OnPlatform(com.myfit.tracker.ui.theme.LocalFitTheme.current.accentBright, modifier) {
+        if (on && have && !failed) Coach3DView(look, pose, Modifier.fillMaxSize(), onFail = { failed = true })
+        else CoachFigure(look, pose, Modifier.fillMaxSize(), level, spotlight = false)
+    }
 }
 
 /** "a>b>c" plays a, then b (one-shots, timed to their clips), then stays on c. Plain names pass through. */
@@ -175,7 +178,7 @@ private fun Coach3DView(look: String, pose: String, modifier: Modifier, onFail: 
     LaunchedEffect(look) { glb = withContext(Dispatchers.IO) { Coach3D.readGlb(ctx, look) }; if (glb == null) onFail() }
     val buf = glb
     Box(modifier) {
-        if (buf == null) CoachFigure(look, pose, Modifier.fillMaxSize(), tapToEmote = false)
+        if (buf == null) CoachFigure(look, pose, Modifier.fillMaxSize(), spotlight = false, tapToEmote = false)
         else Scene3D(look, pose, buf, onFail, scope, yaw, { springJob }, { springJob = it })
     }
 }
@@ -189,7 +192,7 @@ private fun Scene3D(look: String, pose: String, buf: ByteBuffer, onFail: () -> U
         // the animated clip keeps playing underneath until the 3D coach has actually drawn, then fades out (no frozen start)
         val shown by holder.shown
         val fade by androidx.compose.animation.core.animateFloatAsState(if (shown) 0f else 1f, androidx.compose.animation.core.tween(350), label = "c3d")
-        if (fade > 0.01f) CoachFigure(look, pose, Modifier.fillMaxSize().graphicsLayer { alpha = fade }, tapToEmote = false)
+        if (fade > 0.01f) CoachFigure(look, pose, Modifier.fillMaxSize().graphicsLayer { alpha = fade }, spotlight = false, tapToEmote = false)
         val poseNow by rememberUpdatedState(pose)
         AndroidView(
             factory = { c -> TextureView(c).also { tv -> if (!holder.attach(tv)) onFail() else holder.setPose(poseNow) } },

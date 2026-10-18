@@ -128,30 +128,7 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
-// R27: camera coach body models (MediaPipe Pose Landmarker Full ~9 MB + Lite ~5.5 MB) are bundled again, fetched into
-// assets/pose at build time (not committed). Heavy + Face (R17-R26) were replaced: too heavy for the GPU.
-val fetchPoseModels by tasks.registering {
-    val dir = file("src/main/assets/pose")
-    val base = "https://storage.googleapis.com/mediapipe-models/pose_landmarker"
-    val models = mapOf(
-        "pose_landmarker_full.task" to "$base/pose_landmarker_full/float16/1/pose_landmarker_full.task",
-        "pose_landmarker_lite.task" to "$base/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
-    )
-    outputs.files(models.keys.map { File(dir, it) })
-    doLast {
-        dir.mkdirs()
-        dir.listFiles()?.filter { it.name !in models.keys }?.forEach { it.delete() }
-        models.forEach { (name, url) ->
-            val f = File(dir, name)
-            if (f.exists() && f.length() > 100_000) return@forEach
-            val tmp = File(dir, "$name.part")
-            URI(url).toURL().openStream().use { input -> tmp.outputStream().use { input.copyTo(it) } }
-            tmp.renameTo(f)
-            logger.lifecycle("Fetched $name (${f.length() / 1024} KB)")
-        }
-    }
-}
-tasks.named("preBuild") { dependsOn(fetchPoseModels) }
+// R29: the camera coach is back on Google ML Kit pose detection (base, bundled in the SDK) — no model fetch needed.
 
 
 dependencies {
@@ -211,8 +188,7 @@ dependencies {
     implementation("androidx.camera:camera-view:$camerax")
     implementation("com.google.mlkit:image-labeling:17.0.9")
     // pro trainer camera mode: on-device body landmarks for rep counting and form checks (no images leave the phone)
-    // R17 camera coach: MediaPipe Pose Landmarker (heavy) + Face Landmarker for head pose — models fetched at build time
-    implementation("com.google.mediapipe:tasks-vision:0.10.14")
+    implementation("com.google.mlkit:pose-detection:18.0.0-beta5")   // R29 camera coach: ML Kit pose (base) — smooth on old phones
     // R18 offline food recogniser (MobileCLIP image encoder, downloaded in the background)
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.28.0")   // same ORT API level (1.28) as sherpa-onnx 1.13.8 bundles
     // accounts, friends & leaderboards

@@ -336,7 +336,7 @@ fun BattleDialog(container: AppContainer, me: Fighter, them: Fighter, onClose: (
                     }
                     Text("VS", style = FitType.hero.copy(fontSize = 34.sp), color = Color.White, modifier = Modifier.align(Alignment.CenterVertically))
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        ChampStill(them.look, Modifier.fillMaxWidth().weight(1f).graphicsLayer { scaleX = -1f }, full = true)
+                        com.myfit.tracker.ui.coach.OnPlatform(them.look.color, Modifier.fillMaxWidth().weight(1f)) { ChampStill(them.look, Modifier.fillMaxSize().graphicsLayer { scaleX = -1f }, full = true) }
                         Text(them.look.label, style = FitType.label, color = them.look.color); Caption("${them.name} · ${them.rating}", color = Color.White.copy(alpha = 0.7f))
                     }
                 }

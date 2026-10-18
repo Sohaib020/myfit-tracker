@@ -49,7 +49,7 @@ fun ChampStage(b: BuddyChar, pose: String, modifier: Modifier = Modifier, onEnd:
         else if (!Buddy.installed(ctx, b)) { Buddy.download(ctx, b); packTick++ }
     }
     val end by rememberUpdatedState(onEnd)
-    Box(modifier, contentAlignment = Alignment.BottomCenter) {
+    com.myfit.tracker.ui.coach.OnPlatform(b.color, modifier) {
         if (use3d) {
             val ctl = remember(b.id) { Champ3DController() }
             LaunchedEffect(ctl, pose) { ctl.play(pose, pose in CHAMP_LOOPS) { end?.invoke() } }
