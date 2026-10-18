@@ -1,0 +1,47 @@
+name: APK audit
+# Breaks the latest main release APK down by part (native libs, assets folders, dex, resources) -> branch apk-audit-out/audit.txt
+on:
+  push:
+    branches: [ apk-audit-run ]
+  workflow_dispatch:
+permissions: { contents: write }
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download latest APK
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          TAG=$(gh release list -R ${{ github.repository }} --limit 60 --json tagName --jq '[.[] | select(.tagName|startswith("build-"))][0].tagName')
+          echo "tag $TAG"; gh release download "$TAG" -R ${{ github.repository }} -p MyFitTracker.apk -O app.apk
+          echo "$TAG" > tag.txt
+      - name: Analyse
+        run: |
+          python3 - <<'PY'
+          import zipfile, collections, os
+          z = zipfile.ZipFile('app.apk'); infos = z.infolist()
+          total = os.path.getsize('app.apk')
+          g = collections.Counter(); gu = collections.Counter()
+          def key(n):
+              p = n.split('/')
+              if p[0] == 'lib': return 'lib/' + (p[2] if len(p) > 2 else '?')
+              if p[0] == 'assets': return 'assets/' + (p[1] if len(p) > 2 else p[1])
+              if n.startswith('classes') and n.endswith('.dex'): return 'dex'
+              if p[0] == 'res': return 'res'
+              return p[0]
+          for i in infos:
+              g[key(i.filename)] += i.compress_size; gu[key(i.filename)] += i.file_size
+          out = [f"APK {open('tag.txt').read().strip()}  total {total/1e6:.1f} MB  ({len(infos)} files)", '', 'PART  compressed_MB  raw_MB']
+          for k, v in g.most_common(): out.append(f"{k}  {v/1e6:.2f}  {gu[k]/1e6:.2f}")
+          out += ['', 'TOP 60 FILES (compressed MB)']
+          for i in sorted(infos, key=lambda i: -i.compress_size)[:60]: out.append(f"{i.compress_size/1e6:.2f}  {i.filename}")
+          # asset folder file counts
+          cnt = collections.Counter(key(i.filename) for i in infos if i.filename.startswith('assets/'))
+          out += ['', 'ASSET FOLDERS (files)'] + [f"{k}  {v}" for k, v in cnt.most_common()]
+          open('audit.txt', 'w').write('\n'.join(out) + '\n')
+          print('\n'.join(out[:80]))
+          PY
+      - name: Publish
+        run: |
+          mkdir pub && cp audit.txt pub/ && cd pub && git init -q && git checkout -q -b apk-audit-out && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm audit && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" apk-audit-out
