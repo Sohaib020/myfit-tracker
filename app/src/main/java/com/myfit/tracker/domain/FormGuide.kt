@@ -17,7 +17,8 @@ data class Say(val en: String, val ur: String) {
  */
 object FormGuide {
     enum class Pattern { SQUAT, HINGE, LUNGE, PUSHUP, BENCH, OVERHEAD, ROW, PULLUP, CURL, TRICEP, RAISE, PLANK, CRUNCH, CARDIO, OTHER,
-        JUMPING_JACK, HIGH_KNEES, GLUTE_BRIDGE, SITUP, MOUNTAIN_CLIMBER, WALL_SIT, SIDE_PLANK, CALF_RAISE, BURPEE }
+        JUMPING_JACK, HIGH_KNEES, GLUTE_BRIDGE, SITUP, MOUNTAIN_CLIMBER, WALL_SIT, SIDE_PLANK, CALF_RAISE, BURPEE,
+        DIP, PIKE_PUSHUP, PISTOL, LEG_RAISE, L_SIT, SUPPORT_HOLD, HANDSTAND, HOLLOW, DEAD_HANG }
 
     /** A tempo phase: what to do and for how long (seconds). */
     data class Phase(val word: Say, val sec: Float)
@@ -26,21 +27,31 @@ object FormGuide {
         val n = name.lowercase()
         fun has(vararg k: String) = k.any { it in n }
         return when {
+            has("l-sit", "l sit", "tuck sit") -> Pattern.L_SIT
+            has("support hold", "dip hold", "top hold") -> Pattern.SUPPORT_HOLD
+            has("handstand push", "pike push", "pike press", "elevated pike") -> Pattern.PIKE_PUSHUP
+            has("handstand") -> Pattern.HANDSTAND
+            has("hollow") -> Pattern.HOLLOW
+            has("dead hang", "active hang") -> Pattern.DEAD_HANG
+            has("nordic") || (has("lever") && !has("row")) -> Pattern.OTHER
+            has("pistol", "shrimp squat", "single-leg squat", "single leg squat", "skater squat") -> Pattern.PISTOL
+            has("hanging leg raise", "hanging knee raise", "hanging pike", "toes to bar", "toes-to-bar", "lying leg raise") -> Pattern.LEG_RAISE
+            has("dip") && !has("hip") -> Pattern.DIP
             has("side plank") -> Pattern.SIDE_PLANK
             has("wall sit") -> Pattern.WALL_SIT
-            has("plank", "hollow hold", "dead hang") -> Pattern.PLANK
+            has("plank") || (has("planche") && !has("push")) -> Pattern.PLANK
             has("jumping jack", "star jump") -> Pattern.JUMPING_JACK
             has("high knee") -> Pattern.HIGH_KNEES
             has("mountain climber") -> Pattern.MOUNTAIN_CLIMBER
             has("burpee") -> Pattern.BURPEE
             has("calf raise", "heel raise") -> Pattern.CALF_RAISE
-            has("glute bridge", "hip bridge", "hip thrust") -> Pattern.GLUTE_BRIDGE
+            has("glute bridge", "hip bridge", "hip thrust", "butt lift") -> Pattern.GLUTE_BRIDGE
             has("sit-up", "sit up", "situp") -> Pattern.SITUP
             has("run", "jog", "walk", "cycl", "bike", "rowing machine", "elliptical", "skipping", "jump rope", "stair", "treadmill") -> Pattern.CARDIO
             has("lunge", "split squat", "step up", "step-up") -> Pattern.LUNGE
             has("squat", "leg press", "hack") -> Pattern.SQUAT
             has("deadlift", "romanian", "rdl", "good morning", "kettlebell swing", "hyperextension", "back extension") -> Pattern.HINGE
-            has("push-up", "push up", "pushup", "press-up", "dip") -> Pattern.PUSHUP
+            has("push-up", "push up", "pushup", "press-up") -> Pattern.PUSHUP
             has("bench", "chest press", "fly", "flye", "pec deck", "floor press") -> Pattern.BENCH
             has("overhead", "shoulder press", "military", "arnold", "push press", "pike") -> Pattern.OVERHEAD
             has("pull-up", "pull up", "pullup", "chin", "pulldown", "pull-down") -> Pattern.PULLUP
@@ -79,6 +90,10 @@ object FormGuide {
         Pattern.GLUTE_BRIDGE, Pattern.CALF_RAISE -> listOf(Phase(UP, 1f), Phase(SQUEEZE, 1f), Phase(DOWN, 1.5f))
         Pattern.SITUP -> listOf(Phase(UP, 1.2f), Phase(DOWN, 1.8f))
         Pattern.JUMPING_JACK, Pattern.HIGH_KNEES, Pattern.MOUNTAIN_CLIMBER, Pattern.BURPEE, Pattern.WALL_SIT, Pattern.SIDE_PLANK -> emptyList()
+        Pattern.DIP, Pattern.PIKE_PUSHUP -> listOf(Phase(DOWN, 2f), Phase(PUSH, 1f), Phase(BREATHE, 0.5f))
+        Pattern.PISTOL -> listOf(Phase(DOWN, 2.5f), Phase(UP, 1.5f), Phase(BREATHE, 0.8f))
+        Pattern.LEG_RAISE -> listOf(Phase(UP, 1.2f), Phase(HOLD, 0.5f), Phase(LOWER, 2f))
+        Pattern.L_SIT, Pattern.SUPPORT_HOLD, Pattern.HANDSTAND, Pattern.HOLLOW, Pattern.DEAD_HANG -> emptyList()
     }
 
     /** Setup + form cues with joint angles, said before and during the set. */
@@ -166,6 +181,39 @@ object FormGuide {
         Pattern.BURPEE -> listOf(
             Say("Squat, hands down, jump your feet back to a plank.", "بیٹھیں، ہاتھ زمین پر، پاؤں پیچھے پلانک میں۔"),
             Say("Jump your feet in and explode up with a jump.", "پاؤں آگے لائیں اور چھلانگ لگا کر اوپر آئیں۔"))
+        Pattern.DIP -> listOf(
+            Say("Start on straight arms, shoulders pushed down away from your ears.", "سیدھے بازوؤں سے شروع کریں، کندھے کانوں سے دور نیچے۔"),
+            Say("Lean slightly forward and lower until your elbows reach about 90 degrees.", "تھوڑا آگے جھکیں اور اتنا نیچے آئیں کہ کہنیاں تقریباً 90 ڈگری پر ہوں۔"),
+            Say("Press back up to full lockout.", "واپس اوپر دھکیلیں، بازو پورے سیدھے۔"))
+        Pattern.PIKE_PUSHUP -> listOf(
+            Say("Hips high, head between your hands, weight over your shoulders.", "کولہے اونچے، سر ہاتھوں کے بیچ، وزن کندھوں پر۔"),
+            Say("Lower your head towards the floor, elbows about 45 degrees.", "سر زمین کی طرف لائیں، کہنیاں تقریباً 45 ڈگری پر۔"),
+            Say("Press back up until your arms are straight.", "بازو سیدھے ہونے تک واپس دھکیلیں۔"))
+        Pattern.PISTOL -> listOf(
+            Say("Stand on one leg, other leg reaching forward, arms out for balance.", "ایک ٹانگ پر کھڑے ہوں، دوسری آگے، توازن کے لیے بازو سامنے۔"),
+            Say("Sit down slowly, knee tracking over your toes, heel flat.", "آہستہ نیچے بیٹھیں، گھٹنا پنجوں کی سیدھ میں، ایڑی زمین پر۔"),
+            Say("Go as low as you control, then drive up through the whole foot.", "جتنا کنٹرول ہو اتنا نیچے، پھر پورے پاؤں سے زور لگا کر اوپر۔"))
+        Pattern.LEG_RAISE -> listOf(
+            Say("Hang or lie still, ribs down, no swinging.", "ساکن لٹکیں یا لیٹیں، پسلیاں نیچے، جھولا نہیں۔"),
+            Say("Lift your legs to hip height, about 90 degrees at the hip.", "ٹانگیں کولہے کی اونچائی تک، کولہے پر تقریباً 90 ڈگری۔"),
+            Say("Lower slowly with control.", "آہستہ کنٹرول سے نیچے لائیں۔"))
+        Pattern.L_SIT -> listOf(
+            Say("Hands on the floor or bars, arms locked, shoulders pushed down.", "ہاتھ زمین یا بارز پر، بازو سیدھے، کندھے نیچے دبائیں۔"),
+            Say("Lift your legs to hip height. Tuck your knees if you need to.", "ٹانگیں کولہے کی اونچائی تک اٹھائیں۔ ضرورت ہو تو گھٹنے موڑ لیں۔"),
+            Say("Point your toes and keep breathing.", "پنجے سیدھے اور سانس لیتے رہیں۔"))
+        Pattern.SUPPORT_HOLD -> listOf(
+            Say("Arms locked straight, body still.", "بازو پورے سیدھے، جسم ساکن۔"),
+            Say("Push your shoulders down, away from your ears.", "کندھے کانوں سے دور نیچے دبائیں۔"))
+        Pattern.HANDSTAND -> listOf(
+            Say("Hands shoulder-width, about a hand's length from the wall.", "ہاتھ کندھوں جتنے کھلے، دیوار سے تقریباً ایک ہاتھ دور۔"),
+            Say("Arms locked, push the floor away, stack hips over shoulders.", "بازو سیدھے، زمین کو دھکیلیں، کولہے کندھوں کے اوپر۔"),
+            Say("Squeeze your legs together and come down if you feel unsafe.", "ٹانگیں ساتھ دبائیں، غیر محفوظ لگے تو نیچے آ جائیں۔"))
+        Pattern.HOLLOW -> listOf(
+            Say("Lower back pressed into the floor.", "کمر کا نچلا حصہ زمین سے دبا رہے۔"),
+            Say("Arms and legs long and low, shoulders just off the floor.", "بازو اور ٹانگیں لمبی اور نیچی، کندھے زمین سے ذرا اوپر۔"))
+        Pattern.DEAD_HANG -> listOf(
+            Say("Grip the bar shoulder-width, arms fully straight.", "بار کندھوں جتنی چوڑی پکڑیں، بازو پورے سیدھے۔"),
+            Say("Relax your legs and breathe. Pull your shoulders down a little.", "ٹانگیں ڈھیلی، سانس لیں، کندھے تھوڑے نیچے کھینچیں۔"))
         Pattern.OTHER -> listOf(
             Say("Move slowly and with control.", "آہستہ اور کنٹرول سے حرکت کریں۔"),
             Say("Use the full range and breathe out on the effort.", "پوری رینج استعمال کریں، زور لگاتے وقت سانس باہر۔"))
@@ -235,6 +283,13 @@ object FormGuide {
         HEAD_NEUTRAL(Say("Keep your neck long — don't drop your head.", "گردن سیدھی رکھیں، سر نیچے نہ گرائیں۔")),
         LOOK_FORWARD(Say("Eyes forward, head up.", "نظریں سامنے، سر اوپر۔")),
         HEAD_STILL(Say("Keep your head still and facing forward.", "سر سیدھا اور سامنے رکھیں۔")),
+        CHIN_OVER(Say("Pull higher — chin over the bar.", "اور اوپر کھینچیں، ٹھوڑی بار سے اوپر۔")),
+        HANG_FULL(Say("Lower all the way to straight arms.", "پورا نیچے آئیں، بازو سیدھے۔")),
+        LEGS_UP(Say("Lift your legs to hip height.", "ٹانگیں کولہے کی اونچائی تک اٹھائیں۔")),
+        KNEES_STRAIGHT(Say("Straighten your knees.", "گھٹنے سیدھے کریں۔")),
+        ARMS_STRAIGHT(Say("Lock your arms straight.", "بازو پورے سیدھے رکھیں۔")),
+        STACK(Say("Stack your hips over your shoulders.", "کولہے کندھوں کے اوپر سیدھ میں۔")),
+        LOW_BACK(Say("Press your lower back down, legs a bit higher.", "کمر نیچے دبائیں، ٹانگیں تھوڑی اوپر۔")),
     }
 
     /** Head orientation in degrees from the face model: yaw + = turned to their left, pitch + = looking up, roll + = tilted. */
@@ -332,11 +387,25 @@ object FormGuide {
             val s = pp.side(SH, HIP)
             if (pp.ok(SH + s) && pp.ok(HIP + s)) pp.lean(HIP + s, SH + s) else null
         }
+        // hanging pull: elbow angle while the wrists are above the shoulders (stops counting when you drop off the bar)
+        Pattern.PULLUP -> Rule(setOf(SH, EL, WR), View.ANY, true, 145f, 128f, 75f, 105f, Fix.CHIN_OVER) { pp ->
+            val s = pp.side(SH, EL, WR)
+            if (pp.ok(SH + s) && pp.ok(EL + s) && pp.ok(WR + s) && pp.y(WR + s) < pp.y(SH + s)) pp.angle(SH + s, EL + s, WR + s) else null
+        }
+        Pattern.DIP -> Rule(setOf(SH, EL, WR), View.SIDE, true, 150f, 135f, 98f, 118f, Fix.DEEPER) { sideAngle(it, SH, EL, WR) }
+        Pattern.PIKE_PUSHUP -> Rule(setOf(SH, EL, WR), View.SIDE, true, 148f, 132f, 100f, 120f, Fix.DEEPER) { sideAngle(it, SH, EL, WR) }
+        Pattern.PISTOL -> Rule(setOf(HIP, KN, AN), View.SIDE, true, 155f, 135f, 90f, 120f, Fix.DEEPER) { minAngle(it, HIP, KN, AN) }
+        Pattern.LEG_RAISE -> Rule(setOf(SH, HIP, KN), View.SIDE, true, 158f, 140f, 105f, 125f, Fix.LEGS_UP) { sideAngle(it, SH, HIP, KN) }
         else -> null
     }
 
     /** Holds the camera can watch (time-based sets). */
-    fun holdView(p: Pattern): View? = when (p) { Pattern.PLANK, Pattern.WALL_SIT -> View.SIDE; Pattern.SIDE_PLANK -> View.FRONT; else -> null }
+    fun holdView(p: Pattern): View? = when (p) {
+        Pattern.PLANK, Pattern.WALL_SIT, Pattern.L_SIT, Pattern.HANDSTAND, Pattern.HOLLOW -> View.SIDE
+        Pattern.SIDE_PLANK -> View.FRONT
+        Pattern.SUPPORT_HOLD, Pattern.DEAD_HANG -> View.ANY
+        else -> null
+    }
     fun cameraCounts(p: Pattern) = rule(p) != null
     fun cameraHolds(p: Pattern) = holdView(p) != null
     fun requiredView(p: Pattern): View = rule(p)?.view ?: holdView(p) ?: View.ANY
@@ -347,6 +416,9 @@ object FormGuide {
         Pattern.ROW to "Rows", Pattern.JUMPING_JACK to "Jumping jacks", Pattern.HIGH_KNEES to "High knees", Pattern.GLUTE_BRIDGE to "Glute bridges",
         Pattern.SITUP to "Sit-ups & crunches", Pattern.MOUNTAIN_CLIMBER to "Mountain climbers", Pattern.CALF_RAISE to "Calf raises",
         Pattern.BURPEE to "Burpees", Pattern.PLANK to "Plank", Pattern.SIDE_PLANK to "Side plank", Pattern.WALL_SIT to "Wall sit",
+        Pattern.PULLUP to "Pull-ups & chin-ups", Pattern.DIP to "Dips", Pattern.PIKE_PUSHUP to "Pike & handstand push-ups",
+        Pattern.PISTOL to "Pistol & single-leg squats", Pattern.LEG_RAISE to "Leg raises", Pattern.L_SIT to "L-sit",
+        Pattern.SUPPORT_HOLD to "Support hold", Pattern.HANDSTAND to "Wall handstand", Pattern.HOLLOW to "Hollow hold", Pattern.DEAD_HANG to "Dead hang",
     )
 
     /** Before the set: is the whole body in view, at a good distance, from the right angle? */
@@ -451,7 +523,9 @@ object FormGuide {
             val f: Fix? = when (pattern) {
                 Pattern.SQUAT -> if (p.ok(sh) && p.ok(hip) && p.lean(hip, sh) > 55f) Fix.CHEST_UP else null
                 Pattern.LUNGE -> if (p.ok(sh) && p.ok(hip) && p.lean(hip, sh) > 30f) Fix.STAY_TALL else null
-                Pattern.PUSHUP, Pattern.MOUNTAIN_CLIMBER -> if (p.ok(sh) && p.ok(hip) && p.ok(an) && p.angle(sh, hip, an) < 150f) {
+                Pattern.PUSHUP -> { val kn = KN + s   // shoulder–hip–knee stays straight in full and knee push-ups alike
+                    if (p.ok(sh) && p.ok(hip) && p.ok(kn) && p.angle(sh, hip, kn) < 150f) { if (hipAbove(p, sh, hip, kn)) Fix.HIPS_DOWN else Fix.HIPS_UP } else null }
+                Pattern.MOUNTAIN_CLIMBER -> if (p.ok(sh) && p.ok(hip) && p.ok(an) && p.angle(sh, hip, an) < 150f) {
                     if (hipAbove(p, sh, hip, an)) Fix.HIPS_DOWN else Fix.HIPS_UP } else null
                 Pattern.CURL -> if (p.ok(sh) && p.ok(el) && p.ok(hip) && p.angle(hip, sh, el) > 35f) Fix.ELBOWS else null
                 Pattern.RAISE -> if (v > 110f) Fix.TOO_HIGH else null
@@ -466,8 +540,14 @@ object FormGuide {
             val s = p.side(SH, HIP, AN); val sh = SH + s; val hip = HIP + s; val an = AN + s; val kn = KN + s
             if (!(p.ok(sh) && p.ok(hip) && p.ok(an))) { if (++unseen == 25) fix(out, Fix.STEP_BACK, now, force = true); return out }
             unseen = 0
+            val el = EL + s; val wr = WR + s
             val bad: Fix? = when (pattern) {
                 Pattern.WALL_SIT -> if (p.ok(kn)) p.angle(hip, kn, an).also { out += Event.Angle(it) }.let { if (it > 112f) Fix.KNEE_90 else null } else null
+                // tuck or full L both pass: what matters is thighs up near hip height
+                Pattern.L_SIT -> if (p.ok(kn)) p.angle(sh, hip, kn).also { out += Event.Angle(it) }.let { if (it > 125f) Fix.LEGS_UP else null } else null
+                Pattern.SUPPORT_HOLD, Pattern.DEAD_HANG -> if (p.ok(el) && p.ok(wr)) p.angle(sh, el, wr).also { out += Event.Angle(it) }.let { if (it < 150f) Fix.ARMS_STRAIGHT else null } else null
+                Pattern.HANDSTAND -> p.angle(sh, hip, an).also { out += Event.Angle(it) }.let { if (it < 155f) Fix.STACK else null }
+                Pattern.HOLLOW -> p.angle(sh, hip, an).also { out += Event.Angle(it) }.let { if (it < 135f) Fix.LOW_BACK else null }
                 else -> {
                     val line = p.angle(sh, hip, an); out += Event.Angle(line)
                     if (line < 160f) { if (hipAbove(p, sh, hip, an)) Fix.HIPS_DOWN else Fix.HIPS_UP } else null

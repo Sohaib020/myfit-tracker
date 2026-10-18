@@ -115,6 +115,8 @@ private val CAM_GROUPS = listOf(
     "Push & arms" to listOf(FormGuide.Pattern.PUSHUP, FormGuide.Pattern.OVERHEAD, FormGuide.Pattern.CURL, FormGuide.Pattern.TRICEP, FormGuide.Pattern.RAISE, FormGuide.Pattern.ROW),
     "Core" to listOf(FormGuide.Pattern.SITUP, FormGuide.Pattern.PLANK, FormGuide.Pattern.SIDE_PLANK, FormGuide.Pattern.MOUNTAIN_CLIMBER),
     "Cardio" to listOf(FormGuide.Pattern.JUMPING_JACK, FormGuide.Pattern.HIGH_KNEES, FormGuide.Pattern.BURPEE),
+    "Calisthenics" to listOf(FormGuide.Pattern.PULLUP, FormGuide.Pattern.DIP, FormGuide.Pattern.PIKE_PUSHUP, FormGuide.Pattern.PISTOL,
+        FormGuide.Pattern.LEG_RAISE, FormGuide.Pattern.L_SIT, FormGuide.Pattern.SUPPORT_HOLD, FormGuide.Pattern.HANDSTAND, FormGuide.Pattern.HOLLOW, FormGuide.Pattern.DEAD_HANG),
 )
 
 /**

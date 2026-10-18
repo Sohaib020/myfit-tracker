@@ -129,6 +129,9 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
                 onExercises = { onTab(2) }, onBody = { onTab(3) }, onRecords = { nav.push(Overlay.Records) })
         }
 
+        // ---------------- R31 calisthenics skill tree
+        item(key = "cali") { com.myfit.tracker.ui.cali.CalisthenicsTrainCard { nav.push(Overlay.Calisthenics) } }
+
         // ---------------- 3. my workout days
         item(key = "daysHead") {
             Row(verticalAlignment = Alignment.CenterVertically) {

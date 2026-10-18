@@ -62,9 +62,9 @@ object GameMode {
 }
 
 enum class Stat(val label: String, val from: String) {
-    POWER("Power", "strength sets this week"),
+    POWER("Power", "strength and calisthenics sets this week"),
     STAMINA("Stamina", "steps and active minutes"),
-    AGILITY("Agility", "active days and workout variety"),
+    AGILITY("Agility", "active days, variety and skill holds"),
     FOCUS("Focus", "your daily streak"),
 }
 
@@ -89,6 +89,11 @@ data class ChampStats(
             val weekViews = views.filter { !java.time.LocalDate.parse(it.workout.localDate).isBefore(today.minusDays(6)) }
             val sets = weekViews.sumOf { v -> v.exercises.sumOf { it.sets.size } }
             val variety = weekViews.flatMap { v -> v.exercises.map { it.exercise.id } }.distinct().size
+            // R31: calisthenics skill sets count half again toward Power; skill holds (L-sit, levers, handstands…) add Agility
+            val caliData = runCatching { com.myfit.tracker.domain.Cali.data(c.app) }.getOrNull()
+            val caliKeys = caliData?.byKey?.keys.orEmpty()
+            val caliSets = weekViews.sumOf { v -> v.exercises.filter { it.exercise.imageKey in caliKeys }.sumOf { it.sets.size } }
+            val holdSets = weekViews.sumOf { v -> v.exercises.filter { caliData?.step(it.exercise.imageKey)?.hold == true }.sumOf { it.sets.size } }
             val total = runCatching { c.workoutRepo.completedRange("2000-01-01", Clock.dateKey(today)).first().size }.getOrDefault(0)
             val workoutDays = views.map { it.workout.localDate }.toSet()
             fun active(d: com.myfit.tracker.ui.arena.Day) = d.steps >= threshold || d.activeMin >= 20 || d.date.toString() in workoutDays
@@ -103,9 +108,9 @@ data class ChampStats(
             // one day can't carry the week: steps and minutes are capped per day before averaging
             val cappedSteps = week.sumOf { minOf(it.steps, 25_000L) }.toDouble() / 7.0
             ChampStats(
-                power = (sets / 60.0 * 100).toInt().coerceIn(0, 100),
+                power = ((sets + caliSets * 0.5) / 60.0 * 100).toInt().coerceIn(0, 100),
                 stamina = (minOf(avgSteps, cappedSteps) / 10_000.0 * 70 + minOf(activeMin, 300.0) / 150.0 * 30).toInt().coerceIn(0, 100),
-                agility = (activeWeek / 7.0 * 70 + minOf(variety, 15) / 15.0 * 30).toInt().coerceIn(0, 100),
+                agility = (activeWeek / 7.0 * 70 + minOf(variety, 15) / 15.0 * 30 + minOf(holdSets, 10)).toInt().coerceIn(0, 100),
                 focus = (streak / 14.0 * 100).toInt().coerceIn(0, 100),
                 streak = streak, totalWorkouts = total, activeDays = days.count { active(it) },
             )
