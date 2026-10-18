@@ -345,3 +345,16 @@ Expected APK ≈ 169 − 29.2 (MediaPipe) + 10.1 (ML Kit base) − 9.4 (Pip) ≈
 2 ✅ Battle dialog: fighters row takes the leftover height (150–300 dp), result + buttons always visible.
 3 ✅ Arena champion tile redesigned: premium dark card, drifting light fields, horizon glow, grain, soft light sweep, travelling edge light, tilt parallax (no rainbow/glitter).
 Next: calisthenics (research done; waiting on owner answers).
+
+## Round 31 (19 Oct) — branch agent/r31 — Calisthenics
+Owner decisions: all four features (skill tree + auto-progression, camera reps + holds, level test, programs); Train tab section; illustrated stills; Game Mode stars + badges + stats.
+1 ✅ Data: tools/cali/data.py (source) → gen.py writes assets/calisthenics.json (8 chains, 54 steps, 73 poses, placement table) and appends 34 new moves ("cali_*", fr 0, how-to text) to exercise_catalog.json (876 → 910; existing entries untouched). `gen.py --preview out.png` renders every pose.
+   Chains: Push-up (9), Pull-up (9), Row (4), Dip (6), Squat→pistol/shrimp (6), Hinge→nordic (5), Core→L-sit→front lever (9), Handstand (6).
+2 ✅ domain/Calisthenics.kt (Cali): state in prefs "cali" (cur:<chain>, mastered, placed, gear, tpl, party). Mastered = a logged workout with 3 working sets ≥ goal (reps or seconds). sync() advances chains, grants Arena stars once (cali:<key> = 4 + step index; chain complete +15), queues unlocks for the celebration. Runs on screen open and inside BadgeEngine.evaluate (after logging).
+3 ✅ Level test → placement (push-ups, pull-ups or dead hang, squats, plank); "count with camera first" starts a test workout. Any chain can be moved with "Make current".
+4 ✅ Today's session: pull+squat, dip+hinge, row+push supersets, then core + handstand; 3 sets, 90 s rest; gear chips (pull-up bar, dip bars) drop to the hardest step you can do; saved as template "Calisthenics session" and started.
+5 ✅ ui/cali/CaliFigure.kt: side-view athlete from joint angles (same model as tools/cali/figure.py), props (bar, rings, parallel bars, parallettes, wall, boxes, band), anchored contact point, still = end pose + ghost of start, animated = eased loop. ExerciseImage draws it for cali_* exercises everywhere.
+6 ✅ ui/cali/CalisthenicsScreen.kt (Overlay.Calisthenics) + CalisthenicsTrainCard on Train after the tiles: overview bars per chain, chain cards (current step big + path of nodes), step sheet (work range, unlock goal, gear, camera support, recent sessions, practise now, how-to), unlock dialog.
+7 ✅ FormGuide: new patterns DIP, PIKE_PUSHUP, PISTOL, LEG_RAISE (rep rules) and L_SIT, SUPPORT_HOLD, HANDSTAND, HOLLOW, DEAD_HANG (holds with checks); PULLUP rule (elbow angle while wrists above shoulders — negatives count too); "dip" no longer maps to push-up; push-up line check uses shoulder–hip–knee (knee push-ups aren't nagged); new cues. Camera list group "Calisthenics".
+8 ✅ Badges group Calisthenics: Skill Climber, Chain Master, Bar Raiser, Upside Down, Lever Up, One-Leg Wonder (from logged sets only). ChampStats: calisthenics sets ×1.5 toward Power, skill holds add up to +10 Agility.
+9 ✅ Programs: Park Calisthenics, Home Calisthenics (tools/programs/gen.py now also maps retired mascots, so it reproduces programs.json exactly).

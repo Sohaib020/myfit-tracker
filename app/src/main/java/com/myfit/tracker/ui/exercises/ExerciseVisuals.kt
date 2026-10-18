@@ -12,6 +12,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccessibilityNew
@@ -73,6 +74,18 @@ object ExerciseImages {
 fun ExerciseImage(ex: Exercise, modifier: Modifier = Modifier, animate: Boolean = false, periodMs: Long = 1100) {
     val ctx = LocalContext.current
     val key = ex.imageKey
+    // R31: calisthenics moves added by MyFit have no photos — draw the illustrated figure instead
+    if (key != null && key.startsWith("cali_")) {
+        val d = remember { com.myfit.tracker.domain.Cali.data(ctx) }
+        val hit = d.byKey[key]
+        if (hit != null) {
+            val c = Color(hit.first.color)
+            Box(modifier.background(Brush.verticalGradient(listOf(Color(0xFF1C2030), Color(0xFF10131B))))) {
+                com.myfit.tracker.ui.cali.CaliFigure(hit.first.steps[hit.second], c, Modifier.fillMaxSize().padding(6.dp), animate = animate)
+            }
+            return
+        }
+    }
     if (key == null || ex.imageFrames == 0) {
         val c = muscleColor(ex.primaryMuscle)
         Box(

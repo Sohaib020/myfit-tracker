@@ -57,6 +57,8 @@ sealed interface Overlay {
     data object Nutritionist : Overlay
     /** Pro trainer home. */
     data object CoachHub : Overlay
+    /** R31 calisthenics skill tree. */
+    data object Calisthenics : Overlay
     data class PickExercises(val templateId: Long? = null, val workoutId: Long? = null) : Overlay
     data class Food(val date: String? = null) : Overlay
     data class FoodAdd(val mealType: String, val date: String, val tab: Int) : Overlay
