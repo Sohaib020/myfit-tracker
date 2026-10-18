@@ -1,0 +1,173 @@
+APK build-424  total 169.3 MB  (5034 files)
+
+PART  compressed_MB  raw_MB
+lib/libonnxruntime.so  22.25  22.25
+lib/liblitertlm_jni.so  21.80  21.80
+assets/pip  21.80  21.80
+assets/exercises  17.16  17.16
+assets/pose  15.18  15.18
+lib/libmediapipe_tasks_vision_jni.so  14.03  14.03
+lib/libmlkitcommonpipeline.so  10.99  10.99
+dex  10.37  25.69
+assets/foodicon  8.26  8.26
+lib/libsherpa-onnx-jni.so  4.77  4.77
+lib/libgltfio-jni.so  4.68  4.68
+lib/libsherpa-onnx-c-api.so  4.47  4.47
+assets/champ  2.45  2.45
+lib/libfilament-jni.so  2.27  2.27
+assets/mlkit_label_default_model  1.99  3.04
+assets/programs  1.84  1.85
+resources.arsc  0.98  0.98
+res  0.85  1.62
+lib/libsherpa-onnx-cxx-api.so  0.44  0.44
+assets/avatars  0.40  0.40
+assets/coach  0.21  0.21
+assets/buddy  0.21  0.21
+assets/anatomy  0.20  0.20
+assets/challenge  0.16  0.16
+assets/exercise_catalog.json  0.15  0.78
+lib/libonnxruntime4j_jni.so  0.11  0.11
+org  0.10  0.23
+assets/equipment  0.09  0.09
+assets/foods_pk.json  0.06  0.36
+google  0.05  0.15
+lib/libimage_processing_util_jni.so  0.03  0.03
+assets/themes  0.03  0.07
+com  0.01  0.04
+kotlin  0.01  0.05
+META-INF  0.01  0.03
+assets/programs.json  0.01  0.11
+lib/libandroidx.graphics.path.so  0.01  0.01
+assets/dexopt  0.01  0.01
+AndroidManifest.xml  0.01  0.04
+lib/libdatastore_shared_counter.so  0.01  0.01
+lib/libsurface_util_jni.so  0.00  0.00
+assets/meal_plans.json  0.00  0.06
+assets/EXERCISE_DATA_LICENSE.md  0.00  0.00
+DebugProbesKt.bin  0.00  0.00
+kotlin-tooling-metadata.json  0.00  0.00
+play-services-measurement-sdk-api.properties  0.00  0.00
+image-labeling-default-common.properties  0.00  0.00
+play-services-measurement-base.properties  0.00  0.00
+play-services-auth-api-phone.properties  0.00  0.00
+play-services-ads-identifier.properties  0.00  0.00
+play-services-code-scanner.properties  0.00  0.00
+protolite-well-known-types.properties  0.00  0.00
+firebase-database-collection.properties  0.00  0.00
+play-services-auth-base.properties  0.00  0.00
+barcode-scanning-common.properties  0.00  0.00
+firebase-encoders-proto.properties  0.00  0.00
+play-services-ads-base.properties  0.00  0.00
+play-services-ads-lite.properties  0.00  0.00
+play-services-wearable.properties  0.00  0.00
+user-messaging-platform.properties  0.00  0.00
+firebase-encoders-json.properties  0.00  0.00
+image-labeling-common.properties  0.00  0.00
+play-services-basement.properties  0.00  0.00
+play-services-appset.properties  0.00  0.00
+transport-backend-cct.properties  0.00  0.00
+firebase-annotations.properties  0.00  0.00
+firebase-auth-interop.properties  0.00  0.00
+play-services-tasks.properties  0.00  0.00
+play-services-auth.properties  0.00  0.00
+play-services-base.properties  0.00  0.00
+play-services-fido.properties  0.00  0.00
+play-services-ads.properties  0.00  0.00
+vision-internal-vkp.properties  0.00  0.00
+firebase-encoders.properties  0.00  0.00
+transport-runtime.properties  0.00  0.00
+vision-interfaces.properties  0.00  0.00
+image-labeling.properties  0.00  0.00
+firebase-auth.properties  0.00  0.00
+transport-api.properties  0.00  0.00
+vision-common.properties  0.00  0.00
+core-common.properties  0.00  0.00
+image.properties  0.00  0.00
+recaptcha.properties  0.00  0.00
+integrity.properties  0.00  0.00
+common.properties  0.00  0.00
+googleid.properties  0.00  0.00
+
+TOP 60 FILES (compressed MB)
+22.25  lib/arm64-v8a/libonnxruntime.so
+21.80  lib/arm64-v8a/liblitertlm_jni.so
+14.03  lib/arm64-v8a/libmediapipe_tasks_vision_jni.so
+10.99  lib/arm64-v8a/libmlkitcommonpipeline.so
+9.40  assets/pose/pose_landmarker_full.task
+5.78  assets/pose/pose_landmarker_lite.task
+4.77  lib/arm64-v8a/libsherpa-onnx-jni.so
+4.68  lib/arm64-v8a/libgltfio-jni.so
+4.47  lib/arm64-v8a/libsherpa-onnx-c-api.so
+4.12  classes3.dex
+3.47  classes.dex
+2.77  classes2.dex
+2.27  lib/arm64-v8a/libfilament-jni.so
+1.99  assets/mlkit_label_default_model/mobile_ica_8bit_with_metadata_tflite
+0.98  resources.arsc
+0.79  assets/pip/meditate.webp
+0.68  assets/pip/sleepy.webp
+0.66  assets/pip/dance.webp
+0.65  assets/pip/train.webp
+0.61  assets/pip/hydrate.webp
+0.61  assets/pip/jumpingjacks.webp
+0.60  assets/pip/stretch.webp
+0.59  assets/pip/idle.webp
+0.59  assets/pip/squat.webp
+0.56  assets/pip/concerned.webp
+0.55  assets/pip/sad.webp
+0.55  assets/pip/jog.webp
+0.55  assets/pip/grumpy.webp
+0.54  assets/pip/yawn.webp
+0.54  assets/pip/hearteyes.webp
+0.54  assets/pip/fuel.webp
+0.54  assets/pip/love.webp
+0.53  assets/pip/dizzy.webp
+0.52  assets/pip/cheer.webp
+0.51  assets/pip/letsgo.webp
+0.50  assets/pip/flex.webp
+0.49  assets/pip/wave.webp
+0.47  assets/pip/celebrate.webp
+0.47  assets/pip/bow.webp
+0.46  assets/pip/pout.webp
+0.46  assets/pip/sneeze.webp
+0.46  assets/pip/peekaboo.webp
+0.46  assets/pip/shy.webp
+0.46  assets/pip/highfive.webp
+0.46  assets/pip/clap.webp
+0.46  assets/pip/laugh.webp
+0.44  assets/pip/salute.webp
+0.44  lib/arm64-v8a/libsherpa-onnx-cxx-api.so
+0.43  assets/pip/blowkiss.webp
+0.42  assets/pip/facepalm.webp
+0.42  assets/pip/shrug.webp
+0.40  assets/pip/point.webp
+0.39  assets/pip/no.webp
+0.38  assets/pip/thinking.webp
+0.38  assets/pip/surprised.webp
+0.37  assets/pip/yes.webp
+0.35  assets/pip/spin.webp
+0.31  assets/pip/thumbsup.webp
+0.29  assets/pip/curious.webp
+0.23  assets/pip/wink.webp
+
+ASSET FOLDERS (files)
+assets/exercises  1746
+assets/foodicon  1062
+assets/avatars  133
+assets/champ  90
+assets/programs  55
+assets/pip  52
+assets/themes  42
+assets/anatomy  36
+assets/equipment  18
+assets/buddy  12
+assets/challenge  6
+assets/coach  6
+assets/dexopt  2
+assets/pose  2
+assets/EXERCISE_DATA_LICENSE.md  1
+assets/exercise_catalog.json  1
+assets/foods_pk.json  1
+assets/meal_plans.json  1
+assets/mlkit_label_default_model  1
+assets/programs.json  1
