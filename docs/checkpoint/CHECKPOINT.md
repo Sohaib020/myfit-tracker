@@ -339,3 +339,9 @@ Audit (build-424, 169.3 MB): ONNX runtime 22.3 (voice + offline food), LiteRT-LM
 5 ✅ Arena ChampionTile = holographic foil card: AGSL foil + diffraction lines + glare driven by the accelerometer tilt, twinkling glitter, rotating neon edge (SweepGradient), slight 3D lean; buddy tile shows the same animated partner (bobbing) small and large.
 6 ✅ R28 renders finished: coach3d-v3 (12.7–17.3 MB per coach, 60 fps), champs-v3 (45 looks, 8–19 MB, tight crop, 60 fps).
 Expected APK ≈ 169 − 29.2 (MediaPipe) + 10.1 (ML Kit base) − 9.4 (Pip) ≈ 141 MB.
+
+## Round 30 (18 Oct) — branch agent/r30
+1 ✅ AlphaVideoView rewritten: own MediaCodec + MediaExtractor on the render thread, frames released on Choreographer vsync (even pacing on 120 Hz panels), seamless loops (re-feed from the first keyframe with shifted timestamps, no flush), media3 removed. Feet line: first frame of the folder's idle.mp4 (MediaMetadataRetriever) → empty rows under the feet → viewport shifted so feet sit on the view's bottom edge (= platform centre).
+2 ✅ Battle dialog: fighters row takes the leftover height (150–300 dp), result + buttons always visible.
+3 ✅ Arena champion tile redesigned: premium dark card, drifting light fields, horizon glow, grain, soft light sweep, travelling edge light, tilt parallax (no rainbow/glitter).
+Next: calisthenics (research done; waiting on owner answers).

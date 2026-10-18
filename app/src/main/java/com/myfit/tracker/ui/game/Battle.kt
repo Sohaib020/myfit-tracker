@@ -324,10 +324,11 @@ fun BattleDialog(container: AppContainer, me: Fighter, them: Fighter, onClose: (
     val done = stars != null
     Dialog(onDismissRequest = { if (done) onClose() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF07080D), Color(0xFF141826))))) {
-            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(16.dp)) {
+            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp)) {
                 Text("CHAMPION BATTLE", style = FitType.overline, color = Color.White.copy(alpha = 0.6f), modifier = Modifier.align(Alignment.CenterHorizontally))
                 Spacer(Modifier.height(8.dp))
-                Row(Modifier.fillMaxWidth().height(260.dp)) {
+                // R30: the fighters take whatever height is left, so the result and buttons always fit on screen
+                Row(Modifier.fillMaxWidth().weight(1f).heightIn(min = 150.dp, max = 300.dp)) {
                     val winPose = if (me.look.tier == Tier.STREET) "celebrate" else "victory"
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                         if (done) ChampStage(me.look, if (result.won) winPose else "sad", Modifier.fillMaxWidth().weight(1f))
@@ -351,7 +352,7 @@ fun BattleDialog(container: AppContainer, me: Fighter, them: Fighter, onClose: (
                         BattleBar(bars[i].second.value, them.look.color, r.theirs)
                     }
                 }
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(8.dp))
                 if (done) {
                     Text(if (result.won) "VICTORY ${result.score}" else "DEFEAT ${result.score}", style = FitType.hero.copy(fontSize = 40.sp),
                         color = if (result.won) Color(0xFF7CF7D4) else Color(0xFFFF8A8A), modifier = Modifier.align(Alignment.CenterHorizontally))

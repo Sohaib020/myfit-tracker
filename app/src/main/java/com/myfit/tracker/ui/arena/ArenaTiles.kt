@@ -105,43 +105,13 @@ private fun rememberTilt(): State<Offset> {
     return tilt
 }
 
-/** AGSL holographic foil: thin-film rainbow bands + diffraction lines that slide as you tilt, with a moving glare. */
-private object HoloShader {
-    private const val SRC = """
-uniform float2 res; uniform float t; uniform float2 tilt;
-half4 main(float2 p) {
-    float2 uv = p / res;
-    float d = uv.x * 0.8 + uv.y * 1.1 + tilt.x * 0.7 - tilt.y * 0.5;
-    float3 c = 0.55 + 0.45 * cos(6.28318 * (d * 1.4 + t * 0.04 + float3(0.0, 0.33, 0.67)));
-    float lines = 0.5 + 0.5 * sin(uv.x * 210.0 + uv.y * 90.0 + tilt.x * 24.0 + t * 0.6);
-    c *= 0.85 + 0.3 * lines;
-    float g = 1.0 - abs((uv.x - 0.5 - tilt.x * 0.55) + (uv.y - 0.5 + tilt.y * 0.45) * 0.55);
-    float glare = smoothstep(0.82, 1.0, g);
-    float a = 0.30 + 0.18 * lines + glare * 0.35;
-    return half4(half3(c * a + glare * 0.45), half(a));
-}
-"""
-    private var shader: Any? = null
-    private var brush: androidx.compose.ui.graphics.ShaderBrush? = null
-    fun draw(scope: androidx.compose.ui.graphics.drawscope.DrawScope, t: Float, tilt: Offset): Boolean {
-        if (android.os.Build.VERSION.SDK_INT < 33 || com.myfit.tracker.CrashGuard.safeMode) return false
-        return runCatching {
-            val s = (shader as? android.graphics.RuntimeShader) ?: android.graphics.RuntimeShader(SRC).also { shader = it; brush = androidx.compose.ui.graphics.ShaderBrush(it) }
-            s.setFloatUniform("res", scope.size.width, scope.size.height)
-            s.setFloatUniform("t", t)
-            s.setFloatUniform("tilt", tilt.x, tilt.y)
-            scope.drawRect(brush!!)
-            true
-        }.getOrDefault(false)
-    }
-}
-
-private val GLITTER = List(70) { Triple(kotlin.random.Random(it * 31 + 7).nextFloat(), kotlin.random.Random(it * 57 + 3).nextFloat(), kotlin.random.Random(it * 11 + 5).nextFloat()) }
+private val GRAIN2 = List(220) { Triple(kotlin.random.Random(it * 19 + 1).nextFloat(), kotlin.random.Random(it * 43 + 9).nextFloat(), kotlin.random.Random(it * 7 + 3).nextFloat()) }
 
 /**
- * R29 champion tile: a holographic trading card. Iridescent foil and diffraction lines that shift with the phone's
- * tilt, a glare that follows your hand, twinkling glitter, a rotating neon edge and a slight 3D lean — your champion
- * stands on a glowing platform in the middle. Same design small and large.
+ * R30 champion tile — premium and quiet: a deep card tinted by the champion's colour, two soft light fields drifting
+ * slowly behind them, a horizon glow, fine film grain, an occasional soft light sweep, and a thin edge light that
+ * travels around the border. The phone's tilt adds a gentle parallax (background and champion move apart a little).
+ * Same design small and large.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -156,60 +126,71 @@ private fun ChampionTile(large: Boolean, onLong: () -> Unit, onClick: () -> Unit
     }
     val ch = b.champion ?: Champion.BLAZE
     val tilt by rememberTilt()
-    val inf = rememberInfiniteTransition(label = "holo")
-    val t by inf.animateFloat(0f, 600f, infiniteRepeatable(tween(600_000, easing = LinearEasing)), label = "t")
-    val edge by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(6_000, easing = LinearEasing)), label = "edge")
-    val twinkle by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(2_400, easing = LinearEasing)), label = "tw")
+    val inf = rememberInfiniteTransition(label = "tile")
+    val drift by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(22_000, easing = LinearEasing)), label = "drift")
+    val edge by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(9_000, easing = LinearEasing)), label = "edge")
+    val sweep by inf.animateFloat(-0.6f, 2.4f, infiniteRepeatable(tween(7_500, easing = androidx.compose.animation.core.FastOutSlowInEasing)), label = "sweep")
+    val breathe by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(3_200), RepeatMode.Reverse), label = "breathe")
     val c1 = ch.color
-    val rarity = ch.rarity
+    val c2 = ch.rarity.color
     val shape = RoundedCornerShape(26.dp)
-    Box(Modifier.fillMaxSize().graphicsLayer {
-        rotationY = tilt.x * 9f; rotationX = -tilt.y * 7f; cameraDistance = 14f * density
-    }.clip(shape).background(Brush.verticalGradient(listOf(mixC(c1, Color(0xFF0A0B14), 0.72f), Color(0xFF07080F))))
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    Box(Modifier.fillMaxSize().clip(shape)
+        .background(Brush.verticalGradient(listOf(mixC(c1, Color(0xFF07080D), 0.80f), Color(0xFF07080D))))
         .combinedClickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null,
             onClick = { if (on) onClick() else GameMode.setOn(ctx, true) }, onLongClick = onLong)) {
-        // foil + glitter + glare
         Canvas(Modifier.matchParentSize()) {
-            if (!HoloShader.draw(this, t, tilt)) {
-                val sx = (0.5f + tilt.x * 0.5f) * size.width
-                drawRect(Brush.linearGradient(listOf(Color(0x5562F7E4), Color(0x55B67CFF), Color(0x55FF8AD8), Color(0x55FFE07C), Color(0x5562F7E4)),
-                    Offset(sx - size.width, 0f), Offset(sx + size.width, size.height)))
-            }
-            GLITTER.forEach { (x, y, k) ->
-                val a = (0.5f + 0.5f * sin((twinkle + k) * 6.283f * 2f + tilt.x * 3f)).let { it * it }
-                drawCircle(Color.White.copy(alpha = 0.75f * a), (0.8f + 1.6f * k).dp.toPx(), Offset(x * size.width, y * size.height))
-            }
+            val w = size.width; val h = size.height; val tau = 6.2832f
+            val px = tilt.x * 10.dp.toPx(); val py = tilt.y * 6.dp.toPx()
+            fun field(cx: Float, cy: Float, r: Float, c: Color, a: Float) =
+                drawCircle(Brush.radialGradient(listOf(c.copy(alpha = a), c.copy(alpha = a * 0.3f), Color.Transparent), Offset(cx, cy), r), r, Offset(cx, cy))
+            field(w * (0.30f + 0.10f * sin(drift * tau)) + px, h * (0.28f + 0.06f * cos(drift * tau)) + py, h * 0.85f, c1, 0.34f)
+            field(w * (0.78f + 0.08f * cos(drift * tau + 1f)) + px, h * (0.62f + 0.07f * sin(drift * tau + 2f)) + py, h * 0.70f, c2, 0.18f)
+            // horizon glow behind the platform
+            val hy = h * (if (large) 0.84f else 0.80f)
+            drawRect(Brush.verticalGradient(listOf(Color.Transparent, c1.copy(alpha = 0.16f + 0.06f * breathe), Color.Transparent), hy - h * 0.16f, hy + h * 0.10f))
+            // film grain
+            GRAIN2.forEach { (x, y, k) -> drawCircle(Color.White.copy(alpha = 0.025f + 0.03f * k), 0.55.dp.toPx(), Offset(x * w, y * h)) }
+            // soft light sweep (one pass, then rests off-card)
+            val sx = sweep * w
+            drawRect(Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.07f), Color.Transparent), Offset(sx - w * 0.35f, 0f), Offset(sx, h)))
+            // vignette for depth and legibility
+            drawRect(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.45f))))
         }
-        // the champion on a platform
-        Box(Modifier.fillMaxSize().padding(top = if (large) 12.dp else 30.dp, bottom = if (large) 12.dp else 34.dp)
-            .then(if (large) Modifier.padding(end = 0.dp) else Modifier)) {
+        // champion on the platform, with a touch of parallax against the background
+        Box(Modifier.fillMaxSize().padding(top = if (large) 14.dp else 46.dp, bottom = if (large) 14.dp else 38.dp)
+            .graphicsLayer { translationX = -tilt.x * with(density) { 5.dp.toPx() } }) {
             Box(Modifier.fillMaxHeight().then(if (large) Modifier.fillMaxWidth(0.55f) else Modifier.fillMaxWidth())) {
                 com.myfit.tracker.ui.coach.OnPlatform(c1, Modifier.fillMaxSize()) {
                     if (on) ChampStage(b, "idle", Modifier.fillMaxSize()) else ChampStill(b, Modifier.fillMaxSize())
                 }
             }
         }
-        // rarity chip + name
-        Column(Modifier.align(if (large) Alignment.TopEnd else Alignment.TopStart).padding(12.dp), horizontalAlignment = if (large) Alignment.End else Alignment.Start) {
-            Box(Modifier.clip(CircleShape).background(Brush.horizontalGradient(listOf(rarity.color, c1))).padding(horizontal = 8.dp, vertical = 2.dp)) {
-                Text(rarity.label.uppercase(), style = FitType.overline.copy(fontSize = 9.sp), color = Color.White)
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(ch.tag, style = (if (large) FitType.hero.copy(fontSize = 34.sp, lineHeight = 36.sp) else FitType.metric.copy(fontSize = 20.sp, lineHeight = 22.sp)), color = Color.White, maxLines = 1)
-            if (large) Text(if (on) "${b.tier.label} · Rating ${stats.rating}" else "Game Mode is off", style = FitType.label, color = Color.White.copy(alpha = 0.85f))
+        // type
+        Column(Modifier.align(if (large) Alignment.TopEnd else Alignment.TopStart).padding(14.dp), horizontalAlignment = if (large) Alignment.End else Alignment.Start) {
+            Text(ch.rarity.label.uppercase() + " · " + b.tier.label.uppercase(), style = FitType.overline.copy(fontSize = 9.sp, letterSpacing = 1.6.sp), color = c1.copy(alpha = 0.95f), maxLines = 1)
+            Spacer(Modifier.height(2.dp))
+            Text(ch.tag, style = FitType.label.copy(fontSize = if (large) 30.sp else 20.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp), color = Color.White, maxLines = 1)
+            if (large) Text(if (on) ch.archetype else "Game Mode is off", style = FitType.caption, color = Color.White.copy(alpha = 0.7f))
         }
-        // glass footer
-        Box(Modifier.align(if (large) Alignment.BottomEnd else Alignment.BottomCenter).padding(10.dp).clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.14f)).border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape).padding(horizontal = 12.dp, vertical = 5.dp)) {
-            Text(if (on) (if (large) "Battle · Looks · Roster" else "★ ${stats.rating} · Battle") else "Tap to turn on", style = FitType.caption.copy(fontWeight = FontWeight.Bold), color = Color.White)
+        Row(Modifier.align(if (large) Alignment.BottomEnd else Alignment.BottomCenter).padding(12.dp).clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.08f)).border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape).padding(horizontal = 12.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            if (on) {
+                Text("${stats.rating}", style = FitType.caption.copy(fontWeight = FontWeight.Black), color = Color.White)
+                Text("  RATING", style = FitType.overline.copy(fontSize = 8.sp), color = Color.White.copy(alpha = 0.6f))
+                if (large) Text("   ·   Battle", style = FitType.caption.copy(fontWeight = FontWeight.Bold), color = c1)
+            } else Text("Tap to turn on", style = FitType.caption.copy(fontWeight = FontWeight.Bold), color = Color.White)
         }
-        // rotating neon edge
+        // hairline border + an edge light travelling around it
         Canvas(Modifier.matchParentSize()) {
-            val cols = intArrayOf(c1.toArgbInt(), 0xFF7CF7D4.toInt(), 0xFFB67CFF.toInt(), 0xFFFF8AD8.toInt(), c1.toArgbInt())
-            val sg = android.graphics.SweepGradient(size.width / 2, size.height / 2, cols, null)
+            val r = androidx.compose.ui.geometry.CornerRadius(26.dp.toPx())
+            drawRoundRect(Color.White.copy(alpha = 0.10f), cornerRadius = r, style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+            val cols = intArrayOf(0x00FFFFFF, 0x00FFFFFF, c1.copy(alpha = 0.9f).toArgbInt(), 0xCCFFFFFF.toInt(), 0x00FFFFFF, 0x00FFFFFF)
+            val pos = floatArrayOf(0f, 0.62f, 0.72f, 0.75f, 0.80f, 1f)
+            val sg = android.graphics.SweepGradient(size.width / 2, size.height / 2, cols, pos)
             sg.setLocalMatrix(android.graphics.Matrix().apply { setRotate(edge, size.width / 2, size.height / 2) })
-            drawRoundRect(androidx.compose.ui.graphics.ShaderBrush(sg), cornerRadius = androidx.compose.ui.geometry.CornerRadius(26.dp.toPx()),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(2.2.dp.toPx()))
+            drawRoundRect(androidx.compose.ui.graphics.ShaderBrush(sg), cornerRadius = r, style = androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
         }
     }
 }
