@@ -329,3 +329,13 @@ Owner decisions: heart check ~15 s; Vitals = beating heart + ECG; Arena buddy + 
 5 ✅ Coach/nutritionist renaming removed (names follow the character).
 6 ✅ Vitals: ui/vitals/VitalsHero.kt — beating heart (lub-dub at your last bpm), ECG sweep, glowing "Check my heart · 15 s", last check time; small tile version. CameraHr: warm-up 1.5 s, early finish from ~10 s when two estimates 0.5 s apart agree within 3 bpm (quality ≥ 0.75), hard stop 21.5 s; ring eases over ~15 s; live bpm from ~5 s; Ppg.estimate needs 8 s (was 15).
 7 ✅ Arena: ArenaHeroTiles — buddy level tile (now has a small mode) + ChampionTile (rotating stadium beams, pulsing floor ring, rising sparks, champion in the spotlight); long-press toggles size (prefs arena_tiles).
+
+## Round 29 (18 Oct) — branch agent/r29
+Audit (build-424, 169.3 MB): ONNX runtime 22.3 (voice + offline food), LiteRT-LM 21.8 (offline Gemma, 2.6 GB download), Pip clips 21.8, exercises 17.2, MediaPipe 14.0 + pose models 15.2, ML Kit common 11.0, dex 10.4, food icons 8.3, sherpa 9.7, Filament 7.0. Owner chose: trim Pip's rare moves only; camera back to ML Kit Base; neon platform; holographic champion tile.
+1 ✅ Camera coach: ML Kit pose-detection (base, STREAM_MODE) on the camera frame directly (InputImage.fromMediaImage), ~30 fps cap (15 when hot), head direction from face points; every live point drawn as a glowing dot. MediaPipe tasks-vision, the build-time model fetch and PoseModels removed.
+2 ✅ Pip: 20 least-used moves removed from assets (−9.4 MB); Buddy.path maps them to FALLBACK moves.
+3 ✅ Home champion card hidden (DashCard.HERO in MergedCards).
+4 ✅ OnPlatform (CoachArt.kt): glowing neon disc under coaches/nutritionist (CoachStage) and champions (ChampStage, locked stills, battle rival); characters centred and lifted onto the disc.
+5 ✅ Arena ChampionTile = holographic foil card: AGSL foil + diffraction lines + glare driven by the accelerometer tilt, twinkling glitter, rotating neon edge (SweepGradient), slight 3D lean; buddy tile shows the same animated partner (bobbing) small and large.
+6 ✅ R28 renders finished: coach3d-v3 (12.7–17.3 MB per coach, 60 fps), champs-v3 (45 looks, 8–19 MB, tight crop, 60 fps).
+Expected APK ≈ 169 − 29.2 (MediaPipe) + 10.1 (ML Kit base) − 9.4 (Pip) ≈ 141 MB.
