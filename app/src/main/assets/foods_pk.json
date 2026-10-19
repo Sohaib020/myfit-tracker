@@ -22989,5 +22989,3672 @@
    "high_sugar",
    "fried"
   ]
+ },
+ {
+  "id": "hummus",
+  "name": "Hummus",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 150,
+  "kcal": 265,
+  "p": 11.8,
+  "c": 21,
+  "f": 14.4,
+  "fiber": 9,
+  "aliases": [
+   "humus",
+   "houmous",
+   "chickpea dip"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me",
+   "eu",
+   "uk"
+  ]
+ },
+ {
+  "id": "falafel",
+  "name": "Falafel (4 pieces)",
+  "category": "Middle Eastern",
+  "serving": 4,
+  "unit": "piece",
+  "grams": 100,
+  "kcal": 333,
+  "p": 13,
+  "c": 32,
+  "f": 18,
+  "fiber": 5,
+  "aliases": [
+   "falafal",
+   "taameya",
+   "felafel"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me",
+   "eu"
+  ]
+ },
+ {
+  "id": "falafel_wrap",
+  "name": "Falafel wrap",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 250,
+  "kcal": 560,
+  "p": 18,
+  "c": 70,
+  "f": 23,
+  "fiber": 9,
+  "aliases": [
+   "falafel sandwich",
+   "falafel roll"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me",
+   "eu",
+   "uk"
+  ]
+ },
+ {
+  "id": "chicken_kabsa",
+  "name": "Chicken kabsa",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 650,
+  "p": 35,
+  "c": 85,
+  "f": 18,
+  "fiber": 3,
+  "aliases": [
+   "kabsa",
+   "kapsa",
+   "saudi rice"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "chicken_machboos",
+  "name": "Chicken machboos",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 640,
+  "p": 34,
+  "c": 84,
+  "f": 18,
+  "fiber": 3,
+  "aliases": [
+   "majboos",
+   "machbous",
+   "chicken majboos"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "mansaf",
+  "name": "Mansaf (lamb with jameed)",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 780,
+  "p": 42,
+  "c": 70,
+  "f": 36,
+  "fiber": 2,
+  "aliases": [
+   "mansaf lamb"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "harees",
+  "name": "Harees",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 300,
+  "kcal": 420,
+  "p": 26,
+  "c": 48,
+  "f": 13,
+  "fiber": 6,
+  "aliases": [
+   "harees gulf",
+   "jareesh",
+   "hareesa wheat"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "fattoush",
+  "name": "Fattoush salad",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 200,
+  "kcal": 180,
+  "p": 4,
+  "c": 20,
+  "f": 10,
+  "fiber": 5,
+  "aliases": [
+   "fatoush"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me",
+   "eu"
+  ]
+ },
+ {
+  "id": "tabbouleh",
+  "name": "Tabbouleh",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 150,
+  "kcal": 180,
+  "p": 3,
+  "c": 16,
+  "f": 12,
+  "fiber": 4,
+  "aliases": [
+   "tabouli",
+   "taboule"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me",
+   "eu"
+  ]
+ },
+ {
+  "id": "moutabal",
+  "name": "Moutabal (baba ganoush)",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 150,
+  "kcal": 200,
+  "p": 4,
+  "c": 12,
+  "f": 16,
+  "fiber": 6,
+  "aliases": [
+   "baba ganoush",
+   "mutabbal",
+   "baba ghanouj"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me",
+   "eu"
+  ]
+ },
+ {
+  "id": "labneh",
+  "name": "Labneh (2 tbsp)",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "serving",
+  "grams": 60,
+  "kcal": 100,
+  "p": 4,
+  "c": 3,
+  "f": 8,
+  "fiber": 0,
+  "aliases": [
+   "labne",
+   "strained yogurt"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "manakish_zaatar",
+  "name": "Manakish za'atar",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 140,
+  "kcal": 420,
+  "p": 10,
+  "c": 52,
+  "f": 19,
+  "fiber": 4,
+  "aliases": [
+   "manakeesh",
+   "manaeesh",
+   "zaatar bread"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "manakish_cheese",
+  "name": "Manakish with cheese",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 160,
+  "kcal": 500,
+  "p": 19,
+  "c": 50,
+  "f": 24,
+  "fiber": 2,
+  "aliases": [
+   "cheese manakish",
+   "jibneh manakish"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "shakshuka",
+  "name": "Shakshuka",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 300,
+  "kcal": 330,
+  "p": 18,
+  "c": 18,
+  "f": 21,
+  "fiber": 5,
+  "aliases": [
+   "shakshouka",
+   "eggs in tomato"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me",
+   "eu",
+   "uk"
+  ]
+ },
+ {
+  "id": "foul_medames",
+  "name": "Ful medames",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 300,
+  "p": 16,
+  "c": 38,
+  "f": 9,
+  "fiber": 13,
+  "aliases": [
+   "foul",
+   "ful",
+   "fava beans"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "mixed_grill",
+  "name": "Arabic mixed grill",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 780,
+  "p": 70,
+  "c": 8,
+  "f": 52,
+  "fiber": 1,
+  "aliases": [
+   "mix grill",
+   "mashawi"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "shish_tawook",
+  "name": "Shish tawook",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 200,
+  "kcal": 380,
+  "p": 48,
+  "c": 6,
+  "f": 18,
+  "fiber": 1,
+  "aliases": [
+   "shish taouk",
+   "chicken tikka arabic",
+   "tawook"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "arabic_coffee",
+  "name": "Arabic coffee (1 finjan)",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 60,
+  "kcal": 5,
+  "p": 0.1,
+  "c": 1,
+  "f": 0,
+  "fiber": 0,
+  "aliases": [
+   "gahwa",
+   "qahwa",
+   "kahwa arabi"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "luqaimat",
+  "name": "Luqaimat (5 pieces)",
+  "category": "Sweets",
+  "serving": 5,
+  "unit": "piece",
+  "grams": 100,
+  "kcal": 400,
+  "p": 5,
+  "c": 55,
+  "f": 18,
+  "fiber": 1,
+  "aliases": [
+   "luqaimat",
+   "lokma",
+   "awamat"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "umm_ali",
+  "name": "Umm Ali",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 200,
+  "kcal": 470,
+  "p": 10,
+  "c": 52,
+  "f": 25,
+  "fiber": 1,
+  "aliases": [
+   "om ali",
+   "umali"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "kibbeh",
+  "name": "Kibbeh (3 pieces)",
+  "category": "Middle Eastern",
+  "serving": 3,
+  "unit": "piece",
+  "grams": 150,
+  "kcal": 420,
+  "p": 18,
+  "c": 30,
+  "f": 25,
+  "fiber": 4,
+  "aliases": [
+   "kibbe",
+   "kubba"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "fatayer",
+  "name": "Spinach fatayer (3 pieces)",
+  "category": "Middle Eastern",
+  "serving": 3,
+  "unit": "piece",
+  "grams": 150,
+  "kcal": 380,
+  "p": 9,
+  "c": 50,
+  "f": 16,
+  "fiber": 4,
+  "aliases": [
+   "fatayer sabanekh",
+   "spinach pies"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "warak_enab",
+  "name": "Stuffed vine leaves (6)",
+  "category": "Middle Eastern",
+  "serving": 6,
+  "unit": "piece",
+  "grams": 120,
+  "kcal": 210,
+  "p": 4,
+  "c": 28,
+  "f": 9,
+  "fiber": 4,
+  "aliases": [
+   "dolma",
+   "warak enab",
+   "yalanji",
+   "dolmades"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me",
+   "eu"
+  ]
+ },
+ {
+  "id": "shorbat_adas",
+  "name": "Lentil soup (shorbat adas)",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 300,
+  "kcal": 230,
+  "p": 13,
+  "c": 34,
+  "f": 5,
+  "fiber": 8,
+  "aliases": [
+   "adas soup",
+   "red lentil soup",
+   "mercimek"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me",
+   "eu"
+  ]
+ },
+ {
+  "id": "mutabbaq",
+  "name": "Mutabbaq (savoury)",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 200,
+  "kcal": 520,
+  "p": 16,
+  "c": 50,
+  "f": 28,
+  "fiber": 2,
+  "aliases": [
+   "murtabak arabic",
+   "motabbaq"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "koshari",
+  "name": "Koshari",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 620,
+  "p": 20,
+  "c": 110,
+  "f": 12,
+  "fiber": 12,
+  "aliases": [
+   "kushari",
+   "koshary"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "grilled_hammour",
+  "name": "Grilled hammour (fish)",
+  "category": "Middle Eastern",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 250,
+  "kcal": 330,
+  "p": 50,
+  "c": 2,
+  "f": 13,
+  "fiber": 0,
+  "aliases": [
+   "hamour",
+   "grouper",
+   "samak mashwi"
+  ],
+  "basis": "typical",
+  "regions": [
+   "me"
+  ]
+ },
+ {
+  "id": "full_english",
+  "name": "Full English breakfast (bacon & sausage)",
+  "category": "British",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 450,
+  "kcal": 850,
+  "p": 42,
+  "c": 52,
+  "f": 52,
+  "fiber": 8,
+  "aliases": [
+   "fry up",
+   "english breakfast",
+   "full breakfast"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "halal_full_english",
+  "name": "Full English (beef sausage, turkey rashers)",
+  "category": "British",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 450,
+  "kcal": 780,
+  "p": 45,
+  "c": 52,
+  "f": 44,
+  "fiber": 8,
+  "aliases": [
+   "halal fry up",
+   "halal english breakfast"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "beans_on_toast",
+  "name": "Beans on toast",
+  "category": "British",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 250,
+  "kcal": 380,
+  "p": 16,
+  "c": 62,
+  "f": 7,
+  "fiber": 11,
+  "aliases": [
+   "baked beans toast"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "jacket_potato_beans",
+  "name": "Jacket potato with beans",
+  "category": "British",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 450,
+  "p": 15,
+  "c": 85,
+  "f": 5,
+  "fiber": 14,
+  "aliases": [
+   "baked potato beans",
+   "jacket spud"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "jacket_potato_cheese",
+  "name": "Jacket potato with cheese",
+  "category": "British",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 330,
+  "kcal": 520,
+  "p": 18,
+  "c": 70,
+  "f": 19,
+  "fiber": 7,
+  "aliases": [
+   "baked potato cheese"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk",
+   "us"
+  ]
+ },
+ {
+  "id": "shepherds_pie",
+  "name": "Shepherd's pie",
+  "category": "British",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 450,
+  "p": 24,
+  "c": 35,
+  "f": 24,
+  "fiber": 4,
+  "aliases": [
+   "shepherds pie",
+   "lamb pie"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "cottage_pie",
+  "name": "Cottage pie",
+  "category": "British",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 460,
+  "p": 25,
+  "c": 36,
+  "f": 24,
+  "fiber": 4,
+  "aliases": [
+   "beef cottage pie"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "roast_chicken_dinner",
+  "name": "Sunday roast (chicken)",
+  "category": "British",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 450,
+  "kcal": 700,
+  "p": 50,
+  "c": 55,
+  "f": 30,
+  "fiber": 7,
+  "aliases": [
+   "roast dinner",
+   "chicken roast dinner",
+   "sunday dinner"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "roast_beef_dinner",
+  "name": "Roast beef & Yorkshire pudding",
+  "category": "British",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 450,
+  "kcal": 780,
+  "p": 48,
+  "c": 60,
+  "f": 38,
+  "fiber": 6,
+  "aliases": [
+   "roast beef dinner",
+   "beef roast"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "bangers_mash",
+  "name": "Bangers & mash (pork sausages)",
+  "category": "British",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 680,
+  "p": 25,
+  "c": 55,
+  "f": 40,
+  "fiber": 5,
+  "aliases": [
+   "sausage and mash",
+   "bangers and mash"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "cornish_pasty",
+  "name": "Cornish pasty",
+  "category": "British",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 230,
+  "kcal": 650,
+  "p": 16,
+  "c": 60,
+  "f": 38,
+  "fiber": 4,
+  "aliases": [
+   "pasty",
+   "steak pasty"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "sausage_roll",
+  "name": "Sausage roll (pork)",
+  "category": "British",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 130,
+  "kcal": 410,
+  "p": 11,
+  "c": 30,
+  "f": 27,
+  "fiber": 1.5,
+  "aliases": [
+   "greggs sausage roll"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "scone_jam_cream",
+  "name": "Scone with jam & cream",
+  "category": "British",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 120,
+  "kcal": 420,
+  "p": 6,
+  "c": 55,
+  "f": 20,
+  "fiber": 1.5,
+  "aliases": [
+   "cream tea",
+   "scone"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "crumpets",
+  "name": "Crumpets with butter (2)",
+  "category": "British",
+  "serving": 2,
+  "unit": "piece",
+  "grams": 130,
+  "kcal": 300,
+  "p": 7,
+  "c": 48,
+  "f": 9,
+  "fiber": 2,
+  "aliases": [
+   "crumpet"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "tikka_masala_rice",
+  "name": "Chicken tikka masala with rice",
+  "category": "British",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 450,
+  "kcal": 820,
+  "p": 40,
+  "c": 90,
+  "f": 32,
+  "fiber": 4,
+  "aliases": [
+   "ctm",
+   "tikka masala"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk",
+   "in"
+  ]
+ },
+ {
+  "id": "ploughmans",
+  "name": "Ploughman's lunch",
+  "category": "British",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 750,
+  "p": 30,
+  "c": 60,
+  "f": 42,
+  "fiber": 5,
+  "aliases": [
+   "ploughmans lunch"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "tea_milk",
+  "name": "Tea with milk (no sugar)",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 250,
+  "kcal": 40,
+  "p": 2,
+  "c": 3,
+  "f": 1.5,
+  "fiber": 0,
+  "aliases": [
+   "builders tea",
+   "english tea",
+   "cuppa"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "egg_muffin",
+  "name": "Egg & cheese muffin",
+  "category": "British",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 140,
+  "kcal": 300,
+  "p": 15,
+  "c": 28,
+  "f": 14,
+  "fiber": 1.5,
+  "aliases": [
+   "breakfast muffin",
+   "egg mcmuffin"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk",
+   "us"
+  ]
+ },
+ {
+  "id": "fish_finger_sandwich",
+  "name": "Fish finger sandwich",
+  "category": "British",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 200,
+  "kcal": 480,
+  "p": 20,
+  "c": 52,
+  "f": 20,
+  "fiber": 3,
+  "aliases": [
+   "fish finger sarnie"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "prawn_mayo_sandwich",
+  "name": "Prawn mayo sandwich",
+  "category": "British",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 180,
+  "kcal": 400,
+  "p": 17,
+  "c": 38,
+  "f": 20,
+  "fiber": 3,
+  "aliases": [
+   "prawn sandwich",
+   "meal deal sandwich"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "sticky_toffee_pudding",
+  "name": "Sticky toffee pudding",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "serving",
+  "grams": 150,
+  "kcal": 520,
+  "p": 5,
+  "c": 75,
+  "f": 23,
+  "fiber": 1.5,
+  "aliases": [
+   "toffee pudding"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "apple_crumble",
+  "name": "Apple crumble with custard",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 200,
+  "kcal": 400,
+  "p": 5,
+  "c": 62,
+  "f": 15,
+  "fiber": 3,
+  "aliases": [
+   "crumble"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "mushy_peas",
+  "name": "Mushy peas",
+  "category": "British",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 150,
+  "kcal": 130,
+  "p": 8,
+  "c": 20,
+  "f": 1.5,
+  "fiber": 7,
+  "aliases": [
+   "mushy pea"
+  ],
+  "basis": "typical",
+  "regions": [
+   "uk"
+  ]
+ },
+ {
+  "id": "pancakes",
+  "name": "Pancakes with syrup (3)",
+  "category": "American",
+  "serving": 3,
+  "unit": "piece",
+  "grams": 230,
+  "kcal": 520,
+  "p": 12,
+  "c": 85,
+  "f": 14,
+  "fiber": 2,
+  "aliases": [
+   "hotcakes",
+   "american pancakes"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk"
+  ]
+ },
+ {
+  "id": "waffles",
+  "name": "Waffles (2)",
+  "category": "American",
+  "serving": 2,
+  "unit": "piece",
+  "grams": 150,
+  "kcal": 450,
+  "p": 10,
+  "c": 55,
+  "f": 21,
+  "fiber": 2,
+  "aliases": [
+   "belgian waffle",
+   "waffle"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "eu"
+  ]
+ },
+ {
+  "id": "bagel_cream_cheese",
+  "name": "Bagel with cream cheese",
+  "category": "American",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 140,
+  "kcal": 400,
+  "p": 13,
+  "c": 58,
+  "f": 13,
+  "fiber": 2.5,
+  "aliases": [
+   "bagel",
+   "cream cheese bagel"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us"
+  ]
+ },
+ {
+  "id": "mac_cheese",
+  "name": "Mac & cheese",
+  "category": "American",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 500,
+  "p": 20,
+  "c": 50,
+  "f": 25,
+  "fiber": 2,
+  "aliases": [
+   "macaroni and cheese",
+   "mac n cheese"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk"
+  ]
+ },
+ {
+  "id": "bbq_ribs",
+  "name": "BBQ pork ribs (half rack)",
+  "category": "American",
+  "serving": 1,
+  "unit": "serving",
+  "grams": 300,
+  "kcal": 820,
+  "p": 55,
+  "c": 25,
+  "f": 56,
+  "fiber": 0.5,
+  "aliases": [
+   "ribs",
+   "pork ribs",
+   "spare ribs"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us"
+  ]
+ },
+ {
+  "id": "buffalo_wings",
+  "name": "Buffalo wings (6)",
+  "category": "American",
+  "serving": 6,
+  "unit": "piece",
+  "grams": 200,
+  "kcal": 520,
+  "p": 40,
+  "c": 4,
+  "f": 38,
+  "fiber": 0,
+  "aliases": [
+   "hot wings",
+   "wings buffalo"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us"
+  ]
+ },
+ {
+  "id": "cobb_salad",
+  "name": "Cobb salad",
+  "category": "American",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 350,
+  "kcal": 520,
+  "p": 38,
+  "c": 12,
+  "f": 36,
+  "fiber": 6,
+  "aliases": [
+   "cobb"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us"
+  ]
+ },
+ {
+  "id": "caesar_salad",
+  "name": "Chicken Caesar salad",
+  "category": "American",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 300,
+  "kcal": 450,
+  "p": 32,
+  "c": 18,
+  "f": 28,
+  "fiber": 3,
+  "aliases": [
+   "caesar salad"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk",
+   "eu"
+  ]
+ },
+ {
+  "id": "chicken_burrito",
+  "name": "Chicken burrito",
+  "category": "American",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 350,
+  "kcal": 700,
+  "p": 38,
+  "c": 80,
+  "f": 25,
+  "fiber": 10,
+  "aliases": [
+   "burrito"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk"
+  ]
+ },
+ {
+  "id": "burrito_bowl",
+  "name": "Burrito bowl",
+  "category": "American",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 450,
+  "kcal": 650,
+  "p": 40,
+  "c": 75,
+  "f": 20,
+  "fiber": 12,
+  "aliases": [
+   "chipotle bowl",
+   "rice bowl mexican"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk"
+  ]
+ },
+ {
+  "id": "beef_tacos",
+  "name": "Beef tacos (3)",
+  "category": "American",
+  "serving": 3,
+  "unit": "piece",
+  "grams": 270,
+  "kcal": 570,
+  "p": 28,
+  "c": 45,
+  "f": 30,
+  "fiber": 6,
+  "aliases": [
+   "tacos",
+   "taco"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us"
+  ]
+ },
+ {
+  "id": "chicken_quesadilla",
+  "name": "Chicken quesadilla",
+  "category": "American",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 230,
+  "kcal": 600,
+  "p": 34,
+  "c": 45,
+  "f": 32,
+  "fiber": 3,
+  "aliases": [
+   "quesadilla"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us"
+  ]
+ },
+ {
+  "id": "nachos",
+  "name": "Nachos with cheese",
+  "category": "American",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 250,
+  "kcal": 690,
+  "p": 18,
+  "c": 70,
+  "f": 38,
+  "fiber": 7,
+  "aliases": [
+   "loaded nachos"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk"
+  ]
+ },
+ {
+  "id": "pbj_sandwich",
+  "name": "Peanut butter & jelly sandwich",
+  "category": "American",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 110,
+  "kcal": 380,
+  "p": 13,
+  "c": 48,
+  "f": 16,
+  "fiber": 4,
+  "aliases": [
+   "pb&j",
+   "pbj",
+   "peanut butter jam sandwich"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us"
+  ]
+ },
+ {
+  "id": "granola_yogurt",
+  "name": "Granola with yogurt & berries",
+  "category": "American",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 420,
+  "p": 15,
+  "c": 58,
+  "f": 14,
+  "fiber": 6,
+  "aliases": [
+   "yogurt parfait",
+   "granola bowl"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk",
+   "eu"
+  ]
+ },
+ {
+  "id": "chicken_noodle_soup",
+  "name": "Chicken noodle soup",
+  "category": "American",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 350,
+  "kcal": 220,
+  "p": 15,
+  "c": 24,
+  "f": 7,
+  "fiber": 2,
+  "aliases": [
+   "chicken soup noodles"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us"
+  ]
+ },
+ {
+  "id": "clam_chowder",
+  "name": "Clam chowder",
+  "category": "American",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 300,
+  "kcal": 380,
+  "p": 14,
+  "c": 30,
+  "f": 22,
+  "fiber": 1.5,
+  "aliases": [
+   "chowder",
+   "new england chowder"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us"
+  ]
+ },
+ {
+  "id": "poutine",
+  "name": "Poutine",
+  "category": "American",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 740,
+  "p": 20,
+  "c": 75,
+  "f": 40,
+  "fiber": 6,
+  "aliases": [
+   "canadian poutine"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us"
+  ]
+ },
+ {
+  "id": "philly_cheesesteak",
+  "name": "Philly cheesesteak",
+  "category": "American",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 300,
+  "kcal": 750,
+  "p": 40,
+  "c": 60,
+  "f": 38,
+  "fiber": 3,
+  "aliases": [
+   "cheesesteak",
+   "steak sandwich"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us"
+  ]
+ },
+ {
+  "id": "meatloaf",
+  "name": "Meatloaf (1 slice)",
+  "category": "American",
+  "serving": 1,
+  "unit": "slice",
+  "grams": 180,
+  "kcal": 380,
+  "p": 25,
+  "c": 14,
+  "f": 24,
+  "fiber": 1,
+  "aliases": [
+   "meat loaf"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us"
+  ]
+ },
+ {
+  "id": "pulled_chicken_sandwich",
+  "name": "BBQ pulled chicken sandwich",
+  "category": "American",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 250,
+  "kcal": 520,
+  "p": 35,
+  "c": 55,
+  "f": 16,
+  "fiber": 3,
+  "aliases": [
+   "pulled chicken burger"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us"
+  ]
+ },
+ {
+  "id": "turkey_sandwich",
+  "name": "Turkey sandwich",
+  "category": "American",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 220,
+  "kcal": 350,
+  "p": 25,
+  "c": 38,
+  "f": 10,
+  "fiber": 4,
+  "aliases": [
+   "turkey sub",
+   "turkey club"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk"
+  ]
+ },
+ {
+  "id": "smoothie_bowl",
+  "name": "Acai smoothie bowl",
+  "category": "American",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 350,
+  "kcal": 350,
+  "p": 8,
+  "c": 65,
+  "f": 8,
+  "fiber": 9,
+  "aliases": [
+   "acai bowl",
+   "smoothie bowl"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "eu",
+   "uk"
+  ]
+ },
+ {
+  "id": "avocado_toast",
+  "name": "Avocado toast",
+  "category": "American",
+  "serving": 1,
+  "unit": "slice",
+  "grams": 130,
+  "kcal": 280,
+  "p": 7,
+  "c": 26,
+  "f": 17,
+  "fiber": 7,
+  "aliases": [
+   "avo toast"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk",
+   "eu"
+  ]
+ },
+ {
+  "id": "avocado_egg_toast",
+  "name": "Avocado toast with egg",
+  "category": "American",
+  "serving": 1,
+  "unit": "slice",
+  "grams": 180,
+  "kcal": 360,
+  "p": 13,
+  "c": 26,
+  "f": 22,
+  "fiber": 7,
+  "aliases": [
+   "avo egg toast"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk",
+   "eu"
+  ]
+ },
+ {
+  "id": "apple_pie",
+  "name": "Apple pie (1 slice)",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "slice",
+  "grams": 125,
+  "kcal": 300,
+  "p": 2.5,
+  "c": 43,
+  "f": 14,
+  "fiber": 2,
+  "aliases": [
+   "apple pie slice"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk"
+  ]
+ },
+ {
+  "id": "greek_salad",
+  "name": "Greek salad",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 280,
+  "p": 8,
+  "c": 12,
+  "f": 23,
+  "fiber": 4,
+  "aliases": [
+   "horiatiki"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "uk"
+  ]
+ },
+ {
+  "id": "chicken_souvlaki",
+  "name": "Chicken souvlaki plate",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 650,
+  "p": 45,
+  "c": 55,
+  "f": 26,
+  "fiber": 4,
+  "aliases": [
+   "souvlaki"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "chicken_gyro",
+  "name": "Chicken gyro wrap",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 300,
+  "kcal": 600,
+  "p": 32,
+  "c": 55,
+  "f": 27,
+  "fiber": 4,
+  "aliases": [
+   "gyros",
+   "gyro"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "us"
+  ]
+ },
+ {
+  "id": "moussaka",
+  "name": "Moussaka",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 560,
+  "p": 25,
+  "c": 30,
+  "f": 38,
+  "fiber": 6,
+  "aliases": [
+   "musaka"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "spaghetti_bolognese",
+  "name": "Spaghetti bolognese",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 620,
+  "p": 32,
+  "c": 78,
+  "f": 20,
+  "fiber": 6,
+  "aliases": [
+   "spag bol",
+   "bolognese"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "uk",
+   "us"
+  ]
+ },
+ {
+  "id": "carbonara",
+  "name": "Spaghetti carbonara (pancetta)",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 680,
+  "p": 27,
+  "c": 72,
+  "f": 30,
+  "fiber": 3,
+  "aliases": [
+   "carbonara"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "uk"
+  ]
+ },
+ {
+  "id": "penne_arrabbiata",
+  "name": "Penne arrabbiata",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 480,
+  "p": 15,
+  "c": 85,
+  "f": 9,
+  "fiber": 6,
+  "aliases": [
+   "arrabiata",
+   "penne arabiata"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "pizza_margherita",
+  "name": "Pizza margherita (2 slices)",
+  "category": "Mediterranean",
+  "serving": 2,
+  "unit": "slice",
+  "grams": 220,
+  "kcal": 530,
+  "p": 22,
+  "c": 66,
+  "f": 19,
+  "fiber": 4,
+  "aliases": [
+   "margherita",
+   "margarita pizza"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "us",
+   "uk"
+  ]
+ },
+ {
+  "id": "mushroom_risotto",
+  "name": "Mushroom risotto",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 350,
+  "kcal": 520,
+  "p": 13,
+  "c": 70,
+  "f": 20,
+  "fiber": 3,
+  "aliases": [
+   "risotto"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "paella",
+  "name": "Seafood paella",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 600,
+  "p": 32,
+  "c": 75,
+  "f": 18,
+  "fiber": 3,
+  "aliases": [
+   "paella marisco"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "minestrone",
+  "name": "Minestrone soup",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 300,
+  "kcal": 180,
+  "p": 7,
+  "c": 28,
+  "f": 4.5,
+  "fiber": 6,
+  "aliases": [
+   "minestrone"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "caprese_salad",
+  "name": "Caprese salad",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 200,
+  "kcal": 330,
+  "p": 18,
+  "c": 7,
+  "f": 26,
+  "fiber": 1.5,
+  "aliases": [
+   "caprese",
+   "insalata caprese"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "tzatziki",
+  "name": "Tzatziki",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 100,
+  "kcal": 100,
+  "p": 4,
+  "c": 5,
+  "f": 7,
+  "fiber": 0.5,
+  "aliases": [
+   "tzatziki dip",
+   "cacik"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "grilled_halloumi",
+  "name": "Grilled halloumi (3 slices)",
+  "category": "Mediterranean",
+  "serving": 3,
+  "unit": "slice",
+  "grams": 90,
+  "kcal": 300,
+  "p": 20,
+  "c": 2,
+  "f": 23,
+  "fiber": 0,
+  "aliases": [
+   "halloumi",
+   "hellim"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "me",
+   "uk"
+  ]
+ },
+ {
+  "id": "ratatouille",
+  "name": "Ratatouille",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 300,
+  "kcal": 210,
+  "p": 4,
+  "c": 24,
+  "f": 11,
+  "fiber": 7,
+  "aliases": [
+   "ratatoui"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "pain_au_chocolat",
+  "name": "Pain au chocolat",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 75,
+  "kcal": 310,
+  "p": 6,
+  "c": 34,
+  "f": 17,
+  "fiber": 2,
+  "aliases": [
+   "chocolate croissant"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "uk"
+  ]
+ },
+ {
+  "id": "nutella_crepe",
+  "name": "Crêpe with Nutella",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 120,
+  "kcal": 380,
+  "p": 7,
+  "c": 48,
+  "f": 18,
+  "fiber": 2,
+  "aliases": [
+   "crepe",
+   "nutella crepe"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "tiramisu",
+  "name": "Tiramisu",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "slice",
+  "grams": 120,
+  "kcal": 360,
+  "p": 7,
+  "c": 32,
+  "f": 23,
+  "fiber": 1,
+  "aliases": [
+   "tiramisu slice"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "gnocchi",
+  "name": "Gnocchi in tomato sauce",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 300,
+  "kcal": 450,
+  "p": 10,
+  "c": 82,
+  "f": 9,
+  "fiber": 5,
+  "aliases": [
+   "gnocchi"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "doner_wrap",
+  "name": "Doner kebab wrap",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 350,
+  "kcal": 750,
+  "p": 35,
+  "c": 65,
+  "f": 38,
+  "fiber": 4,
+  "aliases": [
+   "doner",
+   "döner",
+   "kebab wrap"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "uk",
+   "me"
+  ]
+ },
+ {
+  "id": "lahmacun",
+  "name": "Lahmacun",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 180,
+  "kcal": 400,
+  "p": 17,
+  "c": 50,
+  "f": 14,
+  "fiber": 4,
+  "aliases": [
+   "turkish pizza",
+   "lahmajoun"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "me"
+  ]
+ },
+ {
+  "id": "menemen",
+  "name": "Menemen (Turkish eggs)",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 250,
+  "kcal": 290,
+  "p": 14,
+  "c": 10,
+  "f": 22,
+  "fiber": 3,
+  "aliases": [
+   "turkish scrambled eggs"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "me"
+  ]
+ },
+ {
+  "id": "greek_yogurt_honey",
+  "name": "Greek yogurt with honey & nuts",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 200,
+  "kcal": 280,
+  "p": 18,
+  "c": 30,
+  "f": 10,
+  "fiber": 1,
+  "aliases": [
+   "yogurt honey walnuts"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "uk"
+  ]
+ },
+ {
+  "id": "olives",
+  "name": "Olives (10)",
+  "category": "Mediterranean",
+  "serving": 10,
+  "unit": "piece",
+  "grams": 40,
+  "kcal": 60,
+  "p": 0.4,
+  "c": 1.5,
+  "f": 6,
+  "fiber": 1.3,
+  "aliases": [
+   "zaitoon",
+   "black olives",
+   "green olives"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "me"
+  ]
+ },
+ {
+  "id": "salmon_veg",
+  "name": "Grilled salmon with vegetables",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 520,
+  "p": 40,
+  "c": 18,
+  "f": 32,
+  "fiber": 5,
+  "aliases": [
+   "salmon dinner",
+   "salmon plate"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "uk",
+   "us"
+  ]
+ },
+ {
+  "id": "goulash",
+  "name": "Beef goulash",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 350,
+  "kcal": 420,
+  "p": 30,
+  "c": 25,
+  "f": 22,
+  "fiber": 4,
+  "aliases": [
+   "gulyas",
+   "goulash soup"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "chicken_schnitzel",
+  "name": "Chicken schnitzel",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 180,
+  "kcal": 420,
+  "p": 35,
+  "c": 22,
+  "f": 21,
+  "fiber": 1,
+  "aliases": [
+   "schnitzel"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu"
+  ]
+ },
+ {
+  "id": "pasta_pesto",
+  "name": "Pasta with pesto",
+  "category": "Mediterranean",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 650,
+  "p": 18,
+  "c": 80,
+  "f": 28,
+  "fiber": 5,
+  "aliases": [
+   "pesto pasta"
+  ],
+  "basis": "typical",
+  "regions": [
+   "eu",
+   "uk"
+  ]
+ },
+ {
+  "id": "salmon_nigiri",
+  "name": "Salmon nigiri (6)",
+  "category": "East Asian",
+  "serving": 6,
+  "unit": "piece",
+  "grams": 180,
+  "kcal": 330,
+  "p": 18,
+  "c": 48,
+  "f": 6,
+  "fiber": 0.5,
+  "aliases": [
+   "nigiri",
+   "sushi salmon"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "us",
+   "uk"
+  ]
+ },
+ {
+  "id": "salmon_sashimi",
+  "name": "Salmon sashimi (6 slices)",
+  "category": "East Asian",
+  "serving": 6,
+  "unit": "slice",
+  "grams": 120,
+  "kcal": 250,
+  "p": 25,
+  "c": 0,
+  "f": 16,
+  "fiber": 0,
+  "aliases": [
+   "sashimi"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea"
+  ]
+ },
+ {
+  "id": "chicken_ramen",
+  "name": "Chicken ramen",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 550,
+  "kcal": 600,
+  "p": 32,
+  "c": 70,
+  "f": 20,
+  "fiber": 3,
+  "aliases": [
+   "ramen",
+   "shoyu ramen"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "us",
+   "uk"
+  ]
+ },
+ {
+  "id": "tonkotsu_ramen",
+  "name": "Tonkotsu ramen (pork)",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 650,
+  "kcal": 800,
+  "p": 35,
+  "c": 75,
+  "f": 38,
+  "fiber": 3,
+  "aliases": [
+   "tonkotsu"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea"
+  ]
+ },
+ {
+  "id": "miso_soup",
+  "name": "Miso soup",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 60,
+  "p": 4,
+  "c": 6,
+  "f": 2,
+  "fiber": 1,
+  "aliases": [
+   "miso"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea"
+  ]
+ },
+ {
+  "id": "teriyaki_chicken",
+  "name": "Teriyaki chicken with rice",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 650,
+  "p": 38,
+  "c": 85,
+  "f": 15,
+  "fiber": 2,
+  "aliases": [
+   "chicken teriyaki",
+   "teriyaki bowl"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "us"
+  ]
+ },
+ {
+  "id": "katsu_curry",
+  "name": "Chicken katsu curry",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 500,
+  "kcal": 900,
+  "p": 38,
+  "c": 110,
+  "f": 32,
+  "fiber": 5,
+  "aliases": [
+   "katsu",
+   "japanese curry"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "uk"
+  ]
+ },
+ {
+  "id": "udon",
+  "name": "Udon noodle soup",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 500,
+  "kcal": 420,
+  "p": 15,
+  "c": 75,
+  "f": 6,
+  "fiber": 3,
+  "aliases": [
+   "kake udon",
+   "udon soup"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea"
+  ]
+ },
+ {
+  "id": "onigiri",
+  "name": "Onigiri (rice ball)",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 110,
+  "kcal": 180,
+  "p": 4,
+  "c": 38,
+  "f": 1,
+  "fiber": 0.5,
+  "aliases": [
+   "rice ball",
+   "omusubi"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea"
+  ]
+ },
+ {
+  "id": "chicken_gyoza",
+  "name": "Chicken gyoza (6)",
+  "category": "East Asian",
+  "serving": 6,
+  "unit": "piece",
+  "grams": 150,
+  "kcal": 300,
+  "p": 13,
+  "c": 30,
+  "f": 14,
+  "fiber": 2,
+  "aliases": [
+   "gyoza",
+   "potstickers"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "uk",
+   "us"
+  ]
+ },
+ {
+  "id": "edamame",
+  "name": "Edamame",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 155,
+  "kcal": 190,
+  "p": 17,
+  "c": 14,
+  "f": 8,
+  "fiber": 8,
+  "aliases": [
+   "edamame beans",
+   "soy beans"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "us"
+  ]
+ },
+ {
+  "id": "jiaozi",
+  "name": "Steamed dumplings (8)",
+  "category": "East Asian",
+  "serving": 8,
+  "unit": "piece",
+  "grams": 200,
+  "kcal": 380,
+  "p": 18,
+  "c": 45,
+  "f": 13,
+  "fiber": 2,
+  "aliases": [
+   "jiaozi",
+   "chinese dumplings",
+   "momos chicken"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea"
+  ]
+ },
+ {
+  "id": "kung_pao_chicken",
+  "name": "Kung pao chicken",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 300,
+  "kcal": 520,
+  "p": 32,
+  "c": 20,
+  "f": 34,
+  "fiber": 3,
+  "aliases": [
+   "kung po chicken",
+   "gong bao"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "us"
+  ]
+ },
+ {
+  "id": "sweet_sour_chicken",
+  "name": "Sweet & sour chicken",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 620,
+  "p": 25,
+  "c": 70,
+  "f": 26,
+  "fiber": 2,
+  "aliases": [
+   "sweet and sour chicken"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "uk",
+   "us"
+  ]
+ },
+ {
+  "id": "mapo_tofu",
+  "name": "Mapo tofu",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 300,
+  "kcal": 330,
+  "p": 18,
+  "c": 10,
+  "f": 24,
+  "fiber": 2,
+  "aliases": [
+   "mapo doufu"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea"
+  ]
+ },
+ {
+  "id": "beef_broccoli",
+  "name": "Beef & broccoli",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 300,
+  "kcal": 380,
+  "p": 30,
+  "c": 18,
+  "f": 20,
+  "fiber": 4,
+  "aliases": [
+   "beef with broccoli"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "us"
+  ]
+ },
+ {
+  "id": "congee",
+  "name": "Chicken congee",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 400,
+  "kcal": 280,
+  "p": 14,
+  "c": 45,
+  "f": 4,
+  "fiber": 1,
+  "aliases": [
+   "congee",
+   "jook",
+   "rice porridge"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "sea"
+  ]
+ },
+ {
+  "id": "peking_duck",
+  "name": "Peking duck (4 pancakes)",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "serving",
+  "grams": 200,
+  "kcal": 520,
+  "p": 25,
+  "c": 30,
+  "f": 33,
+  "fiber": 2,
+  "aliases": [
+   "roast duck pancakes"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "uk"
+  ]
+ },
+ {
+  "id": "bibimbap",
+  "name": "Bibimbap",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 500,
+  "kcal": 620,
+  "p": 25,
+  "c": 90,
+  "f": 17,
+  "fiber": 7,
+  "aliases": [
+   "bibim bap"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea"
+  ]
+ },
+ {
+  "id": "kimchi",
+  "name": "Kimchi",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "serving",
+  "grams": 100,
+  "kcal": 25,
+  "p": 1.5,
+  "c": 4,
+  "f": 0.5,
+  "fiber": 2,
+  "aliases": [
+   "kimchee"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea"
+  ]
+ },
+ {
+  "id": "bulgogi_rice",
+  "name": "Beef bulgogi with rice",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 650,
+  "p": 32,
+  "c": 80,
+  "f": 22,
+  "fiber": 3,
+  "aliases": [
+   "bulgogi"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea"
+  ]
+ },
+ {
+  "id": "korean_fried_chicken",
+  "name": "Korean fried chicken (6)",
+  "category": "East Asian",
+  "serving": 6,
+  "unit": "piece",
+  "grams": 250,
+  "kcal": 700,
+  "p": 40,
+  "c": 40,
+  "f": 42,
+  "fiber": 1,
+  "aliases": [
+   "kfc korean",
+   "yangnyeom chicken"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "us",
+   "uk"
+  ]
+ },
+ {
+  "id": "tteokbokki",
+  "name": "Tteokbokki",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 300,
+  "kcal": 450,
+  "p": 9,
+  "c": 90,
+  "f": 6,
+  "fiber": 3,
+  "aliases": [
+   "ddeokbokki",
+   "rice cakes spicy"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea"
+  ]
+ },
+ {
+  "id": "kimbap",
+  "name": "Kimbap (1 roll)",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "serving",
+  "grams": 230,
+  "kcal": 380,
+  "p": 12,
+  "c": 65,
+  "f": 8,
+  "fiber": 3,
+  "aliases": [
+   "gimbap"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea"
+  ]
+ },
+ {
+  "id": "japchae",
+  "name": "Japchae",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 250,
+  "kcal": 380,
+  "p": 10,
+  "c": 55,
+  "f": 14,
+  "fiber": 3,
+  "aliases": [
+   "glass noodles korean"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea"
+  ]
+ },
+ {
+  "id": "tofu_stir_fry",
+  "name": "Tofu & vegetable stir-fry",
+  "category": "East Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 300,
+  "kcal": 300,
+  "p": 18,
+  "c": 15,
+  "f": 18,
+  "fiber": 5,
+  "aliases": [
+   "tofu stir fry"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "sea",
+   "us"
+  ]
+ },
+ {
+  "id": "bubble_tea",
+  "name": "Bubble tea",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 500,
+  "kcal": 350,
+  "p": 3,
+  "c": 70,
+  "f": 7,
+  "fiber": 0,
+  "aliases": [
+   "boba",
+   "pearl milk tea"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "sea",
+   "us"
+  ]
+ },
+ {
+  "id": "matcha_latte",
+  "name": "Matcha latte",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 350,
+  "kcal": 190,
+  "p": 9,
+  "c": 24,
+  "f": 7,
+  "fiber": 0.5,
+  "aliases": [
+   "green tea latte"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "us",
+   "uk"
+  ]
+ },
+ {
+  "id": "pad_thai",
+  "name": "Pad Thai (chicken)",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 620,
+  "p": 25,
+  "c": 80,
+  "f": 22,
+  "fiber": 3,
+  "aliases": [
+   "pad thai"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea",
+   "us",
+   "uk"
+  ]
+ },
+ {
+  "id": "green_curry",
+  "name": "Thai green curry with rice",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 450,
+  "kcal": 720,
+  "p": 30,
+  "c": 75,
+  "f": 33,
+  "fiber": 4,
+  "aliases": [
+   "green curry"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea",
+   "uk"
+  ]
+ },
+ {
+  "id": "tom_yum",
+  "name": "Tom yum soup",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 350,
+  "kcal": 180,
+  "p": 15,
+  "c": 10,
+  "f": 8,
+  "fiber": 2,
+  "aliases": [
+   "tom yam",
+   "tom yum goong"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "massaman_curry",
+  "name": "Massaman curry with rice",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 450,
+  "kcal": 820,
+  "p": 32,
+  "c": 85,
+  "f": 38,
+  "fiber": 5,
+  "aliases": [
+   "massaman"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "pad_kra_pao",
+  "name": "Thai basil chicken with rice & egg",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 650,
+  "p": 35,
+  "c": 70,
+  "f": 25,
+  "fiber": 2,
+  "aliases": [
+   "pad kra pao",
+   "kra pow",
+   "basil chicken"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "mango_sticky_rice",
+  "name": "Mango sticky rice",
+  "category": "Sweets",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 250,
+  "kcal": 480,
+  "p": 6,
+  "c": 85,
+  "f": 14,
+  "fiber": 3,
+  "aliases": [
+   "khao niao mamuang"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "nasi_lemak",
+  "name": "Nasi lemak",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 700,
+  "p": 25,
+  "c": 75,
+  "f": 33,
+  "fiber": 4,
+  "aliases": [
+   "nasi lemak ayam"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "nasi_goreng",
+  "name": "Nasi goreng",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 620,
+  "p": 22,
+  "c": 80,
+  "f": 22,
+  "fiber": 3,
+  "aliases": [
+   "indonesian fried rice"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "mee_goreng",
+  "name": "Mee goreng",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 600,
+  "p": 18,
+  "c": 80,
+  "f": 22,
+  "fiber": 4,
+  "aliases": [
+   "mi goreng",
+   "fried noodles malay"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "laksa",
+  "name": "Laksa",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 550,
+  "kcal": 680,
+  "p": 28,
+  "c": 60,
+  "f": 36,
+  "fiber": 4,
+  "aliases": [
+   "curry laksa",
+   "curry mee"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "chicken_satay",
+  "name": "Chicken satay (6 sticks)",
+  "category": "Southeast Asian",
+  "serving": 6,
+  "unit": "piece",
+  "grams": 200,
+  "kcal": 420,
+  "p": 35,
+  "c": 12,
+  "f": 26,
+  "fiber": 2,
+  "aliases": [
+   "satay",
+   "sate ayam"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "chicken_rice",
+  "name": "Hainanese chicken rice",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 600,
+  "p": 35,
+  "c": 70,
+  "f": 20,
+  "fiber": 1,
+  "aliases": [
+   "hainan chicken rice"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea",
+   "ea"
+  ]
+ },
+ {
+  "id": "beef_rendang",
+  "name": "Beef rendang",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "serving",
+  "grams": 200,
+  "kcal": 470,
+  "p": 35,
+  "c": 8,
+  "f": 33,
+  "fiber": 2,
+  "aliases": [
+   "rendang"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "pho_bo",
+  "name": "Pho (beef)",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 650,
+  "kcal": 450,
+  "p": 30,
+  "c": 60,
+  "f": 10,
+  "fiber": 2,
+  "aliases": [
+   "pho",
+   "beef pho"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea",
+   "us"
+  ]
+ },
+ {
+  "id": "pho_ga",
+  "name": "Pho ga (chicken)",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 650,
+  "kcal": 400,
+  "p": 30,
+  "c": 55,
+  "f": 7,
+  "fiber": 2,
+  "aliases": [
+   "chicken pho"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "banh_mi",
+  "name": "Banh mi (chicken)",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 250,
+  "kcal": 500,
+  "p": 24,
+  "c": 60,
+  "f": 18,
+  "fiber": 3,
+  "aliases": [
+   "banh mi"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea",
+   "us"
+  ]
+ },
+ {
+  "id": "goi_cuon",
+  "name": "Fresh spring rolls (2)",
+  "category": "Southeast Asian",
+  "serving": 2,
+  "unit": "piece",
+  "grams": 200,
+  "kcal": 220,
+  "p": 12,
+  "c": 34,
+  "f": 4,
+  "fiber": 2,
+  "aliases": [
+   "summer rolls",
+   "goi cuon",
+   "rice paper rolls"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "chicken_adobo",
+  "name": "Chicken adobo with rice",
+  "category": "Southeast Asian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 400,
+  "kcal": 650,
+  "p": 35,
+  "c": 65,
+  "f": 26,
+  "fiber": 1,
+  "aliases": [
+   "adobo"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "roti_canai",
+  "name": "Roti canai with dhal (2)",
+  "category": "Southeast Asian",
+  "serving": 2,
+  "unit": "piece",
+  "grams": 220,
+  "kcal": 450,
+  "p": 10,
+  "c": 55,
+  "f": 21,
+  "fiber": 4,
+  "aliases": [
+   "roti prata",
+   "paratha malaysian"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "thai_iced_tea",
+  "name": "Thai iced tea",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 350,
+  "kcal": 250,
+  "p": 3,
+  "c": 40,
+  "f": 8,
+  "fiber": 0,
+  "aliases": [
+   "cha yen"
+  ],
+  "basis": "typical",
+  "regions": [
+   "sea"
+  ]
+ },
+ {
+  "id": "dal_makhani",
+  "name": "Dal makhani",
+  "category": "Indian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 360,
+  "p": 13,
+  "c": 32,
+  "f": 20,
+  "fiber": 9,
+  "aliases": [
+   "daal makhni",
+   "maa ki daal"
+  ],
+  "basis": "typical",
+  "regions": [
+   "in",
+   "pk"
+  ]
+ },
+ {
+  "id": "uttapam",
+  "name": "Uttapam",
+  "category": "Indian",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 180,
+  "kcal": 300,
+  "p": 8,
+  "c": 48,
+  "f": 8,
+  "fiber": 3,
+  "aliases": [
+   "uthappam",
+   "onion uttapam"
+  ],
+  "basis": "typical",
+  "regions": [
+   "in"
+  ]
+ },
+ {
+  "id": "misal_pav",
+  "name": "Misal pav",
+  "category": "Indian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 350,
+  "kcal": 520,
+  "p": 18,
+  "c": 70,
+  "f": 18,
+  "fiber": 12,
+  "aliases": [
+   "misal"
+  ],
+  "basis": "typical",
+  "regions": [
+   "in"
+  ]
+ },
+ {
+  "id": "pongal",
+  "name": "Ven pongal",
+  "category": "Indian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 330,
+  "p": 9,
+  "c": 48,
+  "f": 11,
+  "fiber": 3,
+  "aliases": [
+   "khara pongal"
+  ],
+  "basis": "typical",
+  "regions": [
+   "in"
+  ]
+ },
+ {
+  "id": "appam_stew",
+  "name": "Appam with stew (2)",
+  "category": "Indian",
+  "serving": 2,
+  "unit": "piece",
+  "grams": 300,
+  "kcal": 420,
+  "p": 12,
+  "c": 58,
+  "f": 15,
+  "fiber": 4,
+  "aliases": [
+   "appam",
+   "hoppers"
+  ],
+  "basis": "typical",
+  "regions": [
+   "in"
+  ]
+ },
+ {
+  "id": "paneer_paratha",
+  "name": "Paneer paratha",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 150,
+  "kcal": 380,
+  "p": 14,
+  "c": 42,
+  "f": 17,
+  "fiber": 4,
+  "aliases": [
+   "paneer stuffed paratha"
+  ],
+  "basis": "typical",
+  "regions": [
+   "in",
+   "pk"
+  ]
+ },
+ {
+  "id": "chicken_chettinad",
+  "name": "Chicken chettinad",
+  "category": "Indian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 420,
+  "p": 30,
+  "c": 10,
+  "f": 29,
+  "fiber": 3,
+  "aliases": [
+   "chettinad chicken"
+  ],
+  "basis": "typical",
+  "regions": [
+   "in"
+  ]
+ },
+ {
+  "id": "kerala_fish_curry",
+  "name": "Kerala fish curry",
+  "category": "Indian",
+  "serving": 1,
+  "unit": "bowl",
+  "grams": 250,
+  "kcal": 320,
+  "p": 26,
+  "c": 8,
+  "f": 21,
+  "fiber": 2,
+  "aliases": [
+   "meen curry",
+   "fish molee"
+  ],
+  "basis": "typical",
+  "regions": [
+   "in"
+  ]
+ },
+ {
+  "id": "veg_thali",
+  "name": "Veg thali",
+  "category": "Indian",
+  "serving": 1,
+  "unit": "plate",
+  "grams": 600,
+  "kcal": 850,
+  "p": 25,
+  "c": 120,
+  "f": 30,
+  "fiber": 16,
+  "aliases": [
+   "thali",
+   "vegetarian thali"
+  ],
+  "basis": "typical",
+  "regions": [
+   "in"
+  ]
+ },
+ {
+  "id": "pani_puri",
+  "name": "Pani puri (6)",
+  "category": "Indian",
+  "serving": 6,
+  "unit": "piece",
+  "grams": 150,
+  "kcal": 230,
+  "p": 5,
+  "c": 36,
+  "f": 7,
+  "fiber": 4,
+  "aliases": [
+   "golgappa",
+   "puchka"
+  ],
+  "basis": "typical",
+  "regions": [
+   "in"
+  ]
+ },
+ {
+  "id": "quinoa",
+  "name": "Quinoa (cooked)",
+  "category": "Basics",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 185,
+  "kcal": 222,
+  "p": 8,
+  "c": 39,
+  "f": 3.6,
+  "fiber": 5,
+  "aliases": [
+   "quinoa cooked"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk",
+   "eu"
+  ]
+ },
+ {
+  "id": "avocado",
+  "name": "Avocado (half)",
+  "category": "Fruit",
+  "serving": 0.5,
+  "unit": "piece",
+  "grams": 100,
+  "kcal": 160,
+  "p": 2,
+  "c": 9,
+  "f": 15,
+  "fiber": 7,
+  "aliases": [
+   "butter fruit",
+   "avocado half"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk",
+   "eu"
+  ]
+ },
+ {
+  "id": "broccoli",
+  "name": "Broccoli (steamed)",
+  "category": "Vegetables",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 150,
+  "kcal": 52,
+  "p": 3.6,
+  "c": 10,
+  "f": 0.6,
+  "fiber": 5,
+  "aliases": [
+   "broccoli steamed"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk",
+   "eu",
+   "ea"
+  ]
+ },
+ {
+  "id": "blueberries",
+  "name": "Blueberries",
+  "category": "Fruit",
+  "serving": 1,
+  "unit": "cup",
+  "grams": 150,
+  "kcal": 85,
+  "p": 1.1,
+  "c": 21,
+  "f": 0.5,
+  "fiber": 3.6,
+  "aliases": [
+   "blueberry"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk",
+   "eu"
+  ]
+ },
+ {
+  "id": "kiwi",
+  "name": "Kiwi",
+  "category": "Fruit",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 75,
+  "kcal": 46,
+  "p": 0.9,
+  "c": 11,
+  "f": 0.4,
+  "fiber": 2.3,
+  "aliases": [
+   "kiwifruit"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk",
+   "eu",
+   "ea"
+  ]
+ },
+ {
+  "id": "tofu",
+  "name": "Tofu (firm)",
+  "category": "Basics",
+  "serving": 100,
+  "unit": "g",
+  "grams": 100,
+  "kcal": 145,
+  "p": 15.7,
+  "c": 3.5,
+  "f": 8.7,
+  "fiber": 2.3,
+  "aliases": [
+   "bean curd",
+   "tofu firm"
+  ],
+  "basis": "typical",
+  "regions": [
+   "ea",
+   "sea",
+   "us"
+  ]
+ },
+ {
+  "id": "tortilla",
+  "name": "Tortilla wrap",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "piece",
+  "grams": 60,
+  "kcal": 180,
+  "p": 5,
+  "c": 30,
+  "f": 4.5,
+  "fiber": 2,
+  "aliases": [
+   "flour tortilla",
+   "wrap bread"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk",
+   "eu"
+  ]
+ },
+ {
+  "id": "sourdough",
+  "name": "Sourdough bread (slice)",
+  "category": "Breads",
+  "serving": 1,
+  "unit": "slice",
+  "grams": 50,
+  "kcal": 130,
+  "p": 5,
+  "c": 25,
+  "f": 0.8,
+  "fiber": 1.2,
+  "aliases": [
+   "sourdough slice"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk",
+   "eu"
+  ]
+ },
+ {
+  "id": "almond_milk",
+  "name": "Almond milk (unsweetened)",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 250,
+  "kcal": 40,
+  "p": 1.5,
+  "c": 1.5,
+  "f": 3,
+  "fiber": 0.5,
+  "aliases": [
+   "almond milk"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk",
+   "eu"
+  ]
+ },
+ {
+  "id": "oat_milk",
+  "name": "Oat milk",
+  "category": "Drinks",
+  "serving": 1,
+  "unit": "glass",
+  "grams": 250,
+  "kcal": 120,
+  "p": 3,
+  "c": 16,
+  "f": 5,
+  "fiber": 2,
+  "aliases": [
+   "oat milk"
+  ],
+  "basis": "typical",
+  "regions": [
+   "us",
+   "uk",
+   "eu"
+  ]
  }
 ]
