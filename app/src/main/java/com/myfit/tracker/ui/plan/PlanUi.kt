@@ -84,6 +84,7 @@ import com.myfit.tracker.ui.theme.LocalFitTheme
 import com.myfit.tracker.ui.theme.Motion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
@@ -732,6 +733,12 @@ fun PlanStoryHost(c: AppContainer, allowed: Boolean) {
         owner.lifecycle.addObserver(obs)
         if (allowed && DayPlans.storyDue(ctx)) show = true
         onDispose { owner.lifecycle.removeObserver(obs) }
+    }
+    // not on install day: there's no "yesterday" yet — the first story comes tomorrow morning
+    LaunchedEffect(show) {
+        if (!show) return@LaunchedEffect
+        val created = withContext(Dispatchers.IO) { runCatching { c.profileRepo.profile.first()?.createdAt }.getOrNull() }
+        if (created != null && java.time.Instant.ofEpochMilli(created).atZone(Clock.zone()).toLocalDate() == Clock.today()) { DayPlans.markStoryShown(ctx); show = false }
     }
     androidx.compose.animation.AnimatedVisibility(show,
         enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260)) + androidx.compose.animation.scaleIn(spring(0.86f, 340f), initialScale = 1.06f),
