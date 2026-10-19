@@ -53,33 +53,43 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
-/* Pakistani 7-day meal plans in household units (roti, katori, cup) — assets/meal_plans.json from tools/mealplans/gen.py. */
+/* Regional 7-day meal plans (8 regions; Pakistani first) in household units (roti, katori, cup) — assets/meal_plans.json from tools/mealplans/gen.py. */
 
 data class PlanItem(val id: String, val q: Double, val label: String, val kcal: Int, val p: Double)
 data class PlanMeal(val type: String, val items: List<PlanItem>, val kcal: Int, val p: Double)
 data class PlanDay(val name: String, val meals: List<PlanMeal>, val kcal: Int, val p: Double)
-data class MealPlans(val note: String, val bands: Map<Int, List<PlanDay>>)
+data class MealPlans(val note: String, val bands: Map<Int, List<PlanDay>>, val id: String = "pk", val name: String = "Pakistan")
 
+/** R32: one set of 7-day plans per food region (tools/mealplans/gen.py + regions.py). */
 internal object MealPlanData {
-    @Volatile private var cache: MealPlans? = null
-    fun load(c: Context): MealPlans = cache ?: run {
+    @Volatile private var cache: Map<String, MealPlans>? = null
+    fun all(c: Context): Map<String, MealPlans> = cache ?: run {
         val o = JSONObject(c.assets.open("meal_plans.json").bufferedReader().use { it.readText() })
-        val plans = o.getJSONArray("plans")
-        val bands = (0 until plans.length()).associate { i ->
-            val p = plans.getJSONObject(i)
-            val days = p.getJSONArray("days")
-            p.getInt("kcal") to (0 until days.length()).map { d ->
-                val dd = days.getJSONObject(d); val ms = dd.getJSONArray("meals")
-                PlanDay(dd.getString("name"), (0 until ms.length()).map { m ->
-                    val mm = ms.getJSONObject(m); val its = mm.getJSONArray("items")
-                    PlanMeal(mm.getString("type"), (0 until its.length()).map { k ->
-                        val x = its.getJSONObject(k); PlanItem(x.getString("id"), x.getDouble("q"), x.getString("label"), x.getInt("kcal"), x.getDouble("p"))
-                    }, mm.getInt("kcal"), mm.getDouble("p"))
-                }, dd.getInt("kcal"), dd.getDouble("p"))
+        fun plansOf(r: JSONObject, id: String, name: String): MealPlans {
+            val plans = r.getJSONArray("plans")
+            val bands = (0 until plans.length()).associate { i ->
+                val p = plans.getJSONObject(i)
+                val days = p.getJSONArray("days")
+                p.getInt("kcal") to (0 until days.length()).map { d ->
+                    val dd = days.getJSONObject(d); val ms = dd.getJSONArray("meals")
+                    PlanDay(dd.getString("name"), (0 until ms.length()).map { m ->
+                        val mm = ms.getJSONObject(m); val its = mm.getJSONArray("items")
+                        PlanMeal(mm.getString("type"), (0 until its.length()).map { k ->
+                            val x = its.getJSONObject(k); PlanItem(x.getString("id"), x.getDouble("q"), x.getString("label"), x.getInt("kcal"), x.getDouble("p"))
+                        }, mm.getInt("kcal"), mm.getDouble("p"))
+                    }, dd.getInt("kcal"), dd.getDouble("p"))
+                }
             }
+            return MealPlans(r.optString("note"), bands, id, name)
         }
-        MealPlans(o.optString("note"), bands).also { cache = it }
+        val out = LinkedHashMap<String, MealPlans>()
+        val rs = o.optJSONArray("regions")
+        if (rs != null) for (i in 0 until rs.length()) { val r = rs.getJSONObject(i); out[r.getString("id")] = plansOf(r, r.getString("id"), r.getString("name")) }
+        else out["pk"] = plansOf(o, "pk", "Pakistan")
+        out.also { cache = it }
     }
+    /** Plans for your food region (falls back to Pakistan). */
+    fun load(c: Context, region: String = com.myfit.tracker.domain.FoodRegion.get(c).id): MealPlans = all(c).let { it[region] ?: it.values.first() }
 }
 
 @Composable
@@ -88,7 +98,9 @@ fun MealPlansScreen(container: AppContainer) {
     val nav = LocalNav.current
     val ctx = LocalContext.current
     val toaster = LocalToaster.current
-    val data by produceState<MealPlans?>(null) { value = withContext(Dispatchers.IO) { runCatching { MealPlanData.load(ctx) }.getOrNull() } }
+    val regionId by com.myfit.tracker.domain.FoodRegion.flow.collectAsState()
+    val region = remember(regionId) { com.myfit.tracker.domain.FoodRegion.get(ctx) }
+    val data by produceState<MealPlans?>(null, region.id) { value = withContext(Dispatchers.IO) { runCatching { MealPlanData.load(ctx, region.id) }.getOrNull() } }
     val targets by container.profileRepo.targets.collectAsState(initial = emptyList())
     val myKcal = remember(targets) { Targets.on(targets, TargetType.CALORIES, Clock.today()) }
     var band by rememberSaveable { mutableIntStateOf(-1) }
@@ -104,19 +116,25 @@ fun MealPlansScreen(container: AppContainer) {
     val swapped = remember { mutableStateMapOf<String, com.myfit.tracker.data.db.Food>() }
     var openKey by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize()) {
-        OverlayTopBar("Pakistani meal plans", { nav.pop() }, "Desi ghar ka khana, everyday portions")
+        OverlayTopBar("Meal plans", { nav.pop() }, "${region.flag} ${region.name} · everyday portions")
         if (d == null) { Caption("Loading…", Modifier.padding(16.dp)); return@Column }
         val bands = d.bands.keys.sorted()
         if (band < 0) band = myKcal?.let { k -> bands.minByOrNull { kotlin.math.abs(it - k) } } ?: 2000
         val days = d.bands[band].orEmpty()
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 40.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
+                Text("Region", style = FitType.label, color = th.textDim)
+                Spacer(Modifier.height(6.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(com.myfit.tracker.domain.FoodRegion.ALL) { r -> GlassChip("${r.flag} ${r.short}", r.id == region.id, { com.myfit.tracker.domain.FoodRegion.set(ctx, r.id); swapped.clear() }) }
+                }
+                Spacer(Modifier.height(12.dp))
                 Text("Calories per day", style = FitType.label, color = th.textDim)
                 Spacer(Modifier.height(6.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(bands) { b -> GlassChip("$b" + if (myKcal != null && bands.minByOrNull { kotlin.math.abs(it - myKcal) } == b) " ★" else "", band == b, { band = b }) }
                 }
-                if (myKcal != null) Caption("★ closest to your target of ${myKcal.toInt()}. Plans are within about 60 kcal of the band.", Modifier.padding(top = 6.dp))
+                if (myKcal != null) Caption("★ closest to your target of ${myKcal.toInt()}. Each day lands close to the band (usually within 100 kcal).", Modifier.padding(top = 6.dp))
             }
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -126,14 +144,14 @@ fun MealPlansScreen(container: AppContainer) {
             val dd = days.getOrNull(day.coerceIn(0, (days.size - 1).coerceAtLeast(0))) ?: return@LazyColumn
             val flagged = health.size.let { _ -> dd.meals.sumOf { m -> m.items.count { i -> foodsById[i.id]?.let { f -> !container.nutritionRepo.judge(f, muslim).ok } == true } } }
             if (flagged > 0) item {
-                Caption("$flagged item${if (flagged == 1) "" else "s"} today may not suit your health profile — tap one to see safer Pakistani swaps.", Modifier.padding(horizontal = 6.dp), color = th.warning)
+                Caption("$flagged item${if (flagged == 1) "" else "s"} today may not suit your health profile — tap one to see safer swaps.", Modifier.padding(horizontal = 6.dp), color = th.warning)
             }
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     SectionTitle("${dd.name} · ${dd.kcal} kcal · ${dd.p.toInt()} g protein", Modifier.weight(1f))
                 }
             }
-            items(dd.meals, key = { "${band}_${day}_${it.type}" }) { m ->
+            items(dd.meals, key = { "${region.id}_${band}_${day}_${it.type}" }) { m ->
                 Glass(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {

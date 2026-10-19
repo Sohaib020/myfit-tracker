@@ -120,7 +120,7 @@ private fun DrawScope.ecgSweep(t: Float, color: Color, beats: Int = 3) {
     drawCircle(color.copy(alpha = 0.45f), 12f, Offset(head, hy))
 }
 
-/** R28 Home Vitals card: a beating heart, a live ECG sweep and one big "Check my heart" call to action. */
+/** R28 Home Vitals card: a beating heart, a live ECG sweep and one big "Measure heart rate" call to action. */
 @Composable
 fun VitalsHeroCard(container: AppContainer, onLogBp: () -> Unit) {
     val th = LocalFitTheme.current
@@ -161,7 +161,7 @@ fun VitalsHeroCard(container: AppContainer, onLogBp: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                         Icon(Duo.Pulse, null, tint = Color.White, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Check my heart · 15 s", style = FitType.label.copy(fontWeight = FontWeight.Bold), color = Color.White)
+                        Text("Measure heart rate", style = FitType.label.copy(fontWeight = FontWeight.Bold), color = Color.White)
                     }
                 }
                 Box(Modifier.height(54.dp).clip(RoundedCornerShape(27.dp)).background(th.text.copy(alpha = 0.08f))

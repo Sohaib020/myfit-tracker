@@ -254,7 +254,7 @@ fun NutritionistScreen(container: AppContainer) {
                                 scope.launch {
                                     aiNote = ask(container, systemPrompt(cp.nName, totals, goals, muslim),
                                         "Review my ${mealLabel(meal.mealType).lowercase()}: " + its.joinToString { "${it.foodName} x${"%.1f".format(it.quantity)} (${(it.caloriesPerServing * it.quantity).toInt()} kcal, ${(it.proteinPerServing * it.quantity).toInt()} g protein)" } +
-                                            ". In under 90 words: what's good, one improvement and one Pakistani swap.")
+                                            ". In under 90 words: what's good, one improvement and one local swap.")
                                     busy = false
                                 }
                             }, Modifier.fillMaxWidth(), icon = Duo.AutoAwesome, height = 42.dp)
@@ -296,7 +296,7 @@ private fun WeekTab(container: AppContainer, kcal: Double?, muslim: Boolean) {
     val checked = remember { mutableStateListOf<String>() }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 40.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Caption("A week at about $band kcal a day, strictly Pakistani home food" + (if (swaps.isNotEmpty()) ", with ${swaps.size} item${if (swaps.size == 1) "" else "s"} swapped for your health profile" else "") + ".")
+            Caption("A week at about $band kcal a day of ${com.myfit.tracker.domain.FoodRegion.current().name} home food" + (if (swaps.isNotEmpty()) ", with ${swaps.size} item${if (swaps.size == 1) "" else "s"} swapped for your health profile" else "") + ".")
         }
         items(days) { dd ->
             var open by remember { mutableStateOf(false) }
@@ -411,8 +411,8 @@ private fun ChatTab(container: AppContainer, name: String, system: String, perso
 
 private fun systemPrompt(name: String, t: Nutritionist.Totals, g: Nutritionist.Goals, halal: Boolean): String {
     val h = HealthProfile.summary()
-    return "You are $name, a warm, practical sports nutritionist for people in Pakistan (a fictional character in the MyFit app). " +
-        "Recommend Pakistani home food and local options in household units (roti, katori, cup, glass, plate) and local names. " +
+    return "You are $name, a warm, practical sports nutritionist (a fictional character in the MyFit app). The user eats ${com.myfit.tracker.domain.FoodRegion.current().name} food. " +
+        "Recommend home food and local options from that region in household units (roti, katori, cup, glass, plate, slice) and local names. " +
         "Be specific and brief (under 120 words unless asked for a plan), use simple English or Roman Urdu if the user writes that way. " +
         "Values are typical estimates. Never prescribe medicines, supplements doses or insulin; for medical conditions suggest checking with their doctor. " +
         (if (h.isNotBlank()) "The user's health profile: $h — never suggest foods that conflict with it and offer safe swaps. " else "") +

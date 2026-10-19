@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -120,188 +121,235 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
         }
     }
 
+    // R32: four tabs, each a list of labelled groups; switches live in their own groups, never mixed with policies
+    var tab by androidx.compose.runtime.saveable.rememberSaveable { mutableIntStateOf(0) }
+    val tabs = listOf("General", "Training", "Coach & AI", "Privacy & data")
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = bottomPad.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             Column(Modifier.statusBarsPadding().padding(top = com.myfit.tracker.ui.components.TopBarSpace)) {
                 Text("Settings", style = FitType.display, color = th.text)
-                Caption("Look & feel, Pip, AI, voice, Gym Mode and units.")
+                Caption(when (tab) { 0 -> "Look, features, notifications and units"; 1 -> "Gym Mode and your health profile"; 2 -> "Your trainer, nutritionist and AI buddy"; else -> "Your data, backups, legal and app info" })
             }
         }
-
-        // ---------- appearance
         item {
-            GlassCard {
-                CardHeader(Duo.Palette, "Theme & style", th.fat)
-                Spacer(Modifier.height(12.dp))
-                ThemePicker(container, settings)
+            Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                tabs.forEachIndexed { i, t -> GlassChip(t, tab == i, { tab = i }) }
             }
         }
-
-        item {
-            GlassCard {
-                CardHeader(Duo.Wallpaper, "Background", th.water)
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    GlassChip("Theme art", settings.customBackground == null, { container.write { container.settings.setCustomBackground(null) } })
-                    GlassChip("My photo", settings.customBackground != null, {
-                        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    }, icon = Duo.Image)
-                }
-                if (settings.customBackground != null) {
-                    Spacer(Modifier.height(8.dp))
-                    GlassButton("Choose a different photo", { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, height = 44.dp)
-                }
-                Spacer(Modifier.height(14.dp))
-                Spacer(Modifier.height(12.dp))
-                Text("Motion", style = FitType.section, color = th.text)
-                Caption(if (com.myfit.tracker.ui.theme.lowFx) "Pip animations. Battery saver keeps everything still." else "Pip and glass effects. Battery saver keeps everything still.")
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Smooth", "Balanced", "Battery saver").forEachIndexed { i, label ->
-                        GlassChip(label, settings.motion == i, { container.write { container.settings.setMotion(i) } })
+        when (tab) {
+            0 -> {
+                item { GroupLabel("Appearance") }
+                item {
+                    GlassCard {
+                        CardHeader(Duo.Palette, "Theme & style", th.fat)
+                        Spacer(Modifier.height(12.dp))
+                        ThemePicker(container, settings)
                     }
                 }
-                // Android 12 and older use solid cards (no glass/blur), so these controls would do nothing there
-                if (!com.myfit.tracker.ui.theme.lowFx) {
-                    Spacer(Modifier.height(12.dp))
-                    GlassSlider("Glass tint", "How milky the cards are", settings.glassStrength, 0.4f..1.6f) { v -> container.write { container.settings.setGlassStrength(v) } }
-                    GlassSlider("Blur amount", "0 = crystal clear, right = heavy frost", settings.blurAmount, 0f..2f) { v -> container.write { container.settings.setBlurAmount(v) } }
-                    GlassSlider("Dock blur", "How frosted the bottom bar is", settings.dockBlur, 0f..2.5f) { v -> container.write { container.settings.setDockBlur(v) } }
+
+                item {
+                    GlassCard {
+                        CardHeader(Duo.Wallpaper, "Background & motion", th.water)
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            GlassChip("Theme art", settings.customBackground == null, { container.write { container.settings.setCustomBackground(null) } })
+                            GlassChip("My photo", settings.customBackground != null, {
+                                picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            }, icon = Duo.Image)
+                        }
+                        if (settings.customBackground != null) {
+                            Spacer(Modifier.height(8.dp))
+                            GlassButton("Choose a different photo", { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, height = 44.dp)
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(12.dp))
+                        Text("Motion", style = FitType.section, color = th.text)
+                        Caption(if (com.myfit.tracker.ui.theme.lowFx) "Pip animations. Battery saver keeps everything still." else "Pip and glass effects. Battery saver keeps everything still.")
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("Smooth", "Balanced", "Battery saver").forEachIndexed { i, label ->
+                                GlassChip(label, settings.motion == i, { container.write { container.settings.setMotion(i) } })
+                            }
+                        }
+                        // Android 12 and older use solid cards (no glass/blur), so these controls would do nothing there
+                        if (!com.myfit.tracker.ui.theme.lowFx) {
+                            Spacer(Modifier.height(12.dp))
+                            GlassSlider("Glass tint", "How milky the cards are", settings.glassStrength, 0.4f..1.6f) { v -> container.write { container.settings.setGlassStrength(v) } }
+                            GlassSlider("Blur amount", "0 = crystal clear, right = heavy frost", settings.blurAmount, 0f..2f) { v -> container.write { container.settings.setBlurAmount(v) } }
+                            GlassSlider("Dock blur", "How frosted the bottom bar is", settings.dockBlur, 0f..2.5f) { v -> container.write { container.settings.setDockBlur(v) } }
+                        }
+                    }
+                }
+
+                item { GroupLabel("Features") }
+                item {
+                    GlassCard {
+                        GameModeRow()
+                        SettingsDivider()
+                        Coach3DRow()
+                        SettingsDivider()
+                        ToggleRow("Shariah & Health", "Prayer times, Qibla, fasting hub, dhikr, halal check", settings.muslim == "yes") { v -> container.write { container.settings.setMuslim(if (v) "yes" else "no") } }
+                        SettingsDivider()
+                        ToggleRow("Haptic feedback", "Small vibrations on taps and timers", settings.haptics) { container.write { container.settings.setHaptics(it) } }
+                    }
+                }
+                item { GroupLabel("Notifications") }
+                item { GlassCard { LiveNotifRow() } }
+                item { GroupLabel("Home screen") }
+                item {
+                    GlassCard {
+                        CardHeader(Duo.Tune, "Dashboard cards", th.steps)
+                        Spacer(Modifier.height(6.dp))
+                        val navS = com.myfit.tracker.ui.nav.LocalNav.current
+                        Caption("${settings.dashCards.size} of ${DashCard.entries.size} cards shown. Reorder them or switch them off.")
+                        Spacer(Modifier.height(8.dp))
+                        GlassButton("Arrange dashboard cards", { navS.push(com.myfit.tracker.ui.nav.Overlay.ArrangeDash) }, icon = Duo.Tune, height = 44.dp)
+                    }
+                }
+                item { GroupLabel("Units") }
+                item {
+                    GlassCard {
+                        CardHeader(Duo.Straighten, "Units", th.warning)
+                        Spacer(Modifier.height(12.dp))
+                        val u = settings.units
+                        UnitRow("Weight") { GlassSegmented(WeightUnit.entries, u.weight, { it.label }, { container.write { container.settings.setUnits(u.copy(weight = it)) } }, Modifier.width(170.dp)) }
+                        UnitRow("Body measurements") { GlassSegmented(LengthUnit.entries, u.length, { it.label }, { container.write { container.settings.setUnits(u.copy(length = it)) } }, Modifier.width(170.dp)) }
+                        UnitRow("Water") { GlassSegmented(VolumeUnit.entries, u.volume, { it.label }, { container.write { container.settings.setUnits(u.copy(volume = it)) } }, Modifier.width(200.dp)) }
+                        UnitRow("Distance") { GlassSegmented(DistanceUnit.entries, u.distance, { it.label }, { container.write { container.settings.setUnits(u.copy(distance = it)) } }, Modifier.width(170.dp)) }
+                        UnitRow("Energy") { GlassSegmented(com.myfit.tracker.domain.EnergyUnits.entries, u.energy, { it.label }, { container.write { container.settings.setUnits(u.copy(energy = it)) } }, Modifier.width(170.dp)) }
+                        UnitRow("Clock") { GlassSegmented(listOf(false, true), settings.clock24, { if (it) "24-hour" else "12-hour" }, { container.write { container.settings.setClock24(it) } }, Modifier.width(200.dp)) }
+                        Caption("Data is stored in metric at full precision; units only change how it's shown.")
+                    }
+                }
+
+            }
+            1 -> {
+                item { GroupLabel("Gym Mode") }
+                item {
+                    GlassCard {
+                        CardHeader(Duo.FitnessCenter, "Gym Mode", th.accentBright)
+                        Spacer(Modifier.height(10.dp))
+                        ToggleRow("Auto-start rest timer", "Starts after every completed set.", settings.restAutoStart) { container.write { container.settings.setRestAuto(it) } }
+                        Text("Default rest", style = FitType.body, color = th.text)
+                        Spacer(Modifier.height(6.dp))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(30, 60, 90, 120, 180).forEach { r -> GlassChip(if (r < 60) "${r}s" else "${r / 60}:${"%02d".format(r % 60)}", settings.restDefaultSec == r, { container.write { container.settings.setRestSec(r) } }) }
+                        }
+                        Caption("Templates can set their own rest per exercise.")
+                        ToggleRow("Rest-over sound", null, settings.restSound) { container.write { container.settings.setRestSound(it) } }
+                        ToggleRow("Rest-over vibration", null, settings.restVibrate) { container.write { container.settings.setRestVibrate(it) } }
+                        ToggleRow("Keep screen on in Gym Mode", null, settings.keepScreenOn) { container.write { container.settings.setKeepScreenOn(it) } }
+                        Text("Weight +/− step (kg)", style = FitType.body, color = th.text)
+                        Spacer(Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(1.0, 2.0, 2.5, 5.0).forEach { st -> GlassChip(Fmt.trim(st, 2), settings.weightStepKg == st, { container.write { container.settings.setWeightStep(st) } }) }
+                        }
+                        Caption("In pounds the step is always 5 lb. You can always tap the number to type an exact weight.")
+                    }
+                }
+
+                item { GroupLabel("Health & diet") }
+                item { com.myfit.tracker.ui.settings.HealthProfileCard(container) }
+            }
+            2 -> {
+                item { GroupLabel("Your coaches") }
+                item { com.myfit.tracker.ui.coach.ProTeamCard(container) }
+                item { GroupLabel("AI buddy") }
+                item { PipEntryCard(container) }
+                item {
+                    GlassButton("Replay Pip's tour", { container.write { container.settings.setTourDone(false) } }, Modifier.fillMaxWidth(), icon = Duo.AutoAwesome, height = 46.dp)
                 }
             }
-        }
-
-        // ---------- pip / AI
-        item { com.myfit.tracker.ui.settings.HealthProfileCard(container) }
-        item { com.myfit.tracker.ui.coach.ProTeamCard(container) }
-        item { PipEntryCard(container) }
-        item {
-            GlassCard {
-                ToggleRow("Shariah & Health", "Prayer times, Qibla, fasting hub, dhikr, halal check", settings.muslim == "yes") { v -> container.write { container.settings.setMuslim(if (v) "yes" else "no") } }
-            }
-        }
-        item {
-            GlassButton("Replay Pip's tour", { container.write { container.settings.setTourDone(false) } }, Modifier.fillMaxWidth(), icon = Duo.AutoAwesome, height = 46.dp)
-        }
-
-        // ---------- gym mode
-        item {
-            GlassCard {
-                CardHeader(Duo.FitnessCenter, "Gym Mode", th.accentBright)
-                Spacer(Modifier.height(10.dp))
-                ToggleRow("Auto-start rest timer", "Starts after every completed set.", settings.restAutoStart) { container.write { container.settings.setRestAuto(it) } }
-                Text("Default rest", style = FitType.body, color = th.text)
-                Spacer(Modifier.height(6.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(30, 60, 90, 120, 180).forEach { r -> GlassChip(if (r < 60) "${r}s" else "${r / 60}:${"%02d".format(r % 60)}", settings.restDefaultSec == r, { container.write { container.settings.setRestSec(r) } }) }
+            else -> {
+                item { GroupLabel("Your data") }
+                item {
+                    var eraseAsk by remember { mutableStateOf(false) }
+                    var erasing by remember { mutableStateOf(false) }
+                    val ctxE = androidx.compose.ui.platform.LocalContext.current
+                    val scopeE = androidx.compose.runtime.rememberCoroutineScope()
+                    if (eraseAsk) androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { if (!erasing) eraseAsk = false },
+                        title = { Text("Delete all your data?") },
+                        text = { Text("This permanently erases everything you've logged on this phone — workouts, food, weight, cycle, glucose, notes, photos and settings — plus your friends profile and weekly totals on the server. It can't be undone. Make a backup first if you might want it later.") },
+                        confirmButton = {
+                            androidx.compose.material3.TextButton({
+                                erasing = true
+                                scopeE.launch { com.myfit.tracker.data.DataEraser.eraseAll(ctxE); com.myfit.tracker.data.DataEraser.restart(ctxE) }
+                            }, enabled = !erasing) { Text(if (erasing) "Deleting…" else "Delete everything", color = th.danger) }
+                        },
+                        dismissButton = { androidx.compose.material3.TextButton({ eraseAsk = false }, enabled = !erasing) { Text("Cancel") } },
+                    )
+                    GlassCard {
+                        CardHeader(Duo.Cloud, "Backup & data", th.water)
+                        Spacer(Modifier.height(8.dp))
+                        Caption("Your health records stay on this phone. Back them up to a file or your Google account, or erase everything.")
+                        Spacer(Modifier.height(10.dp))
+                        val navB = com.myfit.tracker.ui.nav.LocalNav.current
+                        AccentButton("Backup & restore", { navB.push(com.myfit.tracker.ui.nav.Overlay.Backup) }, Modifier.fillMaxWidth(), icon = Duo.Cloud, height = 44.dp)
+                        Spacer(Modifier.height(8.dp))
+                        GlassButton("Delete my data", { eraseAsk = true }, Modifier.fillMaxWidth(), icon = Duo.DeleteOutline, height = 44.dp)
+                    }
                 }
-                Caption("Templates can set their own rest per exercise.")
-                ToggleRow("Rest-over sound", null, settings.restSound) { container.write { container.settings.setRestSound(it) } }
-                ToggleRow("Rest-over vibration", null, settings.restVibrate) { container.write { container.settings.setRestVibrate(it) } }
-                ToggleRow("Keep screen on in Gym Mode", null, settings.keepScreenOn) { container.write { container.settings.setKeepScreenOn(it) } }
-                Text("Weight +/− step (kg)", style = FitType.body, color = th.text)
-                Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(1.0, 2.0, 2.5, 5.0).forEach { st -> GlassChip(Fmt.trim(st, 2), settings.weightStepKg == st, { container.write { container.settings.setWeightStep(st) } }) }
+                item { GroupLabel("Privacy & legal") }
+                item {
+                    val ctxP = androidx.compose.ui.platform.LocalContext.current
+                    GlassCard {
+                        CardHeader(Duo.Lock, "Privacy", th.textDim)
+                        Spacer(Modifier.height(8.dp))
+                        Caption("Signing in shares only your name, characters and weekly totals with friends you choose. Ads are optional and never use your health data. Cycle data never leaves this phone.")
+                        Spacer(Modifier.height(10.dp))
+                        GlassButton("Privacy policy", {
+                            runCatching { ctxP.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(com.myfit.tracker.health.PRIVACY_URL))) }
+                        }, Modifier.fillMaxWidth(), icon = Duo.Link, height = 44.dp)
+                        Spacer(Modifier.height(8.dp))
+                        Caption("Exercise photos & instructions: free-exercise-db (public domain).", color = th.textFaint)
+                    }
                 }
-                Caption("In pounds the step is always 5 lb. You can always tap the number to type an exact weight.")
-            }
-        }
-
-        // ---------- units
-        item {
-            GlassCard {
-                CardHeader(Duo.Straighten, "Units", th.warning)
-                Spacer(Modifier.height(12.dp))
-                val u = settings.units
-                UnitRow("Weight") { GlassSegmented(WeightUnit.entries, u.weight, { it.label }, { container.write { container.settings.setUnits(u.copy(weight = it)) } }, Modifier.width(170.dp)) }
-                UnitRow("Body measurements") { GlassSegmented(LengthUnit.entries, u.length, { it.label }, { container.write { container.settings.setUnits(u.copy(length = it)) } }, Modifier.width(170.dp)) }
-                UnitRow("Water") { GlassSegmented(VolumeUnit.entries, u.volume, { it.label }, { container.write { container.settings.setUnits(u.copy(volume = it)) } }, Modifier.width(200.dp)) }
-                UnitRow("Distance") { GlassSegmented(DistanceUnit.entries, u.distance, { it.label }, { container.write { container.settings.setUnits(u.copy(distance = it)) } }, Modifier.width(170.dp)) }
-                UnitRow("Energy") { GlassSegmented(com.myfit.tracker.domain.EnergyUnits.entries, u.energy, { it.label }, { container.write { container.settings.setUnits(u.copy(energy = it)) } }, Modifier.width(170.dp)) }
-                UnitRow("Clock") { GlassSegmented(listOf(false, true), settings.clock24, { if (it) "24-hour" else "12-hour" }, { container.write { container.settings.setClock24(it) } }, Modifier.width(200.dp)) }
-                Caption("Data is stored in metric at full precision; units only change how it's shown.")
-            }
-        }
-
-        // ---------- dashboard & behaviour
-        item {
-            GlassCard {
-                CardHeader(Duo.Tune, "Dashboard & behaviour", th.steps)
-                Spacer(Modifier.height(10.dp))
-                val navS = com.myfit.tracker.ui.nav.LocalNav.current
-                Caption("${settings.dashCards.size} of ${DashCard.entries.size} cards shown. Reorder them or switch them off.")
-                Spacer(Modifier.height(8.dp))
-                GlassButton("Arrange dashboard cards", { navS.push(com.myfit.tracker.ui.nav.Overlay.ArrangeDash) }, icon = Duo.Tune, height = 44.dp)
-                Spacer(Modifier.height(6.dp))
-                ToggleRow("Haptic feedback", null, settings.haptics) { container.write { container.settings.setHaptics(it) } }
-            }
-        }
-
-        item { com.myfit.tracker.update.AppUpdatesSection() }
-        item {
-            var eraseAsk by remember { mutableStateOf(false) }
-            var erasing by remember { mutableStateOf(false) }
-            val ctxE = androidx.compose.ui.platform.LocalContext.current
-            val scopeE = androidx.compose.runtime.rememberCoroutineScope()
-            if (eraseAsk) androidx.compose.material3.AlertDialog(
-                onDismissRequest = { if (!erasing) eraseAsk = false },
-                title = { Text("Delete all your data?") },
-                text = { Text("This permanently erases everything you've logged on this phone — workouts, food, weight, cycle, glucose, notes, photos and settings — plus your friends profile and weekly totals on the server. It can't be undone. Make a backup first if you might want it later.") },
-                confirmButton = {
-                    androidx.compose.material3.TextButton({
-                        erasing = true
-                        scopeE.launch { com.myfit.tracker.data.DataEraser.eraseAll(ctxE); com.myfit.tracker.data.DataEraser.restart(ctxE) }
-                    }, enabled = !erasing) { Text(if (erasing) "Deleting…" else "Delete everything", color = th.danger) }
-                },
-                dismissButton = { androidx.compose.material3.TextButton({ eraseAsk = false }, enabled = !erasing) { Text("Cancel") } },
-            )
-            GlassCard {
-                CardHeader(Duo.Lock, "Privacy", th.textDim)
-                Spacer(Modifier.height(10.dp))
-                Caption("Your health records stay on this phone. Signing in shares only your name and weekly totals with friends you choose. Ads are optional and never use your health data. Exercise photos & instructions: free-exercise-db (public domain).")
-                Spacer(Modifier.height(6.dp))
-                var taps by remember { mutableIntStateOf(0) }
-                val toasterV = LocalToaster.current
-                Caption("Version ${BuildConfig.VERSION_NAME}", Modifier.clickableNoRipple {
-                    if (com.myfit.tracker.update.Store.isStoreBuild) return@clickableNoRipple   // store builds have no hidden menus
-                    if (settings.devMode) { toasterV.show("Developer options are already on"); return@clickableNoRipple }
-                    taps++
-                    if (taps >= 7) { container.write { container.settings.setDevMode(true) }; toasterV.show("Developer options unlocked") }
-                    else if (taps >= 4) toasterV.show("${7 - taps} more taps to unlock developer options")
-                }.padding(vertical = 4.dp))
-                val ctxP = androidx.compose.ui.platform.LocalContext.current
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    com.myfit.tracker.ui.theme.GlassButton("Privacy policy", {
-                        runCatching { ctxP.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(com.myfit.tracker.health.PRIVACY_URL))) }
-                    }, Modifier.weight(1f), height = 44.dp)
-                    com.myfit.tracker.ui.theme.GlassButton("Delete my data", { eraseAsk = true }, Modifier.weight(1f), height = 44.dp)
+                item { GroupLabel("About the app") }
+                item { com.myfit.tracker.update.AppUpdatesSection() }
+                item {
+                    GlassCard {
+                        var taps by remember { mutableIntStateOf(0) }
+                        val toasterV = LocalToaster.current
+                        Row(Modifier.fillMaxWidth().clickableNoRipple {
+                            if (com.myfit.tracker.update.Store.isStoreBuild) return@clickableNoRipple   // store builds have no hidden menus
+                            if (settings.devMode) { toasterV.show("Developer options are already on"); return@clickableNoRipple }
+                            taps++
+                            if (taps >= 7) { container.write { container.settings.setDevMode(true) }; toasterV.show("Developer options unlocked") }
+                            else if (taps >= 4) toasterV.show("${7 - taps} more taps to unlock developer options")
+                        }, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Version", style = FitType.body, color = th.text, modifier = Modifier.weight(1f))
+                            Text(BuildConfig.VERSION_NAME, style = FitType.label, color = th.textDim)
+                        }
+                    }
                 }
-                Spacer(Modifier.height(8.dp))
-                val navB = com.myfit.tracker.ui.nav.LocalNav.current
-                com.myfit.tracker.ui.theme.AccentButton("Backup & restore", { navB.push(com.myfit.tracker.ui.nav.Overlay.Backup) }, Modifier.fillMaxWidth(), icon = com.myfit.tracker.ui.theme.Duo.Cloud, height = 44.dp)
-                Spacer(Modifier.height(14.dp))
-                LiveNotifRow()
-                Spacer(Modifier.height(10.dp))
-                Coach3DRow()
-                Spacer(Modifier.height(10.dp))
-                GameModeRow()
-            }
-        }
-        if (settings.devMode && !com.myfit.tracker.update.Store.isStoreBuild) item {
-            val navD = com.myfit.tracker.ui.nav.LocalNav.current
-            GlassCard(onClick = { navD.push(com.myfit.tracker.ui.nav.Overlay.DevSettings) }) {
-                CardHeader(Duo.Tune, "Developer options", th.textDim) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
-                Spacer(Modifier.height(6.dp))
-                Caption("AI services & keys, voice keys, glass refraction.")
+                if (settings.devMode && !com.myfit.tracker.update.Store.isStoreBuild) item {
+                    val navD = com.myfit.tracker.ui.nav.LocalNav.current
+                    GlassCard(onClick = { navD.push(com.myfit.tracker.ui.nav.Overlay.DevSettings) }) {
+                        CardHeader(Duo.Tune, "Developer options", th.textDim) { Box(Modifier.size(20.dp)) { androidx.compose.material3.Icon(Duo.KeyboardArrowRight, null, tint = th.textDim) } }
+                        Spacer(Modifier.height(6.dp))
+                        Caption("AI services & keys, voice keys, glass refraction.")
+                    }
+                }
             }
         }
     }
+}
+
+@Composable
+private fun GroupLabel(text: String) {
+    val th = LocalFitTheme.current
+    Text(text.uppercase(), style = FitType.overline, color = th.textDim, modifier = Modifier.padding(start = 6.dp, top = 8.dp))
+}
+
+@Composable
+private fun SettingsDivider() {
+    val th = LocalFitTheme.current
+    Box(Modifier.fillMaxWidth().padding(vertical = 6.dp).height(1.dp).background(th.text.copy(alpha = 0.07f)))
 }
 
 /** Hidden developer settings: AI providers & keys, voice service keys, advanced glass. */

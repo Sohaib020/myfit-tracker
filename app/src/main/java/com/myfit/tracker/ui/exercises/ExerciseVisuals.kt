@@ -81,7 +81,7 @@ fun ExerciseImage(ex: Exercise, modifier: Modifier = Modifier, animate: Boolean 
         if (hit != null) {
             val c = Color(hit.first.color)
             Box(modifier.background(Brush.verticalGradient(listOf(Color(0xFF1C2030), Color(0xFF10131B))))) {
-                com.myfit.tracker.ui.cali.CaliFigure(hit.first.steps[hit.second], c, Modifier.fillMaxSize().padding(6.dp), animate = animate)
+                com.myfit.tracker.ui.cali.CaliArt(hit.first.steps[hit.second], c, Modifier.fillMaxSize().padding(2.dp), animate = animate)
             }
             return
         }

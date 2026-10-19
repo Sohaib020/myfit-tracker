@@ -141,15 +141,44 @@ fun CalisthenicsScreen(container: AppContainer) {
         startWith(step.name) { val w = container.workoutRepo.startEmpty(step.name); container.workoutRepo.addExercise(w, e.id); w }
     }
 
+    // R32: one hero, three clear tabs — Today (what to do now), Skill tree (one chain at a time), Progress
+    var tab by androidx.compose.runtime.saveable.rememberSaveable { mutableIntStateOf(0) }
+    var chainSel by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("push") }
     Column(Modifier.fillMaxSize()) {
         OverlayTopBar("Calisthenics", { nav.pop() }, "Bodyweight skills that level up with you")
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            item(key = "head") { Overview(data, s) }
-            if (!s.placed) item(key = "test") { LevelTestCard(onTest = { test = true }, onSkip = { Cali.place(ctx, emptyMap()) }) }
-            item(key = "today") { TodayCard(container, data, s, onStart = { startSession() }, onGear = { Cali.setGear(ctx, it) }) }
-            items(data.chains, key = { it.id }) { c -> ChainCard(c, s, history, exercises) { open = c to it } }
-            item(key = "how") { HowItWorks(onRetest = { test = true }) }
+            item(key = "hero") { CaliHero(data, s, onStart = { startSession() }, onTree = { tab = 1 }) }
+            item(key = "tabs") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Today", "Skill tree", "Progress").forEachIndexed { i, t -> GlassChip(t, tab == i, { tab = i }) }
+                }
+            }
+            when (tab) {
+                0 -> {
+                    if (!s.placed) item(key = "test") { LevelTestCard(onTest = { test = true }, onSkip = { Cali.place(ctx, emptyMap()) }) }
+                    item(key = "today") { TodayCard(container, data, s, onStart = { startSession() }, onGear = { Cali.setGear(ctx, it) }, onStep = { c, i -> open = c to i }) }
+                }
+                1 -> {
+                    item(key = "chains") {
+                        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(data.chains, key = { "c" + it.id }) { c ->
+                                ChainChip(c, s, chainSel == c.id) { chainSel = c.id }
+                            }
+                        }
+                    }
+                    val c = data.chain(chainSel) ?: data.chains.first()
+                    item(key = "chainHead_${c.id}") { ChainHeader(c, s) }
+                    items(c.steps.size, key = { "st_${c.id}_$it" }) { i ->
+                        PathStep(c, i, s, history, exercises, last = i == c.steps.lastIndex) { open = c to i }
+                    }
+                }
+                else -> {
+                    item(key = "overview") { Overview(data, s) }
+                    item(key = "badges") { CaliBadges(data, s) }
+                    item(key = "how") { HowItWorks(onRetest = { test = true }) }
+                }
+            }
         }
     }
 
@@ -235,7 +264,7 @@ private fun LevelTestCard(onTest: () -> Unit, onSkip: () -> Unit) {
 // ------------------------------------------------------------------ today's session
 
 @Composable
-private fun TodayCard(container: AppContainer, data: Cali.Data, s: Cali.State, onStart: () -> Unit, onGear: (Set<String>) -> Unit) {
+private fun TodayCard(container: AppContainer, data: Cali.Data, s: Cali.State, onStart: () -> Unit, onGear: (Set<String>) -> Unit, onStep: (Cali.Chain, Int) -> Unit = { _, _ -> }) {
     val th = LocalFitTheme.current
     val ctx = LocalContext.current
     val items = remember(s) { Cali.session(ctx, s) }
@@ -256,10 +285,11 @@ private fun TodayCard(container: AppContainer, data: Cali.Data, s: Cali.State, o
                 val g = it2.group
                 val label = g?.let { "${'A' + it - 1}${if (lastGroup == g) 2 else 1}" } ?: "•"
                 lastGroup = g
-                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickableNoRipple { onStep(it2.chain, it2.chain.steps.indexOf(it2.step)) }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
                     Text(label, style = FitType.label, color = Color(it2.chain.color), modifier = Modifier.width(28.dp))
-                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(12.dp)).background(TILE_BG)) {
-                        CaliFigure(it2.step, Color(it2.chain.color), Modifier.fillMaxSize().padding(4.dp))
+                    Box(Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(TILE_BG)) {
+                        CaliArt(it2.step, Color(it2.chain.color), Modifier.fillMaxSize().padding(2.dp))
                     }
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
@@ -300,7 +330,7 @@ private fun ChainCard(c: Cali.Chain, s: Cali.State, history: List<SetRow>, exerc
             Row(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickableNoRipple { onStep(cur) },
                 verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(96.dp).clip(RoundedCornerShape(18.dp)).background(TILE_BG).border(1.dp, col.copy(alpha = 0.5f), RoundedCornerShape(18.dp))) {
-                    CaliFigure(step, col, Modifier.fillMaxSize().padding(8.dp), animate = true)
+                    CaliArt(step, col, Modifier.fillMaxSize().padding(4.dp), animate = true)
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
@@ -349,7 +379,7 @@ private fun StepNode(step: Cali.Step, col: Color, state: Int, n: Int, onClick: (
             .drawBehind { if (state == 1) drawCircle(Brush.radialGradient(listOf(col.copy(alpha = glow * 0.55f), Color.Transparent)), radius = size.minDimension * 0.75f) }
             .clip(RoundedCornerShape(16.dp)).background(TILE_BG)
             .border(if (state == 1) 2.dp else 1.dp, when (state) { 2 -> col.copy(alpha = 0.8f); 1 -> col; else -> Color.White.copy(alpha = 0.12f) }, RoundedCornerShape(16.dp))) {
-            CaliFigure(step, col, Modifier.fillMaxSize().padding(6.dp).graphicsLayer { alpha = if (state == 0) 0.55f else 1f })
+            CaliArt(step, col, Modifier.fillMaxSize().padding(3.dp).graphicsLayer { alpha = if (state == 0) 0.55f else 1f })
             if (state == 2) Box(Modifier.align(Alignment.TopEnd).padding(3.dp).size(16.dp).clip(CircleShape).background(col), contentAlignment = Alignment.Center) {
                 Icon(Duo.Check, null, tint = Color.Black, modifier = Modifier.size(11.dp))
             }
@@ -373,7 +403,7 @@ private fun StepSheet(c: Cali.Chain, i: Int, s: Cali.State, history: List<SetRow
     val cam = FormGuide.cameraCounts(pattern) || FormGuide.cameraHolds(pattern)
     Column(Modifier.fillMaxWidth().heightIn(max = 640.dp).verticalScroll(rememberScrollState())) {
         Box(Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(24.dp)).background(TILE_BG)) {
-            CaliFigure(step, col, Modifier.fillMaxSize().padding(18.dp), animate = true)
+            CaliArt(step, col, Modifier.fillMaxSize().padding(10.dp), animate = true)
             Text("${c.name.uppercase()} · STEP ${i + 1}", style = FitType.overline, color = col, modifier = Modifier.padding(14.dp))
         }
         Spacer(Modifier.height(12.dp))
@@ -476,7 +506,7 @@ private fun UnlockDialog(list: List<Cali.Unlock>, onDismiss: () -> Unit) {
         Text(if (u.to == null) "CHAIN COMPLETE" else "NEW SKILL UNLOCKED", style = FitType.overline, color = Color.White.copy(alpha = 0.8f))
         Spacer(Modifier.height(10.dp))
         Box(Modifier.size(180.dp).clip(RoundedCornerShape(26.dp)).background(TILE_BG)) {
-            CaliFigure(u.to ?: u.from, col, Modifier.fillMaxSize().padding(14.dp), animate = true)
+            CaliArt(u.to ?: u.from, col, Modifier.fillMaxSize().padding(8.dp), animate = true)
         }
         Spacer(Modifier.height(12.dp))
         Text(u.to?.name ?: u.chain.name, style = FitType.title, color = Color.White, textAlign = TextAlign.Center)
@@ -512,10 +542,9 @@ private fun HowItWorks(onRetest: () -> Unit) {
 
 // ------------------------------------------------------------------ Train tab entry
 
-/** R31 Train tab card: your current pull / push / handstand steps and overall progress; opens the skill tree. */
+/** R32 Train tab hero: your coach performing your current skill, level, progress and one tap into the skill tree. */
 @Composable
 fun CalisthenicsTrainCard(onOpen: () -> Unit) {
-    val th = LocalFitTheme.current
     val ctx = LocalContext.current
     val data = remember { Cali.data(ctx) }
     val st by Cali.state.collectAsState()
@@ -523,21 +552,171 @@ fun CalisthenicsTrainCard(onOpen: () -> Unit) {
     val s = st
     val total = data.chains.sumOf { it.steps.size }
     val done = s?.let { x -> data.chains.sumOf { c -> c.steps.count { it.key in x.mastered } } } ?: 0
-    Glass(Modifier.fillMaxWidth(), onClick = onOpen, tint = Color(0xFF3FA9FF).copy(alpha = 0.08f)) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("CALISTHENICS", style = FitType.overline, color = th.textDim)
-                Text("Skill tree", style = FitType.section, color = th.text)
-                Spacer(Modifier.height(2.dp))
-                Caption(if (s?.placed == true) "$done of $total steps mastered · today's session ready" else "8 chains from wall push-ups to the front lever. Take the 2-minute level test.")
+    val pull = data.chain("pull")!!
+    val step = pull.steps[s?.cur(pull) ?: 0]
+    Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(28.dp))
+        .background(Brush.linearGradient(listOf(Color(0xFF0F2A44), Color(0xFF101423), Color(0xFF241534))))
+        .clickableNoRipple(onOpen)) {
+        Box(Modifier.align(Alignment.CenterEnd).size(200.dp).drawBehind {
+            drawCircle(Brush.radialGradient(listOf(Color(pull.color).copy(alpha = 0.5f), Color.Transparent)), radius = size.minDimension / 2)
+        })
+        CaliArt(step, Color(pull.color), Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(180.dp).padding(vertical = 8.dp), animate = true)
+        Column(Modifier.align(Alignment.CenterStart).padding(18.dp).width(190.dp)) {
+            Text("CALISTHENICS", style = FitType.overline, color = Color(0xFF7FC8FF))
+            Spacer(Modifier.height(4.dp))
+            Text("Master your bodyweight", style = FitType.title, color = Color.White, maxLines = 2)
+            Spacer(Modifier.height(4.dp))
+            Caption(if (s?.placed == true) "${levelOf(done)} · $done of $total skills · session ready" else "8 skill chains, from wall push-ups to the front lever", color = Color.White.copy(alpha = 0.75f))
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.14f)).padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(if (s?.placed == true) "Open skill tree" else "Find my level", style = FitType.label, color = Color.White)
+                Spacer(Modifier.width(6.dp))
+                Icon(Duo.KeyboardArrowRight, null, tint = Color.White, modifier = Modifier.size(16.dp))
             }
-            Spacer(Modifier.width(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("pull", "push", "hand").forEach { id ->
-                    val c = data.chain(id) ?: return@forEach
-                    Box(Modifier.size(width = 46.dp, height = 62.dp).clip(RoundedCornerShape(12.dp)).background(TILE_BG)
-                        .border(1.dp, Color(c.color).copy(alpha = 0.45f), RoundedCornerShape(12.dp))) {
-                        CaliFigure(c.steps[s?.cur(c) ?: 0], Color(c.color), Modifier.fillMaxSize().padding(4.dp))
+        }
+    }
+}
+
+// ------------------------------------------------------------------ R32 hero, chain path, badges
+
+/** Level from steps mastered: a simple, honest label (no estimates). */
+private fun levelOf(done: Int) = when { done >= 40 -> "Elite"; done >= 25 -> "Advanced"; done >= 12 -> "Intermediate"; done >= 4 -> "Novice"; else -> "Beginner" }
+
+@Composable
+private fun CaliHero(data: Cali.Data, s: Cali.State, onStart: () -> Unit, onTree: () -> Unit) {
+    val th = LocalFitTheme.current
+    val ctx = LocalContext.current
+    val total = data.chains.sumOf { it.steps.size }
+    val done = data.chains.sumOf { c -> c.steps.count { it.key in s.mastered } }
+    // spotlight: the hardest current step across the upper-body chains
+    val spot = remember(s) { listOf("pull", "push", "hand", "dip").mapNotNull { id -> data.chain(id)?.let { it to it.steps[s.cur(it)] } }.maxByOrNull { (c, st) -> c.steps.indexOf(st) } }
+    val dl by CaliPacks.progress.collectAsState()
+    Box(Modifier.fillMaxWidth().height(260.dp).clip(RoundedCornerShape(30.dp))
+        .background(Brush.linearGradient(listOf(Color(0xFF14233B), Color(0xFF0E1220), Color(0xFF1B1430))))) {
+        // soft light behind the coach
+        Box(Modifier.align(Alignment.CenterEnd).size(260.dp).drawBehind {
+            drawCircle(Brush.radialGradient(listOf((spot?.first?.color?.let { Color(it) } ?: th.accent).copy(alpha = 0.45f), Color.Transparent)), radius = size.minDimension / 2)
+        })
+        if (spot != null) CaliArt(spot.second, Color(spot.first.color), Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(220.dp).padding(vertical = 10.dp), animate = true)
+        Column(Modifier.align(Alignment.TopStart).padding(18.dp).width(170.dp)) {
+            Text("CALISTHENICS", style = FitType.overline, color = Color.White.copy(alpha = 0.7f))
+            Spacer(Modifier.height(4.dp))
+            Text(levelOf(done), style = FitType.title, color = Color.White)
+            Caption("$done of $total steps mastered", color = Color.White.copy(alpha = 0.75f))
+            Spacer(Modifier.height(10.dp))
+            spot?.let { (c, st) ->
+                Text("NOW TRAINING", style = FitType.overline, color = Color(c.color))
+                Text(st.name, style = FitType.section, color = Color.White, maxLines = 2)
+            }
+            dl?.let { Caption("Downloading your coach's moves · ${(it * 100).toInt()}%", Modifier.padding(top = 6.dp), color = Color.White.copy(alpha = 0.7f)) }
+        }
+        Row(Modifier.align(Alignment.BottomStart).padding(16.dp).width(200.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AccentButton("Start", onStart, Modifier.weight(1f), icon = Duo.PlayArrow, height = 42.dp)
+            GlassButton("Tree", onTree, Modifier.weight(1f), height = 42.dp)
+        }
+    }
+}
+
+@Composable
+private fun ChainChip(c: Cali.Chain, s: Cali.State, selected: Boolean, onClick: () -> Unit) {
+    val th = LocalFitTheme.current
+    val col = Color(c.color)
+    Column(Modifier.width(74.dp).clip(RoundedCornerShape(18.dp))
+        .background(if (selected) col.copy(alpha = 0.22f) else th.text.copy(alpha = 0.05f))
+        .border(if (selected) 1.5.dp else 0.dp, if (selected) col else Color.Transparent, RoundedCornerShape(18.dp))
+        .clickableNoRipple(onClick).padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(44.dp).clip(CircleShape).background(TILE_BG)) {
+            CaliArt(c.steps[s.cur(c)], col, Modifier.fillMaxSize().padding(2.dp))
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(SHORT[c.id] ?: c.name, style = FitType.label, color = if (selected) th.text else th.textDim, maxLines = 1)
+        Text("${s.cur(c) + if (s.done(c)) 1 else 0}/${c.steps.size}", style = FitType.caption, color = col)
+    }
+}
+
+@Composable
+private fun ChainHeader(c: Cali.Chain, s: Cali.State) {
+    val th = LocalFitTheme.current
+    val col = Color(c.color)
+    Column(Modifier.padding(horizontal = 4.dp)) {
+        Text(c.name, style = FitType.title, color = th.text)
+        Caption(c.sub + " · " + if (s.done(c)) "chain complete" else "step ${s.cur(c) + 1} of ${c.steps.size}")
+        Spacer(Modifier.height(8.dp))
+        LinearProgressIndicator(progress = { (s.cur(c) + if (s.done(c)) 1 else 0) / c.steps.size.toFloat() }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+            color = col, trackColor = th.textFaint.copy(alpha = 0.2f))
+    }
+}
+
+/** One step on the vertical path: done (check), current (big, animated, progress to unlock), or ahead (dimmed). */
+@Composable
+private fun PathStep(c: Cali.Chain, i: Int, s: Cali.State, history: List<SetRow>, exercises: Map<String, Exercise>, last: Boolean, onClick: () -> Unit) {
+    val th = LocalFitTheme.current
+    val col = Color(c.color)
+    val step = c.steps[i]
+    val cur = s.cur(c)
+    val state = when { step.key in s.mastered || i < cur -> 2; i == cur -> 1; else -> 0 }
+    val big = state == 1
+    Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min)) {
+        // rail
+        Column(Modifier.width(26.dp).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.size(if (big) 20.dp else 14.dp).clip(CircleShape).background(when (state) { 2 -> col; 1 -> col; else -> th.textFaint.copy(alpha = 0.35f) }),
+                contentAlignment = Alignment.Center) {
+                if (state == 2) Icon(Duo.Check, null, tint = Color.Black, modifier = Modifier.size(10.dp))
+            }
+            if (!last) Box(Modifier.width(2.dp).weight(1f).background(if (state == 2) col.copy(alpha = 0.7f) else th.textFaint.copy(alpha = 0.25f)))
+        }
+        Spacer(Modifier.width(8.dp))
+        Glass(Modifier.weight(1f).padding(bottom = 10.dp), onClick = onClick, tint = if (big) col.copy(alpha = 0.10f) else null) {
+            Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(if (big) 112.dp else 64.dp).clip(RoundedCornerShape(16.dp)).background(TILE_BG)
+                    .graphicsLayer { alpha = if (state == 0) 0.6f else 1f }) {
+                    CaliArt(step, col, Modifier.fillMaxSize().padding(2.dp), animate = big)
+                    if (state == 0) Icon(Duo.Lock, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.align(Alignment.TopEnd).padding(5.dp).size(12.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(when (state) { 2 -> "MASTERED"; 1 -> "NOW"; else -> "STEP ${i + 1}" }, style = FitType.overline, color = if (state == 0) th.textFaint else col)
+                    Text(step.name, style = if (big) FitType.section else FitType.body, color = if (state == 0) th.textDim else th.text, maxLines = 2)
+                    Caption("${step.target()}${if (step.hold) "" else " reps"} · unlock at ${step.goalText()}")
+                    if (big) {
+                        val lastS = remember(history, exercises, step) { exercises[step.key]?.let { Cali.sessions(history, it.id, step.hold).firstOrNull() } }
+                        Spacer(Modifier.height(6.dp))
+                        LinearProgressIndicator(progress = { progressTo(step, lastS) }, modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
+                            color = col, trackColor = th.textFaint.copy(alpha = 0.2f))
+                        Caption(lastS?.let { l -> "Last time: " + l.joinToString(" · ") { if (step.hold) "${it}s" else "$it" } } ?: "Not logged yet", color = th.textFaint)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The six calisthenics badges with what each tier needs (values from your logged sets only). */
+@Composable
+private fun CaliBadges(data: Cali.Data, s: Cali.State) {
+    val th = LocalFitTheme.current
+    val m = s.mastered
+    fun best(id: String) = data.chain(id)?.let { Cali.best(it, m) + 1 } ?: 0
+    val rows = listOf(
+        Triple("Skill Climber", m.size, listOf(3, 15, 35)),
+        Triple("Chain Master", data.chains.count { it.steps.last().key in m }, listOf(1, 3, 8)),
+        Triple("Bar Raiser", best("pull"), listOf(5, 6, 8)),
+        Triple("Upside Down", best("hand"), listOf(3, 5, 6)),
+        Triple("Lever Up", best("core"), listOf(5, 6, 9)),
+        Triple("One-Leg Wonder", best("legs"), listOf(4, 5, 6)),
+    )
+    Glass(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Calisthenics badges", style = FitType.section, color = th.text)
+            Caption("Bronze · Silver · Gold — earned from the sets you log")
+            Spacer(Modifier.height(8.dp))
+            rows.forEach { (name, v, tiers) ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, style = FitType.body, color = th.text, modifier = Modifier.weight(1f))
+                    listOf(Color(0xFFCD7F32), Color(0xFFC0C6D0), Color(0xFFFFC83D)).forEachIndexed { k, col ->
+                        val on = v >= tiers[k]
+                        Box(Modifier.padding(start = 6.dp).size(18.dp).clip(CircleShape).background(if (on) col else th.textFaint.copy(alpha = 0.2f)))
                     }
                 }
             }

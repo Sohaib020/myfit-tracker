@@ -1,5 +1,6 @@
 package com.myfit.tracker.ui.food
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -75,6 +76,9 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
     val byMeal = meals.associateBy { it.id }
     val grouped = items.groupBy { byMeal[it.mealId]?.mealType ?: "OTHER" }
     val dateKey = Clock.dateKey(date)
+    var pickRegion by remember { mutableStateOf(false) }
+    val regionId by com.myfit.tracker.domain.FoodRegion.flow.collectAsState()
+    val region = remember(regionId) { com.myfit.tracker.domain.FoodRegion.get(ctxN) }
 
     Column(Modifier.fillMaxSize()) {
         val dayLabel = if (date == Clock.today()) "Today" else date.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.US))
@@ -94,13 +98,36 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
             ) {
                 Column(Modifier.weight(1f)) {
                     Text("Food", style = FitType.display, color = th.text)
-                    Caption("$dayLabel · diary, snaps, fasting & supplements")
+                    Caption("$dayLabel · ${region.flag} ${region.name}")
                 }
                 GlassIconButton(Duo.KeyboardArrowLeft, { date = date.minusDays(1) })
                 Spacer(Modifier.width(8.dp))
                 GlassIconButton(Duo.KeyboardArrowRight, { if (date < Clock.today()) date = date.plusDays(1) })
             }
             }
+            // R32: organised top to bottom — find food, your nutritionist, today, meals, plans & tools
+            item {
+                // big search entry: opens the food list straight into search
+                Glass(Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(27.dp), onClick = { nav.push(Overlay.FoodAdd(mealForNow(), dateKey, 0)) }) {
+                    Row(Modifier.fillMaxSize().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Duo.Search, null, tint = th.accentBright, modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text(region.hint, style = FitType.body, color = th.textDim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(region.flag, style = FitType.section)
+                    }
+                }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    QuickTile("Snap meal", Duo.Camera, th.protein, Modifier.weight(1f)) { nav.push(Overlay.FoodPhoto(mealForNow(), dateKey)) }
+                    QuickTile("Barcode", Duo.Barcode, th.carbs, Modifier.weight(1f)) { nav.push(Overlay.FoodAdd(mealForNow(), dateKey, 1)) }
+                    QuickTile("Saved", Duo.Bookmark, th.fat, Modifier.weight(1f)) { nav.push(Overlay.FoodAdd(mealForNow(), dateKey, 2)) }
+                    QuickTile("Meal plans", Duo.ForkKnife, th.success, Modifier.weight(1f)) { nav.push(Overlay.MealPlans) }
+                }
+            }
+            item { FoodSection("Your nutritionist") }
+            item { NutritionistHero { nav.push(Overlay.Nutritionist) } }
+            item { FoodSection(if (date == Clock.today()) "Today" else dayLabel) }
             item {
                 GlassCard {
                     MacroSummary(
@@ -113,48 +140,7 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
                     }
                 }
             }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickTile("Snap meal", Duo.Camera, th.protein, Modifier.weight(1f)) { nav.push(Overlay.FoodPhoto(mealForNow(), dateKey)) }
-                    QuickTile("Search", Duo.Search, th.water, Modifier.weight(1f)) { nav.push(Overlay.FoodAdd(mealForNow(), dateKey, 0)) }
-                    QuickTile("Barcode", Duo.Barcode, th.carbs, Modifier.weight(1f)) { nav.push(Overlay.FoodAdd(mealForNow(), dateKey, 1)) }
-                    QuickTile("Saved", Duo.Bookmark, th.fat, Modifier.weight(1f)) { nav.push(Overlay.FoodAdd(mealForNow(), dateKey, 2)) }
-                }
-            }
-            item {
-                com.myfit.tracker.ui.theme.Glass(Modifier.fillMaxWidth(), onClick = { nav.push(Overlay.MealPlans) }) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        com.myfit.tracker.ui.components.IconBubble(Duo.ForkKnife, th.success, 40.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("Pakistani meal plans", style = FitType.section, color = th.text)
-                            Caption("7 days of desi meals in roti, katori and cups — log a meal in one tap")
-                        }
-                        Icon(Duo.KeyboardArrowRight, null, tint = th.textDim)
-                    }
-                }
-            }
-            item {
-                remember { com.myfit.tracker.domain.Coach.load(ctxN); 0 }
-                val cpN by com.myfit.tracker.domain.Coach.prefs.collectAsState()
-                com.myfit.tracker.ui.theme.Glass(Modifier.fillMaxWidth(), onClick = { nav.push(Overlay.Nutritionist) }) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        com.myfit.tracker.ui.coach.CoachPortrait(cpN.nLook.id, false, 44.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("${cpN.nName} · your nutritionist", style = FitType.section, color = th.text, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                            Caption("Today's coaching, meal reviews, weekly plan & grocery list, chat")
-                        }
-                        Icon(Duo.KeyboardArrowRight, null, tint = th.textDim)
-                    }
-                }
-            }
-            if (asTab) item {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    HubChip("Fasting", Duo.Timer, th.sleep, Modifier.weight(1f)) { nav.push(Overlay.Fasting) }
-                    HubChip("Supplements", Duo.Inventory2, th.success, Modifier.weight(1f)) { nav.push(Overlay.Supplements) }
-                }
-            }
+            item { FoodSection("Meals") }
             MEAL_ORDER.filter { it in grouped.keys || it in listOf("BREAKFAST", "LUNCH", "SNACK", "DINNER") }.forEach { type ->
                 val list = grouped[type].orEmpty()
                 item(key = type) {
@@ -183,7 +169,43 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
                     }
                 }
             }
+            item { FoodSection("Plans & tools") }
+            item {
+                Glass(Modifier.fillMaxWidth(), onClick = { nav.push(Overlay.MealPlans) }) {
+                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        com.myfit.tracker.ui.components.IconBubble(Duo.ForkKnife, th.success, 42.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("${region.name} meal plans", style = FitType.section, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Caption("7 days of local meals at your calories — log a whole meal in one tap")
+                        }
+                        Text("${region.flag} Change", style = FitType.label, color = th.accentBright, modifier = Modifier.clip(RoundedCornerShape(14.dp)).clickableNoRipple { pickRegion = true }.padding(8.dp))
+                    }
+                }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HubChip("Fasting", Duo.Timer, th.sleep, Modifier.weight(1f)) { nav.push(Overlay.Fasting) }
+                    HubChip("Supplements", Duo.Inventory2, th.success, Modifier.weight(1f)) { nav.push(Overlay.Supplements) }
+                }
+            }
             item { Spacer(Modifier.navigationBarsPadding()) }
+        }
+    }
+
+    GlassSheet(visible = pickRegion, onDismiss = { pickRegion = false }) {
+        Text("Where do you eat?", style = FitType.title, color = th.text)
+        Caption("Sets your meal plans, the \"Popular here\" foods and search hints. Every food stays searchable.")
+        Spacer(Modifier.height(10.dp))
+        com.myfit.tracker.domain.FoodRegion.ALL.forEach { r ->
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickableNoRipple { com.myfit.tracker.domain.FoodRegion.set(ctxN, r.id); pickRegion = false }
+                .background(if (r.id == region.id) th.accent.copy(alpha = 0.16f) else androidx.compose.ui.graphics.Color.Transparent).padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(r.flag, style = FitType.title)
+                Spacer(Modifier.width(12.dp))
+                Text(r.name, style = FitType.body, color = th.text, modifier = Modifier.weight(1f))
+                if (r.id == region.id) Icon(Duo.Check, null, tint = th.accentBright, modifier = Modifier.size(20.dp))
+            }
         }
     }
 
@@ -279,6 +301,41 @@ fun ItemRow(i: MealItem, onClick: () -> Unit, onDelete: () -> Unit, icon: String
         Text(" ${com.myfit.tracker.domain.EnergyUnit.label}", style = FitType.caption, color = th.textDim)
         Box(Modifier.size(34.dp).clip(CircleShape).clickableNoRipple(onDelete), contentAlignment = Alignment.Center) {
             Icon(Duo.Close, "Remove", tint = th.textDim, modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
+
+@Composable
+private fun FoodSection(text: String) {
+    val th = LocalFitTheme.current
+    Text(text.uppercase(), style = FitType.overline, color = th.textDim, modifier = Modifier.padding(start = 6.dp, top = 6.dp))
+}
+
+/** R32: the nutritionist, front and centre — portrait, what they do, and two direct actions. */
+@Composable
+private fun NutritionistHero(onOpen: () -> Unit) {
+    val th = LocalFitTheme.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    remember { com.myfit.tracker.domain.Coach.load(ctx); 0 }
+    val cp by com.myfit.tracker.domain.Coach.prefs.collectAsState()
+    Glass(Modifier.fillMaxWidth(), onClick = onOpen, tint = th.success.copy(alpha = 0.12f)) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(84.dp).clip(RoundedCornerShape(24.dp))
+                .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(th.success.copy(alpha = 0.35f), th.success.copy(alpha = 0.08f)))),
+                contentAlignment = Alignment.BottomCenter) {
+                com.myfit.tracker.ui.coach.CoachPortrait(cp.nLook.id, false, 80.dp)
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(cp.nName, style = FitType.title, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Caption("Your nutritionist · reviews your meals, plans your week, builds your grocery list")
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    com.myfit.tracker.ui.theme.AccentButton("Ask", onOpen, Modifier.weight(1f), icon = Duo.ChatBubble, height = 38.dp)
+                    GlassButton("My plan", onOpen, Modifier.weight(1f), height = 38.dp)
+                }
+            }
         }
     }
 }

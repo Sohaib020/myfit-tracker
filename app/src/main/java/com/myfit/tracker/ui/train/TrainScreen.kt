@@ -121,6 +121,9 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
                     runCatching { java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.parse(w.workout.localDate), java.time.LocalDate.now()) in 0..6 }.getOrDefault(false) }) }
         }
 
+        // ---------------- R32 calisthenics hero, right under the start card
+        item(key = "cali") { com.myfit.tracker.ui.cali.CalisthenicsTrainCard { nav.push(Overlay.Calisthenics) } }
+
         // ---------------- 2. every tool as a neon bento tile
         item(key = "tiles") {
             TrainBento(container, coach, p?.name, recent,
@@ -128,9 +131,6 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
                 onRun = { nav.push(Overlay.Stopwatch) }, onCoach = { nav.push(Overlay.CoachHub) }, onPlans = { onTab(1) },
                 onExercises = { onTab(2) }, onBody = { onTab(3) }, onRecords = { nav.push(Overlay.Records) })
         }
-
-        // ---------------- R31 calisthenics skill tree
-        item(key = "cali") { com.myfit.tracker.ui.cali.CalisthenicsTrainCard { nav.push(Overlay.Calisthenics) } }
 
         // ---------------- 3. my workout days
         item(key = "daysHead") {
