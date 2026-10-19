@@ -116,8 +116,8 @@ android {
         // sherpa-onnx and ONNX Runtime both ship libonnxruntime.so — kept at the same API level (1.28.x), so either copy works
         jniLibs { pickFirsts += listOf("**/libc++_shared.so", "**/libonnxruntime.so") }
     }
-    // R35: exported Room schemas (app/schemas) are test assets for SchemaTest / future migration tests
-    sourceSets { getByName("test").assets.srcDir("$projectDir/schemas") }
+    // R35: exported Room schemas (app/schemas) are assets for SchemaTest (unit tests run on the debug variant)
+    sourceSets { getByName("debug").assets.srcDir("$projectDir/schemas") }   // debug builds only: never in a release APK
     // MediaPipe memory-maps its .task models straight from the APK
     androidResources { noCompress += "task" }
     lint {
