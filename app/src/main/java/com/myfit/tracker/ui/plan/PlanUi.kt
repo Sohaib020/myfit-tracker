@@ -131,7 +131,7 @@ fun rememberTodayPlan(c: AppContainer): DayPlan? {
     val key = Clock.dateKey(Clock.today())
     LaunchedEffect(key) {
         withContext(Dispatchers.IO) {
-            runCatching { val (p, _, _) = DayPlans.today(c); DayPlans.tip(c, p) }
+            runCatching { DayPlans.tip(c, DayPlans.ensureToday(c)) }
         }
     }
     return hist[key]

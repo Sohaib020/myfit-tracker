@@ -393,4 +393,5 @@ Status: building.
   PlanStory + PlanStoryHost in MyFitRoot, DailyReportTile in Me, MorningPlanToggle in Settings→Notifications),
   renames (Activity Card / Live notification), ui/theme/Motion.kt (springs + Modifier.entrance cascade hooked into Glass),
   predictive back on overlays, tab drift transition, sheet springs, Motion.init in Application.
-- TODO: CI green; more animation polish (number count-ups, list item placement, dialog/popups); PR + APK; audit doc.
+- CI green at 6c? (build success after test-signature fix). Added DayPlans.ensureToday (cards skip queries when plan saved), tab depth recede.
+- TODO: more animation polish (number count-ups, list item placement, dialog/popups); PR + APK; audit doc.

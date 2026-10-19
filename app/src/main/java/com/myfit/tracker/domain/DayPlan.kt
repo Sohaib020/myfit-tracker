@@ -226,6 +226,12 @@ object DayPlans {
         return DayPlan(Clock.dateKey(today), headline, why, items)
     }
 
+    /** Cheap path for cards: the saved plan if there is one (no queries), else build it. */
+    suspend fun ensureToday(c: AppContainer): DayPlan {
+        load(c.app)
+        return _history.value[Clock.dateKey(Clock.today())] ?: today(c).first
+    }
+
     /** Builds (or returns the saved) plan for today. */
     suspend fun today(c: AppContainer, force: Boolean = false): Triple<DayPlan, DayStats?, DayTargets> {
         load(c.app)
