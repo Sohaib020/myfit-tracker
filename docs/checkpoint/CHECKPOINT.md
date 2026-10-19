@@ -384,4 +384,13 @@ Owner asked:
 4. Settings rename: "MyFit card" → "Activity Card", "Now Bar" → "Live notification" (`MeScreen.kt` ~L1173).
 5. App-wide animation pass: transitions, every element/section entrance, ultra smooth (Apple-like springs), good on 60 Hz.
 6. After PR + APK: in-depth code/feature audit (bugs, perf, heavy hardware load, optimisation list light/deep), missing features, security, Play Store publishing gaps.
-Status: questions asked, nothing built yet.
+Answers: popup = story-style full screen (3 cards, once/day after 4 am); plan = on-device rules + optional AI one-line tip;
+Home = Today's progress (RINGS) + Plan my day combined when large, split into Rings tile + Plan tile when small (replaces CheckInTile pairing);
+motion = Apple-style springs, lighter on low-end, respects Reduce motion.
+Status: building.
+- DONE (commit 1): domain/DayPlan.kt (rules engine, stats batch, score, JSON history filesDir/dayplans.json, story once/day prefs, AI tip),
+  ui/plan/PlanUi.kt (PlanStrip in large RINGS card, PlanTile small half, DailyHubScreen Today/Report/History = Overlay.DayPlan(tab),
+  PlanStory + PlanStoryHost in MyFitRoot, DailyReportTile in Me, MorningPlanToggle in Settings→Notifications),
+  renames (Activity Card / Live notification), ui/theme/Motion.kt (springs + Modifier.entrance cascade hooked into Glass),
+  predictive back on overlays, tab drift transition, sheet springs, Motion.init in Application.
+- TODO: CI green; more animation polish (number count-ups, list item placement, dialog/popups); PR + APK; audit doc.

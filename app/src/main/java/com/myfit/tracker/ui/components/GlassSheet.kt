@@ -1,5 +1,6 @@
 package com.myfit.tracker.ui.components
 
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -53,6 +54,7 @@ fun GlassSheet(
     val drag = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(visible) { if (visible) drag.snapTo(0f) }
+    androidx.compose.runtime.remember(visible) { if (visible) com.myfit.tracker.ui.theme.Motion.markScreen(); 0 }
     if (visible) BackHandler(onBack = onDismiss)
     // while any sheet is open the floating dock hides, so sheets are never drawn under it
     androidx.compose.runtime.DisposableEffect(visible) {
@@ -71,8 +73,8 @@ fun GlassSheet(
         AnimatedVisibility(
             visible,
             modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(spring(0.8f, 380f)) { it } + fadeIn(),
-            exit = slideOutVertically(tween(220)) { it } + fadeOut(tween(200)),
+            enter = slideInVertically(spring(0.86f, 420f, androidx.compose.ui.unit.IntOffset.VisibilityThreshold)) { it } + fadeIn(tween(160)),
+            exit = slideOutVertically(spring(1f, 520f, androidx.compose.ui.unit.IntOffset.VisibilityThreshold)) { it } + fadeOut(tween(180, delayMillis = 60)),
         ) {
             val maxH = LocalConfiguration.current.screenHeightDp.dp * 0.92f
             Glass(

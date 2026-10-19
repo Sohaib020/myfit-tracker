@@ -127,7 +127,7 @@ fun Glass(
     val bounds = remember { arrayOfNulls<androidx.compose.ui.geometry.Rect>(1) }
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed && onClick != null) pressScale else 1f, spring(0.45f, 700f), label = "glassPress")
+    val scale by animateFloatAsState(if (pressed && onClick != null) pressScale else 1f, spring(0.62f, 820f), label = "glassPress")
     val glow by animateFloatAsState(if (pressed && onClick != null) 1f else 0f, label = "glassGlow")
     val tick = rememberTick()
     // Everything samples a backdrop that was blurred ONCE per frame at low resolution:
@@ -152,6 +152,7 @@ fun Glass(
 
     Box(
         modifier
+            .entrance()
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .onGloballyPositioned { pos.value = it.positionInRoot(); if (onClick != null) bounds[0] = it.boundsInRoot() }
             .clip(shape)
