@@ -128,7 +128,7 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
             }
             item {
                 com.myfit.tracker.ui.coach.CoachCard(com.myfit.tracker.ui.coach.CoachRole.NUTRITIONIST, { nav.push(Overlay.Nutritionist) }, height = 190.dp,
-                    primary = "Ask" to { nav.push(Overlay.Nutritionist) }, secondary = "Meal plans" to { nav.push(Overlay.MealPlans) })
+                    primary = "Ask" to { com.myfit.tracker.ui.nav.Launch.nutriTab = 3; nav.push(Overlay.Nutritionist) }, secondary = "Plans" to { nav.push(Overlay.MealPlans) })
             }
             item { FoodSection("Meals") }
             val types = MEAL_ORDER.filter { it in grouped.keys || it in listOf("BREAKFAST", "LUNCH", "SNACK", "DINNER") }

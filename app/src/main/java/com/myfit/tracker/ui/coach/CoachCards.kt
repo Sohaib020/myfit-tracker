@@ -27,6 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -63,13 +66,15 @@ private val NUTRI_TIPS = listOf(
 )
 
 /**
- * R33 full-bleed character card: the coach stands large in a soft spotlight (cropped at the waist), name and role on
- * the left, a speech bubble with today's tip, and two quick actions.
+ * R33 full-bleed character card, R36 framing: the coach stands in their own column on the right (never under the
+ * text or buttons), head near the top, cropped at the upper thigh with a soft fade into the card. The clips are all
+ * framed the same (character spans 17–92 % of the video height), so both coaches sit identically.
  */
 @Composable
 fun CoachCard(role: CoachRole, onOpen: () -> Unit, modifier: Modifier = Modifier, height: Dp = 210.dp,
               primary: Pair<String, () -> Unit>? = null, secondary: Pair<String, () -> Unit>? = null) {
     val ctx = LocalContext.current
+    val nav = com.myfit.tracker.ui.nav.LocalNav.current
     remember { Coach.load(ctx); 0 }
     val cp by Coach.prefs.collectAsState()
     val trainer = role == CoachRole.TRAINER
@@ -78,35 +83,43 @@ fun CoachCard(role: CoachRole, onOpen: () -> Unit, modifier: Modifier = Modifier
     val accent = if (trainer) Color(0xFFFFB13B) else Color(0xFF34D399)
     val bg = if (trainer) listOf(Color(0xFF2A1A0C), Color(0xFF15121C), Color(0xFF101423)) else listOf(Color(0xFF0B2A22), Color(0xFF101A1C), Color(0xFF101423))
     val tip = remember(role) { val d = java.time.LocalDate.now().dayOfYear; (if (trainer) TRAINER_TIPS else NUTRI_TIPS)[d % 7] }
-    Box(modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(28.dp))
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(28.dp))
         .background(Brush.linearGradient(bg))
         .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.04f))), RoundedCornerShape(28.dp))
         .clickableNoRipple(onOpen)) {
-        // spotlight + floor glow behind the character
+        val figW = maxWidth * 0.42f
+        val textW = maxWidth - figW
+        // spotlight behind the figure column
         Box(Modifier.fillMaxSize().drawBehind {
-            val c = Offset(size.width * 0.78f, size.height * 0.42f)
-            drawCircle(Brush.radialGradient(listOf(accent.copy(alpha = 0.42f), accent.copy(alpha = 0.08f), Color.Transparent), c, size.height * 0.85f), size.height * 0.85f, c)
-            drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)), size.height * 0.6f, size.height))
+            val c = Offset(size.width - figW.toPx() / 2, size.height * 0.45f)
+            drawCircle(Brush.radialGradient(listOf(accent.copy(alpha = 0.40f), accent.copy(alpha = 0.08f), Color.Transparent), c, size.height * 0.8f), size.height * 0.8f, c)
         })
-        // the character, taller than the card so it's cropped at the waist
-        Box(Modifier.align(Alignment.TopEnd).width(height * 0.95f).fillMaxSize().clipToBounds()) {
-            CoachFigure(look, "idle", Modifier.align(Alignment.TopCenter).offset(y = height * 0.06f).requiredHeight(height * 1.9f).fillMaxWidth(),
+        // the coach: video is 710×1280 per frame; scaled to 1.9× card height, head at ~10 % from the top
+        Box(Modifier.align(Alignment.BottomEnd).width(figW).fillMaxHeight().clipToBounds()
+            .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                drawRect(Brush.verticalGradient(0.72f to Color.Black, 1f to Color.Transparent), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+            }) {
+            val figH = height * 1.9f
+            CoachFigure(look, "idle", Modifier.align(Alignment.TopCenter).offset(y = height * 0.10f - figH * 0.17f)
+                .requiredSize(width = figH * (710f / 1280f), height = figH),
                 spotlight = false, tapToEmote = false, idleOnce = true)
         }
-        Column(Modifier.align(Alignment.TopStart).padding(16.dp).fillMaxWidth(0.62f)) {
-            Text(if (trainer) "YOUR TRAINER" else "YOUR NUTRITIONIST", style = FitType.overline, color = accent)
+        Column(Modifier.align(Alignment.TopStart).width(textW).padding(start = 16.dp, top = 16.dp, end = 4.dp)) {
+            Text(if (trainer) "YOUR TRAINER" else "YOUR NUTRITIONIST", style = FitType.overline, color = accent, maxLines = 1)
             Text(name, style = FitType.title, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(8.dp))
-            // speech bubble
             Box(Modifier.clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 4.dp))
                 .background(Color.White.copy(alpha = 0.13f)).padding(horizontal = 12.dp, vertical = 8.dp)) {
                 Text(tip, style = FitType.caption.copy(lineHeight = FitType.caption.lineHeight * 1.15f), color = Color.White.copy(alpha = 0.92f), maxLines = 3, overflow = TextOverflow.Ellipsis)
             }
         }
-        Row(Modifier.align(Alignment.BottomStart).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val p = primary ?: ((if (trainer) "Chat" else "Ask") to onOpen)
-            val s = secondary ?: ("Today's plan" to onOpen)
-            ActionChip(p.first, if (trainer) Duo.ChatBubble else Duo.ChatBubble, accent, filled = true, onClick = p.second)
+        Row(Modifier.align(Alignment.BottomStart).width(textW).padding(start = 14.dp, bottom = 14.dp, end = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val p = primary ?: if (trainer) ("Chat" to { nav.push(com.myfit.tracker.ui.nav.Overlay.CoachChat) })
+                else ("Ask" to { com.myfit.tracker.ui.nav.Launch.nutriTab = 3; nav.push(com.myfit.tracker.ui.nav.Overlay.Nutritionist) })
+            val s = secondary ?: ("Plan" to onOpen)
+            ActionChip(p.first, Duo.ChatBubble, accent, filled = true, onClick = p.second)
             ActionChip(s.first, Duo.CalendarMonth, accent, filled = false, onClick = s.second)
         }
     }
