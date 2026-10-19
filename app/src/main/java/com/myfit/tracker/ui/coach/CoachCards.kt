@@ -91,7 +91,7 @@ fun CoachCard(role: CoachRole, onOpen: () -> Unit, modifier: Modifier = Modifier
         // the character, taller than the card so it's cropped at the waist
         Box(Modifier.align(Alignment.TopEnd).width(height * 0.95f).fillMaxSize().clipToBounds()) {
             CoachFigure(look, "idle", Modifier.align(Alignment.TopCenter).offset(y = height * 0.06f).requiredHeight(height * 1.9f).fillMaxWidth(),
-                spotlight = false, tapToEmote = false)
+                spotlight = false, tapToEmote = false, idleOnce = true)
         }
         Column(Modifier.align(Alignment.TopStart).padding(16.dp).fillMaxWidth(0.62f)) {
             Text(if (trainer) "YOUR TRAINER" else "YOUR NUTRITIONIST", style = FitType.overline, color = accent)

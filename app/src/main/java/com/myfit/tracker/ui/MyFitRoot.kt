@@ -59,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import com.myfit.tracker.ui.theme.drawBaked
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.geometry.Size
@@ -290,7 +291,15 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
     // closing a sub-screen keeps the chrome where the page left it (resetting it here drew the header over a scrolled list)
     CompositionLocalProvider(LocalNav provides nav, com.myfit.tracker.ui.components.LocalChrome provides chromeState) {
         val win = com.myfit.tracker.ui.components.LocalWindowInfo.current
-        Box(Modifier.fillMaxSize()) {
+        // R35: any touch (observed, never consumed) keeps decorative motion awake for 8 s
+        Box(Modifier.fillMaxSize().pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                    if (e.changes.any { it.pressed }) com.myfit.tracker.ui.theme.Awake.poke()
+                }
+            }
+        }) {
           // wide screens (foldables, tablets): content sits in a readable centred column; the theme fills the screen
           // R34 depth: the tabs recede a touch while a screen opens over them, and come forward as it closes (follows the back gesture)
           val recede by androidx.compose.animation.core.animateFloatAsState(if (top != null) 1f else 0f, com.myfit.tracker.ui.theme.Motion.smooth(), label = "recede")

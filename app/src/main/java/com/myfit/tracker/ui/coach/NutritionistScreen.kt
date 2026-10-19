@@ -390,7 +390,11 @@ private fun ChatTab(container: AppContainer, name: String, system: String, perso
                     if (!m.mine) { CoachPortrait(look, false, 34.dp); Spacer(Modifier.width(6.dp)) }
                     Column(Modifier.fillMaxWidth(0.86f).clip(RoundedCornerShape(18.dp)).background(if (m.mine) th.accent.copy(alpha = 0.22f) else th.text.copy(alpha = 0.06f)).padding(12.dp)) {
                         Text(m.text, style = FitType.body, color = th.text)
-                        if (!m.mine) Icon(Duo.VolumeUp, "Read aloud", tint = th.textDim, modifier = Modifier.align(Alignment.End).size(28.dp).clickableNoRipple { container.pipVoice.speak(m.text, force = true, persona = persona) }.padding(4.dp))
+                        if (!m.mine) Row(Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
+                            com.myfit.tracker.ui.components.AiReportLink(container, m.text, "nutritionist")
+                            Spacer(Modifier.width(8.dp))
+                            Icon(Duo.VolumeUp, "Read aloud", tint = th.textDim, modifier = Modifier.size(28.dp).clickableNoRipple { container.pipVoice.speak(m.text, force = true, persona = persona) }.padding(4.dp))
+                        }
                     }
                 }
             }

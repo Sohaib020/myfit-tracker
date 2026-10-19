@@ -1,6 +1,7 @@
 package com.myfit.tracker.ui.arena
 
 import androidx.compose.animation.core.RepeatMode
+import com.myfit.tracker.ui.theme.awakeFloat
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -60,7 +61,7 @@ fun JourneyTrack(j: Journey, doneKm: Double, photo: ImageBitmap?, initial: Char)
     val stepDp = 78.dp
     val topDp = 26.dp
     val anim by animateFloatAsState(doneKm.toFloat(), tween(1200), label = "trail")
-    val pulse by rememberInfiniteTransition(label = "p").animateFloat(0f, 1f, infiniteRepeatable(tween(1400), RepeatMode.Restart), label = "p")
+    val pulse by rememberInfiniteTransition(label = "p").awakeFloat(0f, 1f, infiniteRepeatable(tween(1400), RepeatMode.Restart), label = "p")
     val density = LocalDensity.current
     BoxWithConstraints(Modifier.fillMaxWidth().height(topDp * 2 + stepDp * (n - 1))) {
         val wPx = with(density) { maxWidth.toPx() }

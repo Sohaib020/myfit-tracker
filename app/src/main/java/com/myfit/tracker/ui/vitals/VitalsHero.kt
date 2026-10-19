@@ -1,6 +1,7 @@
 package com.myfit.tracker.ui.vitals
 
 import androidx.compose.animation.core.LinearEasing
+import com.myfit.tracker.ui.theme.awakeFloat
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -86,7 +87,7 @@ private fun ecg(x: Float): Float {
 fun BeatingHeart(bpm: Int, size: Dp, modifier: Modifier = Modifier) {
     val period = (60_000 / bpm.coerceIn(45, 140))
     val inf = rememberInfiniteTransition(label = "heart")
-    val p by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(period, easing = LinearEasing)), label = "beat")
+    val p by inf.awakeFloat(0f, 1f, infiniteRepeatable(tween(period, easing = LinearEasing)), label = "beat")
     val k = beatScale(p)
     Canvas(modifier.size(size)) {
         val c = Offset(this.size.width / 2, this.size.height / 2)
@@ -127,8 +128,8 @@ fun VitalsHeroCard(container: AppContainer, onLogBp: () -> Unit) {
     val nav = LocalNav.current
     val (bpm, sub) = rememberLastPulse(container)
     val inf = rememberInfiniteTransition(label = "vitals")
-    val sweep by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "sweep")
-    val glow by inf.animateFloat(0.35f, 1f, infiniteRepeatable(tween(1100), RepeatMode.Reverse), label = "glow")
+    val sweep by inf.awakeFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "sweep")
+    val glow by inf.awakeFloat(0.35f, 1f, infiniteRepeatable(tween(1100), RepeatMode.Reverse), label = "glow", rest = 0.8f)
     Glass(Modifier.fillMaxWidth(), tint = HEART_RED.copy(alpha = 0.14f), onClick = { nav.push(Overlay.Vitals) }) {
         Canvas(Modifier.matchParentSize()) {
             drawCircle(Brush.radialGradient(listOf(HEART_RED.copy(alpha = 0.30f), Color.Transparent), Offset(size.width * 0.18f, size.height * 0.35f), size.height * 0.9f),
@@ -180,7 +181,7 @@ fun VitalsHeroTile(container: AppContainer) {
     val nav = LocalNav.current
     val (bpm, _) = rememberLastPulse(container)
     val inf = rememberInfiniteTransition(label = "vtile")
-    val sweep by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "sweep")
+    val sweep by inf.awakeFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "sweep")
     Glass(Modifier.fillMaxSize(), tint = HEART_RED.copy(alpha = 0.16f), onClick = { nav.push(Overlay.CameraHr) }) {
         Canvas(Modifier.fillMaxWidth().height(36.dp).align(Alignment.BottomCenter).padding(bottom = 6.dp)) { ecgSweep(sweep, HEART_RED, beats = 2) }
         Column(Modifier.padding(12.dp)) {

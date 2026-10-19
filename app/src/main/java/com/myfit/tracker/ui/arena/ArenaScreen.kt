@@ -1,6 +1,7 @@
 package com.myfit.tracker.ui.arena
 
 import com.myfit.tracker.ui.components.fadeEdges
+import com.myfit.tracker.ui.theme.awakeFloat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.LinearEasing
@@ -183,9 +184,9 @@ private fun mix(a: Color, b: Color, t: Float) = Color(a.red + (b.red - a.red) * 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun LevelHero(l: Level, partner: Mascot, small: Boolean = false, onLong: () -> Unit = {}, onClick: () -> Unit) {
     val inf = rememberInfiniteTransition(label = "hero")
-    val t by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(22_000, easing = LinearEasing)), label = "aurora")
-    val sheen by inf.animateFloat(-0.6f, 1.6f, infiniteRepeatable(tween(7_000, easing = LinearEasing)), label = "sheen")
-    val bob by inf.animateFloat(-1f, 1f, infiniteRepeatable(tween(1_800), androidx.compose.animation.core.RepeatMode.Reverse), label = "bob")
+    val t by inf.awakeFloat(0f, 1f, infiniteRepeatable(tween(22_000, easing = LinearEasing)), label = "aurora")
+    val sheen by inf.awakeFloat(-0.6f, 1.6f, infiniteRepeatable(tween(7_000, easing = LinearEasing)), label = "sheen")
+    val bob by inf.awakeFloat(-1f, 1f, infiniteRepeatable(tween(1_800), androidx.compose.animation.core.RepeatMode.Reverse), label = "bob", rest = 0f)
     val frac by animateFloatAsState(l.frac, tween(1400), label = "xp")
     val next = Mascot.entries.firstOrNull { it.unlock > l.n }
     val a1 = partner.accent; val a2 = partner.color
