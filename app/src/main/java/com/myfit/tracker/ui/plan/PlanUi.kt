@@ -129,7 +129,9 @@ fun doneCount(p: DayPlan, l: PlanLive): Pair<Int, Int> {
 @Composable
 fun rememberTodayPlan(c: AppContainer): DayPlan? {
     val hist by DayPlans.history.collectAsState()
-    val key = Clock.dateKey(Clock.today())
+    // follows the calendar day, so a phone left open past midnight gets the new day's plan
+    val day by com.myfit.tracker.ui.dashboard.todayFlow.collectAsState(initial = Clock.today())
+    val key = Clock.dateKey(day)
     LaunchedEffect(key) {
         withContext(Dispatchers.IO) {
             runCatching { DayPlans.tip(c, DayPlans.ensureToday(c)) }

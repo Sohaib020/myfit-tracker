@@ -27,6 +27,8 @@ import kotlinx.coroutines.delay
 object Motion {
     @Volatile var lowEnd = false; private set
     @Volatile var reduced = false; private set
+    /** Settings → Motion → Battery saver: everything still. */
+    @Volatile var appStill = false
 
     fun init(ctx: Context) {
         val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
@@ -55,7 +57,7 @@ object Motion {
 
     /** Order of this element in the current cascade, or -1 if the screen opened too long ago. */
     internal fun slot(): Int {
-        if (reduced) return -1
+        if (reduced || appStill) return -1
         return if (SystemClock.uptimeMillis() - screenAt < WINDOW_MS) counter++ else -1
     }
 }

@@ -249,6 +249,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
     val top = nav.stack.lastOrNull()
     val backdrop = LocalBackdrop.current
     // R34: every tab / screen change starts a fresh entrance cascade for the cards that compose next
+    com.myfit.tracker.ui.theme.Motion.appStill = s.motion == 2
     remember(tab, top) { com.myfit.tracker.ui.theme.Motion.markScreen(); 0 }
 
     // R34 predictive back: the open screen follows your thumb (shrinks, rounds its corners, shifts toward the edge)
