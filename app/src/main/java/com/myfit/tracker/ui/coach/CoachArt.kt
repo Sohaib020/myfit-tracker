@@ -97,16 +97,14 @@ private val remember0 = MutableStateFlow(0f)
  */
 @Composable
 fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level: MutableStateFlow<Float>? = null, spotlight: Boolean = true,
-                tapToEmote: Boolean = true) {
+                tapToEmote: Boolean = true, idleOnce: Boolean = false) {
+    // idleOnce (R35, Home-style cards): the move plays once and holds its last frame; tapping the coach plays it again
     val th = LocalFitTheme.current
     // tap → a random fitting emote (never the same twice in a row), played once, then back to the screen's pose
     var tapPose by androidx.compose.runtime.remember(look) { androidx.compose.runtime.mutableStateOf<String?>(null) }
     var lastEmote by androidx.compose.runtime.remember(look) { androidx.compose.runtime.mutableStateOf<String?>(null) }
     val shown = tapPose ?: pose
     val lv by (level ?: remember0).collectAsState()
-    val t = rememberInfiniteTransition(label = "breath")
-    val b by t.animateFloat(0f, 1f, infiniteRepeatable(tween(1900), RepeatMode.Reverse), label = "b")
-    val sway by t.animateFloat(-1f, 1f, infiniteRepeatable(tween(3400), RepeatMode.Reverse), label = "s")
     val onTap = { if (tapPose == null) { val e = CoachEmotes.pick(look, lastEmote); lastEmote = e; tapPose = e } }
     // stills (no pack yet / Android 8) have no end callback: hold the emote briefly, then return
     val ctx0 = LocalContext.current
@@ -125,15 +123,18 @@ fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level
         val packs by CoachPacks.installed.collectAsState()
         // first appearance of this coach: fetch the animated moves in the background (the still shows meanwhile)
         androidx.compose.runtime.LaunchedEffect(look) { if (!CoachPacks.isInstalled(ctx, look)) CoachPacks.ensure(ctx, look) }
+        var replay by androidx.compose.runtime.remember(look) { androidx.compose.runtime.mutableIntStateOf(0) }
         val video = androidx.compose.runtime.remember(look, shown, packs) {
             if (android.os.Build.VERSION.SDK_INT >= 28) CoachPacks.clip(ctx, look, shown)?.takeIf { it.name.endsWith(".mp4") } else null
         }
         if (video != null) {
             // R26: one video view for every move — switching keeps the last frame up until the next move's first frame,
             // so there's no blank flash between moves
-            val once = tapPose != null && shown == tapPose
-            CoachClip(video, Modifier.fillMaxSize().graphicsLayer { transformOrigin = TransformOrigin(0.5f, 1f); translationY = -lv * 6f },
-                loop = !once, onEnd = { if (tapPose == shown) tapPose = null })
+            val once = (tapPose != null && shown == tapPose) || idleOnce
+            androidx.compose.runtime.key(replay) {
+                CoachClip(video, Modifier.fillMaxSize().graphicsLayer { transformOrigin = TransformOrigin(0.5f, 1f); translationY = -lv * 6f },
+                    loop = !once, onEnd = { if (tapPose == shown) tapPose = null })
+            }
         } else AnimatedContent(shown, Modifier.fillMaxSize(), transitionSpec = {
             (scaleIn(spring(0.55f, 380f), initialScale = 0.96f) + fadeIn(tween(180)))
                 .togetherWith(fadeOut(tween(140)))
@@ -149,6 +150,9 @@ fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level
                         loop = !once, onEnd = { if (tapPose == p) tapPose = null })
                 } else {
                     val img = rememberCoachImage(look, p)
+                    val t = rememberInfiniteTransition(label = "breath")
+                    val b by t.animateFloat(0f, 1f, infiniteRepeatable(tween(1900), RepeatMode.Reverse), label = "b")
+                    val sway by t.animateFloat(-1f, 1f, infiniteRepeatable(tween(3400), RepeatMode.Reverse), label = "s")
                     if (img != null) Image(img, null, Modifier.fillMaxSize().graphicsLayer {
                         transformOrigin = TransformOrigin(0.5f, 1f)
                         scaleY = 1f + 0.014f * b + lv * 0.03f; scaleX = 1f + 0.006f * b
@@ -161,6 +165,7 @@ fun CoachFigure(look: String, pose: String, modifier: Modifier = Modifier, level
         }
         // touch layer on top of the animation (an AndroidView underneath would otherwise swallow the tap)
         if (tapToEmote) Box(Modifier.fillMaxSize().pointerInput(look) { detectTapGestures { onTap() } })
+        else if (idleOnce) Box(Modifier.fillMaxSize().pointerInput(look) { detectTapGestures { replay++ } })
     }
 }
 

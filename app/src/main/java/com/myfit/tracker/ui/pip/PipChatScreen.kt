@@ -195,7 +195,7 @@ fun PipChatScreen(container: AppContainer) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(messages, key = { it.id }) { m ->
-                Bubble(m, animate = m.id == typingId, onShowShared = if (m.source == "online" && sharedFor != null && m == messages.lastOrNull()) ({ showShared = true }) else null)
+                Bubble(container, m, animate = m.id == typingId, onShowShared = if (m.source == "online" && sharedFor != null && m == messages.lastOrNull()) ({ showShared = true }) else null)
             }
             if (thinking) item(key = "live") {
                 val p = partial
@@ -308,7 +308,7 @@ fun PipChatScreen(container: AppContainer) {
 
 
 @Composable
-private fun Bubble(m: ChatMessage, animate: Boolean, onShowShared: (() -> Unit)?) {
+private fun Bubble(container: AppContainer, m: ChatMessage, animate: Boolean, onShowShared: (() -> Unit)?) {
     val th = LocalFitTheme.current
     val mine = m.role == "user"
     var shown by remember(m.id) { mutableIntStateOf(if (animate) 0 else m.text.length) }
@@ -341,6 +341,10 @@ private fun Bubble(m: ChatMessage, animate: Boolean, onShowShared: (() -> Unit)?
                         if (onShowShared != null) {
                             Spacer(Modifier.size(10.dp))
                             Text("What was shared?", style = FitType.overline, color = th.textDim, modifier = Modifier.clickableNoRipple { onShowShared() }.padding(2.dp))
+                        }
+                        if (m.source == "online" || m.source == "on-device") {
+                            Spacer(Modifier.size(10.dp))
+                            com.myfit.tracker.ui.components.AiReportLink(container, m.text, "pip")
                         }
                     }
                 }

@@ -1,6 +1,7 @@
 package com.myfit.tracker.ui.arena
 
 import android.content.Context
+import com.myfit.tracker.ui.theme.awakeFloat
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -112,10 +113,10 @@ private fun ChampionTile(large: Boolean, onLong: () -> Unit, onClick: () -> Unit
     val ch = b.champion ?: Champion.BLAZE
     val tilt by rememberTilt()
     val inf = rememberInfiniteTransition(label = "tile")
-    val drift by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(22_000, easing = LinearEasing)), label = "drift")
-    val edge by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(9_000, easing = LinearEasing)), label = "edge")
-    val sweep by inf.animateFloat(-0.6f, 2.4f, infiniteRepeatable(tween(7_500, easing = androidx.compose.animation.core.FastOutSlowInEasing)), label = "sweep")
-    val breathe by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(3_200), RepeatMode.Reverse), label = "breathe")
+    val drift by inf.awakeFloat(0f, 1f, infiniteRepeatable(tween(22_000, easing = LinearEasing)), label = "drift")
+    val edge by inf.awakeFloat(0f, 360f, infiniteRepeatable(tween(9_000, easing = LinearEasing)), label = "edge")
+    val sweep by inf.awakeFloat(-0.6f, 2.4f, infiniteRepeatable(tween(7_500, easing = androidx.compose.animation.core.FastOutSlowInEasing)), label = "sweep")
+    val breathe by inf.awakeFloat(0f, 1f, infiniteRepeatable(tween(3_200), RepeatMode.Reverse), label = "breathe", rest = 0.5f)
     val c1 = ch.color
     val c2 = ch.rarity.color
     val shape = RoundedCornerShape(26.dp)

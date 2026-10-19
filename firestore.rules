@@ -208,5 +208,18 @@ service cloud.firestore {
         && request.resource.data.details is string && request.resource.data.details.size() <= 500;
       allow read, update, delete: if false;
     }
+
+    // R35: reports about AI replies (Play AI-generated content policy). Write-only; signed-out users may report too.
+    match /aiReports/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['uid', 'reason', 'where', 'text', 'app', 'at'])
+        && request.resource.data.uid is string
+        && (request.resource.data.uid == '' || (signedIn() && request.resource.data.uid == request.auth.uid))
+        && request.resource.data.reason is string && request.resource.data.reason.size() <= 40
+        && request.resource.data.where is string && request.resource.data.where.size() <= 20
+        && request.resource.data.text is string && request.resource.data.text.size() <= 2000
+        && request.resource.data.app is string && request.resource.data.app.size() <= 40
+        && request.resource.data.at == request.time;
+      allow read, update, delete: if false;
+    }
   }
 }

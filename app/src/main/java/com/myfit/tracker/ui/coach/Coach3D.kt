@@ -104,6 +104,15 @@ object Coach3D {
      * and nutritionist's GLBs into memory, so opening their screens shows the 3D coach almost at once instead of a
      * frozen clip for several seconds. Also removes files of the retired male nutritionist.
      */
+    /** R35: download any coach model that isn't on disk yet — no engine, nothing loaded into memory. */
+    fun fetchMissing(c: Context, looks: List<String>) {
+        val app = c.applicationContext
+        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+            if (!enabled(app)) return@launch
+            looks.distinct().forEach { l -> if (!installed(app, l)) ensure(app, l) }
+        }
+    }
+
     fun prewarm(c: Context, looks: List<String>) {
         val app = c.applicationContext
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {

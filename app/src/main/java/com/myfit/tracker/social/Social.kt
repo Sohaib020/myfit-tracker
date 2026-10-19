@@ -376,6 +376,18 @@ class Social(private val c: AppContainer) {
             "at" to FieldValue.serverTimestamp())).await()
     }
 
+    /**
+     * R35 (Play AI-generated content policy): a report about an AI reply. Write-only collection `aiReports`
+     * (rules allow create with a fixed schema, never read). Works signed out too; uid is attached when signed in.
+     */
+    suspend fun reportAi(text: String, reason: String, where: String) {
+        if (!available) throw IllegalStateException("offline build")
+        db.collection("aiReports").add(mapOf(
+            "uid" to (auth.currentUser?.uid ?: ""), "reason" to reason.take(40), "where" to where.take(20),
+            "text" to text.take(2000), "app" to com.myfit.tracker.BuildConfig.VERSION_NAME, "at" to FieldValue.serverTimestamp(),
+        )).await()
+    }
+
     /** Blocks [uid]: removes the friendship and hides / declines their friend requests from now on. */
     suspend fun block(uid: String) {
         val me = auth.currentUser?.uid ?: throw IllegalStateException("Sign in first")

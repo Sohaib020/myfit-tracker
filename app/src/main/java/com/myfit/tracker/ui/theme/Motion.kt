@@ -15,6 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.animateFloat
 
 /**
  * R34 motion system — one place for every spring in the app so things feel like one product.
@@ -53,7 +57,7 @@ object Motion {
     private const val WINDOW_MS = 600L
 
     /** Call when a screen/tab/sheet opens: the next cards to compose cascade in. */
-    fun markScreen() { screenAt = SystemClock.uptimeMillis(); counter = 0 }
+    fun markScreen() { screenAt = SystemClock.uptimeMillis(); counter = 0; runCatching { Awake.poke() } }
 
     /** Order of this element in the current cascade, or -1 if the screen opened too long ago. */
     internal fun slot(): Int {
@@ -82,4 +86,44 @@ fun Modifier.entrance(index: Int? = null): Modifier {
         translationY = (1f - v) * rise.toPx()
         if (!Motion.lowEnd) { val s = 0.965f + 0.035f * v; scaleX = s; scaleY = s }
     }
+}
+
+/**
+ * R35 "awake" window: decorative loops (heart sweep, arena aurora, neon tiles…) run for 8 s after the last touch or
+ * screen change, then settle — so an idle screen stops redrawing every frame. Any touch wakes them again.
+ */
+object Awake {
+    private val _on = kotlinx.coroutines.flow.MutableStateFlow(true)
+    val on: kotlinx.coroutines.flow.StateFlow<Boolean> = _on
+    private var last = 0L
+    private var job: kotlinx.coroutines.Job? = null
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main.immediate + kotlinx.coroutines.SupervisorJob())
+    private const val WINDOW_MS = 8_000L
+
+    /** Main thread. Cheap to call on every pointer event: re-arms at most twice a second. */
+    fun poke() {
+        val now = SystemClock.uptimeMillis()
+        if (_on.value && now - last < 500) return
+        last = now
+        _on.value = true
+        job?.cancel()
+        job = scope.launch { delay(WINDOW_MS); _on.value = false }
+    }
+}
+
+@Composable
+fun rememberAwake(): Boolean {
+    val on by Awake.on.collectAsState()
+    return on && !Motion.appStill && !Motion.reduced
+}
+
+/** Like animateFloat, but only ticks while the screen is awake; otherwise it holds [rest] and requests no frames. */
+@Composable
+fun androidx.compose.animation.core.InfiniteTransition.awakeFloat(
+    initialValue: Float, targetValue: Float, animationSpec: androidx.compose.animation.core.InfiniteRepeatableSpec<Float>,
+    label: String = "FloatAnimation", rest: Float = initialValue,
+): androidx.compose.runtime.State<Float> {
+    val awake = rememberAwake()
+    val still = remember { androidx.compose.runtime.mutableFloatStateOf(rest) }
+    return if (awake) animateFloat(initialValue, targetValue, animationSpec, label) else still
 }

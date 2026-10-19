@@ -69,14 +69,13 @@ class MyFitApplication : Application() {
         com.myfit.tracker.reminders.ReminderScheduler.reschedule(this)
         runCatching { container.social.start() }
         container.write { runCatching { container.social.uploadNow() }; runCatching { container.friendsRepo.refresh() } }
+        container.write { com.myfit.tracker.ui.components.AiReports.flush(container) }   // R35: queued AI-reply reports
         if (!java.io.File(filesDir, "voice/" + com.myfit.tracker.ai.voice.VoicePack.MODEL + "/.complete").exists())
             com.myfit.tracker.ai.voice.VoicePackWorker.schedule(this)
         com.myfit.tracker.ai.FoodRecognizer.schedule(this)   // offline food recogniser, Wi-Fi only
         com.myfit.tracker.ai.ondevice.BrainWarmup.schedule(this)   // R21: offline brain first-start prep after install/update
-        // R23: warm the 3D coach engine + load the trainer/nutritionist models, so their screens don't start frozen
-        runCatching { val cp = com.myfit.tracker.domain.Coach.load(this); com.myfit.tracker.ui.coach.Coach3D.prewarm(this, listOf(cp.look.id, cp.nLook.id)) }
-        // R21: when Pip will answer from the phone (offline, or phone-brain mode), load it now so the first message is instant
-        if (!com.myfit.tracker.ai.Net.online(this) || com.myfit.tracker.ai.BrainMode.get(this) == com.myfit.tracker.ai.BrainMode.PHONE)
-            com.myfit.tracker.ai.ondevice.OnDeviceAi.get(this).llm.prewarm()
+        // R35: nothing heavy at launch any more — the 3D coach engine/models and the offline brain load on first use
+        // (Coach3D.shared() / llm on first message). Only fetch missing coach packs so the first open has them on disk.
+        runCatching { val cp = com.myfit.tracker.domain.Coach.load(this); com.myfit.tracker.ui.coach.Coach3D.fetchMissing(this, listOf(cp.look.id, cp.nLook.id)) }
     }
 }

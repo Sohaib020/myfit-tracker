@@ -10,7 +10,7 @@ plugins {
 // Online features (accounts, friends, leaderboards) need app/google-services.json, written by CI from a secret.
 // Without it the app still builds and simply hides those features.
 val socialEnabled = file("google-services.json").exists()
-if (socialEnabled) apply(plugin = "com.google.gms.google-services")
+if (socialEnabled) { apply(plugin = "com.google.gms.google-services"); apply(plugin = "com.google.firebase.crashlytics") }   // R35: crash + ANR reports
 
 android {
     namespace = "com.myfit.tracker"
@@ -116,12 +116,20 @@ android {
         // sherpa-onnx and ONNX Runtime both ship libonnxruntime.so — kept at the same API level (1.28.x), so either copy works
         jniLibs { pickFirsts += listOf("**/libc++_shared.so", "**/libonnxruntime.so") }
     }
+    // R35: exported Room schemas (app/schemas) are test assets for SchemaTest / future migration tests
+    sourceSets { getByName("test").assets.srcDir("$projectDir/schemas") }
     // MediaPipe memory-maps its .task models straight from the APK
     androidResources { noCompress += "task" }
     lint {
         checkReleaseBuilds = false
         abortOnError = false
     }
+}
+
+// R35: the sideloaded GitHub APK compresses its native libraries (89 MB of .so → ~34 MB, APK ~151 → ~96 MB).
+// Play/Galaxy builds keep them stored: the stores deliver per-device splits compressed already.
+androidComponents {
+    onVariants(selector().withFlavor("store" to "github")) { v -> v.packaging.jniLibs.useLegacyPackaging.set(true) }
 }
 
 ksp {
@@ -139,10 +147,11 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.material:material-icons-extended")   // used (Icons.Rounded.* in ~10 screens); R8 keeps only those icons
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")   // R35: installs src/main/baseline-prof.txt (AOT-compiled hot code)
     implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
@@ -151,7 +160,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-process:2.8.6")
-    implementation("androidx.navigation:navigation-compose:2.8.1")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     // on-device LLM (Gemma via LiteRT-LM; the model itself is an optional in-app download, never bundled)
@@ -173,7 +181,7 @@ dependencies {
     implementation("org.apache.commons:commons-compress:1.27.1")
     // Google code scanner: barcode scanning UI without a camera permission
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
-    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.zxing:core:3.5.3")   // invite QR codes; R8 trims it to the QR writer only
     // R21 real-time 3D coaches (capable phones only; GLBs download on demand)
     val filament = "1.56.0"
     implementation("com.google.android.filament:filament-android:$filament")
@@ -192,6 +200,7 @@ dependencies {
     // accounts, friends & leaderboards
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-crashlytics")   // R35: field crash/ANR reports (no-op without google-services.json)
     implementation("com.google.firebase:firebase-firestore")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
     implementation("androidx.credentials:credentials:1.3.0")
@@ -200,6 +209,8 @@ dependencies {
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("androidx.room:room-testing:2.6.1")   // R35: schema / migration test
+    testImplementation("androidx.test:core:1.6.1")
     testImplementation(composeBom)
     testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("org.robolectric:robolectric:4.14.1")
