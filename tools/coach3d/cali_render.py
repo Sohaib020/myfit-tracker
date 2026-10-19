@@ -94,6 +94,13 @@ def apply(p, offset=Vector()):
         lw = pw.inverted() @ dl[b]
         B = REST_Q[b]
         pb.rotation_quaternion = (B.inverted() @ lw @ B).normalized()
+    if HAND['mode'] == 'follow' and HAND.get('grip'):
+        # wrap the fingers round the bar (same curl as moves.fist, parent-relative)
+        import anim
+        for side, m in (('L', 1), ('R', -1)):
+            for bn, y in (('Fingers1', 80), ('Fingers2', 90), ('Fingers3', 70), ('Thumb1', 25), ('Thumb2', 40), ('Thumb3', 30)):
+                n = f'{bn}.{side}'
+                if n in arm.pose.bones: arm.pose.bones[n].rotation_quaternion = anim.to_local(arm, n, 0, y * m, 0)
     hb = arm.pose.bones['Hips']
     hb.location = REST_Q['Hips'].to_matrix().inverted() @ offset
     bpy.context.view_layer.update()
@@ -169,8 +176,12 @@ def props(pr, floor_z):
     metal = mat('metal', (0.55, 0.57, 0.62), 0.85, 0.28); matte = mat('matte', (0.80, 0.81, 0.84), 0.0, 0.7)
     out = []
     wr, wl = J('Hand.R'), J('Hand.L')
+    def palm(side):
+        pb = arm.pose.bones[f'Hand.{side}']; h, t = MW @ pb.head, MW @ pb.tail
+        return h + (t - h) * 0.75
     if 'bar' in pr:
-        y, z = (wr.y + wl.y) / 2, (wr.z + wl.z) / 2 + 0.035
+        pr_, pl_ = palm('R'), palm('L')
+        y, z = (pr_.y + pl_.y) / 2, (pr_.z + pl_.z) / 2
         out.append(cyl(Vector((-0.75, y, z)), Vector((0.75, y, z)), 0.022, metal))
     if 'rings' in pr:
         for w in (wr, wl):
@@ -239,6 +250,7 @@ for c, st in steps:
     poses = [D['poses'][k] for k in st['p']]
     pr = st['pr']
     hold = poses[0] == poses[-1]
+    HAND['grip'] = any(x in pr for x in ('bar', 'rings', 'pbars'))
     HAND['mode'] = 'wall' if 'wall_f' in pr and c['id'] == 'push' else 'follow' if any(x in pr for x in ('bar', 'rings', 'pbars', 'plt')) else 'floor'
     an = anchor_name(pr, poses[0])
     if an != 'WR1' and HAND['mode'] == 'floor' and c['id'] not in ('core', 'hand', 'push', 'dip'): HAND['mode'] = 'follow'   # free hands hang naturally

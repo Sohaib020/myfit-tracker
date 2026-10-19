@@ -32,7 +32,7 @@ import java.util.zip.ZipInputStream
  */
 object CaliPacks {
     private const val BASE = "https://github.com/Sohaib020/myfit-tracker/releases/download/cali3d-v1"
-    private const val VER = "1"
+    private const val VER = "2"   // R33: grips + fixed rows
     val installed = MutableStateFlow(0)
     val progress = MutableStateFlow<Float?>(null)
     private val running = java.util.Collections.synchronizedSet(HashSet<String>())
