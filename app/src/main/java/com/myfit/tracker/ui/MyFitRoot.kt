@@ -378,6 +378,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.Champion -> com.myfit.tracker.ui.game.ChampionScreen(container)
                         Overlay.Archive -> com.myfit.tracker.ui.exercises.ArchiveScreen(container)
                         Overlay.Me -> MeScreen(container) { sheet = it }
+                        is Overlay.SettingsPage -> com.myfit.tracker.ui.settings.SettingsPage(container, o.id)
                         Overlay.ArrangeDash -> com.myfit.tracker.ui.dashboard.ArrangeDashScreen(container)
                         Overlay.Records -> com.myfit.tracker.ui.exercises.RecordsScreen(container)
                         Overlay.Social -> com.myfit.tracker.ui.social.SocialScreen(container)

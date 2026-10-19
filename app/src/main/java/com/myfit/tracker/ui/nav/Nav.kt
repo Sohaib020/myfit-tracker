@@ -57,6 +57,8 @@ sealed interface Overlay {
     data object Nutritionist : Overlay
     /** Pro trainer home. */
     data object CoachHub : Overlay
+    /** R33 one settings category page. */
+    data class SettingsPage(val id: String) : Overlay
     /** R31 calisthenics skill tree. */
     data object Calisthenics : Overlay
     data class PickExercises(val templateId: Long? = null, val workoutId: Long? = null) : Overlay
