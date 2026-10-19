@@ -13,6 +13,7 @@ import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -362,6 +363,7 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
     var liveBpm by remember { mutableStateOf<Int?>(null) }
     var wave by remember { mutableStateOf(FloatArray(0)) }
     val beat = remember { Animatable(1f) }
+    var beats by remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
     DisposableEffect(Unit) {
         analysis.setAnalyzer(exec) { proxy ->
@@ -438,6 +440,7 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
                         val endTime = t.first() + f.size / Ppg.FS
                         if (pkTime > lastBeat + 0.3 && endTime - pkTime < 1.0) {
                             lastBeat = pkTime
+                            beats++
                             scope.launch { beat.snapTo(1.22f); beat.animateTo(1f, tween(320)) }
                         }
                     }
@@ -453,26 +456,20 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
     }
 
     GlassCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val shown by androidx.compose.animation.core.animateFloatAsState(progress, androidx.compose.animation.core.tween(240, easing = androidx.compose.animation.core.LinearEasing), label = "ring")
-            ProgressRing(shown, th.danger, size = 150.dp, stroke = 10.dp) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Duo.Favorite, null, tint = th.danger, modifier = Modifier.size(44.dp).scale(beat.value))
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        liveBpm?.let { "~$it" } ?: "—", style = FitType.title,
-                        color = if (liveBpm != null) th.text else th.textFaint,
-                    )
-                    Text("bpm", style = FitType.caption, color = th.textDim)
-                }
+        // R32: a ripple sent out from the heart on every detected beat (soft ambient ripples while it finds your pulse)
+        val shown by androidx.compose.animation.core.animateFloatAsState(progress, androidx.compose.animation.core.tween(240, easing = androidx.compose.animation.core.LinearEasing), label = "ring")
+        Box(Modifier.fillMaxWidth().height(250.dp), contentAlignment = Alignment.Center) {
+            HeartRipples(beats, finger && !cameraError, shown, th.danger, Modifier.fillMaxSize())
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Duo.Favorite, null, tint = th.danger, modifier = Modifier.size(54.dp).scale(beat.value))
+                Spacer(Modifier.height(2.dp))
+                Text(liveBpm?.let { "$it" } ?: "—", style = FitType.metric, color = if (liveBpm != null) th.text else th.textFaint)
+                Text(if (liveBpm != null) "bpm · live estimate" else "bpm", style = FitType.caption, color = th.textDim)
             }
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    Modifier.size(84.dp).clip(CircleShape).border(2.dp, if (finger) th.success else th.textFaint, CircleShape),
-                ) { AndroidView({ preview }, Modifier.fillMaxSize()) }
-                Spacer(Modifier.height(6.dp))
-                Caption(if (finger) "Finger detected" else "No finger yet", color = if (finger) th.success else th.textDim)
+            Column(Modifier.align(Alignment.TopEnd), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.size(54.dp).clip(CircleShape).border(2.dp, if (finger) th.success else th.textFaint, CircleShape)) { AndroidView({ preview }, Modifier.fillMaxSize()) }
+                Spacer(Modifier.height(3.dp))
+                Caption(if (finger) "Finger on" else "No finger", color = if (finger) th.success else th.textDim)
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -509,5 +506,62 @@ private fun Waveform(values: FloatArray, color: Color, modifier: Modifier) {
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         drawPath(path, color, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+    }
+}
+
+
+/**
+ * R32 measuring visual: expanding, fading rings born on each heartbeat, a breathing glow, and a thin progress arc
+ * with a bright head. Ambient ripples every ~1.4 s keep it alive until the first beat is found.
+ */
+@Composable
+private fun HeartRipples(beats: Int, active: Boolean, progress: Float, color: Color, modifier: Modifier) {
+    val ripples = remember { androidx.compose.runtime.mutableStateListOf<Animatable<Float, androidx.compose.animation.core.AnimationVector1D>>() }
+    val scope = rememberCoroutineScope()
+    fun emit(ms: Int) {
+        val a = Animatable(0f); ripples += a
+        scope.launch { a.animateTo(1f, tween(ms, easing = androidx.compose.animation.core.LinearOutSlowInEasing)); ripples.remove(a) }
+    }
+    LaunchedEffect(beats) { if (beats > 0) emit(1700) }
+    LaunchedEffect(active, beats > 0) {
+        if (beats > 0) return@LaunchedEffect
+        while (true) { emit(if (active) 2000 else 2600); delay(if (active) 1100 else 1600) }
+    }
+    val inf = androidx.compose.animation.core.rememberInfiniteTransition(label = "hr")
+    val breathe by inf.animateFloat(0.85f, 1.1f, androidx.compose.animation.core.infiniteRepeatable(tween(1600), androidx.compose.animation.core.RepeatMode.Reverse), label = "b")
+    val spin by inf.animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(tween(6000, easing = androidx.compose.animation.core.LinearEasing)), label = "s")
+    androidx.compose.foundation.Canvas(modifier) {
+        val c = center
+        val maxR = size.minDimension / 2f
+        val core = maxR * 0.34f
+        // breathing glow behind the heart
+        drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(color.copy(alpha = 0.32f), color.copy(alpha = 0.08f), Color.Transparent), c, core * 1.9f * breathe), core * 1.9f * breathe, c)
+        // ripples
+        ripples.forEach { r ->
+            val t = r.value
+            val rad = core + (maxR - core) * t
+            val fade = (1f - t) * (1f - t)
+            drawCircle(color.copy(alpha = 0.10f * fade), rad, c)
+            drawCircle(color.copy(alpha = 0.75f * fade), rad, c, style = androidx.compose.ui.graphics.drawscope.Stroke(width = (6f * (1f - t) + 1.2f) * density))
+        }
+        // inner disc
+        drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(Color.White.copy(alpha = 0.10f), color.copy(alpha = 0.18f)), c, core), core, c)
+        drawCircle(color.copy(alpha = 0.45f), core, c, style = androidx.compose.ui.graphics.drawscope.Stroke(1.5f * density))
+        // progress arc + glowing head
+        val pr = core + 14f * density
+        val tl = androidx.compose.ui.geometry.Offset(c.x - pr, c.y - pr); val sz = androidx.compose.ui.geometry.Size(pr * 2, pr * 2)
+        drawArc(color.copy(alpha = 0.15f), 0f, 360f, false, tl, sz, style = androidx.compose.ui.graphics.drawscope.Stroke(3f * density))
+        if (progress > 0f) {
+            drawArc(androidx.compose.ui.graphics.Brush.sweepGradient(listOf(color.copy(alpha = 0.2f), color, Color.White), c), -90f, 360f * progress, false, tl, sz,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(4f * density, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+            val ang = Math.toRadians((-90f + 360f * progress).toDouble())
+            val hp = androidx.compose.ui.geometry.Offset(c.x + pr * kotlin.math.cos(ang).toFloat(), c.y + pr * kotlin.math.sin(ang).toFloat())
+            drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(Color.White, color.copy(alpha = 0.6f), Color.Transparent), hp, 10f * density), 10f * density, hp)
+        } else {
+            // idle shimmer orbit while waiting for the finger
+            val ang = Math.toRadians(spin.toDouble())
+            val hp = androidx.compose.ui.geometry.Offset(c.x + pr * kotlin.math.cos(ang).toFloat(), c.y + pr * kotlin.math.sin(ang).toFloat())
+            drawCircle(color.copy(alpha = 0.7f), 3.5f * density, hp)
+        }
     }
 }

@@ -58,25 +58,10 @@ private const val SMALL_H = 196
 @Composable
 fun ArenaHeroTiles(l: Level, partner: Mascot, onBuddy: () -> Unit, onChamp: () -> Unit,
                    buddy: @Composable (small: Boolean, l: Level, onLong: () -> Unit, onClick: () -> Unit) -> Unit) {
-    val ctx = LocalContext.current
-    val haptic = LocalHapticFeedback.current
-    var bigBuddy by remember { mutableStateOf(TilePrefs.large(ctx, "buddy")) }
-    var bigChamp by remember { mutableStateOf(TilePrefs.large(ctx, "champ")) }
-    val toggleB = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); bigBuddy = !bigBuddy; TilePrefs.set(ctx, "buddy", bigBuddy) }
-    val toggleC = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); bigChamp = !bigChamp; TilePrefs.set(ctx, "champ", bigChamp) }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        when {
-            !bigBuddy && !bigChamp -> Row(Modifier.fillMaxWidth().height(SMALL_H.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.weight(1f).fillMaxHeight()) { buddy(true, l, toggleB, onBuddy) }
-                Box(Modifier.weight(1f).fillMaxHeight()) { ChampionTile(false, toggleC, onChamp) }
-            }
-            else -> {
-                if (bigBuddy) buddy(false, l, toggleB, onBuddy)
-                else Row(Modifier.fillMaxWidth().height(SMALL_H.dp)) { Box(Modifier.weight(1f).fillMaxHeight()) { buddy(true, l, toggleB, onBuddy) }; Spacer(Modifier.weight(1f)) }
-                if (bigChamp) Box(Modifier.fillMaxWidth().height(220.dp)) { ChampionTile(true, toggleC, onChamp) }
-                else Row(Modifier.fillMaxWidth().height(SMALL_H.dp)) { Box(Modifier.weight(1f).fillMaxHeight()) { ChampionTile(false, toggleC, onChamp) }; Spacer(Modifier.weight(1f)) }
-            }
-        }
+    // R32: both tiles always small, side by side (no resizing)
+    Row(Modifier.fillMaxWidth().height(SMALL_H.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.weight(1f).fillMaxHeight()) { buddy(true, l, {}, onBuddy) }
+        Box(Modifier.weight(1f).fillMaxHeight()) { ChampionTile(false, {}, onChamp) }
     }
 }
 

@@ -1,5 +1,7 @@
 package com.myfit.tracker.ui.game
 
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.systemBarsPadding
 import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.core.Animatable
@@ -322,46 +324,52 @@ fun BattleDialog(container: AppContainer, me: Fighter, them: Fighter, onClose: (
         }
     }
     val done = stars != null
-    Dialog(onDismissRequest = { if (done) onClose() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    // R32: edge-to-edge dialog; result + buttons are pinned to the bottom and the middle shrinks/scrolls, so nothing is ever off screen
+    Dialog(onDismissRequest = { if (done) onClose() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF07080D), Color(0xFF141826))))) {
-            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp)) {
+            Column(Modifier.fillMaxSize().systemBarsPadding().padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 14.dp)) {
                 Text("CHAMPION BATTLE", style = FitType.overline, color = Color.White.copy(alpha = 0.6f), modifier = Modifier.align(Alignment.CenterHorizontally))
-                Spacer(Modifier.height(8.dp))
-                // R30: the fighters take whatever height is left, so the result and buttons always fit on screen
-                Row(Modifier.fillMaxWidth().weight(1f).heightIn(min = 150.dp, max = 300.dp)) {
-                    val winPose = if (me.look.tier == Tier.STREET) "celebrate" else "victory"
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        if (done) ChampStage(me.look, if (result.won) winPose else "sad", Modifier.fillMaxWidth().weight(1f))
-                        else ChampStage(me.look, "idle", Modifier.fillMaxWidth().weight(1f))
-                        Text(me.look.label, style = FitType.label, color = me.look.color); Caption("You · ${me.rating}", color = Color.White.copy(alpha = 0.7f))
-                    }
-                    Text("VS", style = FitType.hero.copy(fontSize = 34.sp), color = Color.White, modifier = Modifier.align(Alignment.CenterVertically))
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        com.myfit.tracker.ui.coach.OnPlatform(them.look.color, Modifier.fillMaxWidth().weight(1f)) { ChampStill(them.look, Modifier.fillMaxSize().graphicsLayer { scaleX = -1f }, full = true) }
-                        Text(them.look.label, style = FitType.label, color = them.look.color); Caption("${them.name} · ${them.rating}", color = Color.White.copy(alpha = 0.7f))
+                Spacer(Modifier.height(6.dp))
+                androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+                    // fighters get what the three rounds don't need (each round ≈ 62 dp), between 110 and 300 dp
+                    val fighterH = (maxHeight - 3 * 62.dp - 12.dp).coerceIn(110.dp, 300.dp)
+                    Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                        Row(Modifier.fillMaxWidth().height(fighterH)) {
+                            val winPose = if (me.look.tier == Tier.STREET) "celebrate" else "victory"
+                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                                if (done) ChampStage(me.look, if (result.won) winPose else "sad", Modifier.fillMaxWidth().weight(1f))
+                                else ChampStage(me.look, "idle", Modifier.fillMaxWidth().weight(1f))
+                                Text(me.look.label, style = FitType.label, color = me.look.color, maxLines = 1); Caption("You · ${me.rating}", color = Color.White.copy(alpha = 0.7f))
+                            }
+                            Text("VS", style = FitType.hero.copy(fontSize = 30.sp), color = Color.White, modifier = Modifier.align(Alignment.CenterVertically))
+                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                                com.myfit.tracker.ui.coach.OnPlatform(them.look.color, Modifier.fillMaxWidth().weight(1f)) { ChampStill(them.look, Modifier.fillMaxSize().graphicsLayer { scaleX = -1f }, full = true) }
+                                Text(them.look.label, style = FitType.label, color = them.look.color, maxLines = 1); Caption("${them.name} · ${them.rating}", color = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(horizontal = 4.dp))
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        result.rounds.take(shown).forEachIndexed { i, r ->
+                            Column(Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = 0.06f)).padding(horizontal = 12.dp, vertical = 8.dp)) {
+                                Row { Text("Round ${i + 1} · ${r.stat.label}", style = FitType.label, color = Color.White, modifier = Modifier.weight(1f))
+                                    Text(if (r.won) "You win" else "${them.look.label} wins", style = FitType.label, color = if (r.won) Color(0xFF7CF7D4) else Color(0xFFFF8A8A)) }
+                                Spacer(Modifier.height(4.dp))
+                                BattleBar(bars[i].first.value, me.look.color, r.mine)
+                                Spacer(Modifier.height(3.dp))
+                                BattleBar(bars[i].second.value, them.look.color, r.theirs)
+                            }
+                        }
                     }
                 }
-                Spacer(Modifier.height(14.dp))
-                result.rounds.take(shown).forEachIndexed { i, r ->
-                    Column(Modifier.fillMaxWidth().padding(vertical = 5.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.06f)).padding(12.dp)) {
-                        Row { Text("Round ${i + 1} · ${r.stat.label}", style = FitType.label, color = Color.White, modifier = Modifier.weight(1f))
-                            Text(if (r.won) "You win" else "${them.look.label} wins", style = FitType.label, color = if (r.won) Color(0xFF7CF7D4) else Color(0xFFFF8A8A)) }
-                        Spacer(Modifier.height(6.dp))
-                        BattleBar(bars[i].first.value, me.look.color, r.mine)
-                        Spacer(Modifier.height(4.dp))
-                        BattleBar(bars[i].second.value, them.look.color, r.theirs)
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
                 if (done) {
-                    Text(if (result.won) "VICTORY ${result.score}" else "DEFEAT ${result.score}", style = FitType.hero.copy(fontSize = 40.sp),
+                    Spacer(Modifier.height(8.dp))
+                    Text(if (result.won) "VICTORY ${result.score}" else "DEFEAT ${result.score}", style = FitType.hero.copy(fontSize = 34.sp),
                         color = if (result.won) Color(0xFF7CF7D4) else Color(0xFFFF8A8A), modifier = Modifier.align(Alignment.CenterHorizontally))
                     Caption(when {
                         result.won && (stars ?: 0) > 0 -> "+★$stars earned"
                         result.won -> "No stars this time (daily limit reached) — the win still counts"
                         else -> "Raise ${result.rounds.filter { !it.won }.joinToString(" and ") { it.stat.label }} this week and come back"
                     }, color = Color.White.copy(alpha = 0.8f), modifier = Modifier.align(Alignment.CenterHorizontally))
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         GlassButton("Share", { share = true }, Modifier.weight(1f), icon = Duo.Send, height = 46.dp)
                         AccentButton("Done", onClose, Modifier.weight(1f), height = 46.dp)
