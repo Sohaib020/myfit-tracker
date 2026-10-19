@@ -291,7 +291,10 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
         val win = com.myfit.tracker.ui.components.LocalWindowInfo.current
         Box(Modifier.fillMaxSize()) {
           // wide screens (foldables, tablets): content sits in a readable centred column; the theme fills the screen
+          // R34 depth: the tabs recede a touch while a screen opens over them, and come forward as it closes (follows the back gesture)
+          val recede by androidx.compose.animation.core.animateFloatAsState(if (top != null) 1f else 0f, com.myfit.tracker.ui.theme.Motion.smooth(), label = "recede")
           Box(Modifier.align(Alignment.TopCenter).then(win.column()).fillMaxSize()
+              .graphicsLayer { val k = recede * (1f - backP.value); if (k > 0.001f) { val sc = 1f - 0.05f * k; scaleX = sc; scaleY = sc } }
               .nestedScroll(chromeState.connection)) {
             AnimatedContent(
                 targetState = tab,
@@ -373,7 +376,7 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 transitionSpec = {
                     // the new screen grows out of the tapped card (GrowFrom); the old one shrinks away
                     androidx.compose.animation.EnterTransition.None
-                        .togetherWith(fadeOut(tween(200)) + scaleOut(tween(220), targetScale = 0.92f))
+                        .togetherWith(fadeOut(tween(190)) + scaleOut(spring(1f, 520f), targetScale = 0.9f))
                 },
                 label = "overlay",
             ) { o ->

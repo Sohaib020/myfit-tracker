@@ -1,6 +1,9 @@
 package com.myfit.tracker.ui.plan
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
@@ -560,7 +563,7 @@ fun TrendChart(vals: List<Double?>, target: Double?, color: Color, kind: ChartKi
             val path = androidx.compose.ui.graphics.Path()
             pts.forEachIndexed { i, p -> if (i == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y) }
             val clipW = size.width * g
-            androidx.compose.ui.graphics.drawscope.clipRect(right = clipW) {
+            clipRect(right = clipW) {
                 drawPath(path, color, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
                 pts.forEach { drawCircle(color, 3.5.dp.toPx(), it); drawCircle(th.bgBottom, 1.5.dp.toPx(), it) }
             }
