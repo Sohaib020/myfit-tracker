@@ -416,3 +416,15 @@ Status: building.
   medical disclaimers (BP, glucose, cycle); GitHub→Play move notice; pre-launch report fixes after first upload.
 - Play: personal dev account (not yet created) → closed test 12 testers × 14 days (prepare tester invite kit); audience 18+.
 - Flow: owner merges PR #30 first; each round = its own PR from main.
+
+## Round 35 (20 Oct) — branch agent/r35 — DONE (CI green)
+- github flavor compresses jniLibs (androidComponents onVariants) → APK ≈ 91 MB (was 151).
+- onUiStart: no Coach3D prewarm / LLM prewarm; only Coach3D.fetchMissing (download). LLM still prewarms when Pip chat / food vision opens.
+- CoachFigure(idleOnce) used by CoachCard: plays once, tap coach to replay; breathing transition only for stills.
+- Motion.Awake + InfiniteTransition.awakeFloat: decorative loops (VitalsHero, Arena hero/tiles, Bento, JourneyTrack) run 8 s after last touch/screen change; root pointerInput pokes.
+- profileinstaller + src/main/baseline-prof.txt (broad app rules). Crashlytics plugin+SDK (only when google-services.json present).
+- navigation-compose removed. KEPT: Guava (CameraX/WorkManager ListenableFuture), material-icons-extended (Icons.Rounded used in ~10 screens), ZXing (invite QR) — audit claim was wrong.
+- AI reply reports: ui/components/AiReport.kt (sheet + local queue, flush on start) → Firestore aiReports (rule added in firestore.rules — OWNER MUST DEPLOY RULES). Links on Pip bubbles (online/on-device) + Nutritionist chat.
+- HC: READ_HEALTH_DATA_HISTORY removed; sync 30 days. Model download: plain WorkManager + notify(), FGS service/permissions stripped.
+- PipBrain.healthNote(halal) — no runBlocking.
+- Tests: DayPlanTest (7 rules), SchemaTest (Robolectric; app/schemas/…/4.json committed, debug assets). Backup-restore test NOT done (needs DataStore/file fakes) → later.
