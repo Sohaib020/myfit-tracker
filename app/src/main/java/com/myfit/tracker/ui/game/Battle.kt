@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -332,7 +333,7 @@ fun BattleDialog(container: AppContainer, me: Fighter, them: Fighter, onClose: (
                 Spacer(Modifier.height(6.dp))
                 androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
                     // fighters get what the three rounds don't need (each round ≈ 62 dp), between 110 and 300 dp
-                    val fighterH = (maxHeight - 3 * 62.dp - 12.dp).coerceIn(110.dp, 300.dp)
+                    val fighterH = (maxHeight - 198.dp).coerceIn(110.dp, 300.dp)
                     Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState())) {
                         Row(Modifier.fillMaxWidth().height(fighterH)) {
                             val winPose = if (me.look.tier == Tier.STREET) "celebrate" else "victory"
