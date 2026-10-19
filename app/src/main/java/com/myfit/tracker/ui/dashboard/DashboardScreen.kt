@@ -392,7 +392,7 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
         }
         DashCard.SNAP -> if (small) SnapSmall() else SnapHeroCard()
         DashCard.WORKOUT -> if (small) WorkoutSmall(state.workout, container) { goTab(Tabs.TRAIN) } else WorkoutCard(state.workout, container)
-        DashCard.RINGS -> if (small) RingsSmall(state) { nav.push(Overlay.Today) } else RingsCard(state, open, container)
+        DashCard.RINGS -> if (small) RingsSmall(state) { nav.push(Overlay.Today) } else RingsCard(state, container, open)
         DashCard.NUTRITION -> if (small) NutritionSmall(container) { goTab(Tabs.FOOD) } else FoodHydrationCard(state, container, open) { goTab(Tabs.FOOD) }
         DashCard.SOCIAL -> if (small) CompeteSmall(container) { goTab(Tabs.ARENA) } else com.myfit.tracker.ui.social.FriendsHero(container) { goTab(Tabs.ARENA) }
         DashCard.HYDRATION -> HydrationTile(state, container, open, wide = !small)
@@ -664,7 +664,7 @@ private fun TripleRings(s: DashState, outer: Dp) {
 }
 
 @Composable
-internal fun RingsCard(s: DashState, open: (Sheet) -> Unit, container: AppContainer) {
+internal fun RingsCard(s: DashState, container: AppContainer? = null, open: (Sheet) -> Unit) {
     val th = LocalFitTheme.current
     val units = LocalSettings.current.units
     val nav = LocalNav.current
@@ -689,7 +689,7 @@ internal fun RingsCard(s: DashState, open: (Sheet) -> Unit, container: AppContai
         }
         Spacer(Modifier.height(12.dp))
         // R34: Plan my day lives inside Today's progress (the check-in moved to the Mindfulness card's Mood button)
-        com.myfit.tracker.ui.plan.PlanStrip(container, rememberDashLive(s, container))
+        if (container != null) com.myfit.tracker.ui.plan.PlanStrip(container, rememberDashLive(s, container))
     }
 }
 
