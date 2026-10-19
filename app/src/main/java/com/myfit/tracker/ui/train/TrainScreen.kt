@@ -243,16 +243,8 @@ private fun TrainBento(
                 }
             }
         }
-        com.myfit.tracker.ui.components.NeonTile(N.Amber, Modifier.fillMaxWidth().height(112.dp), onCoach, glowAt = Alignment.BottomEnd, phase = 0.15f) {
-            Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    com.myfit.tracker.ui.components.TileLabel("Your trainer")
-                    Text(coach.name, style = FitType.title, color = th.text, maxLines = 1)
-                    Caption("Camera rep counting · form score · voice coaching")
-                }
-                com.myfit.tracker.ui.coach.CoachPortrait(coach.look.id, speaking = false, size = 76.dp)
-            }
-        }
+        // R33: full-bleed trainer card
+        com.myfit.tracker.ui.coach.CoachCard(com.myfit.tracker.ui.coach.CoachRole.TRAINER, onCoach)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             com.myfit.tracker.ui.components.NeonTile(N.Violet, Modifier.weight(1f).height(132.dp), onPlans, phase = 0.4f) {
                 Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {

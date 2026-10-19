@@ -84,7 +84,7 @@ fun CoachPortrait(look: String, speaking: Boolean, size: Dp, modifier: Modifier 
             .border(2.dp + 3.dp * amp, th.accentBright.copy(alpha = if (speaking) 0.95f else 0.45f), CircleShape),
         contentAlignment = Alignment.Center,
     ) {
-        if (img != null) Image(img, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = Alignment.TopCenter)
+        if (img != null) Image(img, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = Alignment.Center)   // R33: *_face.webp crops are framed on the face
         else Icon(Duo.Person, null, tint = th.accentBright, modifier = Modifier.size(size * 0.5f))
     }
 }
