@@ -1,6 +1,6 @@
 name: Food icons
 # Background icon generation (FLUX.1-schnell on CPU runners). Push to branch foodicon-run to start.
-# Generates the ids in tools/foodicon/only.txt; results land on branch foodicon-assets-r7 (icons + contact sheets).
+# Generates the ids in tools/foodicon/only.txt; results land on branch foodicon-assets-r8 (icons + contact sheets).
 on:
   push:
     branches: [ foodicon-run ]
@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
 env:
-  NSH: 20
+  NSH: 8
   BUDGET_MIN: '320'
 jobs:
   setup:
@@ -31,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -56,9 +56,9 @@ jobs:
         with: { pattern: 'raw-*', path: raw, merge-multiple: true }
       - run: pip install "rembg[cpu]" pillow || pip install rembg onnxruntime pillow
       - run: ls raw | wc -l; python3 tools/foodicon/post.py
-      - name: Save to branch foodicon-assets-r7
+      - name: Save to branch foodicon-assets-r8
         run: |
           python3 -c "import os;ids=[l.strip() for l in open('tools/foodicon/only.txt') if l.strip() and not l.startswith('#')];m=[i for i in ids if not os.path.exists('out/foodicon/'+i+'.webp')];print('MISSING',len(m),m);open('out/missing.txt','w').write(chr(10).join(m))"
           mkdir -p pub/foodicon pub/sheets pub/rawjpg && cp out/foodicon/*.webp pub/foodicon/ && cp out/sheet_*.jpg pub/sheets/ && cp out/rawjpg/*.jpg pub/rawjpg/ && cp out/missing.txt pub/
-          cd pub && git init -q && git checkout -q -b foodicon-assets-r7 && git add -A
-          git -c user.name=ci -c user.email=ci@x commit -qm "Food icons r7 run ${{ github.run_number }}" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" foodicon-assets-r7
+          cd pub && git init -q && git checkout -q -b foodicon-assets-r8 && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "Food icons r8 run ${{ github.run_number }}" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" foodicon-assets-r8
