@@ -398,3 +398,21 @@ Status: building.
 - Audit doc written (Claude Docs: 'MyFit Tracker — Code, Performance & Play Store Audit (R34)').
 - Proposed next (needs owner OK): compress jniLibs in github flavor (151→~96 MB), stop Coach3D/LLM prewarm at start,
   pause coach idle video, baseline profile, AI 'Report reply' button (Play blocker), Crashlytics.
+
+## Owner decisions after the R34 audit (20 Oct) — plan for R35–R38
+- R35 speed & stability + Play blockers: compress jniLibs (github flavor); Coach3D/LLM load on first use only; coach idle video plays once, tap to replay;
+  decorative infinite animations pause after ~8 s (resume on scroll/tap); Baseline Profile; Firebase Crashlytics; remove navigation-compose, Guava,
+  material-icons-extended, ZXing (own QR drawer); core logic tests (plan engine, calcs, migrations, backup restore); AI "Report this reply" → Firestore;
+  HC: keep all 33 perms + justify all, keep READ_HEALTH_DATA_IN_BACKGROUND, drop READ_HEALTH_DATA_HISTORY; model download → user-initiated
+  WorkManager (no dataSync FGS); fix runBlocking in PipBrain.healthNote.
+- R36 security & cost: optional backup password (AES-GCM + PBKDF2); Firebase App Check (Play Integrity, GitHub-APK fallback);
+  cycle/glucose HC writes opt-in per type, default off; toggle to hide Google photo on public profile + disclose;
+  AI proxy = FREE TIERS ONLY (Gemini/Groq/Mistral) + hard global daily stop, fallback offline brain / own key, never billed; disclose Gemini free-tier training clause.
+  Monetisation: decide later (rewarded ads stay).
+- R37 features: morning plan notification at wake time; Plan my day widget; CSV/PDF export of all logs; recipe builder;
+  write workouts & meals to Health Connect (opt-in); accessibility pass (140 icons, TalkBack, large font).
+- R38: extract all UI strings to strings.xml (Urdu translation later round); full Galaxy Watch workout tracking; store listing (descriptions,
+  feature graphic, 8 screenshots); Console drafts: Data safety, Health apps declaration, account-deletion web page, content rating + location text;
+  medical disclaimers (BP, glucose, cycle); GitHub→Play move notice; pre-launch report fixes after first upload.
+- Play: personal dev account (not yet created) → closed test 12 testers × 14 days (prepare tester invite kit); audience 18+.
+- Flow: owner merges PR #30 first; each round = its own PR from main.
