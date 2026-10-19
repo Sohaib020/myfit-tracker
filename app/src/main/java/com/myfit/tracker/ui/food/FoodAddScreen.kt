@@ -66,6 +66,8 @@ import com.myfit.tracker.ui.theme.LocalFitTheme
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+private const val REGION_CAT = "__region__"
+
 /** Add food: search the food list, scan a barcode, or log a saved meal. tab 0 = search, 1 = barcode, 2 = saved. */
 /** Foods you've starred for quick logging (kept on the phone; included in backups). */
 object FoodFavs {
@@ -100,7 +102,10 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
     var query by remember { mutableStateOf("") }
     var cat by remember { mutableStateOf<String?>(null) }
     val results by remember(query) { container.nutritionRepo.search(query) }.collectAsState(initial = emptyList())
-    val catFoods by remember(cat) { cat?.let { container.nutritionRepo.inCategory(it) } ?: kotlinx.coroutines.flow.flowOf(emptyList()) }.collectAsState(initial = emptyList())
+    val region = remember { com.myfit.tracker.domain.FoodRegion.get(ctx) }
+    val catFoods by remember(cat) {
+        when (val c = cat) { null -> kotlinx.coroutines.flow.flowOf(emptyList()); REGION_CAT -> container.nutritionRepo.inRegion(region.id); else -> container.nutritionRepo.inCategory(c) }
+    }.collectAsState(initial = emptyList())
     val recent by container.nutritionRepo.recent.collectAsState(initial = emptyList())
     val saved by container.nutritionRepo.savedMeals.collectAsState(initial = emptyList())
     val savedSum by container.nutritionRepo.savedSummaries.collectAsState(initial = emptyList())
@@ -172,11 +177,12 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
             }
             busy?.let { b -> item { Caption(b, Modifier.padding(horizontal = 4.dp)) } }
             if (tab == 0) {
-                item { GlassSearchField(query, { query = it }, "Search nihari, kadhi pakora, zinger, roti…") }
+                item { GlassSearchField(query, { query = it }, region.hint) }
                 if (query.isBlank()) item {
                     val cs = androidx.compose.foundation.lazy.rememberLazyListState()
                     LazyRow(state = cs, modifier = Modifier.fadeEdges(cs), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         item { GlassChip("Recent", cat == null, { cat = null }) }
+                        item { GlassChip("${region.flag} Popular in ${region.short}", cat == REGION_CAT, { cat = REGION_CAT }) }
                         items(container.nutritionRepo.categories) { c -> GlassChip(c, cat == c, { cat = c }) }
                     }
                 }
@@ -190,7 +196,7 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
                     cat != null -> catFoods
                     else -> recent.ifEmpty { results }
                 }
-                item { Text(when { query.isNotBlank() -> "RESULTS"; cat != null -> cat!!.uppercase() + " · ${list.size}"; recent.isNotEmpty() -> "RECENT"; else -> "FOODS" }, style = FitType.overline, color = th.textDim) }
+                item { Text(when { query.isNotBlank() -> "RESULTS"; cat == REGION_CAT -> "POPULAR IN ${region.short.uppercase()} · ${list.size}"; cat != null -> cat!!.uppercase() + " · ${list.size}"; recent.isNotEmpty() -> "RECENT"; else -> "FOODS" }, style = FitType.overline, color = th.textDim) }
                 // foods that don't suit your health profile are hidden (or shown with a warning if you choose)
                 val shown = if (showUnsuitable) list else list.filter { container.nutritionRepo.judge(it, muslim).verdict != com.myfit.tracker.domain.HealthProfile.Verdict.AVOID }
                 items(shown, key = { "f" + it.id }) { f -> FoodRow(f, container.nutritionRepo.meta(f)?.photo, f.id in favIds, { toggleFav(f) }, container.nutritionRepo.judge(f, muslim)) { picked = f } }
