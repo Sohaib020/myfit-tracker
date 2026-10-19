@@ -326,7 +326,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
                 if (small && (c == DashCard.RINGS || c == DashCard.NUTRITION)) item(key = keyOf(c) + "_b", span = half) {
                     Box(Modifier.animateItem().movable(c)) {
                         Box(Modifier.fillMaxWidth().height(TileHeight), propagateMinConstraints = true) {
-                            if (c == DashCard.RINGS) CheckInTile(state) { open(Sheet.CheckIn()) }
+                            if (c == DashCard.RINGS) com.myfit.tracker.ui.plan.PlanTile(container, rememberDashLive(state, container), TileHeight)   // R34: Plan my day replaces the check-in half
                             else HydrationTile(state, container, open)
                         }
                     }
@@ -392,7 +392,7 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
         }
         DashCard.SNAP -> if (small) SnapSmall() else SnapHeroCard()
         DashCard.WORKOUT -> if (small) WorkoutSmall(state.workout, container) { goTab(Tabs.TRAIN) } else WorkoutCard(state.workout, container)
-        DashCard.RINGS -> if (small) RingsSmall(state) { nav.push(Overlay.Today) } else RingsCard(state, open)
+        DashCard.RINGS -> if (small) RingsSmall(state) { nav.push(Overlay.Today) } else RingsCard(state, container, open)
         DashCard.NUTRITION -> if (small) NutritionSmall(container) { goTab(Tabs.FOOD) } else FoodHydrationCard(state, container, open) { goTab(Tabs.FOOD) }
         DashCard.SOCIAL -> if (small) CompeteSmall(container) { goTab(Tabs.ARENA) } else com.myfit.tracker.ui.social.FriendsHero(container) { goTab(Tabs.ARENA) }
         DashCard.HYDRATION -> HydrationTile(state, container, open, wide = !small)
@@ -664,7 +664,7 @@ private fun TripleRings(s: DashState, outer: Dp) {
 }
 
 @Composable
-internal fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
+internal fun RingsCard(s: DashState, container: AppContainer? = null, open: (Sheet) -> Unit) {
     val th = LocalFitTheme.current
     val units = LocalSettings.current.units
     val nav = LocalNav.current
@@ -688,8 +688,21 @@ internal fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
             }
         }
         Spacer(Modifier.height(12.dp))
-        CheckInStrip(s, open)
+        // R34: Plan my day lives inside Today's progress (the check-in moved to the Mindfulness card's Mood button)
+        if (container != null) com.myfit.tracker.ui.plan.PlanStrip(container, rememberDashLive(s, container))
     }
+}
+
+/** Today's live numbers for Plan my day, from Home's state plus today's food log. */
+@Composable
+internal fun rememberDashLive(s: DashState, c: AppContainer): com.myfit.tracker.ui.plan.PlanLive {
+    val items by remember(s.today) { c.nutritionRepo.itemsOn(s.today) }.collectAsState(initial = emptyList())
+    val t = com.myfit.tracker.ui.food.totalsOf(items)
+    return com.myfit.tracker.ui.plan.PlanLive(
+        s.steps?.toLong(), s.waterMl, s.sleepMin?.toDouble(),
+        if (items.isEmpty()) null else t.kcal, if (items.isEmpty()) null else t.protein,
+        s.workout.done.size, s.day.weight.isNotEmpty(), s.checkIn != null,
+    )
 }
 
 /**

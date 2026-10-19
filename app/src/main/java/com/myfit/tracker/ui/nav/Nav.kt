@@ -59,6 +59,8 @@ sealed interface Overlay {
     data object CoachHub : Overlay
     /** R33 one settings category page. */
     data class SettingsPage(val id: String) : Overlay
+    /** R34 Plan my day hub: 0 = today's plan, 1 = report & goals, 2 = history. */
+    data class DayPlan(val tab: Int = 0) : Overlay
     /** R31 calisthenics skill tree. */
     data object Calisthenics : Overlay
     data class PickExercises(val templateId: Long? = null, val workoutId: Long? = null) : Overlay

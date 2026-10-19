@@ -312,6 +312,7 @@ fun SettingsPage(container: AppContainer, id: String) {
                 }
                 "notifications" -> {
                     item { GlassCard { LiveNotifRow() } }
+                    item { GlassCard { com.myfit.tracker.ui.plan.MorningPlanToggle() } }
                     item {
                         SettingsList(Cat(Duo.Bell, th.warning, "Reminders", "Water, meals, workouts, medicines, sleep") { nav.push(com.myfit.tracker.ui.nav.Overlay.Reminders) })
                     }
@@ -548,6 +549,9 @@ fun MeScreen(container: AppContainer, open: (Sheet) -> Unit) {
             }
 
             // ---------- 3. goals
+            // ---------- R34 daily report
+            item { MeSection("Your daily report", "How yesterday went, today's plan, trends and goals") }
+            item { com.myfit.tracker.ui.plan.DailyReportTile(container) }
             item { MeSection("Your daily goals", "What MyFit cheers you towards each day · tap to change") }
             item {
                 GlassCard(onClick = { open(Sheet.EditTargets) }) {
@@ -1170,11 +1174,11 @@ private fun LiveNotifRow() {
         com.myfit.tracker.ui.components.Caption("Workouts, rest, runs and fasts while they run. Pick the look:")
         Spacer(Modifier.height(8.dp))
         androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-            com.myfit.tracker.ui.theme.GlassChip("MyFit card", !nowBar, { nowBar = false; com.myfit.tracker.notify.LiveUpdates.setUseNowBar(ctx, false) })
-            com.myfit.tracker.ui.theme.GlassChip("Now Bar", nowBar, { nowBar = true; com.myfit.tracker.notify.LiveUpdates.setUseNowBar(ctx, true) })
+            com.myfit.tracker.ui.theme.GlassChip("Activity Card", !nowBar, { nowBar = false; com.myfit.tracker.notify.LiveUpdates.setUseNowBar(ctx, false) })
+            com.myfit.tracker.ui.theme.GlassChip("Live notification", nowBar, { nowBar = true; com.myfit.tracker.notify.LiveUpdates.setUseNowBar(ctx, true) })
         }
         Spacer(Modifier.height(4.dp))
-        com.myfit.tracker.ui.components.Caption(if (nowBar) "Android's own Live Update: status-bar chip and Now Bar, in the system's style." else "MyFit's full card: big clock, progress ring, exercise bar and stats. Not shown in the Now Bar.",
+        com.myfit.tracker.ui.components.Caption(if (nowBar) "Live notification: Android's own Live Update — status-bar chip and Now Bar, in the system's style." else "Activity Card: MyFit's full design — big clock, progress ring, exercise bar and stats. Not shown in the Now Bar.",
             color = th.textFaint)
     } else com.myfit.tracker.ui.components.Caption("Automatic: workouts, rest, runs and fasts show as a live card with a big clock and progress.")
     Spacer(Modifier.height(6.dp))

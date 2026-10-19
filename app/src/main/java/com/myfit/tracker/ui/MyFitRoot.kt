@@ -24,6 +24,9 @@ import com.myfit.tracker.ui.train.TrainScreen
 import com.myfit.tracker.ui.train.WorkoutDetailScreen
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.ui.unit.IntOffset
+import kotlinx.coroutines.launch
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -245,8 +248,27 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
     val bottomPad = 120
     val top = nav.stack.lastOrNull()
     val backdrop = LocalBackdrop.current
+    // R34: every tab / screen change starts a fresh entrance cascade for the cards that compose next
+    com.myfit.tracker.ui.theme.Motion.appStill = s.motion == 2
+    remember(tab, top) { com.myfit.tracker.ui.theme.Motion.markScreen(); 0 }
 
-    BackHandler(enabled = top != null) { nav.pop() }
+    // R34 predictive back: the open screen follows your thumb (shrinks, rounds its corners, shifts toward the edge)
+    // and the tab underneath shows through; let go to close, slide back to cancel.
+    val backP = remember { androidx.compose.animation.core.Animatable(0f) }
+    var backEdge by remember { mutableIntStateOf(0) }
+    var popped by remember { mutableStateOf<Overlay?>(null) }
+    val backScope = androidx.compose.runtime.rememberCoroutineScope()
+    androidx.activity.compose.PredictiveBackHandler(enabled = top != null) { events ->
+        try {
+            events.collect { e -> backEdge = e.swipeEdge; backP.snapTo(androidx.compose.animation.core.FastOutSlowInEasing.transform(e.progress)) }
+            popped = nav.stack.lastOrNull()
+            nav.pop()
+            backScope.launch { kotlinx.coroutines.delay(320); backP.snapTo(0f); popped = null }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            backScope.launch { backP.animateTo(0f, com.myfit.tracker.ui.theme.Motion.smooth()) }
+            throw e
+        }
+    }
 
     val chromeState = remember { com.myfit.tracker.ui.components.ChromeState() }
     val densityC = androidx.compose.ui.platform.LocalDensity.current
@@ -270,13 +292,19 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
         val win = com.myfit.tracker.ui.components.LocalWindowInfo.current
         Box(Modifier.fillMaxSize()) {
           // wide screens (foldables, tablets): content sits in a readable centred column; the theme fills the screen
+          // R34 depth: the tabs recede a touch while a screen opens over them, and come forward as it closes (follows the back gesture)
+          val recede by androidx.compose.animation.core.animateFloatAsState(if (top != null) 1f else 0f, com.myfit.tracker.ui.theme.Motion.smooth(), label = "recede")
           Box(Modifier.align(Alignment.TopCenter).then(win.column()).fillMaxSize()
+              .graphicsLayer { val k = recede * (1f - backP.value); if (k > 0.001f) { val sc = 1f - 0.05f * k; scaleX = sc; scaleY = sc } }
               .nestedScroll(chromeState.connection)) {
             AnimatedContent(
                 targetState = tab,
                 transitionSpec = {
-                    // quick cross-fade (like iOS tab bars): no scaling, so heavy tabs never stutter
-                    fadeIn(tween(160, delayMillis = 40)).togetherWith(fadeOut(tween(90)))
+                    // R34: cross-fade with a short directional drift (layer-only, so heavy tabs stay smooth);
+                    // the cards inside then cascade in via Motion.entrance
+                    val dir = if (targetState > initialState) 1 else -1
+                    (fadeIn(tween(200, delayMillis = 30)) + androidx.compose.animation.slideInHorizontally(spring(0.9f, 520f, IntOffset.VisibilityThreshold)) { dir * it / 18 })
+                        .togetherWith(fadeOut(tween(110)) + androidx.compose.animation.slideOutHorizontally(spring(1f, 620f, IntOffset.VisibilityThreshold)) { -dir * it / 28 })
                 },
                 label = "tabs",
             ) { t ->
@@ -349,11 +377,22 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                 transitionSpec = {
                     // the new screen grows out of the tapped card (GrowFrom); the old one shrinks away
                     androidx.compose.animation.EnterTransition.None
-                        .togetherWith(fadeOut(tween(200)) + scaleOut(tween(220), targetScale = 0.92f))
+                        .togetherWith(fadeOut(tween(190)) + scaleOut(spring(1f, 520f), targetScale = 0.9f))
                 },
                 label = "overlay",
             ) { o ->
                 if (o != null) com.myfit.tracker.ui.components.GrowFrom {
+                  val follows = o == popped || (popped == null && o == top)
+                  Box(Modifier.fillMaxSize().graphicsLayer {
+                      val pr = if (follows) backP.value else 0f
+                      if (pr > 0f) {
+                          val sc = 1f - 0.1f * pr
+                          scaleX = sc; scaleY = sc
+                          translationX = (if (backEdge == 1) -1f else 1f) * pr * 18.dp.toPx()
+                          shape = androidx.compose.foundation.shape.RoundedCornerShape((32f * pr).dp)
+                          clip = true
+                      }
+                  }) {
                     val solid = LocalFitTheme.current.bgBottom.copy(alpha = 1f)
                     Canvas(Modifier.fillMaxSize()) {
                         drawRect(solid)       // nothing from the screen underneath may show through (e.g. behind the nav bar)
@@ -413,8 +452,10 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         is Overlay.Food -> com.myfit.tracker.ui.food.FoodDiaryScreen(container, o.date)
                         is Overlay.FoodAdd -> com.myfit.tracker.ui.food.FoodAddScreen(container, o.mealType, o.date, o.tab)
                         is Overlay.FoodPhoto -> com.myfit.tracker.ui.food.FoodPhotoScreen(container, o.mealType, o.date)
+                        is Overlay.DayPlan -> com.myfit.tracker.ui.plan.DailyHubScreen(container, o.tab)
                     }
                     }
+                  }
                 }
             }
 
@@ -437,6 +478,8 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
             }
             // right after the tour: the optional Shariah & Health question (no longer part of onboarding)
             com.myfit.tracker.ui.deen.DeenPopup(container, visible = s.tourDone && s.muslim == "unset" && top == null)
+            // R34: morning "Plan my day" story — once a day after 4 am, never on top of the tour or another popup
+            com.myfit.tracker.ui.plan.PlanStoryHost(container, allowed = s.tourDone && s.muslim != "unset" && top == null)
             LaunchedEffect(Unit) { com.myfit.tracker.domain.BadgeEngine.refresh(container, force = true) }
             // self-update from GitHub releases (checks on launch; downloads on Wi-Fi; user taps Install)
             LaunchedEffect(Unit) { runCatching { com.myfit.tracker.update.AppUpdater.autoRun(container.app) } }

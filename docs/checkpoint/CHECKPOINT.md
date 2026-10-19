@@ -375,3 +375,26 @@ Owner decisions: exercise demo GIFs skipped for now (no free, consistent, app-li
 - Coach avatars: face crops `assets/coach/*_face.webp`, portrait centred. New `ui/coach/CoachCards.kt` full-bleed `CoachCard(role)` used for the Train trainer tile and Food nutritionist.
 - Food tab: region chip in header, glass hero (animated calorie ring + macro bars + day switcher), search pill with camera/barcode, meal timeline, Plans & tools tiles. Glass kept.
 - Heart measure: `LivingOrb` (frame-clock driven blob, beat kick + shockwave, particles, 60-tick progress) + smoothed ECG strip with grid and leading dot.
+
+## Round 34 (20 Oct) — branch agent/r34 — REQUEST (in progress)
+Owner asked:
+1. First launch of the day → "Plan my day" popup: yesterday recap + today's plan (exercise, health/fitness, food) from stats.
+2. Me section: Daily report / goals tile → well-designed page with stats, graphs, measurements, easy goal setting.
+3. Home: replace Check-in tile (pairs with Rings when small, `DashboardScreen.kt` ~L325) with "Plan my day" — small = split into 2 tiles, large = combined. Includes plan history (previous days' stats + plans).
+4. Settings rename: "MyFit card" → "Activity Card", "Now Bar" → "Live notification" (`MeScreen.kt` ~L1173).
+5. App-wide animation pass: transitions, every element/section entrance, ultra smooth (Apple-like springs), good on 60 Hz.
+6. After PR + APK: in-depth code/feature audit (bugs, perf, heavy hardware load, optimisation list light/deep), missing features, security, Play Store publishing gaps.
+Answers: popup = story-style full screen (3 cards, once/day after 4 am); plan = on-device rules + optional AI one-line tip;
+Home = Today's progress (RINGS) + Plan my day combined when large, split into Rings tile + Plan tile when small (replaces CheckInTile pairing);
+motion = Apple-style springs, lighter on low-end, respects Reduce motion.
+Status: building.
+- DONE (commit 1): domain/DayPlan.kt (rules engine, stats batch, score, JSON history filesDir/dayplans.json, story once/day prefs, AI tip),
+  ui/plan/PlanUi.kt (PlanStrip in large RINGS card, PlanTile small half, DailyHubScreen Today/Report/History = Overlay.DayPlan(tab),
+  PlanStory + PlanStoryHost in MyFitRoot, DailyReportTile in Me, MorningPlanToggle in Settings→Notifications),
+  renames (Activity Card / Live notification), ui/theme/Motion.kt (springs + Modifier.entrance cascade hooked into Glass),
+  predictive back on overlays, tab drift transition, sheet springs, Motion.init in Application.
+- CI green at 6c? (build success after test-signature fix). Added DayPlans.ensureToday (cards skip queries when plan saved), tab depth recede.
+- PR #30 open, CI green (also: no story on install day, midnight rollover, Battery-saver motion respected).
+- Audit doc written (Claude Docs: 'MyFit Tracker — Code, Performance & Play Store Audit (R34)').
+- Proposed next (needs owner OK): compress jniLibs in github flavor (151→~96 MB), stop Coach3D/LLM prewarm at start,
+  pause coach idle video, baseline profile, AI 'Report reply' button (Play blocker), Crashlytics.

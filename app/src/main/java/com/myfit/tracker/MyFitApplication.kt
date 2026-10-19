@@ -48,6 +48,7 @@ class MyFitApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.myfit.tracker.ui.theme.Motion.init(this)
         CrashGuard.install(this)
         CrashGuard.loadSafe(this)
         container = AppContainer(this)
