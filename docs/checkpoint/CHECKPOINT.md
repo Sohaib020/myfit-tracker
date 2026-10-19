@@ -375,3 +375,13 @@ Owner decisions: exercise demo GIFs skipped for now (no free, consistent, app-li
 - Coach avatars: face crops `assets/coach/*_face.webp`, portrait centred. New `ui/coach/CoachCards.kt` full-bleed `CoachCard(role)` used for the Train trainer tile and Food nutritionist.
 - Food tab: region chip in header, glass hero (animated calorie ring + macro bars + day switcher), search pill with camera/barcode, meal timeline, Plans & tools tiles. Glass kept.
 - Heart measure: `LivingOrb` (frame-clock driven blob, beat kick + shockwave, particles, 60-tick progress) + smoothed ECG strip with grid and leading dot.
+
+## Round 34 (20 Oct) — branch agent/r34 — REQUEST (in progress)
+Owner asked:
+1. First launch of the day → "Plan my day" popup: yesterday recap + today's plan (exercise, health/fitness, food) from stats.
+2. Me section: Daily report / goals tile → well-designed page with stats, graphs, measurements, easy goal setting.
+3. Home: replace Check-in tile (pairs with Rings when small, `DashboardScreen.kt` ~L325) with "Plan my day" — small = split into 2 tiles, large = combined. Includes plan history (previous days' stats + plans).
+4. Settings rename: "MyFit card" → "Activity Card", "Now Bar" → "Live notification" (`MeScreen.kt` ~L1173).
+5. App-wide animation pass: transitions, every element/section entrance, ultra smooth (Apple-like springs), good on 60 Hz.
+6. After PR + APK: in-depth code/feature audit (bugs, perf, heavy hardware load, optimisation list light/deep), missing features, security, Play Store publishing gaps.
+Status: questions asked, nothing built yet.
