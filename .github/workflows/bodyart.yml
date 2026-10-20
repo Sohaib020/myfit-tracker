@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
 env:
-  NSH: 14
+  NSH: 4
   BUDGET_MIN: '225'
   ICON_DIR: ${{ github.workspace }}/tools/bodyart
 jobs:
@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
