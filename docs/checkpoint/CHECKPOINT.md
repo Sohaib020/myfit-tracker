@@ -428,3 +428,8 @@ Status: building.
 - HC: READ_HEALTH_DATA_HISTORY removed; sync 30 days. Model download: plain WorkManager + notify(), FGS service/permissions stripped.
 - PipBrain.healthNote(halal) — no runBlocking.
 - Tests: DayPlanTest (7 rules), SchemaTest (Robolectric; app/schemas/…/4.json committed, debug assets). Backup-restore test NOT done (needs DataStore/file fakes) → later.
+
+## R35.1 (20 Oct) — branch agent/r35-1 — coach fixes from owner screenshots
+- CoachCard framing: figure column = right 42 %, video 1.9× card height, head at 10 % (clips are framed 17–92 % of height), bottom fade (DstIn); text/chips constrained to the left column.
+- Trainer "Chat" → new Overlay.CoachChat (ui/coach/TrainerChat.kt, reuses ChatTab with per-coach logs "t"/"n"); nutritionist "Ask" opens the Chat tab (Launch.nutriTab = 3).
+- Faster coach chat: AiRouter.text(fast = true) → Groq first, 12 s per provider before failing over (was Gemini first, 40 s); history trimmed to 6 turns.

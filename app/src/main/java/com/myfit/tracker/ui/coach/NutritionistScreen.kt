@@ -125,8 +125,10 @@ private fun MacroRings(t: Nutritionist.Totals, g: Nutritionist.Goals, modifier: 
     }
 }
 
-private data class Msg(val mine: Boolean, val text: String)
-private val chatLog = mutableStateListOf<Msg>()   // kept for this app session only
+internal data class Msg(val mine: Boolean, val text: String)
+/** Chat history per coach ("n" nutritionist, "t" trainer), kept for this app session only. */
+private val chatLogs = mutableMapOf<String, androidx.compose.runtime.snapshots.SnapshotStateList<Msg>>()
+private fun logFor(key: String) = chatLogs.getOrPut(key) { mutableStateListOf() }
 
 /** Pro nutritionist: today's coaching, meal-by-meal review, a week of Pakistani meals with groceries, and chat. */
 @Composable
@@ -143,7 +145,7 @@ fun NutritionistScreen(container: AppContainer) {
     val voice = container.pipVoice
     val speaking by voice.speaking.collectAsState()
     val persona = PipVoice.Persona(cp.nLook.male, trainer = false)
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var tab by rememberSaveable { mutableIntStateOf(com.myfit.tracker.ui.nav.Launch.takeNutriTab() ?: 0) }
 
     val today = remember { Clock.today() }
     val meals by remember { container.nutritionRepo.mealsOn(today) }.collectAsState(initial = emptyList())
@@ -263,7 +265,7 @@ fun NutritionistScreen(container: AppContainer) {
                 }
             }
             2 -> WeekTab(container, goals.kcal, muslim)
-            else -> ChatTab(container, cp.nName, systemPrompt(cp.nName, totals, goals, muslim), persona, cp.nLook.id)
+            else -> ChatTab(container, cp.nName, systemPrompt(cp.nName, totals, goals, muslim), persona, cp.nLook.id, "n")
         }
     }
 }
@@ -360,7 +362,11 @@ private fun WeekTab(container: AppContainer, kcal: Double?, muslim: Boolean) {
 }
 
 @Composable
-private fun ChatTab(container: AppContainer, name: String, system: String, persona: PipVoice.Persona, look: String) {
+internal fun ChatTab(container: AppContainer, name: String, system: String, persona: PipVoice.Persona, look: String, logKey: String,
+                     intro: String = "Ask me anything about food — what to eat before the gym, a diabetic-friendly breakfast, how much roti fits your goal, Ramadan sehri ideas…",
+                     starters: List<String> = listOf("What should I eat after a workout?", "Make me a high-protein desi breakfast", "Is biryani OK on a diet?"),
+                     reportWhere: String = "nutritionist") {
+    val chatLog = remember(logKey) { logFor(logKey) }
     val th = LocalFitTheme.current
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
@@ -371,17 +377,17 @@ private fun ChatTab(container: AppContainer, name: String, system: String, perso
         val t = q.trim(); if (t.isEmpty() || busy) return
         chatLog += Msg(true, t); text = ""; busy = true
         scope.launch {
-            val hist = chatLog.takeLast(8).joinToString("\n") { (if (it.mine) "User: " else "$name: ") + it.text }
-            val a = ask(container, system, "Conversation so far:\n$hist\n\nReply to the user's last message as $name.")
+            val hist = chatLog.takeLast(6).joinToString("\n") { (if (it.mine) "User: " else "$name: ") + it.text.take(600) }
+            val a = ask(container, system, "Conversation so far:\n$hist\n\nReply to the user's last message as $name.", fast = true)
             chatLog += Msg(false, a); busy = false
         }
     }
     Column(Modifier.fillMaxSize().imePadding()) {
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list, contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (chatLog.isEmpty()) item {
-                Caption("Ask me anything about food — what to eat before the gym, a diabetic-friendly breakfast, how much roti fits your goal, Ramadan sehri ideas…")
+                Caption(intro)
                 Spacer(Modifier.height(8.dp))
-                listOf("What should I eat after a workout?", "Make me a high-protein desi breakfast", "Is biryani OK on a diet?").forEach { q ->
+                starters.forEach { q ->
                     GlassButton(q, { send(q) }, Modifier.fillMaxWidth().padding(vertical = 3.dp), height = 42.dp)
                 }
             }
@@ -391,7 +397,7 @@ private fun ChatTab(container: AppContainer, name: String, system: String, perso
                     Column(Modifier.fillMaxWidth(0.86f).clip(RoundedCornerShape(18.dp)).background(if (m.mine) th.accent.copy(alpha = 0.22f) else th.text.copy(alpha = 0.06f)).padding(12.dp)) {
                         Text(m.text, style = FitType.body, color = th.text)
                         if (!m.mine) Row(Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
-                            com.myfit.tracker.ui.components.AiReportLink(container, m.text, "nutritionist")
+                            com.myfit.tracker.ui.components.AiReportLink(container, m.text, reportWhere)
                             Spacer(Modifier.width(8.dp))
                             Icon(Duo.VolumeUp, "Read aloud", tint = th.textDim, modifier = Modifier.size(28.dp).clickableNoRipple { container.pipVoice.speak(m.text, force = true, persona = persona) }.padding(4.dp))
                         }
@@ -426,11 +432,12 @@ private fun systemPrompt(name: String, t: Nutritionist.Totals, g: Nutritionist.G
 }
 
 /** One cloud answer within the daily free allowance; friendly text on failure. */
-private suspend fun ask(container: AppContainer, system: String, user: String): String {
+internal suspend fun ask(container: AppContainer, system: String, user: String, fast: Boolean = false): String {
     val ai = com.myfit.tracker.ai.ondevice.OnDeviceAi.get(container.app)
     return try {
         ai.quota.require(com.myfit.tracker.ai.ondevice.AiQuota.Kind.CHAT)
-        val r = container.aiRouter.text(system, user, 40_000)
+        // R36: chat = fastest providers first (Groq), and a stuck provider gives up after 12 s instead of 40
+        val r = if (fast) container.aiRouter.text(system, user, 12_000, fast = true) else container.aiRouter.text(system, user, 40_000)
         ai.quota.consume(com.myfit.tracker.ai.ondevice.AiQuota.Kind.CHAT)
         r.trim()
     } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
