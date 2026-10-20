@@ -433,3 +433,21 @@ Status: building.
 - CoachCard framing: figure column = right 42 %, video 1.9× card height, head at 10 % (clips are framed 17–92 % of height), bottom fade (DstIn); text/chips constrained to the left column.
 - Trainer "Chat" → new Overlay.CoachChat (ui/coach/TrainerChat.kt, reuses ChatTab with per-coach logs "t"/"n"); nutritionist "Ask" opens the Chat tab (Launch.nutriTab = 3).
 - Faster coach chat: AiRouter.text(fast = true) → Groq first, 12 s per provider before failing over (was Gemini first, 40 s); history trimmed to 6 turns.
+
+## Round 36 REQUEST (20 Oct 13:10) — branch agent/r36 (replaces old R36 plan order; security items move to R37)
+1. Coach/nutritionist cards: figure still out of place (head cut off, legs showing) → fix + responsive for all screen sizes.
+   Root cause found: requiredSize() bigger than parent is CENTRED, so offset math was wrong → use a custom layout() placement.
+2. Train tab: switching to "Today" segment from other segments glitches for a split second (owner video) → fix.
+3. Exercises: "Target muscles" section like inspiration (round muscle-highlight images per muscle) in our design.
+4. All search bars: placeholder just "Search" (remove "Search nihari, kadhi pakora…" etc.).
+5. Onboarding redesign (our design language):
+   - Height page: ruler slider (ft/in + cm) with a character that grows/shrinks with the value.
+   - "What's your fitness goal?" (Weight loss / Muscle build) page.
+   - If weight loss → "Have you tried losing weight? Results?" (4 cards). If muscle build → "Muscle-building goal" (look better / strength / confidence).
+   - "Which areas to focus on?" body with callout chips (Back, Chest, Arms, Abs, Glutes, Legs, Full body).
+   - Weight page AFTER age & height, with live BMI bar.
+   - Current body shape page: body-fat % slider, character visibly gains/loses fat/muscle (owner video), amazing animation.
+   - After body data + workout days + target weight → prediction page (animated curve, "X kg on <date>").
+6. Plan my day: add "personalized plan" style data (About you: height/weight/age, BMI bar, target shape, fitness level, practice suggestions goal/qty/frequency, intensity gauge, aerobic/anaerobic split, target areas) — organized, not cluttered.
+7. Settings: option to redo onboarding later.
+Status: asking questions.
