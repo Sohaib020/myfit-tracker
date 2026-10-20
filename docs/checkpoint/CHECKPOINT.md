@@ -388,6 +388,12 @@ Answers: popup = story-style full screen (3 cards, once/day after 4 am); plan = 
 Home = Today's progress (RINGS) + Plan my day combined when large, split into Rings tile + Plan tile when small (replaces CheckInTile pairing);
 motion = Apple-style springs, lighter on low-end, respects Reduce motion.
 Status: building.
+- DONE (code): CoachCard layout() placement; TrainHost AnimatedContent cross-fade; "Search" placeholders; TargetMuscleRow (MuscleMap.kt);
+  domain/PlanProfile.kt (extras store, prediction, BMI, summary); ui/onboarding/OnboardingPages.kt (Goal, Tried, MuscleGoal, Focus, Height ruler,
+  BmiCard, BodyShape morph, Prediction); ui/plan/PlanSummary.kt (PlanSummaryCards); onboarding flow list (steps 16–21 new), redo via
+  Overlay.RedoOnboarding (prefill), Settings "Redo setup", Report tab "Your plan" section; OnboardingVersion 5 catch-up [16,18,19].
+- Body art: workflow bodyart.yml (branch bodyart-run → bodyart-assets). TODO: pick best seed per gender → copy to
+  app/src/main/assets/onboarding/body/{m,f}_bf1..6.webp + {m,f}_side.webp.
 - DONE (commit 1): domain/DayPlan.kt (rules engine, stats batch, score, JSON history filesDir/dayplans.json, story once/day prefs, AI tip),
   ui/plan/PlanUi.kt (PlanStrip in large RINGS card, PlanTile small half, DailyHubScreen Today/Report/History = Overlay.DayPlan(tab),
   PlanStory + PlanStoryHost in MyFitRoot, DailyReportTile in Me, MorningPlanToggle in Settings→Notifications),
@@ -458,3 +464,9 @@ Target-muscle thumbnails: composite existing assets/anatomy front/back base + ov
 Planned onboarding order: welcome, name, DOB, sex, goal, branch, focus areas, height(ruler+char), weight(live BMI), body shape, target weight,
 activity, days, times, diabetes, health, targets, prediction, plan ready.
 Status: building.
+- DONE (code): CoachCard layout() placement; TrainHost AnimatedContent cross-fade; "Search" placeholders; TargetMuscleRow (MuscleMap.kt);
+  domain/PlanProfile.kt (extras store, prediction, BMI, summary); ui/onboarding/OnboardingPages.kt (Goal, Tried, MuscleGoal, Focus, Height ruler,
+  BmiCard, BodyShape morph, Prediction); ui/plan/PlanSummary.kt (PlanSummaryCards); onboarding flow list (steps 16–21 new), redo via
+  Overlay.RedoOnboarding (prefill), Settings "Redo setup", Report tab "Your plan" section; OnboardingVersion 5 catch-up [16,18,19].
+- Body art: workflow bodyart.yml (branch bodyart-run → bodyart-assets). TODO: pick best seed per gender → copy to
+  app/src/main/assets/onboarding/body/{m,f}_bf1..6.webp + {m,f}_side.webp.

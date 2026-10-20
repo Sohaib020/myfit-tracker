@@ -57,6 +57,8 @@ sealed interface Overlay {
     data object Nutritionist : Overlay
     /** Pro trainer home. */
     data object CoachHub : Overlay
+    /** R36 run the setup again with today's answers filled in. */
+    data object RedoOnboarding : Overlay
     /** R36 chat with your trainer. */
     data object CoachChat : Overlay
     /** R33 one settings category page. */

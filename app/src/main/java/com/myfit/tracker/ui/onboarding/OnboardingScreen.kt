@@ -103,6 +103,7 @@ import com.myfit.tracker.ui.theme.GlassChip
 import com.myfit.tracker.ui.theme.GlassIconButton
 import com.myfit.tracker.ui.theme.LocalFitTheme
 import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.first
 
 @Stable
 private class SetupState(units: UnitPrefs) {
@@ -144,27 +145,54 @@ private class SetupState(units: UnitPrefs) {
     var low by mutableStateOf("70")
     var high by mutableStateOf("180")
 
+    // R36
+    var mainGoal by mutableStateOf<String?>(null)
+    var followUp by mutableStateOf<String?>(null)
+    var focus by mutableStateOf(setOf<String>())
+    var bodyLevel by mutableIntStateOf(0)       // 0 = not chosen yet (guessed from BMI on first show)
+    var pace by mutableIntStateOf(1)
+
     val weightKg get() = Units.toKg(weightDisplay, weightUnit)
     val targetKg get() = if (hasTarget) Units.toKg(targetDisplay, weightUnit) else null
-}
+    val female get() = sex == Sex.FEMALE
 
-private const val STEPS = 15
+    /** R36 page order. 9 (old goal chips) stays only for catch-up; 14 (theme) only on first setup. */
+    fun flow(redo: Boolean): List<Int> = buildList {
+        add(0); add(1); add(2); add(3); add(16)
+        if (mainGoal == com.myfit.tracker.domain.PlanProfile.LOSE || mainGoal == com.myfit.tracker.domain.PlanProfile.BUILD) add(17)
+        add(18); add(6); add(7); add(19); add(8); add(10); add(11); add(12); add(4); add(5); add(13)
+        if (com.myfit.tracker.domain.PlanProfile.predict(weightKg, targetKg, pace) != null) add(20)
+        add(21)
+        if (!redo) add(14)
+        add(15)
+    }
+
+    fun extras() = com.myfit.tracker.domain.PlanProfile.Extras(mainGoal, followUp, focus, bodyLevel.coerceIn(1, 6), pace)
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
+fun OnboardingScreen(container: AppContainer, units: UnitPrefs, redo: UserProfile? = null, onClose: (() -> Unit)? = null) {
     val th = LocalFitTheme.current
+    val ctxP = androidx.compose.ui.platform.LocalContext.current
     val s = remember { SetupState(units) }
+    // R36 redo from Settings: start from today's answers
+    LaunchedEffect(redo) { if (redo != null) prefill(s, redo, container, ctxP) }
     var step by remember { mutableIntStateOf(0) }
+    val flow = s.flow(redo != null)
+    val STEPS = flow.lastIndex
+    val st0 = flow.getOrElse(step.coerceIn(0, STEPS)) { 0 }
     var saving by remember { mutableStateOf(false) }
     val appCtx = androidx.compose.ui.platform.LocalContext.current.applicationContext
     // prefill the name from the signed-in account
     val account by container.social.user.collectAsState()
     LaunchedEffect(account) { if (s.name.isBlank()) account?.displayName?.takeIf { it.isNotBlank() }?.let { s.name = it.substringBefore(' ').take(40) } }
 
-    BackHandler(enabled = step > 0) { step-- }
+    BackHandler(enabled = step > 0 || onClose != null) { if (step > 0) step-- else onClose?.invoke() }
 
-    val canNext = when (step) {
+    val canNext = when (st0) {
+        16 -> s.mainGoal != null
+        17 -> s.followUp != null
         1 -> s.name.isNotBlank()
         2 -> s.age in 13..100
         3 -> s.sex != null
@@ -181,10 +209,10 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
             GlassProgressBar(step / STEPS.toFloat(), th.accent, Modifier.padding(horizontal = 24.dp, vertical = 12.dp), height = 6.dp)
         }
         AnimatedContent(
-            targetState = step,
+            targetState = st0,
             modifier = Modifier.weight(1f).fillMaxWidth(),
             transitionSpec = {
-                val dir = if (targetState > initialState) 1 else -1
+                val dir = if (flow.indexOf(targetState) >= flow.indexOf(initialState)) 1 else -1
                 (slideInHorizontally(spring(0.85f, 300f)) { it * dir / 3 } + fadeIn(tween(250)))
                     .togetherWith(slideOutHorizontally(tween(220)) { -it * dir / 3 } + fadeOut(tween(180)))
             },
@@ -204,15 +232,16 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
             if (step > 0) GlassIconButton(Duo.ArrowBack, { step-- }, size = 52.dp)
             Spacer(Modifier.weight(1f))
             when (step) {
-                0 -> AccentButton("Get started", { step = 1 }, Modifier.fillMaxWidth(), icon = Duo.ArrowForward)
-                STEPS -> AccentButton(if (saving) "Saving…" else "Start tracking", {
+                0 -> AccentButton(if (redo != null) "Let's update" else "Get started", { step = 1 }, Modifier.fillMaxWidth(), icon = Duo.ArrowForward)
+                STEPS -> AccentButton(if (saving) "Saving…" else if (redo != null) "Save changes" else "Start tracking", {
                     if (saving) return@AccentButton
                     saving = true
                     val today = Clock.dateKey(Clock.today())
                     val profile = UserProfile(
                         name = s.name.trim(), age = s.age, ageRecordedOn = today, sex = s.sex ?: Sex.MALE,
                         heightCm = s.heightCm, startWeightKg = s.weightKg, targetWeightKg = s.targetKg,
-                        activityLevel = s.activity, experience = s.experience, goals = s.goals.joinToString(","),
+                        activityLevel = s.activity, experience = s.experience,
+                        goals = (if (s.mainGoal != null) com.myfit.tracker.domain.PlanProfile.legacyGoals(s.mainGoal) else s.goals).joinToString(","),
                         workoutDaysMask = s.workoutDays, workoutTimeMin = s.workoutTime, wakeTimeMin = s.wake,
                         sleepTimeMin = s.sleep, createdAt = 0, updatedAt = 0,
                     )
@@ -240,8 +269,18 @@ fun OnboardingScreen(container: AppContainer, units: UnitPrefs) {
                         container.settings.setUnits(UnitPrefs(weight = s.weightUnit, length = s.lengthUnit, volume = units.volume, distance = units.distance))
                         OnboardingVersion.markDone(ctx0)   // before the profile exists, so no catch-up flashes
                         ctx0.getSharedPreferences("onboarding", android.content.Context.MODE_PRIVATE).edit().putBoolean("perms_v3", true).apply()
-                        container.profileRepo.createProfile(profile, targets)
+                        com.myfit.tracker.domain.PlanProfile.save(ctx0, s.extras())
+                        if (redo == null) container.profileRepo.createProfile(profile, targets)
+                        else {
+                            // R36 redo: same profile row (history kept); targets get a new version from today; a changed weight is a new weigh-in
+                            container.profileRepo.updateProfile(profile.copy(id = redo.id, createdAt = redo.createdAt, startWeightKg = redo.startWeightKg))
+                            targets.forEach { (k, v) -> container.profileRepo.setTarget(k, v) }
+                            val last = container.logRepo.latestWeight().first()?.weightKg
+                            if (last == null || kotlin.math.abs(last - s.weightKg) > 0.05) container.logRepo.addWeight(s.weightKg, null, "Updated in setup")
+                            runCatching { com.myfit.tracker.domain.DayPlans.today(container, force = true) }
+                        }
                     }
+                    if (redo != null) onClose?.invoke()
                 }, Modifier.width(200.dp), enabled = !saving)
                 else -> AccentButton("Next", { if (canNext) step++ }, Modifier.width(150.dp), icon = Duo.ArrowForward, enabled = canNext)
             }
@@ -343,21 +382,16 @@ private fun ColumnScope.StepBody(st: Int, s: SetupState, container: AppContainer
             Column(Modifier.fillMaxWidth()) { com.myfit.tracker.ui.settings.HealthProfilePicker(container, compact = true) }
         }
         6 -> {
-            Header("What's your height?", "Used for better progress tracking.")
-            if (s.lengthUnit == LengthUnit.CM) {
-                WheelPicker(101, (s.heightCm.roundToInt() - 120).coerceIn(0, 100), { s.heightCm = (it + 120).toDouble() }, { "${it + 120} cm" }, Modifier.fillMaxWidth())
-            } else {
-                val inches = (s.heightCm / Units.CM_PER_IN).roundToInt()
-                WheelPicker(43, (inches - 48).coerceIn(0, 42), { s.heightCm = (it + 48) * Units.CM_PER_IN }, { val i = it + 48; "${i / 12}' ${i % 12}\"  ·  $i in" }, Modifier.fillMaxWidth())
-            }
-            Spacer(Modifier.height(16.dp))
-            GlassSegmented(listOf(LengthUnit.CM, LengthUnit.IN), s.lengthUnit, { it.label }, { s.lengthUnit = it }, Modifier.width(180.dp))
+            Header("How tall are you?", "Height makes your BMI and calorie targets accurate.")
+            HeightPage(s.heightCm, s.lengthUnit, s.female, { s.heightCm = it }) { s.lengthUnit = it }
         }
         7 -> {
             Header("What's your current weight?", "This becomes your first weigh-in. You can log more any time.")
             WeightPicker(s.weightDisplay, s.weightUnit, { s.weightDisplay = it }) { u ->
                 s.weightDisplay = round1(Units.kgTo(s.weightKg, u)); s.targetDisplay = round1(Units.kgTo(Units.toKg(s.targetDisplay, s.weightUnit), u)); s.weightUnit = u
             }
+            Spacer(Modifier.height(18.dp))
+            BmiCard(s.weightKg, s.heightCm)     // R36: live as the weight changes (height was asked first)
         }
         8 -> {
             Header("Target weight", "Optional. Used only to show distance to goal — never to judge a single weigh-in.")
@@ -465,6 +499,46 @@ private fun ColumnScope.StepBody(st: Int, s: SetupState, container: AppContainer
             val settings = com.myfit.tracker.ui.theme.LocalSettings.current
             Column(Modifier.fillMaxWidth()) { com.myfit.tracker.ui.settings.ThemePicker(container, settings, tileWidth = 96) }
         }
+        16 -> {
+            Header("What's your main goal?", "Your goal shapes your workouts, calories and daily plan.")
+            GoalPage(s.mainGoal, s.female) { g ->
+                if (s.mainGoal != g) s.followUp = null
+                s.mainGoal = g; s.goals = com.myfit.tracker.domain.PlanProfile.legacyGoals(g)
+            }
+        }
+        17 -> {
+            if (s.mainGoal == com.myfit.tracker.domain.PlanProfile.LOSE) {
+                Header("Have you tried losing weight before?", "No judgement — it helps us pace your plan.")
+                TriedPage(s.followUp) { s.followUp = it }
+            } else {
+                Header("What's your muscle-building goal?", "Pick the one that matters most to you.")
+                MuscleGoalPage(s.followUp, s.female) { s.followUp = it }
+            }
+        }
+        18 -> {
+            Header("Which areas do you want to focus on?", "Pick any — your workouts lean toward them. Full body is a great start.")
+            FocusPage(s.focus, s.female) { s.focus = it }
+        }
+        19 -> {
+            Header("Choose your current body shape", "Slide until the character looks most like you today.")
+            if (s.bodyLevel == 0) {
+                val b = com.myfit.tracker.domain.PlanProfile.bmi(s.weightKg, s.heightCm)
+                s.bodyLevel = when { b < 20 -> 2; b < 25 -> 3; b < 28 -> 4; b < 32 -> 5; else -> 6 }
+            }
+            BodyShapePage(s.bodyLevel, s.female) { s.bodyLevel = it }
+        }
+        20 -> {
+            Spacer(Modifier.height(8.dp))
+            val t = s.targetKg
+            if (t != null) PredictionPage(s.weightKg, t, s.weightUnit, s.pace) { s.pace = it }
+        }
+        21 -> {
+            Header("Your personalised plan is ready", "Here's what we'll work on together.")
+            val p = UserProfile(name = s.name, age = s.age, ageRecordedOn = "", sex = s.sex ?: Sex.MALE, heightCm = s.heightCm, startWeightKg = s.weightKg,
+                targetWeightKg = s.targetKg, activityLevel = s.activity, experience = s.experience, goals = "", workoutDaysMask = s.workoutDays,
+                workoutTimeMin = s.workoutTime, wakeTimeMin = s.wake, sleepTimeMin = s.sleep, createdAt = 0, updatedAt = 0)
+            com.myfit.tracker.ui.plan.PlanSummaryCards(com.myfit.tracker.domain.PlanProfile.summary(p, s.weightKg, s.extras()), s.weightUnit, s.lengthUnit)
+        }
         15 -> {
             Spacer(Modifier.height(40.dp))
             Pip(PipMood.EXCITED, size = 150.dp)
@@ -481,8 +555,8 @@ private fun ColumnScope.StepBody(st: Int, s: SetupState, container: AppContainer
  * step numbers under it in [ADDED]; existing users are asked just those, once, on the first launch after updating.
  */
 object OnboardingVersion {
-    const val CURRENT = 4
-    private val ADDED = mapOf(2 to listOf(2, 11, 12), 3 to listOf(5), 4 to listOf(14))   // v2: date of birth, training days, your week · v3: health & diet · v4: design style & theme
+    const val CURRENT = 5
+    private val ADDED = mapOf(2 to listOf(2, 11, 12), 3 to listOf(5), 4 to listOf(14), 5 to listOf(16, 18, 19))   // v5 (R36): main goal, focus areas, body shape   // v2: date of birth, training days, your week · v3: health & diet · v4: design style & theme
     private fun prefs(c: android.content.Context) = c.getSharedPreferences("onboarding", android.content.Context.MODE_PRIVATE)
     /** Profiles created before versioning existed count as v1. */
     fun stored(c: android.content.Context) = prefs(c).getInt("version", 1)
@@ -502,6 +576,7 @@ fun OnboardingCatchUp(container: AppContainer, profile: UserProfile, units: Unit
             age = profile.age; dobYear = now.year - profile.age; dobMonth = now.monthValue; dobDay = 1
             workoutDays = profile.workoutDaysMask; trainDays = Integer.bitCount(profile.workoutDaysMask).coerceIn(2, 6)
             workoutTime = profile.workoutTimeMin ?: workoutTime; wake = profile.wakeTimeMin; sleep = profile.sleepTimeMin
+            heightCm = profile.heightCm; weightDisplay = round1(Units.kgTo(profile.startWeightKg, weightUnit))
         }
     }
     var i by remember { mutableIntStateOf(-1) }      // -1 = intro
@@ -515,6 +590,7 @@ fun OnboardingCatchUp(container: AppContainer, profile: UserProfile, units: Unit
                 age = s.age, ageRecordedOn = Clock.dateKey(Clock.today()), workoutDaysMask = s.workoutDays,
                 workoutTimeMin = s.workoutTime, wakeTimeMin = s.wake, sleepTimeMin = s.sleep,
             ))
+            if (s.mainGoal != null || s.focus.isNotEmpty() || s.bodyLevel != 0) com.myfit.tracker.domain.PlanProfile.save(ctx, s.extras())
             OnboardingVersion.markDone(ctx)
         }
         onDone()
@@ -550,6 +626,33 @@ fun OnboardingCatchUp(container: AppContainer, profile: UserProfile, units: Unit
 }
 
 private fun round1(v: Double) = (v * 10).roundToInt() / 10.0
+
+/** R36: fill the setup with what's saved today (redo from Settings). */
+private suspend fun prefill(s: SetupState, p: UserProfile, c: AppContainer, ctx: android.content.Context) {
+    s.name = p.name; s.sex = p.sex; s.age = p.age
+    val now = java.time.LocalDate.now(); s.dobYear = now.year - p.age; s.dobMonth = now.monthValue; s.dobDay = 1
+    s.heightCm = p.heightCm; s.activity = p.activityLevel; s.experience = p.experience
+    s.workoutDays = p.workoutDaysMask; s.trainDays = Integer.bitCount(p.workoutDaysMask).coerceIn(2, 6)
+    s.workoutTime = p.workoutTimeMin ?: s.workoutTime; s.wake = p.wakeTimeMin; s.sleep = p.sleepTimeMin
+    s.goals = p.goals.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+    val w = c.logRepo.latestWeight().first()?.weightKg ?: p.startWeightKg
+    s.weightDisplay = round1(Units.kgTo(w, s.weightUnit))
+    p.targetWeightKg?.let { s.hasTarget = true; s.targetDisplay = round1(Units.kgTo(it, s.weightUnit)) } ?: run { s.hasTarget = false }
+    val t = c.profileRepo.targets.first(); val d = Clock.today()
+    com.myfit.tracker.domain.Targets.on(t, TargetType.WATER_ML, d)?.let { s.waterL = Fmt.num(it / 1000, 1) }
+    com.myfit.tracker.domain.Targets.on(t, TargetType.STEPS, d)?.let { s.steps = it.roundToInt().toString() }
+    com.myfit.tracker.domain.Targets.on(t, TargetType.CALORIES, d)?.let { s.calories = it.roundToInt().toString() }
+    com.myfit.tracker.domain.Targets.on(t, TargetType.PROTEIN_G, d)?.let { s.protein = it.roundToInt().toString() }
+    com.myfit.tracker.domain.Targets.on(t, TargetType.SLEEP_MIN, d)?.let { s.sleepH = Fmt.num(it / 60, 1) }
+    val set = c.settings.settings.first()
+    s.diabetes = set.diabetesType.takeIf { it != "unset" } ?: "none"
+    if (s.diabetes != "none") {
+        val g = GlucoseConfigStore.get(ctx)
+        s.treatment = g.treatment; s.cgm = g.cgm; s.low = g.low.toString(); s.high = g.high.toString()
+    }
+    val e = com.myfit.tracker.domain.PlanProfile.load(ctx)
+    s.mainGoal = e.goal; s.followUp = e.followUp; s.focus = e.focus; s.bodyLevel = if (e.goal != null) e.bodyLevel else 0; s.pace = e.pace
+}
 
 @Composable
 private fun Welcome() {
