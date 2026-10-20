@@ -450,4 +450,11 @@ Status: building.
    - After body data + workout days + target weight → prediction page (animated curve, "X kg on <date>").
 6. Plan my day: add "personalized plan" style data (About you: height/weight/age, BMI bar, target shape, fitness level, practice suggestions goal/qty/frequency, intensity gauge, aerobic/anaerobic split, target areas) — organized, not cluttered.
 7. Settings: option to redo onboarding later.
-Status: asking questions.
+Answers: coach frame head→mid-thigh; onboarding chars = our 3D coach style, male+female, athletic (men shirtless+shorts, women sports bra+leggings);
+body-shape = 6 body-fat renders/gender (free FLUX via foodicon-style workflow) + liquid crossfade + width scaling; goals = 4 (Lose/Build/Get fit/Gain),
+branch page for lose (tried results) & build (muscle goal); prediction = safe pace (0.5 kg/wk loss, 0.25 gain) + Slow/Steady/Fast picker, labelled estimate;
+plan summary = "Your plan is ready" onboarding end + "Your plan" section in Plan my day → Report; redo onboarding prefilled, history kept.
+Target-muscle thumbnails: composite existing assets/anatomy front/back base + overlay, cropped round (no generation).
+Planned onboarding order: welcome, name, DOB, sex, goal, branch, focus areas, height(ruler+char), weight(live BMI), body shape, target weight,
+activity, days, times, diabetes, health, targets, prediction, plan ready.
+Status: building.
