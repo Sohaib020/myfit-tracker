@@ -470,3 +470,11 @@ Status: building.
   Overlay.RedoOnboarding (prefill), Settings "Redo setup", Report tab "Your plan" section; OnboardingVersion 5 catch-up [16,18,19].
 - Body art DONE: assets/onboarding/body (men = seed 2, level 4 = m_bf4_s4 re-render; women = seed 1). OnboardingShotTest renders pages to ui-shots.
 - Focus anchors moved onto body; pace chips compact. Next: PR.
+
+## Round 37 REQUEST (20 Oct 16:42) — branch agent/r37
+- Owner dislikes all onboarding body renders (inconsistent, low quality) → owner will PROVIDE 3D models; I rig + subtle animations on height change & body-fat change. Asked: one model w/ blendshapes vs several.
+- UI bugs: focus-areas pointers off body + character too small; goal-card characters cropped inconsistently; intensity label overlaps gauge.
+- Height ruler: add haptic ticks.
+- Exercises: premium detailed body-part images (like inspiration) incl. Cardio & Other (not icons); high-quality equipment images; move Custom + Archive buttons somewhere compact.
+- Plan my day "Your plan": must stay expanded until manually collapsed (collapses on scroll now); replace hexagons (off-brand); premium animated intensity meter.
+Status: asking questions.
