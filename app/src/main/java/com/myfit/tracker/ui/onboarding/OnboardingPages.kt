@@ -220,8 +220,9 @@ fun MuscleGoalPage(selected: String?, female: Boolean, onPick: (String) -> Unit)
 
 /** Anchor points on the front body (fractions of the 360×640 canvas) for each callout. */
 private val ANCHORS = mapOf(
-    "Back" to Offset(0.60f, 0.215f), "Chest" to Offset(0.58f, 0.27f), "Arms" to Offset(0.31f, 0.33f),
-    "Abs" to Offset(0.52f, 0.40f), "Glutes" to Offset(0.43f, 0.52f), "Legs" to Offset(0.45f, 0.66f), "Full body" to Offset(0.55f, 0.84f),
+    // cartoon proportions (big head): shoulders sit at ~29 % of the canvas, hips at ~55 %
+    "Back" to Offset(0.62f, 0.30f), "Chest" to Offset(0.56f, 0.345f), "Arms" to Offset(0.33f, 0.40f),
+    "Abs" to Offset(0.50f, 0.455f), "Glutes" to Offset(0.43f, 0.555f), "Legs" to Offset(0.45f, 0.72f), "Full body" to Offset(0.55f, 0.90f),
 )
 
 @Composable
@@ -489,8 +490,10 @@ fun PredictionPage(fromKg: Double, toKg: Double, unit: WeightUnit, pace: Int, on
         }
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Slow", "Steady", "Fast").forEachIndexed { i, l -> GlassChip("$l · ${"%.2f".format(PlanProfile.kgPerWeek(losing, i)).trimEnd('0').trimEnd('.')} kg/wk", pace == i, { onPace(i) }) }
+            listOf("Slow", "Steady", "Fast").forEachIndexed { i, l -> GlassChip(l, pace == i, { onPace(i) }) }
         }
+        Spacer(Modifier.height(6.dp))
+        Text("${"%.2f".format(PlanProfile.kgPerWeek(losing, pace)).trimEnd('0').trimEnd('.')} kg a week", style = FitType.label, color = th.accentBright)
         Spacer(Modifier.height(10.dp))
         Caption("An estimate at a steady weekly pace — real progress has ups and downs. You can change your target any time.", Modifier.padding(horizontal = 8.dp))
     }
