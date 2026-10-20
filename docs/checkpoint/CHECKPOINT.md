@@ -392,8 +392,8 @@ Status: building.
   domain/PlanProfile.kt (extras store, prediction, BMI, summary); ui/onboarding/OnboardingPages.kt (Goal, Tried, MuscleGoal, Focus, Height ruler,
   BmiCard, BodyShape morph, Prediction); ui/plan/PlanSummary.kt (PlanSummaryCards); onboarding flow list (steps 16–21 new), redo via
   Overlay.RedoOnboarding (prefill), Settings "Redo setup", Report tab "Your plan" section; OnboardingVersion 5 catch-up [16,18,19].
-- Body art: workflow bodyart.yml (branch bodyart-run → bodyart-assets). TODO: pick best seed per gender → copy to
-  app/src/main/assets/onboarding/body/{m,f}_bf1..6.webp + {m,f}_side.webp.
+- Body art DONE: assets/onboarding/body (men = seed 2, level 4 = m_bf4_s4 re-render; women = seed 1). OnboardingShotTest renders pages to ui-shots.
+- Focus anchors moved onto body; pace chips compact. Next: PR.
 - DONE (commit 1): domain/DayPlan.kt (rules engine, stats batch, score, JSON history filesDir/dayplans.json, story once/day prefs, AI tip),
   ui/plan/PlanUi.kt (PlanStrip in large RINGS card, PlanTile small half, DailyHubScreen Today/Report/History = Overlay.DayPlan(tab),
   PlanStory + PlanStoryHost in MyFitRoot, DailyReportTile in Me, MorningPlanToggle in Settings→Notifications),
@@ -468,5 +468,5 @@ Status: building.
   domain/PlanProfile.kt (extras store, prediction, BMI, summary); ui/onboarding/OnboardingPages.kt (Goal, Tried, MuscleGoal, Focus, Height ruler,
   BmiCard, BodyShape morph, Prediction); ui/plan/PlanSummary.kt (PlanSummaryCards); onboarding flow list (steps 16–21 new), redo via
   Overlay.RedoOnboarding (prefill), Settings "Redo setup", Report tab "Your plan" section; OnboardingVersion 5 catch-up [16,18,19].
-- Body art: workflow bodyart.yml (branch bodyart-run → bodyart-assets). TODO: pick best seed per gender → copy to
-  app/src/main/assets/onboarding/body/{m,f}_bf1..6.webp + {m,f}_side.webp.
+- Body art DONE: assets/onboarding/body (men = seed 2, level 4 = m_bf4_s4 re-render; women = seed 1). OnboardingShotTest renders pages to ui-shots.
+- Focus anchors moved onto body; pace chips compact. Next: PR.
