@@ -477,4 +477,5 @@ Status: building.
 - Height ruler: add haptic ticks.
 - Exercises: premium detailed body-part images (like inspiration) incl. Cardio & Other (not icons); high-quality equipment images; move Custom + Archive buttons somewhere compact.
 - Plan my day "Your plan": must stay expanded until manually collapsed (collapses on scroll now); replace hexagons (off-brand); premium animated intensity meter.
-Status: asking questions.
+Answers: owner makes 1 model per gender with shape keys Fat/Muscle/Thin (GLB/FBX) → I rig/render; muscle art = Blender renders of Z-Anatomy (CC BY-SA, credit in About) incl. Cardio & Other; Custom+Archive → ⋯ menu beside search; intensity = glowing arc gauge.
+Status: building.
