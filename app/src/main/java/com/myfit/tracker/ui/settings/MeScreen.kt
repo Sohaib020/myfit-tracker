@@ -166,6 +166,7 @@ fun SettingsScreen(container: AppContainer, open: (Sheet) -> Unit, bottomPad: In
                 Cat(Duo.HealthAndSafety, th.danger, "Health & diet", (if (health.isEmpty()) "No conditions added" else "${health.size} added") + " · ${com.myfit.tracker.domain.FoodRegion.get(ctx).short} food · " + if (settings.muslim == "yes") "Shariah on" else "Shariah off") { go("health") },
                 Cat(Duo.Person, th.success, "Coaches & AI", "${cp.name} & ${cp.nName} · Pip · 3D coaches") { go("coach") },
                 Cat(Duo.EmojiEvents, th.carbs, "Game Mode", if (game) "On · champion, stats, battles" else "Off · clean tracker") { go("game") },
+                Cat(Duo.Replay, th.accentBright, "Redo setup", "Goal, body, focus areas, targets — answers prefilled") { nav.push(com.myfit.tracker.ui.nav.Overlay.RedoOnboarding) },
             )
         }
         item { GroupLabel("Data & app") }

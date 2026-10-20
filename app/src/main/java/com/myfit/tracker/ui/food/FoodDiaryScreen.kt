@@ -119,7 +119,7 @@ fun FoodDiaryScreen(container: AppContainer, startDate: String?, asTab: Boolean 
                     Row(Modifier.fillMaxSize().padding(start = 18.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Duo.Search, null, tint = th.accentBright, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(12.dp))
-                        Text(region.hint, style = FitType.body, color = th.textDim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text("Search", style = FitType.body, color = th.textDim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         PillIcon(Duo.Camera, th.protein) { nav.push(Overlay.FoodPhoto(mealForNow(), dateKey)) }
                         Spacer(Modifier.width(6.dp))
                         PillIcon(Duo.Barcode, th.carbs) { nav.push(Overlay.FoodAdd(mealForNow(), dateKey, 1)) }

@@ -454,6 +454,10 @@ private fun MainShell(container: AppContainer, s: AppSettings) {
                         Overlay.Nutritionist -> com.myfit.tracker.ui.coach.NutritionistScreen(container)
                         Overlay.CoachHub -> com.myfit.tracker.ui.coach.CoachHub(container)
                         Overlay.CoachChat -> com.myfit.tracker.ui.coach.TrainerChatScreen(container)
+                        Overlay.RedoOnboarding -> {
+                            val prof by container.profileRepo.profile.collectAsState(initial = null)
+                            prof?.let { com.myfit.tracker.ui.onboarding.OnboardingScreen(container, s.units, redo = it) { nav.pop() } }
+                        }
                         is Overlay.PickExercises -> com.myfit.tracker.ui.train.PickExercisesScreen(container, o.templateId, o.workoutId)
                         is Overlay.ProgramDetail -> com.myfit.tracker.ui.programs.ProgramDetailScreen(container, o.id)
                         Overlay.Deen -> com.myfit.tracker.ui.deen.DeenScreen(container)

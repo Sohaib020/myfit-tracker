@@ -388,6 +388,12 @@ Answers: popup = story-style full screen (3 cards, once/day after 4 am); plan = 
 Home = Today's progress (RINGS) + Plan my day combined when large, split into Rings tile + Plan tile when small (replaces CheckInTile pairing);
 motion = Apple-style springs, lighter on low-end, respects Reduce motion.
 Status: building.
+- DONE (code): CoachCard layout() placement; TrainHost AnimatedContent cross-fade; "Search" placeholders; TargetMuscleRow (MuscleMap.kt);
+  domain/PlanProfile.kt (extras store, prediction, BMI, summary); ui/onboarding/OnboardingPages.kt (Goal, Tried, MuscleGoal, Focus, Height ruler,
+  BmiCard, BodyShape morph, Prediction); ui/plan/PlanSummary.kt (PlanSummaryCards); onboarding flow list (steps 16–21 new), redo via
+  Overlay.RedoOnboarding (prefill), Settings "Redo setup", Report tab "Your plan" section; OnboardingVersion 5 catch-up [16,18,19].
+- Body art DONE: assets/onboarding/body (men = seed 2, level 4 = m_bf4_s4 re-render; women = seed 1). OnboardingShotTest renders pages to ui-shots.
+- Focus anchors moved onto body; pace chips compact. Next: PR.
 - DONE (commit 1): domain/DayPlan.kt (rules engine, stats batch, score, JSON history filesDir/dayplans.json, story once/day prefs, AI tip),
   ui/plan/PlanUi.kt (PlanStrip in large RINGS card, PlanTile small half, DailyHubScreen Today/Report/History = Overlay.DayPlan(tab),
   PlanStory + PlanStoryHost in MyFitRoot, DailyReportTile in Me, MorningPlanToggle in Settings→Notifications),
@@ -433,3 +439,34 @@ Status: building.
 - CoachCard framing: figure column = right 42 %, video 1.9× card height, head at 10 % (clips are framed 17–92 % of height), bottom fade (DstIn); text/chips constrained to the left column.
 - Trainer "Chat" → new Overlay.CoachChat (ui/coach/TrainerChat.kt, reuses ChatTab with per-coach logs "t"/"n"); nutritionist "Ask" opens the Chat tab (Launch.nutriTab = 3).
 - Faster coach chat: AiRouter.text(fast = true) → Groq first, 12 s per provider before failing over (was Gemini first, 40 s); history trimmed to 6 turns.
+
+## Round 36 REQUEST (20 Oct 13:10) — branch agent/r36 (replaces old R36 plan order; security items move to R37)
+1. Coach/nutritionist cards: figure still out of place (head cut off, legs showing) → fix + responsive for all screen sizes.
+   Root cause found: requiredSize() bigger than parent is CENTRED, so offset math was wrong → use a custom layout() placement.
+2. Train tab: switching to "Today" segment from other segments glitches for a split second (owner video) → fix.
+3. Exercises: "Target muscles" section like inspiration (round muscle-highlight images per muscle) in our design.
+4. All search bars: placeholder just "Search" (remove "Search nihari, kadhi pakora…" etc.).
+5. Onboarding redesign (our design language):
+   - Height page: ruler slider (ft/in + cm) with a character that grows/shrinks with the value.
+   - "What's your fitness goal?" (Weight loss / Muscle build) page.
+   - If weight loss → "Have you tried losing weight? Results?" (4 cards). If muscle build → "Muscle-building goal" (look better / strength / confidence).
+   - "Which areas to focus on?" body with callout chips (Back, Chest, Arms, Abs, Glutes, Legs, Full body).
+   - Weight page AFTER age & height, with live BMI bar.
+   - Current body shape page: body-fat % slider, character visibly gains/loses fat/muscle (owner video), amazing animation.
+   - After body data + workout days + target weight → prediction page (animated curve, "X kg on <date>").
+6. Plan my day: add "personalized plan" style data (About you: height/weight/age, BMI bar, target shape, fitness level, practice suggestions goal/qty/frequency, intensity gauge, aerobic/anaerobic split, target areas) — organized, not cluttered.
+7. Settings: option to redo onboarding later.
+Answers: coach frame head→mid-thigh; onboarding chars = our 3D coach style, male+female, athletic (men shirtless+shorts, women sports bra+leggings);
+body-shape = 6 body-fat renders/gender (free FLUX via foodicon-style workflow) + liquid crossfade + width scaling; goals = 4 (Lose/Build/Get fit/Gain),
+branch page for lose (tried results) & build (muscle goal); prediction = safe pace (0.5 kg/wk loss, 0.25 gain) + Slow/Steady/Fast picker, labelled estimate;
+plan summary = "Your plan is ready" onboarding end + "Your plan" section in Plan my day → Report; redo onboarding prefilled, history kept.
+Target-muscle thumbnails: composite existing assets/anatomy front/back base + overlay, cropped round (no generation).
+Planned onboarding order: welcome, name, DOB, sex, goal, branch, focus areas, height(ruler+char), weight(live BMI), body shape, target weight,
+activity, days, times, diabetes, health, targets, prediction, plan ready.
+Status: building.
+- DONE (code): CoachCard layout() placement; TrainHost AnimatedContent cross-fade; "Search" placeholders; TargetMuscleRow (MuscleMap.kt);
+  domain/PlanProfile.kt (extras store, prediction, BMI, summary); ui/onboarding/OnboardingPages.kt (Goal, Tried, MuscleGoal, Focus, Height ruler,
+  BmiCard, BodyShape morph, Prediction); ui/plan/PlanSummary.kt (PlanSummaryCards); onboarding flow list (steps 16–21 new), redo via
+  Overlay.RedoOnboarding (prefill), Settings "Redo setup", Report tab "Your plan" section; OnboardingVersion 5 catch-up [16,18,19].
+- Body art DONE: assets/onboarding/body (men = seed 2, level 4 = m_bf4_s4 re-render; women = seed 1). OnboardingShotTest renders pages to ui-shots.
+- Focus anchors moved onto body; pace chips compact. Next: PR.

@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.geometry.Offset
@@ -95,17 +96,29 @@ fun CoachCard(role: CoachRole, onOpen: () -> Unit, modifier: Modifier = Modifier
             val c = Offset(size.width - figW.toPx() / 2, size.height * 0.45f)
             drawCircle(Brush.radialGradient(listOf(accent.copy(alpha = 0.40f), accent.copy(alpha = 0.08f), Color.Transparent), c, size.height * 0.8f), size.height * 0.8f, c)
         })
-        // the coach: video is 710×1280 per frame; scaled to 1.9× card height, head at ~10 % from the top
+        // the coach (R36): placed with an explicit layout — requiredSize() re-centres oversized children, which threw the
+        // figure off. The clips are 710×1280 with the character spanning 17–92 % of the height and centred at ~52 % of the width.
+        val figWpx = with(androidx.compose.ui.platform.LocalDensity.current) { figW.toPx() }
         Box(Modifier.align(Alignment.BottomEnd).width(figW).fillMaxHeight().clipToBounds()
             .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
             .drawWithContent {
                 drawContent()
-                drawRect(Brush.verticalGradient(0.72f to Color.Black, 1f to Color.Transparent), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+                drawRect(Brush.verticalGradient(0.74f to Color.Black, 1f to Color.Transparent), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
             }) {
-            val figH = height * 1.9f
-            CoachFigure(look, "idle", Modifier.align(Alignment.TopCenter).offset(y = height * 0.10f - figH * 0.17f)
-                .requiredSize(width = figH * (710f / 1280f), height = figH),
-                spotlight = false, tapToEmote = false, idleOnce = true)
+            CoachFigure(look, "idle", Modifier.layout { m, c ->
+                val cardH = c.maxHeight.toFloat()
+                // head → mid-thigh: head top at 6 % of the card, mid-thigh (≈68 % of body) at the card's bottom edge
+                var vh = cardH * 0.94f / (0.68f * 0.755f)
+                val maxVh = figWpx * 0.95f / (0.6f * (710f / 1280f))      // keep shoulders/arms inside the column
+                if (vh > maxVh) vh = maxVh
+                val vw = vh * 710f / 1280f
+                val p = m.measure(androidx.compose.ui.unit.Constraints.fixed(vw.toInt(), vh.toInt()))
+                layout(c.maxWidth, c.maxHeight) {
+                    val x = (c.maxWidth / 2f - vw * 0.52f).toInt()
+                    val y = (cardH * 0.06f - vh * 0.17f).toInt()
+                    p.place(x, y)
+                }
+            }, spotlight = false, tapToEmote = false, idleOnce = true)
         }
         Column(Modifier.align(Alignment.TopStart).width(textW).padding(start = 16.dp, top = 16.dp, end = 4.dp)) {
             Text(if (trainer) "YOUR TRAINER" else "YOUR NUTRITIONIST", style = FitType.overline, color = accent, maxLines = 1)

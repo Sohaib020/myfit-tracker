@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.animation.togetherWith
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import com.myfit.tracker.AppContainer
@@ -58,8 +59,15 @@ fun TrainHost(container: AppContainer, bottomPad: Int, openSheet: (com.myfit.tra
     androidx.compose.runtime.LaunchedEffect(seg) { chrome.show() }
     Box(Modifier.fillMaxSize()) {
         androidx.compose.runtime.CompositionLocalProvider(com.myfit.tracker.ui.components.LocalTopInset provides with(density) { headerPx.toDp() }) {
+            // R36: segments cross-fade (the old one stays up while the new one composes — no half-drawn frame), and the
+            // new segment's cards cascade in like every other screen
+            androidx.compose.runtime.remember(seg) { com.myfit.tracker.ui.theme.Motion.markScreen(); 0 }
+            androidx.compose.animation.AnimatedContent(seg, Modifier.fillMaxSize(), transitionSpec = {
+                androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220, delayMillis = 60))
+                    .togetherWith(androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)))
+            }, label = "trainSeg") { segShown ->
             Box(Modifier.fillMaxSize()) {
-                when (seg) {
+                when (segShown) {
                     0 -> TrainScreen(container, bottomPad, embedded = true, onBrowsePlans = { seg = 1 }, onTab = { seg = it })
                     1 -> com.myfit.tracker.ui.programs.ProgramsScreen(container, bottomPad)
                     2 -> ExercisesScreen(container, bottomPad, embedded = true)
@@ -68,6 +76,7 @@ fun TrainHost(container: AppContainer, bottomPad: Int, openSheet: (com.myfit.tra
                         item(key = "bmi") { BmiCard(container) }
                     }
                 }
+            }
             }
         }
         Column(

@@ -416,6 +416,8 @@ private fun ReportTab(c: AppContainer) {
     val d = data
     LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 8.dp, 16.dp, 40.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (d == null) { item { Caption("Putting your report together…") }; return@LazyColumn }
+        // R36: your personalised plan (from setup) — compact, expands to the full summary
+        item { YourPlanSection(c) }
         // yesterday at a glance
         item {
             val score = d.y?.let { DayPlans.score(it, d.t) }
@@ -1046,5 +1048,48 @@ fun MorningPlanToggle() {
             Caption("Yesterday's recap and today's plan on your first open of the day")
         }
         androidx.compose.material3.Switch(on, { on = it; DayPlans.setStoryEnabled(ctx, it) })
+    }
+}
+
+
+/** R36 "Your plan": one compact card (goal · BMI · frequency) that opens into the full personalised-plan summary. */
+@Composable
+private fun YourPlanSection(c: AppContainer) {
+    val th = LocalFitTheme.current
+    val ctx = LocalContext.current
+    val nav = LocalNav.current
+    val settings = com.myfit.tracker.ui.theme.LocalSettings.current
+    var open by remember { mutableStateOf(false) }
+    val data by produceState<com.myfit.tracker.domain.PlanProfile.Summary?>(null) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val p = c.profileRepo.profile.first() ?: return@runCatching null
+                val w = c.logRepo.latestWeight().first()?.weightKg ?: p.startWeightKg
+                com.myfit.tracker.domain.PlanProfile.summary(p, w, com.myfit.tracker.domain.PlanProfile.load(ctx))
+            }.getOrNull()
+        }
+    }
+    val sm = data ?: return
+    GlassCard(onClick = { open = !open }, padding = 14.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconBubble(Duo.TrackChanges, th.accentBright, 38.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("YOUR PLAN", style = FitType.overline, color = th.accentBright)
+                Text(sm.goalLabel, style = FitType.section, color = th.text)
+                Caption("BMI ${"%.1f".format(sm.bmi)} · ${sm.bmiClass} · ${sm.perWeek}× a week · ${sm.focus.joinToString()}")
+            }
+            val rot by animateFloatAsState(if (open) 180f else 0f, Motion.snappy(), label = "chev")
+            Icon(Duo.KeyboardArrowDown, null, tint = th.textDim, modifier = Modifier.graphicsLayer { rotationZ = rot })
+        }
+    }
+    androidx.compose.animation.AnimatedVisibility(open,
+        enter = androidx.compose.animation.expandVertically(spring(0.9f, 380f)) + androidx.compose.animation.fadeIn(),
+        exit = androidx.compose.animation.shrinkVertically(spring(1f, 500f)) + androidx.compose.animation.fadeOut()) {
+        Column(Modifier.padding(top = 12.dp)) {
+            PlanSummaryCards(sm, settings.units.weight, settings.units.length)
+            Spacer(Modifier.height(10.dp))
+            com.myfit.tracker.ui.theme.GlassButton("Redo my setup", { nav.push(Overlay.RedoOnboarding) }, Modifier.fillMaxWidth(), icon = Duo.Replay, height = 46.dp)
+        }
     }
 }

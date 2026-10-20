@@ -177,7 +177,7 @@ fun FoodAddScreen(container: AppContainer, mealType0: String, dateKey: String, t
             }
             busy?.let { b -> item { Caption(b, Modifier.padding(horizontal = 4.dp)) } }
             if (tab == 0) {
-                item { GlassSearchField(query, { query = it }, region.hint) }
+                item { GlassSearchField(query, { query = it }, "Search") }
                 if (query.isBlank()) item {
                     val cs = androidx.compose.foundation.lazy.rememberLazyListState()
                     LazyRow(state = cs, modifier = Modifier.fadeEdges(cs), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
