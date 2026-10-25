@@ -44,10 +44,13 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.CornerRadius
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.RoundedRect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -108,6 +111,119 @@ private fun DrawScope.drawBody(img: ImageBitmap, alpha: Float = 1f, topFrac: Flo
     val w = img.width * s * scaleX
     drawImage(img, IntOffset(0, srcTop), IntSize(img.width, srcH),
         IntOffset(((size.width - w) / 2).toInt(), 0), IntSize(w.toInt(), size.height.toInt()), alpha = alpha)
+}
+
+// ====================================================================== vector body (consistent character)
+
+/**
+ * A single consistent cartoon character, drawn procedurally so that the face, hair, beard (male) / ponytail
+ * (female) and pose stay IDENTICAL at every level — only the belly, shoulders, arms and legs grow with [fat].
+ * [fat] is 0 (lean) .. 1 (heaviest). This replaces the old 6-frame cross-fade, whose separately-rendered
+ * images were six different-looking people, so the picker no longer "swaps" the character's identity.
+ */
+private val VB_SKIN_M  = Color(0xFFE0A878)
+private val VB_SKIN_F  = Color(0xFFF1C6A5)
+private val VB_HAIR    = Color(0xFF2B2B2B)
+private val VB_SHOE    = Color(0xFFFAFAFA)
+private val VB_SHOELINE = Color(0xFF2BB673)
+private val VB_WEAR_M  = Color(0xFF3A3F47)   // shorts
+private val VB_WEAR_F  = Color(0xFF2E333B)   // top + leggings
+
+@Composable
+fun VectorBodyCharacter(female: Boolean, fat: Float, modifier: Modifier = Modifier) {
+    val skin = if (female) VB_SKIN_F else VB_SKIN_M
+    val wear = if (female) VB_WEAR_F else VB_WEAR_M
+    Canvas(modifier.fillMaxSize()) {
+        drawBodyCharacter(female, fat.coerceIn(0f, 1f), skin, wear)
+    }
+}
+
+private fun DrawScope.drawBodyCharacter(female: Boolean, t: Float, skin: Color, wear: Color) {
+    val H = size.height; val W = size.width
+    val cx = W / 2f
+    val hair = VB_HAIR
+
+    // vertical layout (fractions of height)
+    val footY = H * 0.935f; val kneeY = H * 0.775f; val hipY = H * 0.60f
+    val waistY = H * 0.50f; val chestY = H * 0.315f; val headCY = H * 0.150f
+    val headR = H * 0.115f
+
+    // widths (grow with t)
+    val shoulderW = H * (0.185f + 0.075f * t)
+    val bellyW    = H * (0.135f + 0.21f * t)
+    val bellyH    = H * (0.085f + 0.09f * t)
+    val hipW      = H * (0.15f + 0.15f * t)
+    val armW      = H * (0.026f + 0.034f * t)
+    val legW      = H * (0.052f + 0.02f * t)
+    val legCxL = cx - (hipW * 0.5f - legW * 0.5f)
+    val legCxR = cx + (hipW * 0.5f - legW * 0.5f)
+    val shinColor = if (female) wear else skin
+
+    // ground shadow
+    drawOval(Color.Black.copy(alpha = 0.16f), Offset(cx - H * 0.14f, footY + H * 0.02f), Size(H * 0.28f, H * 0.045f))
+
+    // legs + shoes
+    fun leg(cxl: Float) {
+        drawRoundRect(RoundedRect(cxl - legW * 0.5f, kneeY, cxl + legW * 0.5f, footY, CornerRadius(legW * 0.4f)), color = shinColor)
+        drawRoundRect(RoundedRect(cxl - legW * 0.55f, hipY, cxl + legW * 0.55f, kneeY + H * 0.02f, CornerRadius(legW * 0.5f)), color = wear)
+        drawRoundRect(RoundedRect(cxl - legW * 0.75f, footY - H * 0.01f, cxl + legW * 0.85f, footY + H * 0.045f, CornerRadius(H * 0.02f)), color = VB_SHOE)
+        drawLine(VB_SHOELINE, Offset(cxl - legW * 0.55f, footY + H * 0.028f), Offset(cxl + legW * 0.65f, footY + H * 0.028f), H * 0.006f)
+    }
+    leg(legCxL); leg(legCxR)
+
+    // torso + belly
+    val torsoW = shoulderW * 0.6f + bellyW * 0.4f
+    drawRoundRect(RoundedRect(cx - torsoW * 0.5f, chestY, cx + torsoW * 0.5f, waistY + bellyH * 0.2f, CornerRadius(torsoW * 0.35f)), color = if (female) wear else skin)
+    val bellyCY = waistY + bellyH * 0.1f
+    drawOval(skin, Offset(cx - bellyW * 0.5f, bellyCY - bellyH * 0.5f), Size(bellyW, bellyH))
+    drawOval(Color.Black.copy(alpha = 0.18f), Offset(cx - bellyW * 0.02f, bellyCY - bellyW * 0.02f), Size(bellyW * 0.04f, bellyW * 0.04f))
+
+    // arms + hands (skin; a female top is sleeveless)
+    val armTop = chestY + H * 0.02f; val armBot = waistY + bellyH * 0.25f
+    val armLx = cx - shoulderW * 0.5f - armW * 0.5f; val armRx = cx + shoulderW * 0.5f + armW * 0.5f
+    drawRoundRect(RoundedRect(armLx, armTop, armLx + armW, armBot, CornerRadius(armW * 0.5f)), color = skin)
+    drawRoundRect(RoundedRect(armRx, armTop, armRx + armW, armBot, CornerRadius(armW * 0.5f)), color = skin)
+    drawOval(skin, Offset(armLx + armW * 0.05f, armBot - armW * 0.3f), Size(armW * 0.9f, armW * 1.1f))
+    drawOval(skin, Offset(armRx + armW * 0.05f, armBot - armW * 0.3f), Size(armW * 0.9f, armW * 1.1f))
+
+    // neck
+    val neckW = H * 0.05f
+    drawRoundRect(RoundedRect(cx - neckW * 0.5f, headCY + headR * 0.55f, cx + neckW * 0.5f, chestY + H * 0.01f, CornerRadius(neckW * 0.3f)), color = skin)
+
+    // ponytail (female) sits behind the head
+    val faceW = headR * 1.7f; val faceH = headR * 1.9f
+    if (female) {
+        drawOval(hair, Offset(cx + faceW * 0.35f, headCY - faceH * 0.55f), Size(faceW * 0.5f, faceH * 0.7f))
+        drawRoundRect(RoundedRect(cx + faceW * 0.55f, headCY - faceH * 0.3f, cx + faceW * 0.75f, headCY + faceH * 0.5f, CornerRadius(faceW * 0.1f)), color = hair)
+    }
+
+    // ears + face + hair cap
+    drawOval(skin, Offset(cx - headR * 1.0f, headCY - headR * 0.12f), Size(headR * 0.28f, headR * 0.5f))
+    drawOval(skin, Offset(cx + headR * 0.72f, headCY - headR * 0.12f), Size(headR * 0.28f, headR * 0.5f))
+    drawOval(skin, Offset(cx - faceW / 2, headCY - faceH / 2), Size(faceW, faceH))
+    drawOval(hair, Offset(cx - faceW * 0.55f, headCY - faceH * 0.55f), Size(faceW * 1.1f, faceH * 0.52f))
+
+    // beard (male)
+    if (!female) {
+        val jawW = faceW * 0.82f; val jawH = faceH * 0.5f
+        drawOval(hair, Offset(cx - jawW / 2, headCY + faceH * 0.05f), Size(jawW, jawH))
+    }
+
+    // eyes + brows + nose + smile
+    val eyeY = headCY - faceH * 0.02f; val eyeDX = faceW * 0.26f
+    val eyeW = faceW * 0.22f; val eyeH = faceW * 0.24f
+    for (s in listOf(-1f, 1f)) {
+        val ex = cx + s * eyeDX
+        drawOval(Color.White, Offset(ex - eyeW / 2, eyeY - eyeH / 2), Size(eyeW, eyeH))
+        drawOval(Color(0xFF3A2E2A), Offset(ex - eyeW * 0.2f, eyeY - eyeH * 0.15f), Size(eyeW * 0.4f, eyeH * 0.5f))
+        drawOval(Color.White, Offset(ex + eyeW * 0.0f, eyeY - eyeH * 0.25f), Size(eyeW * 0.16f, eyeH * 0.18f))
+        val bw = eyeW * 0.5f; val browY = eyeY - eyeH * 0.8f
+        drawRoundRect(RoundedRect(ex - bw, browY - H * 0.004f, ex + bw, browY + H * 0.004f, CornerRadius(H * 0.004f)), color = hair)
+    }
+    drawOval(Color.Black.copy(alpha = 0.10f), Offset(cx - faceW * 0.03f, headCY + faceH * 0.12f), Size(faceW * 0.06f, faceH * 0.05f))
+    val mouthCY = headCY + faceH * 0.30f
+    drawArc(Color(0xFF7A4A3A), 20f, 140f, false, Offset(cx - faceW * 0.18f, mouthCY - faceW * 0.16f), Size(faceW * 0.36f, faceW * 0.32f),
+        style = Stroke(H * 0.006f, cap = StrokeCap.Round))
 }
 
 // ====================================================================== goal
@@ -388,13 +504,14 @@ fun BmiCard(weightKg: Double, heightCm: Double) {
 
 // ====================================================================== body shape
 
-/** Body-shape picker: drag the slider and the character gains or loses fat, morphing smoothly between 6 renders. */
+/** Body-shape picker: drag the slider and the character gains or loses fat. The character is a single consistent
+ * vector figure — only the belly, shoulders, arms and legs change; the face, hair, beard/ponytail and pose are
+ * identical at every level, so it no longer "swaps" into a different person. */
 @Composable
 fun BodyShapePage(level: Int, female: Boolean, onLevel: (Int) -> Unit) {
     val th = LocalFitTheme.current
     val v = remember { Animatable(level.toFloat()) }
     LaunchedEffect(level) { if (kotlin.math.abs(v.value - level) > 0.02f && !v.isRunning) v.animateTo(level.toFloat(), spring(0.8f, 260f)) }
-    val imgs = (1..6).map { rememberBody("${g(female)}_bf$it") }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.fillMaxWidth().height(400.dp)) {
@@ -406,13 +523,7 @@ fun BodyShapePage(level: Int, female: Boolean, onLevel: (Int) -> Unit) {
                 drawOval(Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent), Offset(center.x, size.height * 0.975f), size.width * 0.22f),
                     Offset(center.x - size.width * 0.22f, size.height * 0.95f), Size(size.width * 0.44f, size.height * 0.05f))
             }
-            Canvas(Modifier.fillMaxSize()) {
-                val x = v.value.coerceIn(1f, 6f)
-                val lo = x.toInt().coerceIn(1, 6); val hi = (lo + 1).coerceAtMost(6); val f = x - lo
-                // liquid morph: the two neighbouring renders cross-fade while the lower one widens / the upper one narrows
-                imgs[lo - 1]?.let { drawBody(it, alpha = 1f - f * f * (3 - 2 * f), scaleX = 1f + 0.045f * f) }
-                if (hi != lo && f > 0.001f) imgs[hi - 1]?.let { drawBody(it, alpha = f * f * (3 - 2 * f), scaleX = 1f - 0.045f * (1 - f)) }
-            }
+            VectorBodyCharacter(female, (v.value - 1f) / 5f, Modifier.fillMaxSize())
         }
         Spacer(Modifier.height(6.dp))
         Text(PlanProfile.bodyLevelName(level), style = FitType.title, color = th.text)
