@@ -433,7 +433,7 @@ fun HeightPage(cm: Double, unit: LengthUnit, female: Boolean, onCm: (Double) -> 
                     while (v <= topCm) {
                         val y = H - H * (v / topCm.toFloat())
                         val major = v % 10 == 0
-                        drawLine(tick, Offset(rx - (if (major) 22.dp.toPx() else 11.dp.toPx()), y), Offset(rx, y), (if (major) 1.6f else 1f).dp.toPx())\
+                        drawLine(tick, Offset(rx - (if (major) 22.dp.toPx() else 11.dp.toPx()), y), Offset(rx, y), (if (major) 1.6f else 1f).dp.toPx())
                         v += 2
                     }
                 } else {
