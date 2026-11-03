@@ -46,11 +46,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.CornerRadius
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathMeasure
-import androidx.compose.ui.graphics.RoundedRect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -138,6 +136,15 @@ fun VectorBodyCharacter(female: Boolean, fat: Float, modifier: Modifier = Modifi
     }
 }
 
+private fun DrawScope.drawRRect(left: Float, top: Float, right: Float, bottom: Float, radius: Float, color: Color) {
+    drawRoundRect(
+        color = color,
+        topLeft = Offset(left, top),
+        size = Size((right - left).coerceAtLeast(0f), (bottom - top).coerceAtLeast(0f)),
+        cornerRadius = CornerRadius(radius, radius),
+    )
+}
+
 private fun DrawScope.drawBodyCharacter(female: Boolean, t: Float, skin: Color, wear: Color) {
     val H = size.height; val W = size.width
     val cx = W / 2f
@@ -164,16 +171,16 @@ private fun DrawScope.drawBodyCharacter(female: Boolean, t: Float, skin: Color, 
 
     // legs + shoes
     fun leg(cxl: Float) {
-        drawRoundRect(RoundedRect(cxl - legW * 0.5f, kneeY, cxl + legW * 0.5f, footY, CornerRadius(legW * 0.4f)), color = shinColor)
-        drawRoundRect(RoundedRect(cxl - legW * 0.55f, hipY, cxl + legW * 0.55f, kneeY + H * 0.02f, CornerRadius(legW * 0.5f)), color = wear)
-        drawRoundRect(RoundedRect(cxl - legW * 0.75f, footY - H * 0.01f, cxl + legW * 0.85f, footY + H * 0.045f, CornerRadius(H * 0.02f)), color = VB_SHOE)
+        drawRRect(cxl - legW * 0.5f, kneeY, cxl + legW * 0.5f, footY, legW * 0.4f, shinColor)
+        drawRRect(cxl - legW * 0.55f, hipY, cxl + legW * 0.55f, kneeY + H * 0.02f, legW * 0.5f, wear)
+        drawRRect(cxl - legW * 0.75f, footY - H * 0.01f, cxl + legW * 0.85f, footY + H * 0.045f, H * 0.02f, VB_SHOE)
         drawLine(VB_SHOELINE, Offset(cxl - legW * 0.55f, footY + H * 0.028f), Offset(cxl + legW * 0.65f, footY + H * 0.028f), H * 0.006f)
     }
     leg(legCxL); leg(legCxR)
 
     // torso + belly
     val torsoW = shoulderW * 0.6f + bellyW * 0.4f
-    drawRoundRect(RoundedRect(cx - torsoW * 0.5f, chestY, cx + torsoW * 0.5f, waistY + bellyH * 0.2f, CornerRadius(torsoW * 0.35f)), color = if (female) wear else skin)
+    drawRRect(cx - torsoW * 0.5f, chestY, cx + torsoW * 0.5f, waistY + bellyH * 0.2f, torsoW * 0.35f, if (female) wear else skin)
     val bellyCY = waistY + bellyH * 0.1f
     drawOval(skin, Offset(cx - bellyW * 0.5f, bellyCY - bellyH * 0.5f), Size(bellyW, bellyH))
     drawOval(Color.Black.copy(alpha = 0.18f), Offset(cx - bellyW * 0.02f, bellyCY - bellyW * 0.02f), Size(bellyW * 0.04f, bellyW * 0.04f))
@@ -181,20 +188,20 @@ private fun DrawScope.drawBodyCharacter(female: Boolean, t: Float, skin: Color, 
     // arms + hands (skin; a female top is sleeveless)
     val armTop = chestY + H * 0.02f; val armBot = waistY + bellyH * 0.25f
     val armLx = cx - shoulderW * 0.5f - armW * 0.5f; val armRx = cx + shoulderW * 0.5f + armW * 0.5f
-    drawRoundRect(RoundedRect(armLx, armTop, armLx + armW, armBot, CornerRadius(armW * 0.5f)), color = skin)
-    drawRoundRect(RoundedRect(armRx, armTop, armRx + armW, armBot, CornerRadius(armW * 0.5f)), color = skin)
+    drawRRect(armLx, armTop, armLx + armW, armBot, armW * 0.5f, skin)
+    drawRRect(armRx, armTop, armRx + armW, armBot, armW * 0.5f, skin)
     drawOval(skin, Offset(armLx + armW * 0.05f, armBot - armW * 0.3f), Size(armW * 0.9f, armW * 1.1f))
     drawOval(skin, Offset(armRx + armW * 0.05f, armBot - armW * 0.3f), Size(armW * 0.9f, armW * 1.1f))
 
     // neck
     val neckW = H * 0.05f
-    drawRoundRect(RoundedRect(cx - neckW * 0.5f, headCY + headR * 0.55f, cx + neckW * 0.5f, chestY + H * 0.01f, CornerRadius(neckW * 0.3f)), color = skin)
+    drawRRect(cx - neckW * 0.5f, headCY + headR * 0.55f, cx + neckW * 0.5f, chestY + H * 0.01f, neckW * 0.3f, skin)
 
     // ponytail (female) sits behind the head
     val faceW = headR * 1.7f; val faceH = headR * 1.9f
     if (female) {
         drawOval(hair, Offset(cx + faceW * 0.35f, headCY - faceH * 0.55f), Size(faceW * 0.5f, faceH * 0.7f))
-        drawRoundRect(RoundedRect(cx + faceW * 0.55f, headCY - faceH * 0.3f, cx + faceW * 0.75f, headCY + faceH * 0.5f, CornerRadius(faceW * 0.1f)), color = hair)
+        drawRRect(cx + faceW * 0.55f, headCY - faceH * 0.3f, cx + faceW * 0.75f, headCY + faceH * 0.5f, faceW * 0.1f, hair)
     }
 
     // ears + face + hair cap
@@ -218,7 +225,7 @@ private fun DrawScope.drawBodyCharacter(female: Boolean, t: Float, skin: Color, 
         drawOval(Color(0xFF3A2E2A), Offset(ex - eyeW * 0.2f, eyeY - eyeH * 0.15f), Size(eyeW * 0.4f, eyeH * 0.5f))
         drawOval(Color.White, Offset(ex + eyeW * 0.0f, eyeY - eyeH * 0.25f), Size(eyeW * 0.16f, eyeH * 0.18f))
         val bw = eyeW * 0.5f; val browY = eyeY - eyeH * 0.8f
-        drawRoundRect(RoundedRect(ex - bw, browY - H * 0.004f, ex + bw, browY + H * 0.004f, CornerRadius(H * 0.004f)), color = hair)
+        drawRRect(ex - bw, browY - H * 0.004f, ex + bw, browY + H * 0.004f, H * 0.004f, hair)
     }
     drawOval(Color.Black.copy(alpha = 0.10f), Offset(cx - faceW * 0.03f, headCY + faceH * 0.12f), Size(faceW * 0.06f, faceH * 0.05f))
     val mouthCY = headCY + faceH * 0.30f
@@ -426,7 +433,7 @@ fun HeightPage(cm: Double, unit: LengthUnit, female: Boolean, onCm: (Double) -> 
                     while (v <= topCm) {
                         val y = H - H * (v / topCm.toFloat())
                         val major = v % 10 == 0
-                        drawLine(tick, Offset(rx - (if (major) 22.dp.toPx() else 11.dp.toPx()), y), Offset(rx, y), (if (major) 1.6f else 1f).dp.toPx())
+                        drawLine(tick, Offset(rx - (if (major) 22.dp.toPx() else 11.dp.toPx()), y), Offset(rx, y), (if (major) 1.6f else 1f).dp.toPx())\
                         v += 2
                     }
                 } else {
