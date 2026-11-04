@@ -47,6 +47,38 @@ object PlanProfile {
     }
     fun bodyLevelName(level: Int) = listOf("Very lean", "Athletic", "Average", "Soft", "Overweight", "Obese")[(level - 1).coerceIn(0, 5)]
 
+    /** Upper BMI bound of each body-shape level (1 very lean … 6 obese). */
+    private val BMI_BANDS = listOf(18.5, 21.5, 24.5, 27.5, 32.0, Double.MAX_VALUE)
+
+    /** Middle BMI of each level — the weight a person of that shape would have at a given height. */
+    private val BMI_MIDS = listOf(17.0, 20.0, 23.0, 26.0, 29.75, 35.0)
+
+    /** The weight (kg) that matches a body-shape level at a given height — used to anchor the weight slider. */
+    fun anchorWeightKg(level: Int, heightCm: Double): Double {
+        val h = (heightCm / 100.0).coerceAtLeast(0.5)
+        return BMI_MIDS[(level - 1).coerceIn(0, 5)] * h * h
+    }
+
+    /** The body-shape level a BMI falls into. */
+    fun bodyLevelForBmi(bmi: Double): Int {
+        var lvl = 1
+        while (lvl < 6 && bmi >= BMI_BANDS[lvl - 1]) lvl++
+        return lvl
+    }
+
+    /**
+     * The level to draw for a given weight, relative to the shape the user actually picked.
+     *
+     * The pick is the anchor: at [anchorKg] the character is exactly the level they chose. Moving the weight slider
+     * up fattens the figure, down leans it out — about two BMI points per level, which is roughly a 6 kg step for a
+     * 175 cm adult. Only ever used for the picture, never for their targets.
+     */
+    fun bodyLevelFor(anchorLevel: Int, anchorKg: Double, nowKg: Double, heightCm: Double): Int {
+        val h = (heightCm / 100.0).coerceAtLeast(0.5)
+        val delta = (nowKg - anchorKg) / (h * h)
+        return (anchorLevel + kotlin.math.round(delta / 2.0).toInt()).coerceIn(1, 6)
+    }
+
     /** kg per week for the prediction (always a gentle, commonly recommended range — labelled as an estimate). */
     fun kgPerWeek(losing: Boolean, pace: Int): Double = if (losing) listOf(0.25, 0.5, 0.75)[pace.coerceIn(0, 2)] else listOf(0.15, 0.25, 0.4)[pace.coerceIn(0, 2)]
 
