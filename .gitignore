@@ -14,3 +14,8 @@ app/google-services.json
 .claude/
 __pycache__/
 app/src/main/assets/pose/
+
+# 3D body-variant GLBs (~250 MB, regenerate with tools/meshdeform/build.py)
+tools/meshdeform/glb/
+tools/meshdeform/raw/
+tools/meshdeform/src/
