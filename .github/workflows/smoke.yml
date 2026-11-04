@@ -31,7 +31,7 @@ jobs:
       - name: Fetch sherpa-onnx AAR
         run: |
           mkdir -p app/libs
-          curl -fsSL --retry 4 -o app/libs/sherpa-onnx.aar https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-static-link-onnxruntime-1.13.8.aar
+          curl -fsSL --retry 4 -o app/libs/sherpa-onnx.aar https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-1.13.8.aar
       - name: Build APK (x86_64 for the emulator; release = R8-minified)
         env:
           MYFIT_ABIS: x86_64

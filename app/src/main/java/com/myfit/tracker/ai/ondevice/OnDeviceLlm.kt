@@ -156,6 +156,21 @@ class OnDeviceLlm(private val app: Context, private val hub: OnDeviceAi) {
         }
     }
 
+    /**
+     * R21: first-start preparation — loads the model and generates a few tokens so LiteRT-LM builds and stores its
+     * per-phone caches (cacheDir). Called by [BrainWarmup] after a download or an app update; the engine is then let go
+     * on the usual idle timer, and the next real load reuses the caches.
+     */
+    suspend fun warmUp() = withContext(Dispatchers.IO) {
+        lock.withLock {
+            idleJob?.cancel()
+            val e = ensure()
+            try {
+                withTimeout(120_000) { e.createConversation().use { conv -> conv.sendMessage("Reply with one word: ready") } }
+            } finally { scheduleIdleRelease() }
+        }
+    }
+
     /** Loads the model in the background (e.g. while the food camera is open) so the first answer comes faster. */
     fun prewarm() {
         scope.launch {

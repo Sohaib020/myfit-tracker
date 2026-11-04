@@ -184,14 +184,10 @@ fun ExerciseBrowser(
             item(span = { GridItemSpan(2) }) {
                 Column {
                     Spacer(Modifier.height(4.dp))
-                    GlassSearchField(query, { query = it }, "Search — e.g. \"bench db\", \"lat pull\"")
+                    GlassSearchField(query, { query = it }, "Search")
                     Spacer(Modifier.height(10.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        item { GlassChip("All", muscle == null, { muscle = null }) }
-                        items(MuscleGroup.all) { g ->
-                            GlassChip(g, muscle == g, { muscle = if (muscle == g) null else g })
-                        }
-                    }
+                    // R36: target muscles with anatomy thumbnails (tap again for all)
+                    TargetMuscleRow(muscle) { muscle = it }
                     Spacer(Modifier.height(8.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         item { GlassChip("Any equipment", equipment == null, { equipment = null }) }

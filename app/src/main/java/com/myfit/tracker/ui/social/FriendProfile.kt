@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -63,6 +65,40 @@ fun FriendProfileContent(container: AppContainer, f: com.myfit.tracker.social.Fr
             if (stars != null) { Spacer(Modifier.width(8.dp)); Text("★ ${Fmt.int(stars.toDouble())} stars", style = FitType.label, color = Color(0xFFFFC83D)) }
             val buddy = mascot?.let { m -> Mascot.entries.firstOrNull { it.id == m } }
             if (buddy != null) { Spacer(Modifier.width(8.dp)); com.myfit.tracker.ui.arena.CastImage(buddy, 36.dp) }
+        }
+    }
+    // R32: their champion and Arena buddy, side by side
+    val champ = fresh?.champ?.let { com.myfit.tracker.ui.pip.BuddyChar.parse(it) }?.takeIf { !it.isPip }
+    val buddyM = mascot?.let { m -> Mascot.entries.firstOrNull { it.id == m } }
+    if (champ != null || buddyM != null) {
+        Spacer(Modifier.height(16.dp))
+        Text("Champion & buddy", style = FitType.label, color = th.textDim)
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.fillMaxWidth().height(190.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (champ != null) {
+                val stats = fresh?.champStats.orEmpty()
+                Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(20.dp))
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(champ.color.copy(alpha = 0.35f), Color(0xFF0E1018))))
+                    .padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    com.myfit.tracker.ui.coach.OnPlatform(champ.color, Modifier.fillMaxWidth().weight(1f)) {
+                        com.myfit.tracker.ui.game.ChampStill(champ, Modifier.fillMaxSize(), full = true)
+                    }
+                    Text(champ.label, style = FitType.label, color = Color.White, maxLines = 1)
+                    Caption("${champ.tier.label} champion" + (if (stats.size == 4) " · ${stats.sum() / 4}" else ""), color = Color.White.copy(alpha = 0.75f))
+                }
+            }
+            if (buddyM != null) {
+                Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(20.dp))
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(buddyM.color.copy(alpha = 0.35f), Color(0xFF0E1018))))
+                    .padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                        com.myfit.tracker.ui.arena.CastImage(buddyM, 120.dp)
+                    }
+                    Text(buddyM.label, style = FitType.label, color = Color.White, maxLines = 1)
+                    Caption("Arena buddy" + (level?.let { " · Lv $it" } ?: ""), color = Color.White.copy(alpha = 0.75f))
+                }
+            }
+            if (champ == null || buddyM == null) Spacer(Modifier.weight(1f))
         }
     }
     Spacer(Modifier.height(16.dp))

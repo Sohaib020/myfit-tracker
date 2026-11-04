@@ -87,7 +87,7 @@ fun MacroSummary(t: Totals, kcalTarget: Double?, proteinTarget: Double?, carbsTa
 }
 
 @Composable
-private fun MacroBar(label: String, v: Double, target: Double?, color: Color) {
+internal fun MacroBar(label: String, v: Double, target: Double?, color: Color) {
     val th = LocalFitTheme.current
     Column {
         Row {

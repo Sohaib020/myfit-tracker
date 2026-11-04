@@ -3,7 +3,6 @@ package com.myfit.tracker.ui.pip
 import android.content.Context
 import android.graphics.ImageDecoder
 import androidx.annotation.RequiresApi
-import com.myfit.tracker.ui.arena.Mascot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -15,28 +14,23 @@ import java.net.URL
 import java.util.zip.ZipInputStream
 
 /**
- * Home buddy: Pip by default, or any unlocked Arena character.
+ * Home buddy: Pip by default, or a champion look you own (R24 — the champions replaced the plush Arena buddies).
  *  - Pip ships in the APK with his full set (assets/pip).
- *  - Every other character ships only its portrait (assets/buddy/<id>/portrait.webp). Its animation pack
- *    (~1.7 MB: 8 key moves + talk frames) is downloaded the first time you pick it, from the GitHub release
- *    "buddies-v1", into filesDir/buddy/<id>/. Until then (or offline) it shows its portrait.
- * Moves a character doesn't have play their closest kept move. Everything that draws the buddy goes through
- * [open]/[source]/[openAsset] so it doesn't care where the files live.
+ *  - A champion look ships only its portrait (assets/champ/<id>/portrait.webp). Its clip pack (animated WebPs named
+ *    like Pip's moves) downloads the first time you pick it, from the GitHub release "champs-v1", into
+ *    filesDir/champ/<id>/. Capable phones can show the real-time 3D model instead (see ChampStage).
+ * Moves a pack doesn't have play their closest kept move. Everything that draws the buddy goes through
+ * [open]/[source]/[openAsset], so it doesn't care where the files live.
  */
 object Buddy {
-    private const val PACKS = "https://github.com/Sohaib020/myfit-tracker/releases/download/buddies-v1"
+    private const val PACKS = "https://github.com/Sohaib020/myfit-tracker/releases/download/champs-v3"   // R28: tight-cropped 60 fps MP4 clips
 
     /** The buddy currently shown. */
-    val active = MutableStateFlow(Mascot.PIP)
-    @Volatile var lookN = 13; private set
-    /** Only Pip has the look-at-your-finger head grid. */
-    val hasLook: Boolean get() = active.value == Mascot.PIP
+    val active = MutableStateFlow(BuddyChar.PIP)
 
-    /** Download progress per buddy id (0..1), for the chooser UI. */
+    /** Download progress per look id (0..1), for the chooser UI. */
     val downloading = MutableStateFlow<Map<String, Float>>(emptyMap())
 
-    /** Moves in every lite pack. */
-    val LITE = setOf("idle", "wave", "celebrate", "thinking", "love", "sleepy", "letsgo", "train")
     private val FALLBACK = mapOf(
         "excited" to "celebrate", "dance" to "celebrate", "spin" to "celebrate", "cheer" to "celebrate", "clap" to "celebrate",
         "highfive" to "celebrate", "laugh" to "celebrate", "jumpingjacks" to "train", "squat" to "train", "stretch" to "train",
@@ -47,27 +41,39 @@ object Buddy {
         "yawn" to "sleepy", "meditate" to "sleepy", "sneeze" to "sleepy", "bow" to "wave", "peekaboo" to "wave",
     )
 
-    private var appCtx: Context? = null
-    private fun prefs(c: Context) = c.applicationContext.getSharedPreferences("buddy", Context.MODE_PRIVATE)
-    private fun dir(c: Context, m: Mascot) = File(c.applicationContext.filesDir, "buddy/${m.id}")
+    private val PIP_TRIMMED = setOf("facepalm", "shy", "pout", "dizzy", "blowkiss", "highfive", "bow", "peekaboo", "sneeze", "yawn", "concerned", "meditate", "curious", "surprised", "point", "salute", "laugh", "hearteyes", "grumpy", "wink")
 
-    /** Pip is always installed; others once their pack has been downloaded. */
-    fun installed(c: Context, m: Mascot) = m == Mascot.PIP || File(dir(c, m), ".complete").exists()
-    val name: String get() = active.value.label.substringBefore(' ')
+    private fun prefs(c: Context) = c.applicationContext.getSharedPreferences("buddy", Context.MODE_PRIVATE)
+    private fun dir(c: Context, b: BuddyChar) = File(c.applicationContext.filesDir, "champ/${b.id}")
+
+    /** Pip is always installed; a champion look once its pack has been downloaded. */
+    fun installed(c: Context, b: BuddyChar) = b.isPip || File(dir(c, b), ".complete").let { it.exists() && it.readText().trim() == PACK_VER }
+    private const val PACK_VER = "3"
+    val name: String get() = active.value.label
 
     /** How the AI should introduce itself. */
-    fun persona(): String = active.value.let { m ->
-        if (m == Mascot.PIP) "You are Pip, the cheerful little buddy inside \"MyFit Tracker\", a private fitness logbook app. You look like a soft mint plush with a navy striped sweatband, a curly antenna and little sneakers."
-        else "You are ${m.label.substringBefore(' ')} (${m.label}), the user's chosen buddy inside \"MyFit Tracker\", a private fitness logbook app — a friendly 3D plush character from Pakistan's wildlife. Your motto: \"${m.tagline}\". Always call yourself ${m.label.substringBefore(' ')}, never Pip."
+    fun persona(): String = active.value.let { b ->
+        val ch = b.champion
+        if (ch == null) "You are Pip, the cheerful little buddy inside \"MyFit Tracker\", a private fitness logbook app. You look like a soft mint plush with a navy striped sweatband, a curly antenna and little sneakers."
+        else "You are ${ch.tag}, the user's chosen buddy inside \"MyFit Tracker\", a private fitness logbook app — an original game-hero character, a " +
+            "${ch.archetype}${if (ch.animal) " (a humanoid animal champion)" else ""}, here in your ${b.tier.label} look. Your motto: \"${ch.motto}\". " +
+            "You're a fictional character, not a real person. Always call yourself ${ch.tag}, never Pip."
     }
 
     /** Call once at start-up. */
     fun init(c: Context) {
-        appCtx = c.applicationContext
-        val id = prefs(c).getString("buddy", "pip")
-        val m = Mascot.entries.firstOrNull { it.id == id } ?: Mascot.PIP
+        // R25: Pip is the buddy again; champions live in Game Mode. Someone who had picked a champion keeps it as
+        // their Game Mode champion (Game Mode switched on quietly, no intro).
+        val b = BuddyChar.parse(prefs(c).getString("buddy", "pip"))
+        if (b.champion != null) {
+            if (Champions.owns(c, b.champion, b.tier)) {
+                com.myfit.tracker.ui.game.GameMode.choose(c, b)
+                c.applicationContext.getSharedPreferences("game_mode", Context.MODE_PRIVATE).edit().putBoolean("on", true).putBoolean("asked", true).apply()
+            }
+            prefs(c).edit().putString("buddy", "pip").apply()
+        }
+        val m = BuddyChar.PIP
         apply(m)
-        // the chosen buddy's pack is missing (e.g. after the update that stopped bundling them): fetch it quietly
         if (!installed(c, m)) {
             val app = c.applicationContext
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO).launch {
@@ -76,24 +82,23 @@ object Buddy {
         }
     }
 
-    private fun apply(m: Mascot) {
-        lookN = if (m == Mascot.PIP) 13 else 1
+    private fun apply(m: BuddyChar) {
         active.value = m
         onChange.forEach { it() }
     }
 
     internal val onChange = mutableListOf<() -> Unit>()
 
-    fun choose(c: Context, m: Mascot) {
+    fun choose(c: Context, m: BuddyChar) {
         prefs(c).edit().putString("buddy", m.id).apply()
         apply(m)
     }
 
     /**
-     * Downloads (once) and installs [m]'s animation pack. Returns null on success, else a short error.
+     * Downloads (once) and installs [m]'s clip pack. Returns null on success, else a short error.
      * Safe to call again — a finished pack is skipped.
      */
-    suspend fun download(c: Context, m: Mascot): String? = withContext(Dispatchers.IO) {
+    suspend fun download(c: Context, m: BuddyChar): String? = withContext(Dispatchers.IO) {
         if (installed(c, m)) return@withContext null
         val target = dir(c, m)
         val tmp = File(target.parentFile, "${m.id}.tmp").apply { deleteRecursively(); mkdirs() }
@@ -106,7 +111,7 @@ object Buddy {
                 conn.disconnect(); conn = URL(loc).openConnection() as HttpURLConnection
                 conn.connectTimeout = 15_000; conn.readTimeout = 30_000
             }
-            if (conn.responseCode !in 200..299) return@withContext "Couldn't download ${m.label.substringBefore(' ')} (HTTP ${conn.responseCode})"
+            if (conn.responseCode !in 200..299) return@withContext "Couldn't download ${m.label} (HTTP ${conn.responseCode})"
             val total = conn.contentLengthLong.coerceAtLeast(1L)
             var read = 0L
             val counting = object : java.io.FilterInputStream(conn.inputStream) {
@@ -122,13 +127,13 @@ object Buddy {
                     if (e.isDirectory) out.mkdirs() else { out.parentFile?.mkdirs(); out.outputStream().use { zip.copyTo(it) } }
                 }
             }
-            if (!File(tmp, "idle.webp").exists()) return@withContext "That pack looks incomplete — try again"
-            File(tmp, ".complete").writeText("1")
+            if (!File(tmp, "idle.mp4").exists() && !File(tmp, "idle.webp").exists()) return@withContext "That pack looks incomplete — try again"
+            File(tmp, ".complete").writeText(PACK_VER)
             target.deleteRecursively()
             if (!tmp.renameTo(target)) return@withContext "Couldn't save the pack"
             null
         } catch (e: Exception) {
-            "No connection — ${m.label.substringBefore(' ')} will download when you're online"
+            "No connection — ${m.label} will download when you're online"
         } finally {
             tmp.takeIf { it.exists() && it.name.endsWith(".tmp") }?.deleteRecursively()
             downloading.value = downloading.value - m.id
@@ -136,32 +141,46 @@ object Buddy {
     }
 
     /** Removes a downloaded pack (Settings → storage). */
-    fun remove(c: Context, m: Mascot) { if (m != Mascot.PIP) dir(c, m).deleteRecursively() }
+    fun remove(c: Context, m: BuddyChar) { if (!m.isPip) dir(c, m).deleteRecursively() }
 
-    /** Asset-relative path for a Pip-relative file ("idle.webp", "talk/0.webp", "look/…") of [m]. */
-    fun path(rel: String, m: Mascot = active.value): String {
-        if (m == Mascot.PIP) return "pip/$rel"
-        val base = "buddy/${m.id}/"
-        return when {
-            rel.startsWith("talk/") -> base + rel
-            rel.startsWith("look/") -> base + "portrait.webp"
-            else -> {
-                val clip = rel.removeSuffix(".webp")
-                base + (if (clip in LITE) clip else FALLBACK[clip] ?: "idle") + ".webp"
-            }
+    /** Asset-relative path for a Pip-relative file ("idle.webp", "talk/0.webp") of [m]. */
+    fun path(rel: String, m: BuddyChar = active.value): String {
+        if (m.isPip) {
+            // R29: Pip's 20 least-used moves were trimmed from the APK (−9 MB); they play their closest kept move
+            val clip = rel.removeSuffix(".webp")
+            return if (clip in PIP_TRIMMED) "pip/${FALLBACK[clip] ?: "idle"}.webp" else "pip/$rel"
         }
+        val base = "champ/${m.id}/"
+        if (rel.startsWith("talk/") || rel.startsWith("look/")) return base + "portrait.webp"
+        val clip = rel.removeSuffix(".webp")
+        val have = Champions.clips(m.tier)
+        val pick = when {
+            clip in have -> clip
+            Champions.alias(clip, m.tier)?.let { it in have } == true -> Champions.alias(clip, m.tier)!!
+            FALLBACK[clip] in have -> FALLBACK[clip]!!
+            else -> "idle"
+        }
+        return "$base$pick.webp"
     }
 
-    /** Opens a "buddy/<id>/…" or "pip/…" path: bundled asset, downloaded pack file, or the portrait as a stand-in. */
+    /** Champions draw no mouth frames (realistic faces): when talking they play their "talk" clip instead. */
+    val talksWithClip: Boolean get() = !active.value.isPip
+
+    /** Opens a "champ/<id>/…" or "pip/…" path: downloaded pack file, bundled asset, or the portrait as a stand-in. */
+    private fun dl(p: String) = p.startsWith("champ/") || p.startsWith("buddy/")   // downloadable dirs (buddy/ = Arena cast art)
+
     fun openAsset(c: Context, assetPath: String): InputStream {
-        if (!assetPath.startsWith("buddy/")) return c.assets.open(assetPath)
+        if (!dl(assetPath)) return c.assets.open(assetPath)
         val f = File(c.applicationContext.filesDir, assetPath)
         if (f.exists()) return f.inputStream()
         return runCatching { c.assets.open(assetPath) }.getOrElse { c.assets.open(portraitOf(assetPath)) }
     }
 
-    /** "buddy/<id>/anything" → "buddy/<id>/portrait.webp" (always bundled). */
-    private fun portraitOf(assetPath: String) = "buddy/" + assetPath.removePrefix("buddy/").substringBefore('/') + "/portrait.webp"
+    /** "champ/<id>/anything" → "champ/<id>/portrait.webp" (always bundled; same for buddy/). */
+    private fun portraitOf(assetPath: String): String {
+        val root = assetPath.substringBefore('/')
+        return root + "/" + assetPath.removePrefix("$root/").substringBefore('/') + "/portrait.webp"
+    }
 
     fun open(c: Context, rel: String): InputStream = openAsset(c, path(rel))
 
@@ -170,7 +189,7 @@ object Buddy {
 
     @RequiresApi(28)
     fun sourceFor(c: Context, assetPath: String): ImageDecoder.Source {
-        if (assetPath.startsWith("buddy/")) {
+        if (dl(assetPath)) {
             val f = File(c.applicationContext.filesDir, assetPath)
             if (f.exists()) return ImageDecoder.createSource(f)
             return runCatching { c.assets.openFd(assetPath).close(); ImageDecoder.createSource(c.assets, assetPath) }
@@ -181,6 +200,18 @@ object Buddy {
 
     /** True when the animated clip for [assetPath] is really available (pack downloaded or bundled). */
     fun hasClip(c: Context, assetPath: String): Boolean =
-        !assetPath.startsWith("buddy/") || File(c.applicationContext.filesDir, assetPath).exists() ||
+        !dl(assetPath) || File(c.applicationContext.filesDir, assetPath).exists() ||
             runCatching { c.assets.open(assetPath).close(); true }.getOrDefault(false)
+
+    /** The downloaded clip file for a champion move: the R26 video if the pack has it, else the older WebP. */
+    fun champClip(c: Context, b: BuddyChar, pose: String): File? {
+        val webp = File(c.applicationContext.filesDir, path("$pose.webp", b))
+        return File(webp.path.removeSuffix(".webp") + ".mp4").takeIf { it.exists() } ?: webp.takeIf { it.exists() }
+    }
+
+    /** Bundled full-body still of a champion look (locked-look glimpse, stand-in while loading). */
+    fun standAsset(b: BuddyChar): String = if (b.isPip) "pip/portrait.webp" else "champ/${b.id}/stand.webp"
+
+    /** Bundled portrait of any buddy (chooser, chat header, avatars). */
+    fun portraitAsset(b: BuddyChar): String = if (b.isPip) "pip/portrait.webp" else "champ/${b.id}/portrait.webp"
 }

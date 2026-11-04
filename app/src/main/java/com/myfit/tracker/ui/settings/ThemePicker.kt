@@ -1,6 +1,7 @@
 package com.myfit.tracker.ui.settings
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +21,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,11 +49,11 @@ import com.myfit.tracker.ui.theme.drawBackdrop
 import com.myfit.tracker.ui.theme.flatSurface
 
 /**
- * R17: the design style (Glass or Flat — Android 13+ only; older phones are always Flat) and twelve themes in one
- * tidy grid. The background is the same in both styles; only the cards change.
+ * R20: the design style (Glass or Flat — Android 13+ only; older phones are always Flat) and the themes as three
+ * swipeable rows — Light, Dark and Cultural — shown inline (no tap-to-open sheet). Each row starts at the chosen theme.
  */
 @Composable
-fun ThemePicker(container: AppContainer, settings: AppSettings, @Suppress("UNUSED_PARAMETER") tileWidth: Int = 92) {
+fun ThemePicker(container: AppContainer, settings: AppSettings, tileWidth: Int = 104) {
     val th = LocalFitTheme.current
     val canGlass = com.myfit.tracker.ui.theme.UiStyle.glassCapable
     val flat = settings.uiStyle == 1 || !canGlass
@@ -61,16 +64,35 @@ fun ThemePicker(container: AppContainer, settings: AppSettings, @Suppress("UNUSE
             StyleCard("Glass", "Frosted see-through cards", !flat, Modifier.weight(1f).fillMaxHeight()) { container.write { container.settings.setUiStyle(0) } }
             StyleCard("Flat", "Solid cards tinted by type", flat, Modifier.weight(1f).fillMaxHeight()) { container.write { container.settings.setUiStyle(1) } }
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(18.dp))
     }
-    Text("THEME", style = FitType.overline, color = th.textDim)
+    val cur = Themes.byId(settings.themeId).id
+    val pick: (FitTheme) -> Unit = { t -> container.write { container.settings.setTheme(t.id) } }
+    ThemeRow("Light", com.myfit.tracker.ui.theme.GymThemes.all.filter { it.isLight }, cur, flat, tileWidth, pick)
+    Spacer(Modifier.height(18.dp))
+    ThemeRow("Dark", com.myfit.tracker.ui.theme.GymThemes.all.filter { !it.isLight }, cur, flat, tileWidth, pick)
+    Spacer(Modifier.height(18.dp))
+    ThemeRow("Cultural Themes", com.myfit.tracker.ui.theme.CulturalThemes.all, cur, flat, tileWidth, pick, cultural = true)
+}
+
+/** One category: a label with its count, then a horizontal swipe of theme tiles. */
+@Composable
+private fun ThemeRow(title: String, themes: List<FitTheme>, cur: String, flat: Boolean, tileWidth: Int, onPick: (FitTheme) -> Unit, cultural: Boolean = false) {
+    val th = LocalFitTheme.current
+    val sel = themes.indexOfFirst { it.id == cur }
+    val state = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (sel - 1).coerceAtLeast(0))
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text(title.uppercase(), style = FitType.overline, color = if (sel >= 0) th.accent else th.textDim)
+        Spacer(Modifier.width(8.dp))
+        Text("${themes.size}", style = FitType.caption, color = th.textFaint)
+        Spacer(Modifier.weight(1f))
+        if (themes.size > 3) Text("Swipe ›", style = FitType.caption, color = th.textFaint)
+    }
     Spacer(Modifier.height(8.dp))
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Themes.all.chunked(3).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { t -> ThemeTile(t, t.id == Themes.byId(settings.themeId).id, flat, Modifier.weight(1f)) { container.write { container.settings.setTheme(t.id) } } }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-            }
+    LazyRow(state = state, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        items(themes, key = { it.id }) { t ->
+            ThemeTile(t, t.id == cur, flat, Modifier.width(tileWidth.dp),
+                sub = if (cultural) com.myfit.tracker.ui.theme.CulturalThemes.info(t.id)?.country else null) { onPick(t) }
         }
     }
 }
@@ -105,13 +127,13 @@ private fun StyleCard(title: String, sub: String, selected: Boolean, modifier: M
 }
 
 @Composable
-private fun ThemeTile(t: FitTheme, selected: Boolean, flat: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun ThemeTile(t: FitTheme, selected: Boolean, flat: Boolean, modifier: Modifier, sub: String? = null, onClick: () -> Unit) {
     val th = LocalFitTheme.current
     val backdrop = LocalBackdrop.current
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(0.66f).clip(RoundedCornerShape(20.dp))
-                .border(if (selected) 3.dp else 1.dp, if (selected) t.accent else Color.White.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
+            Modifier.fillMaxWidth().aspectRatio(0.62f).clip(RoundedCornerShape(22.dp))
+                .border(if (selected) 2.5.dp else 1.dp, if (selected) t.accent else Color.White.copy(alpha = 0.22f), RoundedCornerShape(22.dp))
                 .clickableNoRipple(onClick)
         ) {
             Canvas(Modifier.fillMaxSize()) {
@@ -130,8 +152,14 @@ private fun ThemeTile(t: FitTheme, selected: Boolean, flat: Boolean, modifier: M
                 card(0.38f, 0.2f, t.water)
                 drawRoundRect(t.accent, topLeft = Offset(size.width * 0.1f, size.height * 0.8f), size = Size(size.width * 0.8f, size.height * 0.1f), cornerRadius = CornerRadius(40f))
             }
+            if (selected) Box(
+                Modifier.align(Alignment.TopEnd).padding(8.dp).size(22.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(t.accent),
+                contentAlignment = Alignment.Center,
+            ) { androidx.compose.material3.Icon(Duo.Check, "Selected", tint = t.onAccent, modifier = Modifier.size(14.dp)) }
         }
         Spacer(Modifier.height(6.dp))
-        Text(t.name, style = FitType.caption, color = if (selected) th.text else th.textDim, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(t.name, style = FitType.label, color = if (selected) th.text else th.textDim, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (sub != null) Text(sub, style = FitType.caption, color = th.textFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

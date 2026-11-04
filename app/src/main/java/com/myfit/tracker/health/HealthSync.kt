@@ -106,7 +106,8 @@ class HealthSync(private val context: Context, private val db: AppDatabase) {
     )
     val backgroundPermission = "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"
     val historyPermission = "android.permission.health.READ_HEALTH_DATA_HISTORY"
-    val allPermissions: Set<String> get() = dataPermissions + vitalsPermissions + backgroundPermission + historyPermission
+    // R35: history (> 30 days) isn't requested any more (Play review); the sync reads the last 30 days
+    val allPermissions: Set<String> get() = dataPermissions + vitalsPermissions + backgroundPermission
 
     suspend fun granted(): Set<String> = if (!isAvailable) emptySet() else runCatching { client.permissionController.getGrantedPermissions() }.getOrDefault(emptySet())
 

@@ -17,6 +17,7 @@ sealed interface Overlay {
     /** Timed activity with MET calories (Start activity). */
     data object Stopwatch : Overlay
     data object PipChat : Overlay
+    data object Champion : Overlay
     data object Archive : Overlay
     data object Me : Overlay
     data object ArrangeDash : Overlay
@@ -56,6 +57,16 @@ sealed interface Overlay {
     data object Nutritionist : Overlay
     /** Pro trainer home. */
     data object CoachHub : Overlay
+    /** R36 run the setup again with today's answers filled in. */
+    data object RedoOnboarding : Overlay
+    /** R36 chat with your trainer. */
+    data object CoachChat : Overlay
+    /** R33 one settings category page. */
+    data class SettingsPage(val id: String) : Overlay
+    /** R34 Plan my day hub: 0 = today's plan, 1 = report & goals, 2 = history. */
+    data class DayPlan(val tab: Int = 0) : Overlay
+    /** R31 calisthenics skill tree. */
+    data object Calisthenics : Overlay
     data class PickExercises(val templateId: Long? = null, val workoutId: Long? = null) : Overlay
     data class Food(val date: String? = null) : Overlay
     data class FoodAdd(val mealType: String, val date: String, val tab: Int) : Overlay
@@ -86,5 +97,8 @@ object Launch {
     /** Screen requested by tapping a live notification ("gym", "stopwatch", "fasting"). */
     val open = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     @Volatile var calm: Boolean = false
+    /** R36: open the nutritionist straight on a tab (3 = chat). */
+    @Volatile var nutriTab: Int? = null
+    fun takeNutriTab(): Int? = nutriTab.also { nutriTab = null }
     fun takeCalm(): Boolean = calm.also { calm = false }
 }

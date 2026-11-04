@@ -234,45 +234,239 @@ Decisions: one Gemma 4 E2B file for every phone (Google's notes: 2/4/8-bit mix, 
 4 ✅ ORT 1.28.0 (same API level as sherpa-onnx 1.13.8's bundled libonnxruntime 1.28.2) + pickFirst libonnxruntime/libc++_shared; R8 keep ai.onnxruntime.
 Next (phase 2): fine-tune a small adapter on public food photo datasets (Food-101, South Asian sets) mapped to catalogue ids to lift real-photo accuracy; device-test light mode on a real 4 GB phone.
 
-## Characters 3D test (11 Oct) — branch agent/char3d (from main; R19 UI fixes are separate in PR #13)
-Owner's decisions: full 3D moving characters like Pip, pre-rendered (option A) · free route first on 2 test characters (1 athlete + 1 animal legend), previews before committing, paid tools only with approval · 20-character roster (8 men, 8 women incl. hijab/modest, 4 animal legends), gamer-tag names, 5 rarities + 3 upgradable skins (outfit + aura + physique), unlocks via milestones/Trials/Festival drops/training chests, XP while equipped; no Leagues/Crews/paid unlocks.
-Pipeline (tools/char3d, .github/workflows/char3d.yml, push → char3d-run, output → branch char3d-assets):
-- Blender 4.2.3 + MPFB2 extension (CC0) + MakeHuman CC0 system assets pack (URL scraped at runtime). render.py: macros (muscle/weight/height/proportions/ethnicity), young_caucasian_male2 skin tinted toward a South Asian tone (multiply inside the skin node group), short02 hair darkened, shoes02, default rig (163 bones).
-- Gym kit is PAINTED on the body: per-vertex signed fields (height bands, racer-back |x| cut, scoop neck, arm/head weights) stored in a FLOAT_COLOR attribute encoded around 0.5 (attributes clamp negatives) → shader mix to fabric with crimson hem + lime waistband glow, on every body material slot (incl. nipple slot). Skin displacement unlinked.
-- Posing: aim(bone, world dir) (roll-independent) for arms/head; fists by auto-signed local curl; breathing = tiny local spine02/03 lift (aiming spine04 broke the head — don't).
-- MODE=stills (arena, 4 poses, ~20 s/frame @48 spp) or MODE=clips (4 shards, transparent + shadow catcher, 560 px @20 spp, portrait + idle 30 / flex 28 / victory 28 frames) → pack.py: 448 px animated WebP like Pip's lite packs (≈2.1 MB per character per skin) + preview GIFs on a Carbon & Lime backdrop.
-Status: athlete test done (stills + 3 loops). Next: animal legend test (needs a non-MakeHuman route: image-to-3D from the FLUX sample or a CC0 animal base mesh), then owner review → full roster.
-Update: owner rejected the realistic MakeHuman look ("pathetic") → switched to **3D anime (cel-shaded)**, free tools only.
-- Style samples: tools/charart (charart.yml, push charart-run → charart-assets): A fantasy-gacha, B urban streetwear, C sports-anime × athlete / hijab athlete / snow-leopard legend. Flags: c_m2 shows a swoosh-like logo, a_f1 shows hair under the hijab, C reads young — don't reuse those.
-- Free image→3D works: tools/img3d/trellis.py calls the public TRELLIS demo (trellis-community/TRELLIS, MIT, endpoint /generate_and_extract_glb, ~25 s, anonymous, no token) from CI (img3d.yml, push img3d-run → img3d-assets).
-- tools/img3d/toon.py (load+normalise GLB, cel ramp + lime rim + Cycles-safe inverted-hull outline via Backfacing mix), turntable.py, autorig.py (bpy 4.2 pip module + mediapipe 0.10.14 solutions.pose on an ortho front render → joints with mesh-centre depth → armature → heat weights, voxel-proxy + DataTransfer fallback when heat fails — it does on TRELLIS meshes), animate.py (aim-based idle/flex/victory clips, Pip-style frames).
-- Lesson: source images for 3D must be full body, A-pose, arms clear of the body, no props, plain background (crossed arms fuse to the chest; barbell became part of the mesh).
-Update (12 Oct): owner chose the **B→A ladder** (L1 streetwear, L2 Epic gold trims, L3 Legendary armour). Test characters: Blaze (athlete) and Frost (snow leopard).
-- Model sheets: FLUX A-pose prompts (tools/charart). L1 by text; L2 = img2img from L1 at strength 0.68 (same face, mild upgrade); L3 = img2img at 0.82 + "full ornate legendary armour" (big upgrade, face still matches). Chosen inputs in tools/img3d/inputs (blaze_l1/2/3, frost_l1/2/3). Rejected: swoosh-like shoe logo, letter emblem on chest.
-- TRELLIS quota: anonymous ≈1 model/day; free HF token (repo secret HF_TOKEN, added by owner) ≈4/day (120 s reserved per call); HF PRO ($9/mo, needs owner approval) = 25 min/day. tools/img3d/only.txt picks which inputs to build. gradio_client wants token= (new) / hf_token= (old).
-- autorig.py now: drop flat shadow tiles + specks (toon.drop_flat), concept-image projection (landmark-aligned head/body similarity fits, silhouette-masked) for a sharp face, L/R swap when detector reads figure as facing away, confidence-gated (<0.8) limb proportion fix, head guard + torso guard (arms can't pull head/chest), heat weights via voxel proxy, small pieces (<2% verts) rigid distance weights. REBUILD=1 (voxel remesh + bake) is experimental/off: bake hits inner shells, armpits fuse.
-- animate.py: camera centred on hips (tails shift bbox), victory arms at ~45° above horizontal (big shoulder rotations tear loose garments).
-- Lesson for the roster: fitted outfits rig cleanly (Blaze L3 armour perfect); open coats/vests near the arms tear when arms lift.
-- Clip packs ≈0.95 MB per character per level (toon compresses ~2× better than realistic).
-- Pending: Frost L3 (quota), app integration after owner approves previews.
+## Round 19 (11 Oct) — branch agent/r19
+1 ✅ Home: "Show / hide cards" button removed; long-press any card → toolbar now has Cards (opens ArrangeDash) next to Small/Large/Hide; small hint line at the bottom.
+2 ✅ Train bento: Quick start / Run tiles stacked (orb above text, FitText) so titles never truncate; Weight & BMI tile shows BMI (South Asian cut-offs) + "log again to see your trend" until ≥2 different weigh-ins; "N workouts this week".
+3 ✅ Kinetic Mint back (id kinetic_pulse, BackdropArt.PULSE: fine grid + heart-rate traces, accent glow line); Carbon & Lime stays default; 13 themes.
+4 ✅ Settings: ThemeGlanceCard (live mini preview of current theme + accent dots of others) → GlassSheet with the full ThemePicker.
+5 🔄 Characters (everything except Pip): owner picked style 1 (3D game hero), 20 characters (8 men, 8 women incl. hijab/modest, 4 animal-spirit legends), gamer-tag names, 5 rarities, 3 levels (outfit + aura + physique), unlocks = milestones + Trials + Festival drops + training chests (no leagues/crews, no paid), levelling by training with the character equipped, visible on leaderboards/friends/duels/races/feed/locker, Small fair perks. Format: PRE-RENDERED 3D like Pip (lite packs downloaded on unlock/preview). Production: free route first (MakeHuman/MPFB in Blender, CI) — 2 test characters before committing. Samples: tools/charart + charart.yml → branch charart-assets.
 
-## Heroes route (12 Oct) — sculpted CC0 bases
-Owner rejected AI image-to-3D, MakeHuman, code-built toys and the cute buddies; wants professional collectible characters. Roster stays: 8 men, 8 women (incl. hijab/modest), 4 animal champions; gamer-tag names; tiers Street → Epic → Legendary.
-- Bases: Quaternius Universal Base Characters (Standard, free, CC0: Superhero male/female, light/dark skin, 6 hairstyles + beard + brows) and Universal Animation Library (Standard, CC0: 43 animations). Same 65-bone UE-style skeleton → every animation fits every body. Render inputs live on branch **hero-assets** (ubc/, ual/UAL1_Standard.glb).
-- tools/heroes/heroes.py: load body + hair + tint, import UAL actions, studio lights (Khronos PBR Neutral — AgX turned reds pink), act(), freeze() (bake action frame so manual posing sticks), gym moves flex/victory authored over Idle, clip_frame() for idle/flex/victory/punch.
-- tools/heroes/outfit.py: garments cut from the body with bisect planes (clean seams) + dissolve_degenerate/remove_doubles (slivers caused spikes) → Displace lift → Solidify (no even offset) → Subsurf; keep body skin weights. Rigid trims ride bones (_ride must update view layer before reading matrix_world). L1 fitted tee + accent yoke + joggers + sneakers (hoodie/drape attempts looked frumpy — skipped), L2 + gold chain/medal/glow seams/gold soles, L3 moulded armour (chest/ab plates, pauldrons, gauntlets, greaves, knee caps, belt, core).
-- tools/heroes/render_clips.py + roster.json + .github/workflows/heroclips.yml (push heroclips-run; 3 tiers × 4 shards, stills, pack, ladder.gif → branch hero-out). Blaze packs ≈2.8 MB per tier (4 clips + portrait).
-- Next: owner review; then richer outfit designs per character, female/hijab variants, 4 animal champions, app integration.
-Update (12 Oct pm): owner asked for more refinement, new moves, muscle per tier, a female + hijab character, animal champion prototypes.
-- Moves now library-only: idle, combo (jab→cross), run (jog→sprint), jump (start/air/land), dance — heroes.CLIPS / clip_frame. Flex/victory removed.
-- Muscle: outfit.prep_muscle(level) builds a 'muscle' weight map (chest/shoulders/arms/thighs) + Displace 'bulk' (0 / 5 mm / 11 mm) on body and every garment (inserted right after the armature).
-- tools/heroes/designs.py: blaze, nova (female, buns), valor (female, sports hijab with face cut + crown/back volume + chest drape), frost_armour (helm), frost_hybrid (leopard head, rosette fur, tail, claws). roster.json holds per-character body/hair/skin/accent.
-- CI heroclips.yml now matrix hero × level × 2 shards → hero-out/<hero>/l<1-3>/{clips.webp, stills, ladder.gif}.
-- Known issues to fix next: tee neckline trim reads as a dark slot; Epic vest too glossy (plastic); Legendary armour same red for everyone (use accent); floor picks up pink rim light; hijab reads as a hood — needs proper wrap/drape.
-- Leopard: three procedural attempts (hybrid head, sculpted helm, battle helm) are below the quality bar; no CC0 premium anthro base found. Recommend commissioning the 4 animal champions (decision pending with owner).
-Update (12 Oct eve): FINAL roster build.
-- Owner: Legendary = pro-athlete luxe (open tech jacket with gold zips, championship belt, chain/choker, glowing sneakers); women = sporty glam (7 long hair/ponytails + 1 hijab); animal champions = jaguar (Tekken King-style), bull, wolf, female snow leopard — owner chose "try again myself".
-- roster.json: 16 humans (blaze titan kairo raze onyx vortex apex steel / nova valor aria luna siren viper echo lyra) + 4 animals (rex taurus howl frost). designs.human() builds any human from the spec (pony high/low, hijab, beard, colours); glam_face (Eyebrows_Female via HERO_ASSETS_UBC, lip material, SSS), lashes, ponytail, hijab2 (sub=0: solidify+subsurf on the cut hijab crashed Cycles), jacket() (open front via front_strip, zip_edges), champ_belt, chain.
-- outfit.shell: extra cleanup (tiny faces, wire edges, lone faces, recalc normals).
-- tools/heroes/animals.py: masked human head, species fur (Principled Hair strands + matching skin shader; advanced-hair length = emission factors scaled to length), metaball heads (K=1/0.574 convention!), eyes with slit/round pupils, horns, claws, tail, fighter kit (fight shorts, wrestling boots, gold cuffs, champ belt, sleeveless luxe vest). Result: bodies/fur OK, heads read as plush mascots — not Tekken level. Not in CI matrix yet.
-- heroclips.yml: matrix 16 humans × 3 tiers (1 job each), pack, per-hero ladder.gif, roster.jpg (roster_sheet.py).
+## Round 20 (12 Oct) — branch agent/r20 (from main 61b596e)
+Characters PAUSED by owner. Notes for later: find pre-made animal champions; fix the rings/tubes on every character's trousers (knee/side-seam tubes, waist/ankle rings); much more appealing, unlock-worthy outfits.
+Answers: auto-pause = smart (gym 5 min idle + still phone → "Still training?", cardio pauses on no movement) · snap-a-meal = hybrid · cultural themes = all 4 regions (15 countries).
+1 ✅ Pip: look-follow head grid + 2.5D tilt removed; assets/pip/look (169 files, 2.7 MB) deleted, neutral still kept as pip/portrait.webp (CastArt).
+2 ✅ Themes: Settings shows the picker inline (ThemeGlanceCard sheet removed) — Design style cards, then three horizontal swipe rows: Light (3), Dark (10), Cultural Themes (15, country under the name); each row opens at the chosen theme; selected tile has a check badge.
+3 ✅ CulturalThemes.kt (BackdropArt.CULTURE, ids cult_*): Carbon & Lime / Web Crimson composition with a craft pattern that lights up toward the glow + one hero motif — PK jaali, IN mandala, BD jamdani + red sun, SA sadu bands, AE mashrabiya + dunes + pearl moon, TR Iznik rosettes + tulip, EG ripples + rayed sun + pyramids, MA zellige + horseshoe arch, JP seigaiha + vermilion sun, KR ah-ja lattice + moon jar, CN key-fret + clouds + moon gate, GB tartan, IT majolica + arcade, MX step-fret + papel picado, BR Copacabana waves + palms. Baked once (no per-frame cost). CulturalShotTest contact sheet.
+4 ✅ Live notifications: NText styles + values-night colours (text follows the phone's light/dark shade); big card = eyebrow + LIVE pill, 40sp tabular clock in primary text colour, title/body, progress ring (or goal rings), slim gradient bar with glowing tip or one pill per exercise (NCard.segments), stats row. Workout copy refreshed. LiveNotifShotTest (light + dark).
+5 ✅ Auto-pause (gym/WorkoutGuard.kt + notify/GuardReceiver.kt): gym — 5 min without a set/rest AND no walking (step counter) AND quiet accelerometer → paused at last activity + 3 min grace; heads-up "Still training?" (channel workout_guard) with Resume / End & save; Resume moves startedAt forward by the paused time (all durations/kcal stay right; the shown start time shifts — trade-off, no DB migration); opening Gym Mode resumes with "Count it" undo; logging a set resumes. Stopwatch — walk/run/jog/hike/stairs pause after 2 min without steps and resume on steps; cycling uses the accelerometer; other activities never auto-pause. Checks every minute in-process + inexact alarm while asleep.
+6 ✅ Snap a meal: prompts name food from any cuisine (local names for Pakistani dishes), compact answers now carry real macros; matchDish(strict) for AI names so unknown dishes keep their own name/estimate; recogniser says "Not sure — may be outside my list" below 25 %; when the phone is ≥55 % sure and the quick AI pass agrees, no wait for the slow pass; corrections (rename / tap another dish) saved in PersonalDishes (on-phone, per-100 g) and applied next time.
+7 ✅ Size & performance audit (see PR body / reply). Release APK build-328 = 223 MB: pose model 33, two ONNX runtimes 27+23, LiteRT-LM 21, ML Kit pose fallback ≈40 (libxeno 21 + common pipeline 10.5 + models 9), MediaPipe 13, Pip 23, exercises 16, food icons 8, dex 9.5.
+PR agent/r20 → main. OWNER: merge; on phone check notifications in light + dark, a gym session left idle 5+ min, a walk stopped for 2 min.
+8 ✅ Size cuts (owner approved; "keep" items untouched): (a) camera-coach MediaPipe models no longer bundled — ui/coach/PoseModels downloads pose heavy + face (~33 MB) into filesDir/pose on first camera-coach use (auto on Wi-Fi, button + progress otherwise), loaded via setModelAssetBuffer; gradle fetchPoseModels removed. (b) ML Kit pose-detection-accurate fallback removed (libxeno + models); if MediaPipe can't start the camera chip says so. (c) CI uses sherpa-onnx-1.13.8.aar (shared libonnxruntime 1.28.2, jni 4.6 MB) instead of the static-link AAR (23 MB). CI artifact 293 → 189 MB; expected APK ≈ 140 MB (was 223). Needs on-phone check: coach voice speaks (shared ORT), camera coach download + tracking.
+
+## Round 21 (13 Oct) — branch agent/r21 (from main after PR #14)
+1 ✅ Snap a meal, no food: the quick and offline prompts now return a one-sentence "what I see instead" note (objects/scene only, never people); if an AI pass says no food and none found any, that message is shown instead of the phone recogniser's dish guess (it guesses a dish for anything).
+2 ✅ Live notifications: on Android 16 phones the default is now the MyFit card (full R20 design); Settings → Live notifications offers "MyFit card / Now Bar" (prefs live_notif.now_bar). Now Bar version: no milestone squares when exercise segments are shown. The Now Bar look is drawn by Android itself (custom designs can't be promoted).
+3 ✅ Offline brain warm-up: ai/ondevice/BrainWarmup (WorkManager, battery-not-low) runs OnDeviceLlm.warmUp() (load + tiny generation → LiteRT-LM caches) once per (app versionCode, model file): after ModelDownloadWorker succeeds, on MY_PACKAGE_REPLACED (SystemEventsReceiver) and on UI start; app start also preloads the engine when offline or in phone-brain mode.
+4 ✅ 3D coaches (owner's Meshy models; branch coach3d-assets = 7 GLBs + 4 reference images). Answers: animated clips · I rig the female nutritionist · hijab look removed (fh → f) · moves = core + trainer demos + nutritionist props + fun · Meshy can't export more, so missing moves are hand-keyed.
+   tools/coach3d: rig.py (one shared skeleton for all 4 — Meshy mixamo/rigify weights merged; fingers one chain + thumb; female-trainer thumb split from geometry; female nutritionist = scaled female-trainer skeleton + Data Transfer weights + long-hair fix; per-character muscle bulk via lateral bone scale), anim.py (rest-frame world-axis poses, Catmull-Rom + easing + lag + breathing, bake, retarget by world bone directions), moves.py (idle, talk, wave, thumbsup, cheer, fistpump, squat, lunge, press, stretch, pushup/plank via clips.floor_move, plate, bottle, tablet, think; victory in clips.py), clips.py (IK feet/hands, lunge step, props), props.py (dumbbell, plate, bottle, tablet; world-space placement then bone-parented), look.py (matte fabric, skin SSS by texture hue mask, normal 1.25), studio.py (exposure −1.25 colour-matched to references), render_clip.py, pack.py; workflow coach3d.yml (push coach3d-run) → release coach3d-v1/<who>.zip + branch coach3d-out (sheet.jpg). Conventions: L-side abduct y<0, forward x<0, elbow x<0, knee x>0, external rotation tw<0, PALM_UP tw=−80.
+   App: ui/coach/CoachPacks (download pack on first appearance, clipFor() maps old pose names), CoachArt.CoachClip (AnimatedImageDrawable in an ImageView, API 28+; still image below), Coach.demoFor(exercise) → squat/pushup/lunge/plank/press/stretch demos in the camera coach; hub waves then idles. assets/coach = <id>_portrait + <id>_stand only.
+5 ✅ Buddies character bible (Claude Doc "MyFit Buddies — Character Bible"): 5 men, 4 women, 6 animal champions (4 male, 2 female), 3 tier outfits, stylised game hero; pilot = BLAZE Street + TAURUS Street. Waiting on the owner's images/GLBs.
+6 ✅ Coach fixes: card portraits = the owner's reference images cropped head-to-waist (tools/coach3d/ref_portrait.py → assets/coach/<id>_portrait.webp); clips 600×1080 renders, one tight crop shared by all standing clips (pack.py, 720 px tall), shown bottom-centre (BottomFitImageView, was FIT_END = pushed right/down); celebrations use open hands (Meshy fingers are fused, fists read as limp wrists); plate held lower.
+   Tap-to-emote everywhere except the live workout overlay: CoachEmotes (trainer wave/thumbsup/fistpump/cheer/victory, nutritionist wave/thumbsup/think/bottle), never the same twice, plays once (AnimatedImageDrawable end callback) then back to the screen pose.
+7 ✅ Real-time 3D (hub + nutritionist only; camera coach keeps clips): tools/coach3d/export_glb.py (bulk baked into the mesh, IK baked, 8 actions: idle talk wave thumbsup cheer fistpump victory/think dance; ≤60k tris; 1024 JPEG textures; ~3 MB) → workflow coach3d-glb.yml (push coach3d-glb-run) → release coach3d-glb-v1/<who>.glb. App: ui/coach/Coach3D.kt — Filament 1.56.0 (filament, gltfio, filament-utils), TextureView translucent, SH ambient + 2 directional lights, MSAA 4×; drag to spin (yaw only), springs back to face you 3 s after release, no zoom; tap = random emote (no repeat), 0.3 s cross-fade; falls back to clips on any load error. Coach3D.capable = API 28+, RAM ≥ 5.5 GB, strong GPU (DeviceTier); Settings → "3D coaches" toggle (prefs coach3d.on, default = capable). Lighting/framing tuned blind — check on the S23 Ultra.
+
+## Round 22 (16 Oct) — branch agent/r22
+1 ✅ S23 crash leaving the coach hub ("Pick a workout" → add exercise): ModelViewer cleans itself up on view detach and our destroy() also destroyed the engine → native double free (no crash report, since it's below Java). Rewrote Coach3D without ModelViewer/filament-utils: one shared Engine + UbershaderProvider + AssetLoader for the app lifetime (no per-visit engine create/destroy stall); per-scene renderer/view/scene/camera/swap chain via our own UiHelper callback; idempotent destroy in dependency order (onRelease + onDispose); GLB read on IO; textures load async and the coach appears when ready.
+2 ✅ Tap-to-emote on clips (female coaches / male nutritionist fell back to clips): tap layer now sits on top of the animation instead of a clickable under the AndroidView; 8 s safety reset.
+3 ✅ Mixamo mocap (owner's pack, 45 FBX, Y Bot, no skin, 30 fps): tools/coach3d/mocap.py retargets 28 moves onto each coach (anim.retarget, own_rest for spine/neck/head so faces keep their angle; 30→24 fps; loop ends blended into frame 0; heads levelled when a clip's mean tilt is >4° back, except cheer/victory/jump) and writes ONLY baked actions to coach3d-assets/mocap/<who>.blend (raw Mixamo files aren't redistributed — public repo). clips.build uses them for idle/talk(1-3)/think/tablet(phone prop)/dance(1-3)/wave/thumbsup/cheer/fistpump/victory/jump/clap/rally/happy/nod/acknowledge/headshake/sigh/cocky/bottle(Hand.L, grip axis z)/squat/stretch; press/pushup/lunge/plank/plate stay hand-keyed. Off-tone moves (angry, annoyed, dismissing, sarcastic, look away) left out. New clips: trainer clap/rally/nod/jump, nutritionist clap/nod/happy. Pack VER 3, GLB_VER 2 (phones re-download). 3D: talk/idle variants rotate each loop; tap emotes (incl. dances) play once. Zoom stays off (owner).
+
+## Round 23 (16 Oct) — branch agent/r23
+1 ✅ One nutritionist: male look retired (NLook.M removed, "nm" → nf, pack("nm") → nutri_f, nm_* assets deleted, picker removed from Coach settings; prewarm deletes downloaded nutri_m files). CI lists drop nutri_m.
+2 ✅ Meal review pose = "nod>happy>idle" (CoachStage sequences "a>b>c" with SEQ_MS timings; 3D and clips).
+3 ✅ Texting phone: Mixamo texting loop now starts at 2 s (arms already up, no drop each loop); phone in Hand.L, screen turned to her eyes ('face' placement). nutri_f clip pack VER 4 (per-pack versions now).
+4 ✅ 3D start freeze: Coach3D.prewarm() at onUiStart (engine on a main-thread idle handler, GLBs cached in memory / downloaded); the clip keeps playing under the 3D view until the coach has drawn 3 frames, then fades out.
+5 ⏳ Buddies: waiting for the owner's zip (15 champions × Street/Epic/Legendary, names like BLAZE_street.glb) + extra Mixamo list (love, sleepy, meditate, bow, salute, flex, jumping jacks, jog, sad, shrug, surprised, laugh, point, shy, high five; EPIC_*/LEGENDARY_* specials). Decisions: replace the 20 plush buddies (keep Pip); 3D on capable phones + clips elsewhere, per buddy/tier download.
+6 ⏳ Later: owner re-makes all coach models (male coach shoulders look broken) → re-rig + mocap + render.
+
+## Round 24 (16 Oct) — branch agent/r24 — Champions (buddies)
+1 ✅ Owner's 43 Meshy models (unrigged, A-pose) mapped to the bible: tools/buddy3d/roster.json (<champion>_<tier>). Missing: titan_epic, saba_legendary (owner sends later; those tiers stay locked).
+2 ✅ Auto-rig: tools/buddy3d (front_render → detect (MediaPipe, bundled model; jaguars via grey render) → autorig (shared coach skeleton, tails for animals, welded seams, bone-heat + smoothing) → compact (≤60k tris, 1024 JPEG)). All 43 verified with Mixamo cheer + dance (no tearing). Rigged models: branch buddy3d-assets/rigged/*.glb (+ .joints.json).
+3 Decisions: champions replace the 20 plush buddies, Pip stays the free default; they show wherever the buddy shows (home, chat avatar, Arena). Unlock: champion by Arena level (by rarity), Epic/Legendary tiers cost spendable stars (level unaffected). 3D on capable phones + clip packs elsewhere, download per champion/tier.
+4 ✅ (was waiting) owner's extra Mixamo pack (love/blow kiss, yawn, meditate, bow, salute, flex, jumping jacks, jog, sad, shrug, surprised, laugh, point, shy, high five + EPIC_*/LEGENDARY_* specials) before baking moves / rendering clips / exporting GLBs. Then: app integration (Champion data, unlock + star spend, chooser, Buddy 3D/clips), CI renders.
+5 Note: on the bulkiest bodies (TAURUS, KODIAK) arms overhead clip into horns/head — add an arm-spread offset for big builds when baking.
+6 ✅ Owner sent 12 more Mixamo moves (blow a kiss, yawn, salute, bow, point, shrug, surprised, sad, jumping jacks, jog, laugh, punch-to-elbow combo) + titan_epic & saba_legendary models (rigged; roster now 45). Not found on Mixamo: meditate, flex, shy, high five (fallbacks). Tier specials chosen: Epic = being cocky + victory; Legendary = + punch-to-elbow combo + rallying.
+7 ✅ tools/buddy3d/motion.py: every move stored once, skeleton-independent (source-relative world rotations + rest dirs + hip offset, 24 fps) → buddy3d-assets/motion.json.gz (1.2 MB); apply() redoes anim.retarget on any champion (head levelling, loop blend, travel damping for dance/jog/combo). render_champ.py (448² square, 12 fps, CLIP_SET = Pip core 8 + talk/dance/clap/thumbsup/yes + tier specials) → pack_champ.py (WebP) ; export_champ_glb.py (all tier moves). Workflow buddy3d.yml (push buddy3d-run): releases champs-v1/<id>.zip (~4-6 MB) + champ3d-v1/<id>.glb (~4 MB), branch champs-out (portraits + sheet).
+8 ✅ App: ui/pip/Champions.kt (Champion enum with rarity/unlock level/motto, Tier with star costs Epic 150 / Legendary 400, BuddyChar = Pip or champion+tier, Champions.buy/owns/balance — spent stars never lower the level), Buddy.kt rewritten for BuddyChar (packs from champs-v1 into filesDir/champ/<id>, Pip move → champion clip via clips()/alias()/FALLBACK, buddy/ paths still served for Arena cast art), BuddyChooser rebuilt (Pip + 15 champions, star balance, ChampionSheet with the 3 looks), Pip talks with the "talk" clip for champions, Champ3DLayer + Champ3DController (Coach3D.kt) drive a live 3D champion from Pip's clip logic on capable phones (Settings → "3D coaches & buddies"). Retired plush buddy choice → Pip.
+9 ✅ CI run: 45/45 champions → champs-v1 (45 zips, ~4-6 MB each) + champ3d-v1 (45 GLBs, ~4 MB each). Portraits re-rendered locally with tools/buddy3d/portrait.py (framed from the model's top so ears/horns fit) → assets/champ/<id>/portrait.webp (836 KB total).
+
+## Round 25 (17 Oct) — branch agent/r25 — Game Mode (PR A of A/B/C)
+Owner decisions: split roles (Pip = AI buddy, champions = your hero), battles as the core loop, Game Mode toggle with a proper intro, stars only (subscription later).
+1 ✅ Pip is the only buddy again (Buddy.init forces Pip; anyone who had picked a champion keeps it as Game Mode champion with Game Mode on). Buddy chooser removed from Settings / Pip settings; Arena shows ArenaChampionCard.
+2 ✅ ui/game: GameMode (prefs game_mode: on, asked, champ; intro trigger), ChampStats.compute (last 7 days: Power = strength sets/60, Stamina = capped avg steps + active min, Agility = active days + exercise variety, Focus = streak/14; plus streak, total workouts), Milestones (Epic: 14-day streak or 20 workouts; Legendary: 30-day streak or 60 workouts) on top of star costs, sport per champion (bonus stars in PR B).
+3 ✅ ChampStage (3D via Champ3DLayer on capable phones, clip pack otherwise, portrait while downloading; never downloads both), HeroCard on Home under the greeting (today's energy = steps/active/water/workout, poses react; tap for a move), ChampionScreen (Overlay.Champion: stage, looks + unlock, stats with sources, roster), GameModeIntro (dim → champion drops in with combo/victory/celebrate → GAME MODE title; tap to skip) hosted in MyFitRoot, one-time Home invitation card, Settings → Game Mode toggle.
+Next: PR B = champion ladder vs AI (beat to unlock), 3D battle replay, share cards, sport bonus stars; PR C = friend duels (Firestore rules).
+
+## Round 26 (17 Oct) — branch agent/r26
+Owner decisions: keep everything built into the APK (no first-use downloads); keep 12 partners + Pip with new international names; clips at 720p / 50 fps as side-by-side-alpha video; Pip clips unchanged; Game Mode intro = liquid chrome, no character.
+1 ✅ Partners: kept Motu→Bao (panda), Kami→Sahara (camel), Taj→Atlas (markhor), Zara→Echo (snow leopard), Bulhan→Coral (dolphin), Kala→Dash (blackbuck), Bhoori→Tank (buffalo), Sehi→Spike (porcupine), Gogi→Snap (gharial), Monal→Prism, Mor→Indigo (peacock), Yaku→Everest (yak). Ids unchanged (saved partners + Firestore keep working). Removed bhalu, chakor, khargosh, lomri, nevla, sakeen, shaheen, ullu (portraits deleted; tiers/challenges/journeys/programs reassigned; unknown ids fall back to Pip). APK stays ~144 MB (libs already arm64-only, images already WebP).
+2 ✅ New coaches (owner's high-res Meshy): decimated 0.9M → 150k tris, 2K textures, auto-rigged with tools/buddy3d (bone heat fails on the female trainer → new voxel-proxy fallback in autorig._proxy_weights, 1.2 cm voxels) → coach3d-assets/glb/v2/<who>.glb; rig.CHARS 'CANON' loads them via buddy3d/load.py; no bulk. Mocap re-baked on the new skeletons (mocap/<who>.blend). Idle = Mixamo "weight shift" for coaches AND champions (motion.json.gz rebuilt) — Happy Idle bounced.
+3 ✅ Video clips: tools/coach3d/vid.py (H.264, colour left / alpha right, CRF 21, ≤1920×1280, GOP 2 s). Coaches: renders 930×1674 at 50 fps, 14 samples, fixed seed → pack.py → 1280-px-tall MP4s → release coach3d-v2. Champions: 720² at 50 fps, 12 samples, 3 render parts per look → release champs-v2 (+ stand.webp full-body still per look). GLBs: coach3d-glb-v2 (≤90k tris, 2K textures), champ3d-v2.
+   App: ui/coach/AlphaVideo.kt (ExoPlayer media3 1.4.1 → SurfaceTexture → GLES2 shader, transparent TextureView, bottom-fit, seamless REPEAT_MODE_ONE); CoachClip routes .mp4 there; CoachFigure keeps ONE video view and switches files (no blank flash). CoachPacks VER 5 (coach3d-v2), Buddy packs PACK_VER 2 (champs-v2), Coach3D GLB_VER 3, ChampModels VER 2.
+4 ✅ 3D framing: body bounds from every renderable box through its node transform, normalised to 1 unit tall; camera distance from card aspect so the whole body + headroom fills the card and stands on the bottom edge (fixes the small/floating champion, the cut-off Home hero, the bottom-left nutritionist).
+5 ✅ Glass: coach hub hero, nutritionist hero, champion stage, look cards (3 glass cards with stills), roster thumbnails, Arena champion cards.
+6 ✅ Locked looks: ChampStill (bundled champ/<id>/stand.webp, desaturated) — nothing animates or downloads until owned.
+7 ✅ Game Mode intro: game/GameIntro.kt — AGSL liquid-chrome drop (thin-film colours, chrome bands, specular) wobbles in, bursts into a wash, GAME MODE title with a light sweep + ON pill; gradient fallback below Android 13; tap to skip.
+8 ✅ Home: hero card sits right under the Snap (AI calorie) and Pip cards (top only if both hidden).
+9 ✅ Coach hub: "Camera coach exercises" — body area chips → movement (counts reps / times holds, n exercises) → exercises with image + camera view; tap starts (or adds to) a coached workout.
+10 ✅ Arena → Champions tab: your champion (live), battle ladder (10 AI rivals, rung by rung, ★3 per win, 3 paid wins/day), friend battles (friends' published champion + real stats; ★5 once per friend per day; the friend sees the result), roster. Battles: 3 rounds (best of 3), stat + 0–20 roll, seeded by day + rival. Share cards (champion, battle) via FileProvider.
+11 ✅ Firestore rules: arenaProfile allows champ (≤24) + champStats (4 ints 0–100); new /battles/{id} (attacker creates against a friend, both read, either deletes).
+Pending CI: full coach3d (3 coaches × all clips), coach3d-glb, buddy3d (45 looks × 3 parts) → then copy champs-out stand stills into assets/champ/<id>/stand.webp.
+
+## Round 27 (18 Oct) — branch agent/r27 — camera coach performance
+Owner report: S23 Ultra stutters, system UI restarted when the camera coach opened. Owner decisions: optimise (not back to ML Kit), head direction from body points, models built into the APK, solid buttons while the camera runs.
+Causes found: Pose Landmarker HEAVY every frame (53 ms vs Full 25 / Lite 20 on Google's figures, ~1 point more accurate than Full) + Face Landmarker every 3rd frame, both on the GPU delegate alongside the UI's glass/blur and the TextureView preview (GPU overload → UI reset); two new bitmaps per frame (toBitmap + rotate).
+1 ✅ PoseModels: Full (strong phones: ≥7 GB RAM, 8 cores, API 30+) or Lite, bundled in assets/pose (fetched at build by app/build.gradle.kts fetchPoseModels; noCompress task); old downloaded heavy+face files deleted on first use.
+2 ✅ PoseCamera: CPU delegate (XNNPACK), no face model, head yaw/pitch/roll from nose/eyes/ears (smoothed), reused RGBA + upright bitmaps (matrix rotate into a reused canvas), 24 fps analysis cap (15 when thermal SEVERE), auto step-down Full → Lite when average inference > 38 ms or the phone is hot; status chip shows model + fps.
+3 ✅ UiPerf.camera: every Glass panel draws flat while the camera coach runs.
+
+## Round 28 (18 Oct) — branch agent/r28
+Owner decisions: heart check ~15 s; Vitals = beating heart + ECG; Arena buddy + champion tiles side by side (long-press = full width); small Home champion card = champion + rating + energy ring.
+1 ✅ 60 fps everywhere (coach3d-v3, champs-v3; CoachPacks VER 6, Buddy PACK_VER 3). Champion clips framed tight: render_champ.py computes the union of where the body goes in every clip of the tier (backs the camera off until nothing leaves the frame), then renders with a crop border at ~960 px body height → portrait MP4s (square frames looked tiny in narrow cards).
+2 ✅ 3D framing from the skeleton (Coach3D.jointBounds: feet → Head joint / 0.865, centred on Hips); renderable boxes as fallback.
+3 ✅ Locked looks show in full colour (ChampStill no grey). GlassDialog (system blur behind on Android 12+, translucent tinted pane) for the Arena partner popup.
+4 ✅ DashCard.HERO (move / resize / hide like any card; inserted after Snap/Pip in saved layouts); HeroSmall = live champion + rating + energy ring; GameMode.askedFlow drives the invitation.
+5 ✅ Coach/nutritionist renaming removed (names follow the character).
+6 ✅ Vitals: ui/vitals/VitalsHero.kt — beating heart (lub-dub at your last bpm), ECG sweep, glowing "Check my heart · 15 s", last check time; small tile version. CameraHr: warm-up 1.5 s, early finish from ~10 s when two estimates 0.5 s apart agree within 3 bpm (quality ≥ 0.75), hard stop 21.5 s; ring eases over ~15 s; live bpm from ~5 s; Ppg.estimate needs 8 s (was 15).
+7 ✅ Arena: ArenaHeroTiles — buddy level tile (now has a small mode) + ChampionTile (rotating stadium beams, pulsing floor ring, rising sparks, champion in the spotlight); long-press toggles size (prefs arena_tiles).
+
+## Round 29 (18 Oct) — branch agent/r29
+Audit (build-424, 169.3 MB): ONNX runtime 22.3 (voice + offline food), LiteRT-LM 21.8 (offline Gemma, 2.6 GB download), Pip clips 21.8, exercises 17.2, MediaPipe 14.0 + pose models 15.2, ML Kit common 11.0, dex 10.4, food icons 8.3, sherpa 9.7, Filament 7.0. Owner chose: trim Pip's rare moves only; camera back to ML Kit Base; neon platform; holographic champion tile.
+1 ✅ Camera coach: ML Kit pose-detection (base, STREAM_MODE) on the camera frame directly (InputImage.fromMediaImage), ~30 fps cap (15 when hot), head direction from face points; every live point drawn as a glowing dot. MediaPipe tasks-vision, the build-time model fetch and PoseModels removed.
+2 ✅ Pip: 20 least-used moves removed from assets (−9.4 MB); Buddy.path maps them to FALLBACK moves.
+3 ✅ Home champion card hidden (DashCard.HERO in MergedCards).
+4 ✅ OnPlatform (CoachArt.kt): glowing neon disc under coaches/nutritionist (CoachStage) and champions (ChampStage, locked stills, battle rival); characters centred and lifted onto the disc.
+5 ✅ Arena ChampionTile = holographic foil card: AGSL foil + diffraction lines + glare driven by the accelerometer tilt, twinkling glitter, rotating neon edge (SweepGradient), slight 3D lean; buddy tile shows the same animated partner (bobbing) small and large.
+6 ✅ R28 renders finished: coach3d-v3 (12.7–17.3 MB per coach, 60 fps), champs-v3 (45 looks, 8–19 MB, tight crop, 60 fps).
+Expected APK ≈ 169 − 29.2 (MediaPipe) + 10.1 (ML Kit base) − 9.4 (Pip) ≈ 141 MB.
+
+## Round 30 (18 Oct) — branch agent/r30
+1 ✅ AlphaVideoView rewritten: own MediaCodec + MediaExtractor on the render thread, frames released on Choreographer vsync (even pacing on 120 Hz panels), seamless loops (re-feed from the first keyframe with shifted timestamps, no flush), media3 removed. Feet line: first frame of the folder's idle.mp4 (MediaMetadataRetriever) → empty rows under the feet → viewport shifted so feet sit on the view's bottom edge (= platform centre).
+2 ✅ Battle dialog: fighters row takes the leftover height (150–300 dp), result + buttons always visible.
+3 ✅ Arena champion tile redesigned: premium dark card, drifting light fields, horizon glow, grain, soft light sweep, travelling edge light, tilt parallax (no rainbow/glitter).
+Next: calisthenics (research done; waiting on owner answers).
+
+## Round 31 (19 Oct) — branch agent/r31 — Calisthenics
+Owner decisions: all four features (skill tree + auto-progression, camera reps + holds, level test, programs); Train tab section; illustrated stills; Game Mode stars + badges + stats.
+1 ✅ Data: tools/cali/data.py (source) → gen.py writes assets/calisthenics.json (8 chains, 54 steps, 73 poses, placement table) and appends 34 new moves ("cali_*", fr 0, how-to text) to exercise_catalog.json (876 → 910; existing entries untouched). `gen.py --preview out.png` renders every pose.
+   Chains: Push-up (9), Pull-up (9), Row (4), Dip (6), Squat→pistol/shrimp (6), Hinge→nordic (5), Core→L-sit→front lever (9), Handstand (6).
+2 ✅ domain/Calisthenics.kt (Cali): state in prefs "cali" (cur:<chain>, mastered, placed, gear, tpl, party). Mastered = a logged workout with 3 working sets ≥ goal (reps or seconds). sync() advances chains, grants Arena stars once (cali:<key> = 4 + step index; chain complete +15), queues unlocks for the celebration. Runs on screen open and inside BadgeEngine.evaluate (after logging).
+3 ✅ Level test → placement (push-ups, pull-ups or dead hang, squats, plank); "count with camera first" starts a test workout. Any chain can be moved with "Make current".
+4 ✅ Today's session: pull+squat, dip+hinge, row+push supersets, then core + handstand; 3 sets, 90 s rest; gear chips (pull-up bar, dip bars) drop to the hardest step you can do; saved as template "Calisthenics session" and started.
+5 ✅ ui/cali/CaliFigure.kt: side-view athlete from joint angles (same model as tools/cali/figure.py), props (bar, rings, parallel bars, parallettes, wall, boxes, band), anchored contact point, still = end pose + ghost of start, animated = eased loop. ExerciseImage draws it for cali_* exercises everywhere.
+6 ✅ ui/cali/CalisthenicsScreen.kt (Overlay.Calisthenics) + CalisthenicsTrainCard on Train after the tiles: overview bars per chain, chain cards (current step big + path of nodes), step sheet (work range, unlock goal, gear, camera support, recent sessions, practise now, how-to), unlock dialog.
+7 ✅ FormGuide: new patterns DIP, PIKE_PUSHUP, PISTOL, LEG_RAISE (rep rules) and L_SIT, SUPPORT_HOLD, HANDSTAND, HOLLOW, DEAD_HANG (holds with checks); PULLUP rule (elbow angle while wrists above shoulders — negatives count too); "dip" no longer maps to push-up; push-up line check uses shoulder–hip–knee (knee push-ups aren't nagged); new cues. Camera list group "Calisthenics".
+8 ✅ Badges group Calisthenics: Skill Climber, Chain Master, Bar Raiser, Upside Down, Lever Up, One-Leg Wonder (from logged sets only). ChampStats: calisthenics sets ×1.5 toward Power, skill holds add up to +10 Agility.
+9 ✅ Programs: Park Calisthenics, Home Calisthenics (tools/programs/gen.py now also maps retired mascots, so it reproduces programs.json exactly).
+
+## Round 32 (19 Oct) — branch agent/r32
+Owner decisions: exercise demo GIFs skipped for now (no free, consistent, app-licensed library exists — researched ExerciseDB $300, WorkoutLabs, Gym Visual-sourced sets (non-commercial), Fab/itch mocap packs, Mixamo); calisthenics characters = 3D coach renders; 8 food regions; settings = tabs + grouped lists.
+1 ✅ Arena: buddy + champion tiles always small (no resize). Battle dialog edge-to-edge (decorFitsSystemWindows=false), result + buttons pinned at the bottom, fighters/rounds shrink & scroll (BoxWithConstraints).
+2 ✅ Heart: HeartRipples (ripple per detected beat, ambient ripples before the first, breathing glow, progress arc with glowing head); Home tile button "Measure heart rate".
+3 ✅ Settings: tabs General / Training / Coach & AI / Privacy & data with GroupLabel groups; switches (Game Mode, 3D coaches, Shariah & Health, haptics) in Features, live notifications in Notifications; privacy policy only in Privacy & legal; backup + delete in Your data; version row (7 taps for dev options).
+4 ✅ Friends: profile shows champion (on platform, tier + rating) and Arena buddy; avatar picker "My characters" (owned champion looks + unlocked buddies) → ids champ:<look> / cast:<buddy> resolved to bundled portraits (AvatarCatalog.path).
+5 ✅ Food: tools/foodicon/world_dishes.py (+172 dishes, categories Middle Eastern, British, American, Mediterranean, East Asian, Southeast Asian + more Indian + staples; "regions" field); FoodRegion (8 regions, default from phone country); meal_plans.json now {"regions":[…]} from tools/mealplans/gen.py + regions.py (portion ranges stretch with the band); MealPlans screen region chips; FoodAdd "Popular in <region>" chip + regional hint; nutritionist prompts follow the region; Food tab: search bar, quick actions (snap, barcode, saved, meal plans), nutritionist hero, today, meals, plans & tools, region sheet. Icons: foodicon workflow → branch foodicon-assets-r7.
+6 ✅ Calisthenics 3D: tools/coach3d/cali_render.py (pose by aiming bones from the 2D angles; anchored contacts; hands flat on floor/wall; props; ortho 3/4 camera, walls edge-on) + cali_pack.py + cali3d.yml → release cali3d-v1 (trainer_m.zip, trainer_f.zip: <key>.mp4 loops + <key>.webp stills). App: CaliPacks (download with progress), CaliArt (clip → still → drawn figure).
+7 ✅ Calisthenics UI: Train hero card under the start card; screen = hero (level, now training, Start/Tree) + tabs Today / Skill tree (chain picker + vertical path, current step big & animated) / Progress (overview, badge tiers, how it works).
+
+## Round 33 (19 Oct) — branch agent/r33
+- Calisthenics: rows (incline/inverted/arch/tuck-FL) top poses fixed (elbows back, not up); hands now curl round bar/rings/p-bars (`HAND['grip']`), bar sits in the palm. Packs re-rendered → `cali3d-v1`, `CaliPacks.VER = "2"`.
+- Settings: category list (Personalise / Training & health / Data & app) → one page per category (`Overlay.SettingsPage(id)`).
+- Coach avatars: face crops `assets/coach/*_face.webp`, portrait centred. New `ui/coach/CoachCards.kt` full-bleed `CoachCard(role)` used for the Train trainer tile and Food nutritionist.
+- Food tab: region chip in header, glass hero (animated calorie ring + macro bars + day switcher), search pill with camera/barcode, meal timeline, Plans & tools tiles. Glass kept.
+- Heart measure: `LivingOrb` (frame-clock driven blob, beat kick + shockwave, particles, 60-tick progress) + smoothed ECG strip with grid and leading dot.
+
+## Round 34 (20 Oct) — branch agent/r34 — REQUEST (in progress)
+Owner asked:
+1. First launch of the day → "Plan my day" popup: yesterday recap + today's plan (exercise, health/fitness, food) from stats.
+2. Me section: Daily report / goals tile → well-designed page with stats, graphs, measurements, easy goal setting.
+3. Home: replace Check-in tile (pairs with Rings when small, `DashboardScreen.kt` ~L325) with "Plan my day" — small = split into 2 tiles, large = combined. Includes plan history (previous days' stats + plans).
+4. Settings rename: "MyFit card" → "Activity Card", "Now Bar" → "Live notification" (`MeScreen.kt` ~L1173).
+5. App-wide animation pass: transitions, every element/section entrance, ultra smooth (Apple-like springs), good on 60 Hz.
+6. After PR + APK: in-depth code/feature audit (bugs, perf, heavy hardware load, optimisation list light/deep), missing features, security, Play Store publishing gaps.
+Answers: popup = story-style full screen (3 cards, once/day after 4 am); plan = on-device rules + optional AI one-line tip;
+Home = Today's progress (RINGS) + Plan my day combined when large, split into Rings tile + Plan tile when small (replaces CheckInTile pairing);
+motion = Apple-style springs, lighter on low-end, respects Reduce motion.
+Status: building.
+- DONE (code): CoachCard layout() placement; TrainHost AnimatedContent cross-fade; "Search" placeholders; TargetMuscleRow (MuscleMap.kt);
+  domain/PlanProfile.kt (extras store, prediction, BMI, summary); ui/onboarding/OnboardingPages.kt (Goal, Tried, MuscleGoal, Focus, Height ruler,
+  BmiCard, BodyShape morph, Prediction); ui/plan/PlanSummary.kt (PlanSummaryCards); onboarding flow list (steps 16–21 new), redo via
+  Overlay.RedoOnboarding (prefill), Settings "Redo setup", Report tab "Your plan" section; OnboardingVersion 5 catch-up [16,18,19].
+- Body art DONE: assets/onboarding/body (men = seed 2, level 4 = m_bf4_s4 re-render; women = seed 1). OnboardingShotTest renders pages to ui-shots.
+- Focus anchors moved onto body; pace chips compact. Next: PR.
+- DONE (commit 1): domain/DayPlan.kt (rules engine, stats batch, score, JSON history filesDir/dayplans.json, story once/day prefs, AI tip),
+  ui/plan/PlanUi.kt (PlanStrip in large RINGS card, PlanTile small half, DailyHubScreen Today/Report/History = Overlay.DayPlan(tab),
+  PlanStory + PlanStoryHost in MyFitRoot, DailyReportTile in Me, MorningPlanToggle in Settings→Notifications),
+  renames (Activity Card / Live notification), ui/theme/Motion.kt (springs + Modifier.entrance cascade hooked into Glass),
+  predictive back on overlays, tab drift transition, sheet springs, Motion.init in Application.
+- CI green at 6c? (build success after test-signature fix). Added DayPlans.ensureToday (cards skip queries when plan saved), tab depth recede.
+- PR #30 open, CI green (also: no story on install day, midnight rollover, Battery-saver motion respected).
+- Audit doc written (Claude Docs: 'MyFit Tracker — Code, Performance & Play Store Audit (R34)').
+- Proposed next (needs owner OK): compress jniLibs in github flavor (151→~96 MB), stop Coach3D/LLM prewarm at start,
+  pause coach idle video, baseline profile, AI 'Report reply' button (Play blocker), Crashlytics.
+
+## Owner decisions after the R34 audit (20 Oct) — plan for R35–R38
+- R35 speed & stability + Play blockers: compress jniLibs (github flavor); Coach3D/LLM load on first use only; coach idle video plays once, tap to replay;
+  decorative infinite animations pause after ~8 s (resume on scroll/tap); Baseline Profile; Firebase Crashlytics; remove navigation-compose, Guava,
+  material-icons-extended, ZXing (own QR drawer); core logic tests (plan engine, calcs, migrations, backup restore); AI "Report this reply" → Firestore;
+  HC: keep all 33 perms + justify all, keep READ_HEALTH_DATA_IN_BACKGROUND, drop READ_HEALTH_DATA_HISTORY; model download → user-initiated
+  WorkManager (no dataSync FGS); fix runBlocking in PipBrain.healthNote.
+- R36 security & cost: optional backup password (AES-GCM + PBKDF2); Firebase App Check (Play Integrity, GitHub-APK fallback);
+  cycle/glucose HC writes opt-in per type, default off; toggle to hide Google photo on public profile + disclose;
+  AI proxy = FREE TIERS ONLY (Gemini/Groq/Mistral) + hard global daily stop, fallback offline brain / own key, never billed; disclose Gemini free-tier training clause.
+  Monetisation: decide later (rewarded ads stay).
+- R37 features: morning plan notification at wake time; Plan my day widget; CSV/PDF export of all logs; recipe builder;
+  write workouts & meals to Health Connect (opt-in); accessibility pass (140 icons, TalkBack, large font).
+- R38: extract all UI strings to strings.xml (Urdu translation later round); full Galaxy Watch workout tracking; store listing (descriptions,
+  feature graphic, 8 screenshots); Console drafts: Data safety, Health apps declaration, account-deletion web page, content rating + location text;
+  medical disclaimers (BP, glucose, cycle); GitHub→Play move notice; pre-launch report fixes after first upload.
+- Play: personal dev account (not yet created) → closed test 12 testers × 14 days (prepare tester invite kit); audience 18+.
+- Flow: owner merges PR #30 first; each round = its own PR from main.
+
+## Round 35 (20 Oct) — branch agent/r35 — DONE (CI green)
+- github flavor compresses jniLibs (androidComponents onVariants) → APK ≈ 91 MB (was 151).
+- onUiStart: no Coach3D prewarm / LLM prewarm; only Coach3D.fetchMissing (download). LLM still prewarms when Pip chat / food vision opens.
+- CoachFigure(idleOnce) used by CoachCard: plays once, tap coach to replay; breathing transition only for stills.
+- Motion.Awake + InfiniteTransition.awakeFloat: decorative loops (VitalsHero, Arena hero/tiles, Bento, JourneyTrack) run 8 s after last touch/screen change; root pointerInput pokes.
+- profileinstaller + src/main/baseline-prof.txt (broad app rules). Crashlytics plugin+SDK (only when google-services.json present).
+- navigation-compose removed. KEPT: Guava (CameraX/WorkManager ListenableFuture), material-icons-extended (Icons.Rounded used in ~10 screens), ZXing (invite QR) — audit claim was wrong.
+- AI reply reports: ui/components/AiReport.kt (sheet + local queue, flush on start) → Firestore aiReports (rule added in firestore.rules — OWNER MUST DEPLOY RULES). Links on Pip bubbles (online/on-device) + Nutritionist chat.
+- HC: READ_HEALTH_DATA_HISTORY removed; sync 30 days. Model download: plain WorkManager + notify(), FGS service/permissions stripped.
+- PipBrain.healthNote(halal) — no runBlocking.
+- Tests: DayPlanTest (7 rules), SchemaTest (Robolectric; app/schemas/…/4.json committed, debug assets). Backup-restore test NOT done (needs DataStore/file fakes) → later.
+
+## R35.1 (20 Oct) — branch agent/r35-1 — coach fixes from owner screenshots
+- CoachCard framing: figure column = right 42 %, video 1.9× card height, head at 10 % (clips are framed 17–92 % of height), bottom fade (DstIn); text/chips constrained to the left column.
+- Trainer "Chat" → new Overlay.CoachChat (ui/coach/TrainerChat.kt, reuses ChatTab with per-coach logs "t"/"n"); nutritionist "Ask" opens the Chat tab (Launch.nutriTab = 3).
+- Faster coach chat: AiRouter.text(fast = true) → Groq first, 12 s per provider before failing over (was Gemini first, 40 s); history trimmed to 6 turns.
+
+## Round 36 REQUEST (20 Oct 13:10) — branch agent/r36 (replaces old R36 plan order; security items move to R37)
+1. Coach/nutritionist cards: figure still out of place (head cut off, legs showing) → fix + responsive for all screen sizes.
+   Root cause found: requiredSize() bigger than parent is CENTRED, so offset math was wrong → use a custom layout() placement.
+2. Train tab: switching to "Today" segment from other segments glitches for a split second (owner video) → fix.
+3. Exercises: "Target muscles" section like inspiration (round muscle-highlight images per muscle) in our design.
+4. All search bars: placeholder just "Search" (remove "Search nihari, kadhi pakora…" etc.).
+5. Onboarding redesign (our design language):
+   - Height page: ruler slider (ft/in + cm) with a character that grows/shrinks with the value.
+   - "What's your fitness goal?" (Weight loss / Muscle build) page.
+   - If weight loss → "Have you tried losing weight? Results?" (4 cards). If muscle build → "Muscle-building goal" (look better / strength / confidence).
+   - "Which areas to focus on?" body with callout chips (Back, Chest, Arms, Abs, Glutes, Legs, Full body).
+   - Weight page AFTER age & height, with live BMI bar.
+   - Current body shape page: body-fat % slider, character visibly gains/loses fat/muscle (owner video), amazing animation.
+   - After body data + workout days + target weight → prediction page (animated curve, "X kg on <date>").
+6. Plan my day: add "personalized plan" style data (About you: height/weight/age, BMI bar, target shape, fitness level, practice suggestions goal/qty/frequency, intensity gauge, aerobic/anaerobic split, target areas) — organized, not cluttered.
+7. Settings: option to redo onboarding later.
+Answers: coach frame head→mid-thigh; onboarding chars = our 3D coach style, male+female, athletic (men shirtless+shorts, women sports bra+leggings);
+body-shape = 6 body-fat renders/gender (free FLUX via foodicon-style workflow) + liquid crossfade + width scaling; goals = 4 (Lose/Build/Get fit/Gain),
+branch page for lose (tried results) & build (muscle goal); prediction = safe pace (0.5 kg/wk loss, 0.25 gain) + Slow/Steady/Fast picker, labelled estimate;
+plan summary = "Your plan is ready" onboarding end + "Your plan" section in Plan my day → Report; redo onboarding prefilled, history kept.
+Target-muscle thumbnails: composite existing assets/anatomy front/back base + overlay, cropped round (no generation).
+Planned onboarding order: welcome, name, DOB, sex, goal, branch, focus areas, height(ruler+char), weight(live BMI), body shape, target weight,
+activity, days, times, diabetes, health, targets, prediction, plan ready.
+Status: building.
+- DONE (code): CoachCard layout() placement; TrainHost AnimatedContent cross-fade; "Search" placeholders; TargetMuscleRow (MuscleMap.kt);
+  domain/PlanProfile.kt (extras store, prediction, BMI, summary); ui/onboarding/OnboardingPages.kt (Goal, Tried, MuscleGoal, Focus, Height ruler,
+  BmiCard, BodyShape morph, Prediction); ui/plan/PlanSummary.kt (PlanSummaryCards); onboarding flow list (steps 16–21 new), redo via
+  Overlay.RedoOnboarding (prefill), Settings "Redo setup", Report tab "Your plan" section; OnboardingVersion 5 catch-up [16,18,19].
+- Body art DONE: assets/onboarding/body (men = seed 2, level 4 = m_bf4_s4 re-render; women = seed 1). OnboardingShotTest renders pages to ui-shots.
+- Focus anchors moved onto body; pace chips compact. Next: PR.

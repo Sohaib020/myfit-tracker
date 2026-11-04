@@ -125,7 +125,7 @@ fun ProgramsScreen(container: AppContainer, bottomPad: Int) {
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    GlassSearchField(query, { query = it }, "Search programs", Modifier.weight(1f))
+                    GlassSearchField(query, { query = it }, "Search", Modifier.weight(1f))
                     Spacer(Modifier.width(10.dp))
                     Box {
                         Glass(Modifier.size(50.dp), shape = CircleShape, onClick = { sheet = true }) {

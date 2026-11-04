@@ -1,0 +1,5 @@
+# R35 Baseline Profile: ahead-of-time compile MyFit's own code on install (Play) or shortly after first launch
+# (sideloaded, via profileinstaller). Compose, Room and other AndroidX libraries ship their own profiles.
+# Broad rules: every class and method in the app package is marked hot + startup.
+HSPLcom/myfit/tracker/**->**(**)**
+Lcom/myfit/tracker/**;

@@ -1,6 +1,7 @@
 package com.myfit.tracker.ui.arena
 
 import com.myfit.tracker.ui.components.fadeEdges
+import com.myfit.tracker.ui.theme.awakeFloat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.LinearEasing
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.combinedClickable
 import com.myfit.tracker.AppContainer
 import com.myfit.tracker.domain.Clock
 import com.myfit.tracker.domain.Fmt
@@ -120,14 +122,15 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                                 StarPill(total)
                             }
                             Spacer(Modifier.height(10.dp))
-                            LevelHero(lvl, partner) { tab = 3 }
+                            ArenaHeroTiles(lvl, partner, { tab = 3 }, { tab = 4 }) { s, l, onLong, onClick -> LevelHero(l, partner, s, onLong, onClick) }
                         }
                     }
                     item(key = "tabs") {
                         val tabsState = androidx.compose.foundation.lazy.rememberLazyListState()
                         LazyRow(state = tabsState, modifier = Modifier.fadeEdges(tabsState), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            val tabs = listOf("Challenges", "Journeys", "Battles", "Rewards")
-                            items(tabs.size) { i -> GlassChip(tabs[i], tab == i, { tab = i }) }
+                            // R26: Champions tab (index 4) shown second
+                            val tabs = listOf(0 to "Challenges", 4 to "Champions", 1 to "Journeys", 2 to "Battles", 3 to "Rewards")
+                            items(tabs.size) { i -> GlassChip(tabs[i].second, tab == tabs[i].first, { tab = tabs[i].first }) }
                         }
                     }
                     if (tab == 0) item(key = "friends") { com.myfit.tracker.ui.social.FriendsGlimpse(container) }
@@ -144,7 +147,8 @@ fun ArenaScreen(container: AppContainer, bottomPad: Int) {
                         }
                         1 -> item(key = "journeys") { JourneyHub(container, d, partner, ver, { ver++ }) { openJourney = it } }
                         2 -> { item { DuelsPane(container, award) { nav.push(com.myfit.tracker.ui.nav.Overlay.Social) } }; item { Leaderboard(container, lvl, partner) } }
-                        else -> item { RewardsPane(lvl, d, partner, ver) { partner = it; ArenaPrefs.setPartner(ctx, it) } }
+                        3 -> item { RewardsPane(lvl, d, partner, ver) { partner = it; ArenaPrefs.setPartner(ctx, it) } }
+                        else -> item(key = "champions") { com.myfit.tracker.ui.game.ArenaChampions(container) { ver++ } }
                     }
                 }
             }
@@ -177,17 +181,21 @@ private fun mix(a: Color, b: Color, t: Float) = Color(a.red + (b.red - a.red) * 
 
 /** Tier card: slowly flowing aurora light in the partner's colours, fine grain and a periodic glass sheen. */
 @Composable
-private fun LevelHero(l: Level, partner: Mascot, onClick: () -> Unit) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun LevelHero(l: Level, partner: Mascot, small: Boolean = false, onLong: () -> Unit = {}, onClick: () -> Unit) {
     val inf = rememberInfiniteTransition(label = "hero")
-    val t by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(22_000, easing = LinearEasing)), label = "aurora")
-    val sheen by inf.animateFloat(-0.6f, 1.6f, infiniteRepeatable(tween(7_000, easing = LinearEasing)), label = "sheen")
+    val t by inf.awakeFloat(0f, 1f, infiniteRepeatable(tween(22_000, easing = LinearEasing)), label = "aurora")
+    val sheen by inf.awakeFloat(-0.6f, 1.6f, infiniteRepeatable(tween(7_000, easing = LinearEasing)), label = "sheen")
+    val bob by inf.awakeFloat(-1f, 1f, infiniteRepeatable(tween(1_800), androidx.compose.animation.core.RepeatMode.Reverse), label = "bob", rest = 0f)
     val frac by animateFloatAsState(l.frac, tween(1400), label = "xp")
     val next = Mascot.entries.firstOrNull { it.unlock > l.n }
     val a1 = partner.accent; val a2 = partner.color
     val deep = mix(a1, Color(0xFF07080C), 0.78f)
     val hueB = mix(a1, Color(0xFF6A5CFF), 0.45f)
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(deep)
-        .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(28.dp)).clickableNoRipple(onClick)) {
+    Box(Modifier.fillMaxWidth().then(if (small) Modifier.fillMaxHeight() else Modifier).clip(RoundedCornerShape(28.dp)).background(deep)
+        .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(28.dp))
+        .combinedClickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null,
+            onClick = onClick, onLongClick = onLong)) {
         Canvas(Modifier.matchParentSize()) {
             val w = size.width; val h = size.height; val tau = (2 * Math.PI).toFloat()
             fun blob(cx: Float, cy: Float, r: Float, c: Color, alpha: Float) =
@@ -203,9 +211,27 @@ private fun LevelHero(l: Level, partner: Mascot, onClick: () -> Unit) {
             val sx = sheen * w
             drawRect(Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.10f), Color.Transparent), Offset(sx - w * 0.25f, 0f), Offset(sx + w * 0.05f, h)))
         }
+        if (small) {
+            // R28 small tile (half width, next to the champion tile)
+            Column(Modifier.fillMaxSize().padding(12.dp)) {
+                Text(l.tier.label.uppercase(), style = FitType.overline, color = Color.White.copy(alpha = 0.8f), maxLines = 1)
+                Text("Level ${l.n}", style = FitType.metric.copy(fontSize = 24.sp, lineHeight = 26.sp), color = Color.White, maxLines = 1)
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(84.dp).clip(CircleShape).background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent))), contentAlignment = Alignment.Center) {
+                        CastAnim(partner, CastClip.WAVE, 80.dp, Modifier.graphicsLayer { translationY = bob * 4.dp.toPx() })
+                    }
+                }
+                Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.16f))) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(frac.coerceIn(0.03f, 1f)).clip(CircleShape).background(Brush.horizontalGradient(listOf(Color(0xFFFFE9A3), GOLD))))
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(if (l.n >= MAX_LEVEL) "Max level" else "${l.into}/${l.span} ⭐", style = FitType.caption, color = Color.White, maxLines = 1)
+            }
+            return@Box
+        }
         Row(Modifier.padding(start = 12.dp, end = 18.dp, top = 14.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(96.dp).clip(CircleShape).background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent))), contentAlignment = Alignment.Center) {
-                CastImage(partner, 92.dp)
+                CastAnim(partner, CastClip.WAVE, 92.dp, Modifier.graphicsLayer { translationY = bob * 4.dp.toPx() })
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -334,7 +360,7 @@ private fun DuelsPane(container: AppContainer, award: (String, Int, String) -> U
         GlassCard(padding = 14.dp) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(96.dp).height(64.dp)) {
-                    CastImage(Mascot.SHAHEEN, 64.dp)
+                    CastImage(Mascot.MONAL, 64.dp)
                     CastImage(Mascot.ZARA, 64.dp, Modifier.offset(x = 34.dp))
                 }
                 Spacer(Modifier.width(8.dp))
@@ -496,7 +522,7 @@ private fun RewardsPane(l: Level, days: List<Day>, partner: Mascot, ver: Int, pi
                 }
             }
         }
-        GlassCard(padding = 14.dp) { com.myfit.tracker.ui.pip.BuddyChooser() }
+        GlassCard(padding = 14.dp) { com.myfit.tracker.ui.game.ArenaChampionCard() }
         // level road
         GlassCard(padding = 14.dp) {
             Text("Level road", style = FitType.section, color = th.text)

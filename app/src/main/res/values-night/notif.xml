@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="n_text_1">#FFF4F6F8</color>
+    <color name="n_text_2">#FFC5CBD2</color>
+    <color name="n_text_3">#FF959DA6</color>
+    <color name="n_chip_bg">#29FFFFFF</color>
+</resources>

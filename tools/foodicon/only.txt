@@ -1,12 +1,9 @@
-gajar_murabba
-imli_sharbat
-peshawari_ice_cream
-dahi_gosht
-shab_deg
-khajoor_halwa
-moong_daal_halwa
-pulao_kebab
-sohan_papdi
-badam_sharbat
-chicken_cheese_naan
-meethi_tikiyan
+# R32 redo
+buffalo_wings
+caprese_salad
+nasi_lemak
+onigiri
+chicken_quesadilla
+crumpets
+shish_tawook
+cottage_pie

@@ -72,7 +72,7 @@ fun FinishWorkoutScreen(container: AppContainer, workoutId: Long) {
     var templateName by remember { mutableStateOf(w.workout.name) }
     var confirmDiscard by remember { mutableStateOf(false) }
     val t = w.totals
-    val durSec = (Clock.now() - w.workout.startedAt) / 1000
+    val durSec = com.myfit.tracker.gym.WorkoutGuard.activeMs(w.workout.id, w.workout.startedAt, Clock.now()) / 1000
 
     OverlayScaffold("Finish workout", { nav.replace(Overlay.Gym(workoutId)) }, "Back returns to Gym Mode") {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -178,8 +178,11 @@ fun FinishWorkoutScreen(container: AppContainer, workoutId: Long) {
             AccentButton("Save workout", {
                 container.restTimer.stop()?.let { (id, sec) -> container.write { container.workoutRepo.recordRest(id, sec) } }
                 val tName = templateName.trim()
+                val pausedAt = com.myfit.tracker.gym.WorkoutGuard.pausedAt(workoutId)
                 container.write {
                     container.workoutRepo.finish(workoutId, name.trim(), notes.trim())
+                    if (pausedAt != null) container.workoutRepo.workoutView(workoutId).first()?.workout?.let { w -> container.workoutRepo.updateWorkoutMeta(workoutId, w.name, w.notes, w.startedAt, pausedAt) }
+                    com.myfit.tracker.gym.WorkoutGuard.clear(container.app, workoutId)
                     if (asTemplate && tName.isNotEmpty()) container.workoutRepo.templateFromWorkout(workoutId, tName)
                 }
                 toaster.show("Saved · ${t.sets} sets" + (t.volumeKg?.let { " · ${Fmt.weight(it, u.weight, 0)}" } ?: ""))
@@ -194,7 +197,7 @@ fun FinishWorkoutScreen(container: AppContainer, workoutId: Long) {
         title = { Text("Discard this workout?") },
         text = { Text("Its ${t.sets} logged set(s) won't count in any history, totals or records.") },
         confirmButton = { TextButton({
-            container.restTimer.stop(); container.write { container.workoutRepo.discard(workoutId) }
+            container.restTimer.stop(); container.write { container.workoutRepo.discard(workoutId); com.myfit.tracker.gym.WorkoutGuard.clear(container.app, workoutId) }
             confirmDiscard = false; toaster.show("Workout discarded"); nav.clear()
         }) { Text("Discard", color = th.danger) } },
         dismissButton = { TextButton({ confirmDiscard = false }) { Text("Keep") } },

@@ -73,6 +73,24 @@ object AvatarCatalog {
         labels.keys.filter { o.has(it) }.associateWith { k -> o.getJSONArray(k).let { a -> (0 until a.length()).map { a.getString(it) } } }
     }.getOrDefault(emptyMap()).also { cache = it }
     fun isPreset(id: String) = id.isNotBlank() && id != MyAvatar.PHOTO
+
+    /** R32: "cast:<buddy>" and "champ:<look>" pictures are the characters you own (portraits bundled in the app). */
+    fun path(id: String): String = when {
+        id == "cast:pip" -> "pip/portrait.webp"
+        id.startsWith("cast:") -> "buddy/${id.removePrefix("cast:")}/portrait.webp"
+        id.startsWith("champ:") -> "champ/${id.removePrefix("champ:")}/portrait.webp"
+        else -> "avatars/$id.webp"
+    }
+
+    /** Characters you own: Arena buddies you've unlocked and champion looks you have. */
+    fun mine(ctx: android.content.Context): List<String> {
+        val lv = com.myfit.tracker.ui.arena.ArenaProgress.level(com.myfit.tracker.ui.arena.ArenaProgress.total(ctx)).n
+        val champs = com.myfit.tracker.ui.pip.Champion.entries.flatMap { ch ->
+            com.myfit.tracker.ui.pip.Tier.entries.filter { t -> com.myfit.tracker.ui.pip.Champions.owns(ctx, ch, t) }.map { t -> "champ:${ch.id}_${t.id}" }
+        }
+        val cast = com.myfit.tracker.ui.arena.Mascot.entries.filter { lv >= it.unlock }.map { "cast:${it.id}" }
+        return champs.reversed() + cast
+    }
 }
 
 private object AvatarBitmaps {
@@ -86,7 +104,7 @@ private fun rememberPreset(id: String): ImageBitmap? {
     val ctx = LocalContext.current
     val b by produceState(AvatarBitmaps.lru.get(id), id) {
         if (value == null && AvatarCatalog.isPreset(id)) value = withContext(Dispatchers.IO) {
-            runCatching { ctx.assets.open("avatars/$id.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
+            runCatching { ctx.assets.open(AvatarCatalog.path(id)).use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
         }?.also { AvatarBitmaps.lru.put(id, it) }
     }
     return b
@@ -217,8 +235,8 @@ fun AvatarPickerContent(container: AppContainer, name: String, color: Long, onDo
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val toaster = LocalToaster.current
-    val cats = remember { AvatarCatalog.all(ctx) }
-    var cat by remember { mutableStateOf(cats.keys.firstOrNull() ?: "characters") }
+    val cats = remember { linkedMapOf("mine" to AvatarCatalog.mine(ctx)).apply { putAll(AvatarCatalog.all(ctx)) } }
+    var cat by remember { mutableStateOf("mine") }
     var picked by remember { mutableStateOf(MyAvatar.id(ctx)) }
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) scope.launch {
@@ -250,10 +268,11 @@ fun AvatarPickerContent(container: AppContainer, name: String, color: Long, onDo
         Spacer(Modifier.height(12.dp))
         val chips = rememberLazyListState()
         LazyRow(state = chips, modifier = Modifier.fillMaxWidth().fadeEdges(chips), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            cats.keys.forEach { k -> item(k) { GlassChip(AvatarCatalog.labels[k] ?: k, cat == k, { cat = k }) } }
+            cats.keys.forEach { k -> item(k) { GlassChip(if (k == "mine") "My characters" else AvatarCatalog.labels[k] ?: k, cat == k, { cat = k }) } }
         }
         Spacer(Modifier.height(12.dp))
         val ids = cats[cat].orEmpty()
+        if (cat == "mine") Caption("Show off the champions and buddies you've earned — friends see them as your picture.", Modifier.padding(bottom = 8.dp), color = th.textFaint)
         LazyVerticalGrid(GridCells.Adaptive(62.dp), Modifier.fillMaxWidth().heightIn(max = 340.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(ids, key = { it }) { id ->

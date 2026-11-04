@@ -48,6 +48,7 @@ class MyFitApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.myfit.tracker.ui.theme.Motion.init(this)
         CrashGuard.install(this)
         CrashGuard.loadSafe(this)
         container = AppContainer(this)
@@ -68,8 +69,13 @@ class MyFitApplication : Application() {
         com.myfit.tracker.reminders.ReminderScheduler.reschedule(this)
         runCatching { container.social.start() }
         container.write { runCatching { container.social.uploadNow() }; runCatching { container.friendsRepo.refresh() } }
+        container.write { com.myfit.tracker.ui.components.AiReports.flush(container) }   // R35: queued AI-reply reports
         if (!java.io.File(filesDir, "voice/" + com.myfit.tracker.ai.voice.VoicePack.MODEL + "/.complete").exists())
             com.myfit.tracker.ai.voice.VoicePackWorker.schedule(this)
         com.myfit.tracker.ai.FoodRecognizer.schedule(this)   // offline food recogniser, Wi-Fi only
+        com.myfit.tracker.ai.ondevice.BrainWarmup.schedule(this)   // R21: offline brain first-start prep after install/update
+        // R35: nothing heavy at launch any more — the 3D coach engine/models and the offline brain load on first use
+        // (Coach3D.shared() / llm on first message). Only fetch missing coach packs so the first open has them on disk.
+        runCatching { val cp = com.myfit.tracker.domain.Coach.load(this); com.myfit.tracker.ui.coach.Coach3D.fetchMissing(this, listOf(cp.look.id, cp.nLook.id)) }
     }
 }

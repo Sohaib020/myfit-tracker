@@ -156,8 +156,13 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
     fun infoOf(c: DashCard): LazyGridItemInfo? = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == keyOf(c) }
     fun boundsOf(i: LazyGridItemInfo) = Rect(i.offset.x.toFloat(), i.offset.y.toFloat(), (i.offset.x + i.size.width).toFloat(), (i.offset.y + i.size.height).toFloat())
 
+    val ctxG = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) { com.myfit.tracker.ui.game.GameMode.load(ctxG) }
+    val gameOn by com.myfit.tracker.ui.game.GameMode.on.collectAsState()
+    val gameAsked by com.myfit.tracker.ui.game.GameMode.askedFlow.collectAsState()
     fun visible(c: DashCard): Boolean = c in cards && c !in com.myfit.tracker.data.prefs.MergedCards && when (c) {
         DashCard.PIP -> settings.pipEnabled
+        DashCard.HERO -> gameOn || !gameAsked          // R28: champion card (Game Mode) or the one-time invitation
         DashCard.CYCLE -> showCycle(state.profile, settings) && (settings.cycleEnabled || !settings.cycleAsked)
         DashCard.GLUCOSE -> showDiabetes(settings)
         DashCard.DEEN -> settings.muslim == "yes"
@@ -321,18 +326,15 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
                 if (small && (c == DashCard.RINGS || c == DashCard.NUTRITION)) item(key = keyOf(c) + "_b", span = half) {
                     Box(Modifier.animateItem().movable(c)) {
                         Box(Modifier.fillMaxWidth().height(TileHeight), propagateMinConstraints = true) {
-                            if (c == DashCard.RINGS) CheckInTile(state) { open(Sheet.CheckIn()) }
+                            if (c == DashCard.RINGS) com.myfit.tracker.ui.plan.PlanTile(container, rememberDashLive(state, container), TileHeight)   // R34: Plan my day replaces the check-in half
                             else HydrationTile(state, container, open)
                         }
                     }
                 }
             }
-            item(key = "arrange", span = full) {
-                val nav = LocalNav.current
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Spacer(Modifier.height(8.dp))
-                    com.myfit.tracker.ui.theme.GlassButton("Show / hide cards", { nav.push(Overlay.ArrangeDash) }, icon = Duo.Tune, height = 44.dp)
-                }
+            item(key = "arrangeHint", span = full) {
+                Text("Long-press any card to resize it, hide it or bring hidden cards back", style = FitType.caption, color = LocalFitTheme.current.textFaint,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
 
@@ -343,6 +345,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
             })
         }
         val sel = selected
+        val navTb = LocalNav.current
         AnimatedVisibility(
             visible = sel != null && dragKey == null && selBounds != null,
             enter = fadeIn() + scaleIn(initialScale = 0.85f), exit = fadeOut() + scaleOut(targetScale = 0.9f),
@@ -368,6 +371,7 @@ fun DashboardScreen(state: DashState, container: AppContainer, open: (Sheet) -> 
                 onSize = { setSize(sel, it) },
                 onHide = { hide(sel) },
                 onDone = { selected = null },
+                onCards = { selected = null; navTb.push(Overlay.ArrangeDash) },
             )
         }
     }
@@ -378,9 +382,17 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
     val nav = LocalNav.current
     when (c) {
         DashCard.PIP -> if (small) PipSmall(state) else PipCard(state)
+        DashCard.HERO -> {
+            val gameOn by com.myfit.tracker.ui.game.GameMode.on.collectAsState()
+            val asked by com.myfit.tracker.ui.game.GameMode.askedFlow.collectAsState()
+            if (gameOn) {
+                if (small) com.myfit.tracker.ui.game.HeroSmall(container, state.steps, state.stepTarget, state.activeMin, state.waterMl, state.waterTarget, state.workout.done.isNotEmpty())
+                else com.myfit.tracker.ui.game.HeroCard(container, state.steps, state.stepTarget, state.activeMin, state.waterMl, state.waterTarget, state.workout.done.isNotEmpty())
+            } else if (!asked) GameInvite { }
+        }
         DashCard.SNAP -> if (small) SnapSmall() else SnapHeroCard()
         DashCard.WORKOUT -> if (small) WorkoutSmall(state.workout, container) { goTab(Tabs.TRAIN) } else WorkoutCard(state.workout, container)
-        DashCard.RINGS -> if (small) RingsSmall(state) { nav.push(Overlay.Today) } else RingsCard(state, open)
+        DashCard.RINGS -> if (small) RingsSmall(state) { nav.push(Overlay.Today) } else RingsCard(state, container, open)
         DashCard.NUTRITION -> if (small) NutritionSmall(container) { goTab(Tabs.FOOD) } else FoodHydrationCard(state, container, open) { goTab(Tabs.FOOD) }
         DashCard.SOCIAL -> if (small) CompeteSmall(container) { goTab(Tabs.ARENA) } else com.myfit.tracker.ui.social.FriendsHero(container) { goTab(Tabs.ARENA) }
         DashCard.HYDRATION -> HydrationTile(state, container, open, wide = !small)
@@ -389,7 +401,7 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
         DashCard.CHECKIN -> CheckInTile(state) { open(Sheet.CheckIn()) }
         DashCard.BODY -> BodyTile(state) { nav.push(Overlay.Body) }
         DashCard.GOALS -> GoalsTile(state, null)
-        DashCard.VITALS -> if (small) com.myfit.tracker.ui.vitals.VitalsTile(container) { nav.push(Overlay.Vitals) } else VitalsCard(container)
+        DashCard.VITALS -> if (small) com.myfit.tracker.ui.vitals.VitalsHeroTile(container) else VitalsCard(container)
         DashCard.MIND -> if (small) com.myfit.tracker.ui.mind.MindTile(container) { nav.push(Overlay.Mind) } else MindCard(container)
         DashCard.CYCLE -> if (small) com.myfit.tracker.ui.cycle.CycleTile(container) { nav.push(Overlay.Cycle) } else CycleCard(container)
         DashCard.GLUCOSE -> com.myfit.tracker.ui.glucose.GlucoseTile(container) { nav.push(Overlay.Glucose) }
@@ -398,9 +410,9 @@ private fun DashCardContent(c: DashCard, small: Boolean, state: DashState, conta
     }
 }
 
-/** Floating toolbar on a lifted card: Small / Large, Hide, Done. */
+/** Floating toolbar on a lifted card (long-press any tile): Small / Large, Hide, all cards (show hidden / arrange), Done. */
 @Composable
-private fun CardToolbar(small: Boolean, onSize: (Boolean) -> Unit, onHide: () -> Unit, onDone: () -> Unit) {
+private fun CardToolbar(small: Boolean, onSize: (Boolean) -> Unit, onHide: () -> Unit, onDone: () -> Unit, onCards: () -> Unit) {
     val th = LocalFitTheme.current
     Glass(
         Modifier.height(48.dp), shape = RoundedCornerShape(24.dp), pressScale = 1f,
@@ -417,6 +429,7 @@ private fun CardToolbar(small: Boolean, onSize: (Boolean) -> Unit, onHide: () ->
             }
             Spacer(Modifier.width(4.dp))
             ToolAction(Duo.Close, "Hide", th.text, onHide)
+            ToolAction(Duo.Tune, "Cards", th.text, onCards)
             Box(Modifier.size(38.dp).clip(CircleShape).drawBehind { drawCircle(Brush.verticalGradient(listOf(th.accentBright, th.accent))) }.clickableNoRipple(onDone), contentAlignment = Alignment.Center) {
                 Icon(Duo.Check, "Done", tint = th.onAccent, modifier = Modifier.size(20.dp))
             }
@@ -538,6 +551,29 @@ private fun PersonaliseCard(container: AppContainer) {
     }
 }
 
+// ------------------------------------------------------------------ Game Mode invitation (shown once)
+
+@Composable
+private fun GameInvite(onDone: () -> Unit) {
+    val th = LocalFitTheme.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    Glass(Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.myfit.tracker.ui.pip.BuddyAvatar(com.myfit.tracker.ui.pip.BuddyChar(com.myfit.tracker.ui.pip.Champion.BLAZE), 64.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Turn workouts into a champion?", style = FitType.section, color = th.text)
+                Caption("Game Mode: your training powers a 3D champion, earns stars and unlocks looks. You can switch it off any time in Settings.")
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    com.myfit.tracker.ui.theme.AccentButton("Turn on", { com.myfit.tracker.ui.game.GameMode.setOn(ctx, true); onDone() }, height = 40.dp)
+                    com.myfit.tracker.ui.theme.GlassButton("Not now", { com.myfit.tracker.ui.game.GameMode.markAsked(ctx); onDone() }, height = 40.dp)
+                }
+            }
+        }
+    }
+}
+
 // ------------------------------------------------------------------ Pip
 
 private fun pipLine(s: DashState, variant: Int): Pair<PipMood, String> {
@@ -628,7 +664,7 @@ private fun TripleRings(s: DashState, outer: Dp) {
 }
 
 @Composable
-internal fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
+internal fun RingsCard(s: DashState, container: AppContainer? = null, open: (Sheet) -> Unit) {
     val th = LocalFitTheme.current
     val units = LocalSettings.current.units
     val nav = LocalNav.current
@@ -652,8 +688,21 @@ internal fun RingsCard(s: DashState, open: (Sheet) -> Unit) {
             }
         }
         Spacer(Modifier.height(12.dp))
-        CheckInStrip(s, open)
+        // R34: Plan my day lives inside Today's progress (the check-in moved to the Mindfulness card's Mood button)
+        if (container != null) com.myfit.tracker.ui.plan.PlanStrip(container, rememberDashLive(s, container))
     }
+}
+
+/** Today's live numbers for Plan my day, from Home's state plus today's food log. */
+@Composable
+internal fun rememberDashLive(s: DashState, c: AppContainer): com.myfit.tracker.ui.plan.PlanLive {
+    val items by remember(s.today) { c.nutritionRepo.itemsOn(s.today) }.collectAsState(initial = emptyList())
+    val t = com.myfit.tracker.ui.food.totalsOf(items)
+    return com.myfit.tracker.ui.plan.PlanLive(
+        s.steps?.toLong(), s.waterMl, s.sleepMin?.toDouble(),
+        if (items.isEmpty()) null else t.kcal, if (items.isEmpty()) null else t.protein,
+        s.workout.done.size, s.day.weight.isNotEmpty(), s.checkIn != null,
+    )
 }
 
 /**

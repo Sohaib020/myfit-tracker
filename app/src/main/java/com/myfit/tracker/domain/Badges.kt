@@ -37,7 +37,7 @@ enum class BadgeIcon { WORKOUT, STEPS, WATER, FOOD, SUPPLEMENT, MIND, TROPHY, ST
 /** Colour keys — mapped to theme colours in the UI. */
 enum class BadgeHue { ACCENT, STEPS, WATER, PROTEIN, CARBS, FAT, SLEEP, SUCCESS, WARNING }
 
-enum class BadgeGroup(val label: String) { STREAK("Streaks"), MILESTONE("Milestones"), SOCIAL("Arena") }
+enum class BadgeGroup(val label: String) { STREAK("Streaks"), MILESTONE("Milestones"), CALI("Calisthenics"), SOCIAL("Arena") }
 
 data class BadgeDef(
     val id: String,
@@ -144,6 +144,31 @@ object BadgeEngine {
         BadgeDef("weight_goal", "Goal Getter", BadgeGroup.MILESTONE, BadgeShape.SHIELD, BadgeIcon.WEIGHT, BadgeHue.FAT,
             listOf(Tier.GOLD to 1L), "goal", "A logged weight reached the target weight set in your profile.",
         ) { "Reach your target weight" },
+        // ---------------------------------------------------------------- calisthenics (R31: from logged sets only)
+        BadgeDef("cali_steps", "Skill Climber", BadgeGroup.CALI, BadgeShape.HEX, BadgeIcon.FLAME, BadgeHue.ACCENT,
+            listOf(Tier.BRONZE to 3L, Tier.SILVER to 15L, Tier.GOLD to 35L), "steps",
+            "Calisthenics steps mastered: a workout with 3 working sets at the step's unlock number.",
+        ) { "Master $it calisthenics steps" },
+        BadgeDef("cali_chains", "Chain Master", BadgeGroup.CALI, BadgeShape.HEX, BadgeIcon.TROPHY, BadgeHue.WARNING,
+            listOf(Tier.BRONZE to 1L, Tier.SILVER to 3L, Tier.GOLD to 8L), "chains",
+            "Calisthenics chains completed by mastering their final step.",
+        ) { if (it == 1L) "Complete a calisthenics chain" else "Complete $it calisthenics chains" },
+        BadgeDef("cali_bar", "Bar Raiser", BadgeGroup.CALI, BadgeShape.SHIELD, BadgeIcon.WORKOUT, BadgeHue.WATER,
+            listOf(Tier.BRONZE to 5L, Tier.SILVER to 6L, Tier.GOLD to 8L), "step",
+            "Progress on the pull-up chain: Chin-Up (bronze), Pull-Up (silver), Muscle-Up (gold) — each mastered at 3 × goal.",
+        ) { when (it) { 5L -> "Master the chin-up"; 6L -> "Master the pull-up"; else -> "Master the muscle-up" } },
+        BadgeDef("cali_hand", "Upside Down", BadgeGroup.CALI, BadgeShape.SHIELD, BadgeIcon.STAR, BadgeHue.FAT,
+            listOf(Tier.BRONZE to 3L, Tier.SILVER to 5L, Tier.GOLD to 6L), "step",
+            "Handstand chain: chest-to-wall handstand (bronze), wall handstand push-up (silver), freestanding handstand (gold).",
+        ) { when (it) { 3L -> "Hold a chest-to-wall handstand"; 5L -> "Master wall handstand push-ups"; else -> "Hold a freestanding handstand" } },
+        BadgeDef("cali_lever", "Lever Up", BadgeGroup.CALI, BadgeShape.SHIELD, BadgeIcon.FLAG, BadgeHue.CARBS,
+            listOf(Tier.BRONZE to 5L, Tier.SILVER to 6L, Tier.GOLD to 9L), "step",
+            "Core chain: tuck L-sit (bronze), L-sit (silver), front lever (gold).",
+        ) { when (it) { 5L -> "Hold a tuck L-sit"; 6L -> "Hold an L-sit"; else -> "Hold a front lever" } },
+        BadgeDef("cali_pistol", "One-Leg Wonder", BadgeGroup.CALI, BadgeShape.SHIELD, BadgeIcon.FOOTPRINTS, BadgeHue.SUCCESS,
+            listOf(Tier.BRONZE to 4L, Tier.SILVER to 5L, Tier.GOLD to 6L), "step",
+            "Squat chain: box pistol (bronze), pistol squat (silver), shrimp squat (gold).",
+        ) { when (it) { 4L -> "Master the box pistol"; 5L -> "Master the pistol squat"; else -> "Master the shrimp squat" } },
         // ---------------------------------------------------------------- arena (only if you use it)
         BadgeDef("arena_joined", "Arena Rookie", BadgeGroup.SOCIAL, BadgeShape.HEX, BadgeIcon.STAR, BadgeHue.WATER,
             listOf(Tier.BRONZE to 1L), "challenges", "Join a challenge in the Arena (needs you to be signed in).",
@@ -317,6 +342,19 @@ object BadgeEngine {
             }.filter { !it.isEstimate }.map { it.exerciseId to it.workoutId }.toSet().size
         }.getOrDefault(0)
 
+        // calisthenics: record newly mastered steps from history, then read badge values
+        val cali = runCatching {
+            val ctx = c.app
+            val d = Cali.data(ctx)
+            val rows = c.workoutRepo.allHistory().first()
+            val ex = c.workoutRepo.exercisesByKeys(d.chains.flatMap { ch -> ch.steps.map { it.key } })
+            Cali.sync(ctx, rows, ex.values.associate { it.uuid to it.id })
+            val m = Cali.read(ctx).mastered
+            fun best(id: String) = d.chain(id)?.let { Cali.best(it, m) + 1 }?.toLong() ?: 0L
+            mapOf("cali_steps" to m.size.toLong(), "cali_chains" to d.chains.count { it.steps.last().key in m }.toLong(),
+                "cali_bar" to best("pull"), "cali_hand" to best("hand"), "cali_lever" to best("core"), "cali_pistol" to best("legs"))
+        }.getOrDefault(emptyMap())
+
         // weight goal
         val weights = runCatching { c.logRepo.weightsAll().first() }.getOrDefault(emptyList())
         val weightGoal = profile?.targetWeightKg?.let { target ->
@@ -379,7 +417,7 @@ object BadgeEngine {
             "weight_goal" to if (weightGoal) 1L else 0L,
             "arena_joined" to if (store.arenaJoined) 1L else 0L,
             "arena_won" to if (store.arenaWon) 1L else 0L,
-        )
+        ) + cali
 
         val now = System.currentTimeMillis()
         val newly = ArrayList<BadgeProgress>()

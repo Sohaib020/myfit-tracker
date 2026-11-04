@@ -18,6 +18,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.foundation.border
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -139,3 +141,107 @@ private fun PhotoLoop(ex: Exercise, playing: Boolean, modifier: Modifier) {
 }
 
 @Suppress("unused") private val keep = BACK_FIRST
+
+// ------------------------------------------------------------------ R36 Target muscles
+
+/** Coarse filter group → anatomy view + highlighted muscles for its thumbnail. */
+private val TARGET_ART: List<Triple<String, String, List<String>>> = listOf(
+    Triple(MuscleGroup.CHEST, "front", listOf("chest")),
+    Triple(MuscleGroup.BACK, "back", listOf("lats", "middle back", "traps")),
+    Triple(MuscleGroup.SHOULDERS, "front", listOf("shoulders")),
+    Triple(MuscleGroup.BICEPS, "front", listOf("biceps")),
+    Triple(MuscleGroup.TRICEPS, "back", listOf("triceps")),
+    Triple(MuscleGroup.CORE, "front", listOf("abdominals")),
+    Triple(MuscleGroup.GLUTES, "back", listOf("glutes")),
+    Triple(MuscleGroup.LEGS, "front", listOf("quadriceps", "calves")),
+)
+
+/** Bounding box of the highlighted pixels (cached), used to zoom each thumbnail onto its muscle. */
+private object MuscleBox {
+    private val cache = HashMap<String, android.graphics.RectF>()
+    fun of(bmps: List<ImageBitmap>, key: String): android.graphics.RectF = cache.getOrPut(key) {
+        var l = Int.MAX_VALUE; var t = Int.MAX_VALUE; var r = -1; var b = -1
+        bmps.forEach { ib ->
+            val bm = ib.asAndroidBitmap(); val w = bm.width; val h = bm.height
+            val px = IntArray(w); var y = 0
+            while (y < h) {
+                bm.getPixels(px, 0, w, 0, y, w, 1)
+                var x = 0
+                while (x < w) { if ((px[x] ushr 24) > 60) { if (x < l) l = x; if (x > r) r = x; if (y < t) t = y; if (y > b) b = y }; x += 3 }
+                y += 3
+            }
+        }
+        if (r < 0) android.graphics.RectF(0f, 0f, 480f, 800f) else {
+            // square around the muscle with breathing room
+            val cx = (l + r) / 2f; val cy = (t + b) / 2f
+            val side = maxOf(r - l, b - t) * 1.55f + 40f
+            android.graphics.RectF(cx - side / 2, cy - side / 2, cx + side / 2, cy + side / 2)
+        }
+    }
+}
+
+@Composable
+private fun TargetThumb(group: String, view: String, muscles: List<String>, selected: Boolean, size: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
+    val th = LocalFitTheme.current
+    val ctx = LocalContext.current
+    val imgs by produceState<Pair<ImageBitmap?, List<ImageBitmap>>?>(null, view, muscles) {
+        value = MapImages.get(ctx, view) to muscles.mapNotNull { MapImages.get(ctx, view + "_" + it.replace(' ', '_')) }
+    }
+    val ring by androidx.compose.animation.core.animateFloatAsState(if (selected) 1f else 0f, com.myfit.tracker.ui.theme.Motion.snappy(), label = "ring")
+    val accent = th.accentBright
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(size + 8.dp).clickableNoRipple(onClick)) {
+        Box(Modifier.size(size).clip(RoundedCornerShape(size * 0.34f))
+            .background(androidx.compose.ui.graphics.Brush.radialGradient(listOf(th.text.copy(alpha = 0.16f), th.text.copy(alpha = 0.05f))))
+            .then(if (ring > 0.01f) Modifier.border(androidx.compose.foundation.BorderStroke((2.5f * ring).dp, accent), RoundedCornerShape(size * 0.34f)) else Modifier)) {
+            val p = imgs
+            if (p?.first != null) {
+                val box = MuscleBox.of(p.second, view + muscles.joinToString())
+                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                    val so = androidx.compose.ui.unit.IntOffset(box.left.toInt(), box.top.toInt())
+                    val ss = androidx.compose.ui.unit.IntSize(box.width().toInt(), box.height().toInt())
+                    val ds = androidx.compose.ui.unit.IntSize(this.size.width.toInt(), this.size.height.toInt())
+                    // srcOffset may run past the bitmap edge: clamp by drawing into a matching sub-rect
+                    fun draw(ib: ImageBitmap, a: Float) {
+                        val l = so.x.coerceAtLeast(0); val t = so.y.coerceAtLeast(0)
+                        val r = (so.x + ss.width).coerceAtMost(ib.width); val b = (so.y + ss.height).coerceAtMost(ib.height)
+                        if (r <= l || b <= t) return
+                        val sx = ds.width / ss.width.toFloat(); val sy = ds.height / ss.height.toFloat()
+                        drawImage(ib, androidx.compose.ui.unit.IntOffset(l, t), androidx.compose.ui.unit.IntSize(r - l, b - t),
+                            androidx.compose.ui.unit.IntOffset(((l - so.x) * sx).toInt(), ((t - so.y) * sy).toInt()),
+                            androidx.compose.ui.unit.IntSize(((r - l) * sx).toInt(), ((b - t) * sy).toInt()), alpha = a)
+                    }
+                    draw(p.first!!, 1f)
+                    p.second.forEach { draw(it, 1f) }
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(group, style = FitType.label, color = if (selected) accent else th.text, maxLines = 1)
+    }
+}
+
+/** "Target muscles" strip for the exercise library: tap a muscle to filter, tap again for all. */
+@Composable
+fun TargetMuscleRow(selected: String?, onSelect: (String?) -> Unit) {
+    val th = LocalFitTheme.current
+    Column {
+        Text("TARGET MUSCLES", style = FitType.overline, color = th.textDim, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(TARGET_ART.size) { i ->
+                val (g, v, m) = TARGET_ART[i]
+                TargetThumb(g, v, m, selected == g, 78.dp) { onSelect(if (selected == g) null else g) }
+            }
+            items(listOf(MuscleGroup.CARDIO to Duo.DirectionsRun, MuscleGroup.OTHER to Duo.SportsGymnastics).size) { i ->
+                val (g, icon) = listOf(MuscleGroup.CARDIO to Duo.DirectionsRun, MuscleGroup.OTHER to Duo.SportsGymnastics)[i]
+                val sel = selected == g
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(86.dp).clickableNoRipple { onSelect(if (sel) null else g) }) {
+                    Box(Modifier.size(78.dp).clip(RoundedCornerShape(26.dp)).background(if (sel) th.accent.copy(alpha = 0.25f) else th.text.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
+                        Icon(icon, null, tint = if (sel) th.accentBright else th.textDim, modifier = Modifier.size(32.dp))
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(g, style = FitType.label, color = if (sel) th.accentBright else th.text, maxLines = 1)
+                }
+            }
+        }
+    }
+}

@@ -86,6 +86,7 @@ import com.myfit.tracker.gym.Alerts
 import com.myfit.tracker.ui.components.Caption
 import com.myfit.tracker.ui.components.GlassSheet
 import com.myfit.tracker.ui.components.LocalToaster
+import kotlinx.coroutines.flow.first
 import com.myfit.tracker.ui.components.OverlayTopBar
 import com.myfit.tracker.ui.components.ProgressRing
 import com.myfit.tracker.ui.exercises.ExerciseBrowser
@@ -125,6 +126,24 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
     var coach by remember { mutableStateOf(false) }
     val viewPrefs = remember { ctx0Prefs(container) }
     var listMode by remember { mutableStateOf(viewPrefs.getBoolean("list", false)) }
+    // R20: paused while this screen is open → logging the next set resumes it
+    val guardPause by com.myfit.tracker.gym.WorkoutGuard.paused.collectAsStateWithLifecycle()
+    val setCount = view?.totals?.sets
+    var lastSets by remember { mutableStateOf<Int?>(null) }
+    androidx.compose.runtime.LaunchedEffect(setCount) {
+        val prev = lastSets; lastSets = setCount
+        if (prev != null && setCount != null && setCount > prev && guardPause?.first == workoutId) com.myfit.tracker.gym.WorkoutGuard.resume(container, workoutId)
+    }
+    // R20: back after an auto-pause — resume and cut the idle stretch (with an undo if it was real training)
+    androidx.compose.runtime.LaunchedEffect(workoutId) {
+        com.myfit.tracker.gym.WorkoutGuard.load(ctx)
+        if (com.myfit.tracker.gym.WorkoutGuard.pausedAt(workoutId) == null) return@LaunchedEffect
+        val before = container.workoutRepo.workoutView(workoutId).first()?.workout ?: return@LaunchedEffect
+        val mins = com.myfit.tracker.gym.WorkoutGuard.resume(container, workoutId)
+        if (mins >= 1) toaster.show("Welcome back — $mins min of idle time left out", "Count it") {
+            container.write { container.workoutRepo.workoutView(workoutId).first()?.workout?.let { w -> container.workoutRepo.updateWorkoutMeta(workoutId, w.name, w.notes, before.startedAt, null) } }
+        }
+    }
 
     // keep the screen awake while training
     val hostView = LocalView.current
@@ -181,11 +200,11 @@ fun GymModeScreen(container: AppContainer, workoutId: Long) {
                 Column(Modifier.weight(1f)) {
                     Text(v.workout.name, style = FitType.title, color = th.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val t = v.totals
-                    val secs = (now - v.workout.startedAt) / 1000
+                    val secs = com.myfit.tracker.gym.WorkoutGuard.activeMs(v.workout.id, v.workout.startedAt, now) / 1000
                     val bodyKg by remember { container.logRepo.latestWeight() }.collectAsState(null)
                     val burn = com.myfit.tracker.domain.Burn.kcal(com.myfit.tracker.domain.Burn.GYM_MET, bodyKg?.weightKg ?: 70.0, secs)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(mmss(secs), style = FitType.label, color = th.accentBright)
+                        Text(mmss(secs) + if (guardPause?.first == workoutId) " · paused" else "", style = FitType.label, color = th.accentBright)
                         Text("  ·  ~${burn.toInt()} ${com.myfit.tracker.domain.EnergyUnit.label} · ${t.sets} sets" + (t.volumeKg?.let { " · ${Fmt.weight(it, u.weight, 0)}" } ?: ""), style = FitType.caption, color = th.textDim, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }

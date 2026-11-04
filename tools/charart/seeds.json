@@ -1,6 +1,10 @@
 {
- "l3x_blaze_0": 4101,
- "l3x_blaze_1": 5207,
- "l3x_frost_0": 4101,
- "l3x_frost_1": 5207
+ "s1_hero_a": 2207,
+ "s1_hero_b": 6601,
+ "s2_hero_a": 2207,
+ "s2_hero_b": 6601,
+ "s3_hero_a": 2207,
+ "s3_hero_b": 6601,
+ "s1_animal_a": 2207,
+ "s1_animal_b": 6601
 }

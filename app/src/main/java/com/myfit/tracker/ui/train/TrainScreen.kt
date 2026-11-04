@@ -121,6 +121,9 @@ fun TrainScreen(container: AppContainer, bottomPad: Int, embedded: Boolean = fal
                     runCatching { java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.parse(w.workout.localDate), java.time.LocalDate.now()) in 0..6 }.getOrDefault(false) }) }
         }
 
+        // ---------------- R32 calisthenics hero, right under the start card
+        item(key = "cali") { com.myfit.tracker.ui.cali.CalisthenicsTrainCard { nav.push(Overlay.Calisthenics) } }
+
         // ---------------- 2. every tool as a neon bento tile
         item(key = "tiles") {
             TrainBento(container, coach, p?.name, recent,
@@ -204,9 +207,17 @@ private fun TrainBento(
             Text(sub, style = FitType.caption, color = th.textDim, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
     }
+    @Composable
+    fun SmallTitle(title: String, sub: String) {
+        Column {
+            com.myfit.tracker.ui.components.FitText(title, FitType.label, th.text)
+            Text(sub, style = FitType.caption, color = th.textDim, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
+    }
+    val profile by remember { container.profileRepo.profile }.collectAsState(initial = null)
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            com.myfit.tracker.ui.components.NeonTile(N.Lime, Modifier.weight(1.15f).height(210.dp), onBuild, glowAt = Alignment.TopStart) {
+            com.myfit.tracker.ui.components.NeonTile(N.Lime, Modifier.weight(1.15f).height(218.dp), onBuild, glowAt = Alignment.TopStart) {
                 Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
                     com.myfit.tracker.ui.components.IconOrb(Duo.AutoAwesome, N.Lime, 54.dp)
                     Column {
@@ -217,30 +228,23 @@ private fun TrainBento(
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                com.myfit.tracker.ui.components.NeonTile(N.Crimson, Modifier.fillMaxWidth().height(100.dp), onQuick, phase = 0.33f) {
-                    Row(Modifier.fillMaxSize().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        com.myfit.tracker.ui.components.IconOrb(Duo.PlayArrow, N.Crimson, 40.dp, phase = 0.2f)
-                        Spacer(Modifier.width(10.dp)); TitleSub("Quick start", "Empty workout")
+                // stacked layout (orb above the text) so titles never get cut off on narrow phones
+                com.myfit.tracker.ui.components.NeonTile(N.Crimson, Modifier.fillMaxWidth().height(104.dp), onQuick, phase = 0.33f) {
+                    Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                        com.myfit.tracker.ui.components.IconOrb(Duo.PlayArrow, N.Crimson, 32.dp, phase = 0.2f)
+                        SmallTitle("Quick start", "Empty workout")
                     }
                 }
-                com.myfit.tracker.ui.components.NeonTile(N.Cyan, Modifier.fillMaxWidth().height(100.dp), onRun, phase = 0.66f) {
-                    Row(Modifier.fillMaxSize().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        com.myfit.tracker.ui.components.IconOrb(Duo.DirectionsRun, N.Cyan, 40.dp, phase = 0.5f)
-                        Spacer(Modifier.width(10.dp)); TitleSub("Run · walk", "Live tracker")
+                com.myfit.tracker.ui.components.NeonTile(N.Cyan, Modifier.fillMaxWidth().height(104.dp), onRun, phase = 0.66f) {
+                    Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                        com.myfit.tracker.ui.components.IconOrb(Duo.DirectionsRun, N.Cyan, 32.dp, phase = 0.5f)
+                        SmallTitle("Run · walk", "Live tracker")
                     }
                 }
             }
         }
-        com.myfit.tracker.ui.components.NeonTile(N.Amber, Modifier.fillMaxWidth().height(112.dp), onCoach, glowAt = Alignment.BottomEnd, phase = 0.15f) {
-            Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    com.myfit.tracker.ui.components.TileLabel("Your trainer")
-                    Text(coach.name, style = FitType.title, color = th.text, maxLines = 1)
-                    Caption("Camera rep counting · form score · voice coaching")
-                }
-                com.myfit.tracker.ui.coach.CoachPortrait(coach.look.id, speaking = false, size = 76.dp)
-            }
-        }
+        // R33: full-bleed trainer card
+        com.myfit.tracker.ui.coach.CoachCard(com.myfit.tracker.ui.coach.CoachRole.TRAINER, onCoach)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             com.myfit.tracker.ui.components.NeonTile(N.Violet, Modifier.weight(1f).height(132.dp), onPlans, phase = 0.4f) {
                 Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
@@ -265,7 +269,18 @@ private fun TrainBento(
                     Spacer(Modifier.height(6.dp))
                     val last = wSeries.lastOrNull()
                     Text(last?.let { Fmt.weight(it, u.weight, 1) } ?: "Add weight", style = FitType.title, color = th.text)
-                    com.myfit.tracker.ui.components.Spark(wSeries, N.Mint, Modifier.fillMaxWidth().weight(1f).padding(top = 4.dp))
+                    if (wSeries.size >= 2 && wSeries.distinct().size > 1)
+                        com.myfit.tracker.ui.components.Spark(wSeries, N.Mint, Modifier.fillMaxWidth().weight(1f).padding(top = 4.dp))
+                    else {
+                        // too few weigh-ins for a trend line yet: show BMI and what to do next instead of an empty tile
+                        val hM = (profile?.heightCm ?: 0.0) / 100.0
+                        val bmi = if (last != null && hM > 0.5) last / (hM * hM) else null
+                        Spacer(Modifier.weight(1f))
+                        if (bmi != null) Text("BMI ${"%.1f".format(bmi)} · " + when { bmi < 18.5 -> "under"; bmi < 23 -> "healthy"; bmi < 27.5 -> "overweight"; else -> "obese range" },
+                            style = FitType.label, color = N.Mint.a)
+                        Text(if (last == null) "Tap to log your first weigh-in" else "Log again to see your trend", style = FitType.caption, color = th.textDim, maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    }
                 }
             }
             com.myfit.tracker.ui.components.NeonTile(N.Pink, Modifier.weight(1f).height(140.dp), onRecords, glowAt = Alignment.BottomEnd, phase = 0.55f) {
@@ -274,7 +289,7 @@ private fun TrainBento(
                     Column {
                         Row(verticalAlignment = Alignment.Bottom) {
                             com.myfit.tracker.ui.components.CountUp(weekN.toDouble(), { it.toInt().toString() }, FitType.title, th.text)
-                            Spacer(Modifier.width(4.dp)); Caption("this week")
+                            Spacer(Modifier.width(4.dp)); Caption(if (weekN == 1) "workout this week" else "workouts this week")
                         }
                         Text("Records & PRs", style = FitType.label, color = th.textDim)
                     }
@@ -383,7 +398,7 @@ private fun ResumeCard(container: AppContainer, workoutId: Long, onResume: () ->
     val v by remember(workoutId) { container.workoutRepo.workoutView(workoutId) }.collectAsState(null)
     val now by produceState(Clock.now()) { while (true) { androidx.compose.runtime.withFrameMillis { }; value = Clock.now(); delay(1000) } }
     val w = v ?: return
-    val elapsed = now - w.workout.startedAt
+    val elapsed = com.myfit.tracker.gym.WorkoutGuard.activeMs(w.workout.id, w.workout.startedAt, now)
     // left open for hours (forgot to finish): offer to save it at the last set, or discard it
     val stale = elapsed > 4 * 3_600_000L
     Glass(Modifier.fillMaxWidth(), onClick = onResume) {

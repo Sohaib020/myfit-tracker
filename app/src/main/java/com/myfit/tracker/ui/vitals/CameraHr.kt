@@ -13,9 +13,11 @@ import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -88,8 +90,10 @@ import java.util.concurrent.Executors
 import kotlin.math.max
 import kotlin.math.min
 
-private const val MEASURE_SEC = 30.0
-private const val WARMUP_SEC = 2.0
+// R28: ~15 s check. Finishes as soon as two readings in a row agree (usually 10–15 s), never longer than 22 s.
+private const val TARGET_SEC = 13.5
+private const val MEASURE_SEC = 20.0
+private const val WARMUP_SEC = 1.5
 
 /** Estimate from brightness and from red chroma; keep whichever signal is cleaner. */
 private fun bestEstimate(b: PpgBuffer): Ppg.Result {
@@ -236,7 +240,7 @@ internal fun CameraHrContent(container: AppContainer) {
                         Spacer(Modifier.height(10.dp))
                         Step(1, "Rest your hand on a table and sit still for a moment.")
                         Step(2, "Cover the back camera and the flash with your fingertip — gently, don't press hard.")
-                        Step(3, "Stay still while the flash is on — it usually takes 15–30 seconds.")
+                        Step(3, "Stay still while the flash is on — it takes about 15 seconds.")
                         Spacer(Modifier.height(14.dp))
                         AccentButton("Start measuring", { start() }, Modifier.fillMaxWidth(), icon = Duo.PlayArrow, height = 50.dp)
                     }
@@ -360,6 +364,7 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
     var liveBpm by remember { mutableStateOf<Int?>(null) }
     var wave by remember { mutableStateOf(FloatArray(0)) }
     val beat = remember { Animatable(1f) }
+    var beats by remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
     DisposableEffect(Unit) {
         analysis.setAnalyzer(exec) { proxy ->
@@ -405,17 +410,20 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
             finger = buffer.finger
             val dur = buffer.duration()
             settling = dur < WARMUP_SEC
-            progress = ((dur - WARMUP_SEC) / MEASURE_SEC).toFloat().coerceIn(0f, 1f)
+            // the ring fills over the usual ~15 s (eases out near the end if the pulse needs longer), so the wait feels short
+            val x = ((dur - WARMUP_SEC) / TARGET_SEC).toFloat().coerceAtLeast(0f)
+            progress = if (x <= 0.85f) x else (0.85f + 0.13f * (1f - kotlin.math.exp(-(x - 0.85f) * 3f))).coerceAtMost(0.98f)
             if (dur >= WARMUP_SEC + MEASURE_SEC) {
+                progress = 1f
                 onDone(withContext(Dispatchers.Default) { bestEstimate(buffer) })
                 break
             }
-            // finish early once the pulse is clearly steady (usually 15–20 s)
-            if (dur >= WARMUP_SEC + 15.0 && tick % 20 == 0) {
+            // finish early once the pulse is clearly steady (usually 10–15 s)
+            if (dur >= WARMUP_SEC + 8.5 && tick % 10 == 0) {
                 val r = withContext(Dispatchers.Default) { bestEstimate(buffer) }
                 val b = r.bpm
-                if (b != null && r.quality >= 0.8) {
-                    if (early != null && kotlin.math.abs(early!! - b) <= 3) { onDone(r); break }
+                if (b != null && r.quality >= 0.75) {
+                    if (early != null && kotlin.math.abs(early!! - b) <= 3) { progress = 1f; delay(250); onDone(r); break }
                     early = b
                 } else early = null
             }
@@ -433,12 +441,13 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
                         val endTime = t.first() + f.size / Ppg.FS
                         if (pkTime > lastBeat + 0.3 && endTime - pkTime < 1.0) {
                             lastBeat = pkTime
+                            beats++
                             scope.launch { beat.snapTo(1.22f); beat.animateTo(1f, tween(320)) }
                         }
                     }
                 }
-                if (tick % 20 == 0 && dur >= 10.0) {
-                    val (t2, v2) = buffer.snapshot(10.0)
+                if (tick % 10 == 0 && dur >= 4.5) {
+                    val (t2, v2) = buffer.snapshot(8.0)
                     liveBpm = withContext(Dispatchers.Default) { Ppg.liveBpm(t2, v2) }
                 }
             } else {
@@ -448,25 +457,20 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
     }
 
     GlassCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            ProgressRing(progress, th.danger, size = 150.dp, stroke = 10.dp) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Duo.Favorite, null, tint = th.danger, modifier = Modifier.size(44.dp).scale(beat.value))
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        liveBpm?.let { "~$it" } ?: "—", style = FitType.title,
-                        color = if (liveBpm != null) th.text else th.textFaint,
-                    )
-                    Text("bpm", style = FitType.caption, color = th.textDim)
-                }
+        // R33: a living orb that pulses on each real beat, with light shockwaves, drifting particles and a tick progress ring
+        val shown by androidx.compose.animation.core.animateFloatAsState(progress, androidx.compose.animation.core.tween(240, easing = androidx.compose.animation.core.LinearEasing), label = "ring")
+        val bpmShown by androidx.compose.animation.core.animateIntAsState(liveBpm ?: 0, androidx.compose.animation.core.tween(700), label = "bpm")
+        Box(Modifier.fillMaxWidth().height(260.dp), contentAlignment = Alignment.Center) {
+            LivingOrb(beats, finger && !cameraError, shown, th.danger, Modifier.fillMaxSize())
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Duo.Favorite, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(18.dp).scale(beat.value))
+                Text(if (liveBpm != null) "$bpmShown" else "—", style = FitType.metric.copy(fontSize = FitType.metric.fontSize * 1.25f), color = Color.White)
+                Text(if (liveBpm != null) "bpm · estimate" else if (finger) "reading" else "bpm", style = FitType.caption, color = Color.White.copy(alpha = 0.8f))
             }
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    Modifier.size(84.dp).clip(CircleShape).border(2.dp, if (finger) th.success else th.textFaint, CircleShape),
-                ) { AndroidView({ preview }, Modifier.fillMaxSize()) }
-                Spacer(Modifier.height(6.dp))
-                Caption(if (finger) "Finger detected" else "No finger yet", color = if (finger) th.success else th.textDim)
+            Column(Modifier.align(Alignment.TopEnd), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.size(50.dp).clip(CircleShape).border(2.dp, if (finger) th.success else th.textFaint, CircleShape)) { AndroidView({ preview }, Modifier.fillMaxSize()) }
+                Spacer(Modifier.height(3.dp))
+                Caption(if (finger) "Finger on" else "No finger", color = if (finger) th.success else th.textDim)
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -474,34 +478,144 @@ private fun MeasureCard(onDone: (Ppg.Result) -> Unit, onCancel: () -> Unit) {
             cameraError -> "Couldn't open the camera. Close other camera apps and try again."
             !finger -> "Cover the back camera and flash with your fingertip, stay still"
             settling -> "Finding your pulse…"
-            progress < 1f -> "Measuring… stay still · ${(MEASURE_SEC * (1f - progress)).toInt()} s left"
+            progress < 1f -> "Measuring… stay still · about ${(TARGET_SEC * (1f - progress)).toInt().coerceAtLeast(1)} s"
             else -> "Working it out…"
         }
         Text(status, style = FitType.body, color = th.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(10.dp))
-        Waveform(wave, th.danger, Modifier.fillMaxWidth().height(70.dp))
+        Waveform(wave, th.danger, Modifier.fillMaxWidth().height(80.dp).clip(RoundedCornerShape(16.dp)))
         Spacer(Modifier.height(12.dp))
         GlassButton("Cancel", onCancel, Modifier.fillMaxWidth(), icon = Duo.Close, height = 44.dp)
     }
 }
 
+/** R33 live ECG strip: faint paper grid, smoothed trace that fades in from the left, glow underlay and a bright leading dot. */
 @Composable
 private fun Waveform(values: FloatArray, color: Color, modifier: Modifier) {
     val th = LocalFitTheme.current
-    val track = if (th.isLight) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.10f)
-    Canvas(modifier) {
-        drawLine(track, Offset(0f, size.height / 2), Offset(size.width, size.height / 2), 1.dp.toPx())
-        if (values.size < 2) return@Canvas
+    val grid = if (th.isLight) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.06f)
+    Canvas(modifier.background(color.copy(alpha = 0.05f))) {
+        val g = 14.dp.toPx()
+        var gx = 0f; while (gx < size.width) { drawLine(grid, Offset(gx, 0f), Offset(gx, size.height), 1f); gx += g }
+        var gy = 0f; while (gy < size.height) { drawLine(grid, Offset(0f, gy), Offset(size.width, gy), 1f); gy += g }
+        if (values.size < 3) {
+            drawLine(color.copy(alpha = 0.35f), Offset(0f, size.height / 2), Offset(size.width, size.height / 2), 1.5.dp.toPx())
+            return@Canvas
+        }
         var lo = values[0]; var hi = values[0]
         for (x in values) { lo = min(lo, x); hi = max(hi, x) }
         val range = (hi - lo).takeIf { it > 1e-6f } ?: 1f
         val step = size.width / (values.size - 1)
+        fun pt(i: Int) = Offset(i * step, size.height * (1f - (values[i] - lo) / range) * 0.8f + size.height * 0.1f)
         val path = Path()
-        values.forEachIndexed { i, v ->
-            val x = i * step
-            val y = size.height * (1f - (v - lo) / range) * 0.85f + size.height * 0.075f
-            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        var prev = pt(0); path.moveTo(prev.x, prev.y)
+        for (i in 1 until values.size) {
+            val p = pt(i); val mid = Offset((prev.x + p.x) / 2, (prev.y + p.y) / 2)
+            path.quadraticBezierTo(prev.x, prev.y, mid.x, mid.y); prev = p
         }
-        drawPath(path, color, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        path.lineTo(prev.x, prev.y)
+        val brush = androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(color.copy(alpha = 0f), color.copy(alpha = 0.6f), color), 0f, size.width)
+        drawPath(path, androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(color.copy(alpha = 0f), color.copy(alpha = 0.22f)), 0f, size.width),
+            style = Stroke(8.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(path, brush, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(Color.White, color.copy(alpha = 0.5f), Color.Transparent), prev, 9.dp.toPx()), 9.dp.toPx(), prev)
+        drawCircle(Color.White, 2.5.dp.toPx(), prev)
+    }
+}
+
+/**
+ * R33 measuring visual — a "living orb". The blob's edge breathes with layered sine harmonics, it kicks and
+ * sends a light shockwave on every real detected beat, particles drift out of it, and 60 ticks around it fill
+ * as the measurement progresses. Driven by one frame clock (no per-ripple coroutines), so it never stutters.
+ */
+@Composable
+private fun LivingOrb(beats: Int, active: Boolean, progress: Float, color: Color, modifier: Modifier) {
+    var now by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val start = androidx.compose.runtime.withFrameNanos { it }
+        while (true) androidx.compose.runtime.withFrameNanos { now = (it - start) / 1e9f }
+    }
+    val beatAt = remember { FloatArray(4) { -10f } }
+    var bi by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    LaunchedEffect(beats) { if (beats > 0) { beatAt[bi % 4] = now; bi++ } }
+    val light = androidx.compose.ui.graphics.lerp(color, Color.White, 0.45f)
+    val deep = androidx.compose.ui.graphics.lerp(color, Color.Black, 0.55f)
+    val warm = androidx.compose.ui.graphics.lerp(color, Color(0xFFFF8A3D), 0.45f)
+    Canvas(modifier) {
+        val t = now
+        val c = center
+        val maxR = size.minDimension / 2f
+        val baseR = maxR * 0.47f
+        // beat envelope: quick rise then exponential fall; gentle synthetic breathing until real beats arrive
+        val last = beatAt.max()
+        val k = t - last
+        val pulse = when {
+            k in 0f..0.07f -> k / 0.07f
+            k in 0.07f..2f -> kotlin.math.exp(-(k - 0.07f) * 5.5f)
+            else -> 0f
+        }
+        val idle = if (last < 0f) (0.5f + 0.5f * kotlin.math.sin(t * (if (active) 3.4f else 1.6f))) * (if (active) 0.35f else 0.18f) else 0f
+        val amp = maxOf(pulse, idle)
+        val R = baseR * (1f + 0.085f * amp)
+        // outer glow
+        drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(color.copy(alpha = 0.38f + 0.2f * amp), color.copy(alpha = 0.10f), Color.Transparent), c, R * 1.9f), R * 1.9f, c)
+        // shockwaves from recent beats
+        for (b in beatAt) {
+            val d = t - b
+            if (d < 0f || d > 1.3f) continue
+            val q = d / 1.3f
+            val f = (1f - q) * (1f - q)
+            val rr = R * (1.02f + 0.95f * androidx.compose.animation.core.FastOutSlowInEasing.transform(q))
+            drawCircle(light.copy(alpha = 0.55f * f), rr, c, style = Stroke((5f * (1f - q) + 1f) * density))
+            drawCircle(color.copy(alpha = 0.12f * f), rr, c)
+        }
+        // particles drifting outward, faster right after a beat
+        val n = 30
+        for (i in 0 until n) {
+            val seed = (i * 7919 % 1000) / 1000f
+            val ang = (i * 2.399963f) + t * (0.12f + seed * 0.18f) * (if (i % 2 == 0) 1f else -1f)
+            val life = ((t * (0.16f + seed * 0.14f) + seed + pulse * 0.02f) % 1f)
+            val rr = R * (1.08f + life * 0.95f)
+            val a = (kotlin.math.sin(life * Math.PI.toFloat())) * (0.55f + 0.45f * amp)
+            val p = Offset(c.x + rr * kotlin.math.cos(ang), c.y + rr * kotlin.math.sin(ang))
+            drawCircle((if (i % 3 == 0) light else warm).copy(alpha = a * 0.8f), (1.2f + seed * 2.2f) * density, p)
+        }
+        // the orb: organic blob, glow layer + body + specular highlight
+        fun blob(scale: Float): Path {
+            val path = Path(); val m = 120
+            for (j in 0..m) {
+                val th = (j.toFloat() / m) * 2f * Math.PI.toFloat()
+                val wob = 0.032f * kotlin.math.sin(3 * th + t * 1.3f) + 0.024f * kotlin.math.sin(5 * th - t * 1.9f) +
+                    0.018f * kotlin.math.sin(2 * th + t * 0.8f) + 0.04f * amp * kotlin.math.sin(4 * th + t * 4f)
+                val r = R * scale * (1f + wob)
+                val x = c.x + r * kotlin.math.cos(th); val y = c.y + r * kotlin.math.sin(th)
+                if (j == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            path.close(); return path
+        }
+        drawPath(blob(1.12f), color.copy(alpha = 0.22f))
+        val hl = Offset(c.x - R * 0.35f, c.y - R * 0.4f)
+        drawPath(blob(1f), androidx.compose.ui.graphics.Brush.radialGradient(listOf(light, color, deep), hl, R * 1.7f))
+        drawPath(blob(1f), androidx.compose.ui.graphics.Brush.radialGradient(listOf(warm.copy(alpha = 0.55f), Color.Transparent), Offset(c.x + R * 0.45f, c.y + R * 0.55f), R * 0.9f))
+        drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(Color.White.copy(alpha = 0.45f), Color.Transparent), hl, R * 0.55f), R * 0.55f, hl)
+        // 60-tick progress ring
+        val ticks = 60
+        val tr0 = maxR * 0.86f; val tr1 = maxR * 0.95f
+        val lit = progress * ticks
+        for (i in 0 until ticks) {
+            val ang = (-90f + i * 6f) * (Math.PI.toFloat() / 180f)
+            val on = i < lit
+            val head = on && i >= lit - 1.5f
+            val col = when { head -> Color.White; on -> androidx.compose.ui.graphics.lerp(color, warm, i / ticks.toFloat()); else -> color.copy(alpha = 0.16f) }
+            val ext = if (head) 4f * density else 0f
+            drawLine(col, Offset(c.x + tr0 * kotlin.math.cos(ang), c.y + tr0 * kotlin.math.sin(ang)),
+                Offset(c.x + (tr1 + ext) * kotlin.math.cos(ang), c.y + (tr1 + ext) * kotlin.math.sin(ang)), (if (on) 3f else 2f) * density, cap = StrokeCap.Round)
+        }
+        if (progress <= 0f) {
+            // waiting: a soft comet orbits the ring
+            val ang = (t * 1.6f) % (2f * Math.PI.toFloat())
+            val p = Offset(c.x + (tr0 + tr1) / 2 * kotlin.math.cos(ang), c.y + (tr0 + tr1) / 2 * kotlin.math.sin(ang))
+            drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(Color.White, color.copy(alpha = 0.4f), Color.Transparent), p, 8f * density), 8f * density, p)
+        }
     }
 }

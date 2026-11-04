@@ -40,3 +40,6 @@
 # R18: ONNX Runtime (offline food recogniser) — JNI
 -keep class ai.onnxruntime.** { *; }
 -dontwarn ai.onnxruntime.**
+
+# R21 Filament (JNI callbacks into Java/Kotlin)
+-keep class com.google.android.filament.** { *; }

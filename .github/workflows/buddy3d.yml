@@ -1,0 +1,106 @@
+name: Champions (buddy packs + 3D)
+# Rigged champions (branch buddy3d-assets/rigged) + motion pack -> per champion/tier:
+#   clip pack        -> release champs-v3/<id>.zip   (R26: 720p 50 fps side-by-side-alpha MP4 per move + portrait/stand)
+#   real-time model  -> release champ3d-v3/<id>.glb  (every move of the tier)
+# Each look renders in 3 parts (moves split round-robin) so no job runs for hours.
+#   portraits + contact sheet -> branch champs-out (portraits get bundled in the APK)
+on:
+  push:
+    branches: [ buddy3d-run ]
+  workflow_dispatch:
+    inputs:
+      ids: { description: 'only these ids (comma list, empty = all)', required: false, default: '' }
+permissions: { contents: write }
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs: { matrix: '${{ steps.m.outputs.matrix }}' }
+    steps:
+      - uses: actions/checkout@v4
+      - id: m
+        run: |
+          python3 - "${{ github.event.inputs.ids }}" <<'PY' >> $GITHUB_OUTPUT
+          import json, sys
+          r = json.load(open('tools/buddy3d/roster.json'))
+          only = [x for x in sys.argv[1].split(',') if x]
+          inc = [{'id': k, 'tier': v['tier'], 'part': p} for k, v in r.items() if not only or k in only for p in range(3)]
+          print('matrix=' + json.dumps({'include': inc}))
+          PY
+  build:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { ref: buddy3d-assets, path: assets }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Render + pack + 3D
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq libxi6 libxkbcommon0 libsm6 libgl1 libxrender1 libxxf86vm1 libxfixes3 >/dev/null
+          pip install -q bpy==4.2.0 pillow numpy
+          sudo apt-get install -yq ffmpeg >/dev/null
+          ID=${{ matrix.id }}; T=${{ matrix.tier }}; P=${{ matrix.part }}
+          ONLY=$(python3 -c "import sys; sys.path.insert(0,'tools/buddy3d'); import ast,re; src=open('tools/buddy3d/motion.py').read(); \
+            cs=ast.literal_eval(re.search(r'CLIP_SET = (\[.*?\])', src, re.S).group(1)); print(','.join(c for i,c in enumerate(cs) if i % 3 == $P))")
+          echo "part $P: $ONLY"
+          export STAND=$([ "$P" = 0 ] && echo 1 || echo 0)
+          for try in 1 2; do
+            python tools/buddy3d/render_champ.py assets/rigged/$ID.glb assets/motion.json.gz $T frames 60 8 "$ONLY" > log.txt 2>&1 || true
+            grep -q RENDER_DONE log.txt && break
+          done
+          grep -E "CLIP|RENDER_DONE|Error|Traceback" log.txt | head -30
+          grep -q RENDER_DONE log.txt || { tail -30 log.txt | sed 's/^/::error::/'; exit 1; }
+          [ "$P" = 0 ] || rm -f frames/portrait.png frames/stand.png
+          python tools/buddy3d/pack_champ.py frames out/pack/$ID
+          if [ "$P" = 0 ]; then
+            for try in 1 2; do
+              python tools/buddy3d/export_champ_glb.py assets/rigged/$ID.glb assets/motion.json.gz $T out/$ID.glb > glog.txt 2>&1 || true
+              grep -q EXPORT_DONE glog.txt && break
+            done
+            grep -q EXPORT_DONE glog.txt || { tail -20 glog.txt | sed 's/^/::error::/'; exit 1; }
+            mkdir -p out/portraits && cp out/pack/$ID/portrait.webp out/portraits/$ID.webp && cp out/pack/$ID/stand.webp out/portraits/${ID}_stand.webp && cp frames/stand.png out/portraits/${ID}_idle.png || true
+          fi
+          echo "::notice::$ID part $P $(du -sk out/pack/$ID | cut -f1) KB"
+      - uses: actions/upload-artifact@v4
+        with: { name: 'champ-${{ matrix.id }}-${{ matrix.part }}', path: out, retention-days: 3 }
+  release:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: parts }
+      - name: Releases
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          gh release view champs-v3 >/dev/null 2>&1 || gh release create champs-v3 --title "Champion clip packs v2" --notes "tight-cropped 60 fps side-by-side-alpha MP4 per move (R28)" --prerelease
+          gh release view champ3d-v3 >/dev/null 2>&1 || gh release create champ3d-v3 --title "Champion 3D models v2" --notes "Real-time GLBs per champion/tier (R26 idle)" --prerelease
+          mkdir -p merged zips
+          for d in parts/*/pack/*/; do id=$(basename $d); mkdir -p merged/$id; cp -n $d* merged/$id/; done
+          for d in merged/*/; do id=$(basename $d); [ -f $d/idle.mp4 ] || { echo "::warning::$id has no idle"; continue; }; (cd $d && zip -q -r ../../zips/$id.zip .); done
+          for z in zips/*.zip; do gh release upload champs-v3 "$z" --clobber; done
+          for g in parts/*/*.glb; do gh release upload champ3d-v3 "$g" --clobber; done
+      - name: Portraits + sheet branch
+        run: |
+          pip install -q pillow
+          mkdir -p pub && cp parts/*/portraits/*.webp pub/ 2>/dev/null || true
+          python3 - <<'PY'
+          import glob
+          from PIL import Image
+          fs = sorted(glob.glob('parts/*/portraits/*_idle.png'))
+          if fs:
+              cols = 9; W = 224
+              S = Image.new('RGB', (cols * W, ((len(fs) + cols - 1) // cols) * W), (36, 54, 46))
+              for i, f in enumerate(fs):
+                  im = Image.open(f).convert('RGBA').resize((W, W)); S.paste(im, ((i % cols) * W, (i // cols) * W), im)
+              S.save('pub/sheet.jpg', quality=85)
+          PY
+          cd pub && git init -q && git checkout -q -b champs-out && git add -A
+          git -c user.name=ci -c user.email=ci@x commit -qm "champions ${{ github.run_number }}" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" champs-out

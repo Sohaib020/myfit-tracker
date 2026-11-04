@@ -43,6 +43,8 @@ data class NCard(
     val progress: Float? = null, val indeterminate: Boolean = false, val progressLabel: String? = null,
     val stats: List<Pair<String, String>> = emptyList(), val image: Bitmap? = null,
     val eyebrow: String? = null, val unit: String? = null,
+    /** > 1 = the bar is split into this many pills (one per exercise); progress fills them in order. */
+    val segments: Int = 0,
 )
 
 /**
@@ -88,12 +90,11 @@ object NotifKit {
             rv.setViewVisibility(R.id.n_chrono, View.VISIBLE)
             rv.setChronometer(R.id.n_chrono, chronoBase(c.chrono), null, true)
             if (Build.VERSION.SDK_INT >= 24) rv.setChronometerCountDown(R.id.n_chrono, c.countDown)
-            rv.setTextColor(R.id.n_chrono, c.kind.color)
         } else if (c.value != null) {
             rv.setViewVisibility(R.id.n_value, View.VISIBLE)
             rv.setTextViewText(R.id.n_value, c.value)
-            rv.setTextColor(R.id.n_value, c.kind.color)
         }
+        // R20: the big clock uses the shade's own primary text colour (readable in light and dark); colour stays in the accents
     }
 
     fun small(ctx: Context, c: NCard, points: List<Float> = emptyList()): RemoteViews = RemoteViews(ctx.packageName, R.layout.notif_live_small).apply {
@@ -103,7 +104,7 @@ object NotifKit {
         clock(this, c)
         if (c.progress != null) {
             setViewVisibility(R.id.n_track, View.VISIBLE)
-            setImageViewBitmap(R.id.n_track, track(ctx, c.kind, c.progress, points, small = true))
+            setImageViewBitmap(R.id.n_track, track(ctx, c.kind, c.progress, points, small = true, segments = c.segments))
         }
     }
 
@@ -113,14 +114,17 @@ object NotifKit {
         setTextColor(R.id.n_eyebrow, c.kind.color)
         setTextViewText(R.id.n_title, c.title)
         setTextViewText(R.id.n_text, c.text)
-        if (c.image != null) { setViewVisibility(R.id.n_image, View.VISIBLE); setImageViewBitmap(R.id.n_image, c.image) }
+        val img = c.image ?: c.progress?.let { ring(c.kind, it, c.chip ?: "${(it.coerceIn(0f, 1f) * 100).toInt()}%") }
+        if (img != null) { setViewVisibility(R.id.n_image, View.VISIBLE); setImageViewBitmap(R.id.n_image, img) }
         clock(this, c)
         if (c.unit != null && (c.chrono != null || c.value != null)) { setViewVisibility(R.id.n_unit, View.VISIBLE); setTextViewText(R.id.n_unit, c.unit) }
-        if (c.chip != null) { setViewVisibility(R.id.n_chip, View.VISIBLE); setTextViewText(R.id.n_chip, c.chip); setTextColor(R.id.n_chip, c.kind.color) }
+        // header pill: a live dot while a clock runs, else the card's own chip ("Paused", "Iftar" …)
+        val pill = if (c.chrono != null) "● LIVE" else c.chip
+        if (pill != null) { setViewVisibility(R.id.n_chip, View.VISIBLE); setTextViewText(R.id.n_chip, pill); setTextColor(R.id.n_chip, c.kind.color) }
         when {
             c.progress != null -> {
                 setViewVisibility(R.id.n_track, View.VISIBLE)
-                setImageViewBitmap(R.id.n_track, track(ctx, c.kind, c.progress, points, small = false))
+                setImageViewBitmap(R.id.n_track, track(ctx, c.kind, c.progress, points, small = false, segments = c.segments))
             }
             c.indeterminate -> {
                 setViewVisibility(R.id.n_bar_ind, View.VISIBLE)
@@ -138,49 +142,70 @@ object NotifKit {
     }
 
     /**
-     * The progress track: rounded bar filled to [progress] with a soft gradient, milestone dots at [points] and the
-     * kind's round badge riding the front — like a car moving along a ride route.
+     * R20 progress bar: a slim rounded track that fills with a soft gradient and ends in a glowing tip — or, with
+     * [segments] > 1, one pill per step (done = solid, current = part-filled, next = faint). [points] = small ticks.
      */
-    fun track(ctx: Context, kind: NKind, progress: Float, points: List<Float>, small: Boolean): Bitmap {
+    fun track(ctx: Context, kind: NKind, progress: Float, points: List<Float>, small: Boolean, segments: Int = 0): Bitmap {
         val dm = ctx.resources.displayMetrics
         val w = (dm.widthPixels - 64 * dm.density).toInt().coerceIn(320, 1400)
-        val h = ((if (small) 16 else 30) * dm.density).toInt().coerceAtLeast(24)
+        val h = ((if (small) 8 else 12) * dm.density).toInt().coerceAtLeast(12)
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val cv = Canvas(bmp)
         val p = Paint(Paint.ANTI_ALIAS_FLAG)
-        val badge = h * if (small) 0.95f else 0.92f
-        val left = badge / 2; val right = w - badge / 2
-        val barH = h * if (small) 0.32f else 0.26f
+        val col = kind.color
+        val faint = (col and 0x00FFFFFF) or 0x2E000000
+        val barH = h * if (small) 0.62f else 0.5f
         val cy = h / 2f
         val f = progress.coerceIn(0f, 1f)
-        val x = left + (right - left) * f
-        // track
-        p.color = (kind.color and 0x00FFFFFF) or 0x26000000
-        cv.drawRoundRect(RectF(left, cy - barH / 2, right, cy + barH / 2), barH, barH, p)
-        // fill
-        if (x > left + 1) {
-            p.shader = LinearGradient(left, 0f, x, 0f, (kind.color and 0x00FFFFFF) or 0xCC000000.toInt(), kind.color, Shader.TileMode.CLAMP)
-            cv.drawRoundRect(RectF(left, cy - barH / 2, x, cy + barH / 2), barH, barH, p)
+        val left = h / 2f; val right = w - h / 2f
+        fun pill(x0: Float, x1: Float, paint: Paint) { if (x1 > x0) cv.drawRoundRect(RectF(x0, cy - barH / 2, x1, cy + barH / 2), barH, barH, paint) }
+        if (segments in 2..16) {
+            val gap = barH * 0.9f
+            val segW = (right - left - gap * (segments - 1)) / segments
+            val filled = f * segments
+            for (i in 0 until segments) {
+                val x0 = left + i * (segW + gap); val x1 = x0 + segW
+                p.shader = null; p.color = faint; pill(x0, x1, p)
+                val part = (filled - i).coerceIn(0f, 1f)
+                if (part > 0f) {
+                    p.shader = null; p.color = col
+                    pill(x0, maxOf(x0 + barH, x0 + segW * part), p)
+                }
+            }
             p.shader = null
+        } else {
+            val x = left + (right - left) * f
+            p.color = faint; pill(left, right, p)
+            if (f > 0f) {
+                p.shader = null; p.color = col
+                pill(left, maxOf(x, left + barH), p)
+                // glowing tip
+                p.color = (col and 0x00FFFFFF) or 0x55000000; cv.drawCircle(maxOf(x, left + barH / 2), cy, h / 2f, p)
+                p.color = 0xFFFFFFFF.toInt(); cv.drawCircle(maxOf(x, left + barH / 2), cy, barH * 0.42f, p)
+            }
+            points.filter { it in 0.02f..0.98f }.forEach { pt ->
+                val px = left + (right - left) * pt
+                p.color = if (pt <= f) 0xE6FFFFFF.toInt() else (col and 0x00FFFFFF) or 0x8C000000.toInt()
+                cv.drawCircle(px, cy, barH * 0.22f, p)
+            }
         }
-        // milestones
-        points.filter { it in 0.02f..0.98f }.forEach { pt ->
-            val px = left + (right - left) * pt
-            val passed = pt <= f
-            p.color = if (passed) 0xFFFFFFFF.toInt() else (kind.color and 0x00FFFFFF) or 0x66000000
-            cv.drawCircle(px, cy, barH * 0.9f, p)
-            if (passed) { p.color = kind.color; cv.drawCircle(px, cy, barH * 0.45f, p) }
+        return bmp
+    }
+
+    /** Progress ring with a short centre label in the kind's colour (readable on light and dark shades). */
+    fun ring(kind: NKind, progress: Float, label: String, sizePx: Int = 200): Bitmap {
+        val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val cv = Canvas(bmp)
+        val stroke = sizePx * 0.1f
+        val r = RectF(stroke / 2 + 2, stroke / 2 + 2, sizePx - stroke / 2 - 2, sizePx - stroke / 2 - 2)
+        val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = stroke; strokeCap = Paint.Cap.ROUND }
+        p.color = (kind.color and 0x00FFFFFF) or 0x2E000000; cv.drawArc(r, 0f, 360f, false, p)
+        p.color = kind.color; cv.drawArc(r, -90f, 360f * progress.coerceIn(0.015f, 1f), false, p)
+        val t = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = kind.color; textAlign = Paint.Align.CENTER; typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD)
+            textSize = sizePx * (if (label.length <= 4) 0.27f else 0.2f)
         }
-        // finish flag dot
-        p.color = if (f >= 1f) kind.color else (kind.color and 0x00FFFFFF) or 0x80000000.toInt()
-        cv.drawCircle(right, cy, barH * 1.05f, p)
-        // badge with a white ring and soft shadow
-        p.color = 0x33000000; cv.drawCircle(x, cy + h * 0.04f, badge / 2, p)
-        p.color = 0xFFFFFFFF.toInt(); cv.drawCircle(x, cy, badge / 2, p)
-        ContextCompat.getDrawable(ctx, kind.tracker)?.let { d ->
-            val r = (badge / 2 * 0.86f).toInt()
-            d.setBounds((x - r).toInt(), (cy - r).toInt(), (x + r).toInt(), (cy + r).toInt()); d.draw(cv)
-        }
+        cv.drawText(label.take(6), sizePx / 2f, sizePx / 2f - (t.descent() + t.ascent()) / 2, t)
         return bmp
     }
 

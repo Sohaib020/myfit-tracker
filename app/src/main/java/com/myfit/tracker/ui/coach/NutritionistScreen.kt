@@ -125,8 +125,10 @@ private fun MacroRings(t: Nutritionist.Totals, g: Nutritionist.Goals, modifier: 
     }
 }
 
-private data class Msg(val mine: Boolean, val text: String)
-private val chatLog = mutableStateListOf<Msg>()   // kept for this app session only
+internal data class Msg(val mine: Boolean, val text: String)
+/** Chat history per coach ("n" nutritionist, "t" trainer), kept for this app session only. */
+private val chatLogs = mutableMapOf<String, androidx.compose.runtime.snapshots.SnapshotStateList<Msg>>()
+private fun logFor(key: String) = chatLogs.getOrPut(key) { mutableStateListOf() }
 
 /** Pro nutritionist: today's coaching, meal-by-meal review, a week of Pakistani meals with groceries, and chat. */
 @Composable
@@ -143,7 +145,7 @@ fun NutritionistScreen(container: AppContainer) {
     val voice = container.pipVoice
     val speaking by voice.speaking.collectAsState()
     val persona = PipVoice.Persona(cp.nLook.male, trainer = false)
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var tab by rememberSaveable { mutableIntStateOf(com.myfit.tracker.ui.nav.Launch.takeNutriTab() ?: 0) }
 
     val today = remember { Clock.today() }
     val meals by remember { container.nutritionRepo.mealsOn(today) }.collectAsState(initial = emptyList())
@@ -181,11 +183,10 @@ fun NutritionistScreen(container: AppContainer) {
         OverlayTopBar(cp.nName, { voice.stop(); nav.pop() }, "Your nutrition coach")
         // ---------------- hero: the character on a stage with today's headline in a speech bubble
         val headline = tips.firstOrNull()
-        val npose = when (tab) { 0 -> if (headline?.good == true) "thumbs" else "stand"; 1 -> "think"; 2 -> "cart"; else -> "portrait" }
-        Box(Modifier.fillMaxWidth().height(210.dp).padding(horizontal = 16.dp).clip(RoundedCornerShape(30.dp))
-            .background(Brush.linearGradient(listOf(th.success.copy(alpha = 0.22f), th.accent.copy(alpha = 0.06f))))) {
+        val npose = when (tab) { 0 -> if (headline?.good == true) "thumbsup" else "idle"; 1 -> "nod>happy>idle"; 2 -> "plate"; else -> "tablet" }
+        Glass(Modifier.fillMaxWidth().height(210.dp).padding(horizontal = 16.dp), shape = RoundedCornerShape(30.dp), tint = th.success.copy(alpha = 0.14f)) {
             Row(Modifier.fillMaxSize()) {
-                CoachFigure(cp.nLook.id, npose, Modifier.weight(0.9f).fillMaxSize().padding(top = 10.dp), voice.level)
+                CoachStage(cp.nLook.id, npose, Modifier.weight(0.9f).fillMaxSize().padding(top = 10.dp), voice.level)
                 Column(Modifier.weight(1.1f).fillMaxSize().padding(top = 16.dp, end = 14.dp, bottom = 12.dp), verticalArrangement = Arrangement.SpaceBetween) {
                     Column(Modifier.clip(RoundedCornerShape(18.dp)).background(th.text.copy(alpha = 0.08f)).padding(12.dp)) {
                         Text(headline?.title ?: "Hi, I'm ${cp.nName}!", style = FitType.label, color = th.text, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
@@ -255,7 +256,7 @@ fun NutritionistScreen(container: AppContainer) {
                                 scope.launch {
                                     aiNote = ask(container, systemPrompt(cp.nName, totals, goals, muslim),
                                         "Review my ${mealLabel(meal.mealType).lowercase()}: " + its.joinToString { "${it.foodName} x${"%.1f".format(it.quantity)} (${(it.caloriesPerServing * it.quantity).toInt()} kcal, ${(it.proteinPerServing * it.quantity).toInt()} g protein)" } +
-                                            ". In under 90 words: what's good, one improvement and one Pakistani swap.")
+                                            ". In under 90 words: what's good, one improvement and one local swap.")
                                     busy = false
                                 }
                             }, Modifier.fillMaxWidth(), icon = Duo.AutoAwesome, height = 42.dp)
@@ -264,7 +265,7 @@ fun NutritionistScreen(container: AppContainer) {
                 }
             }
             2 -> WeekTab(container, goals.kcal, muslim)
-            else -> ChatTab(container, cp.nName, systemPrompt(cp.nName, totals, goals, muslim), persona, cp.nLook.id)
+            else -> ChatTab(container, cp.nName, systemPrompt(cp.nName, totals, goals, muslim), persona, cp.nLook.id, "n")
         }
     }
 }
@@ -297,7 +298,7 @@ private fun WeekTab(container: AppContainer, kcal: Double?, muslim: Boolean) {
     val checked = remember { mutableStateListOf<String>() }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 40.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Caption("A week at about $band kcal a day, strictly Pakistani home food" + (if (swaps.isNotEmpty()) ", with ${swaps.size} item${if (swaps.size == 1) "" else "s"} swapped for your health profile" else "") + ".")
+            Caption("A week at about $band kcal a day of ${com.myfit.tracker.domain.FoodRegion.current().name} home food" + (if (swaps.isNotEmpty()) ", with ${swaps.size} item${if (swaps.size == 1) "" else "s"} swapped for your health profile" else "") + ".")
         }
         items(days) { dd ->
             var open by remember { mutableStateOf(false) }
@@ -361,7 +362,11 @@ private fun WeekTab(container: AppContainer, kcal: Double?, muslim: Boolean) {
 }
 
 @Composable
-private fun ChatTab(container: AppContainer, name: String, system: String, persona: PipVoice.Persona, look: String) {
+internal fun ChatTab(container: AppContainer, name: String, system: String, persona: PipVoice.Persona, look: String, logKey: String,
+                     intro: String = "Ask me anything about food — what to eat before the gym, a diabetic-friendly breakfast, how much roti fits your goal, Ramadan sehri ideas…",
+                     starters: List<String> = listOf("What should I eat after a workout?", "Make me a high-protein desi breakfast", "Is biryani OK on a diet?"),
+                     reportWhere: String = "nutritionist") {
+    val chatLog = remember(logKey) { logFor(logKey) }
     val th = LocalFitTheme.current
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
@@ -372,17 +377,17 @@ private fun ChatTab(container: AppContainer, name: String, system: String, perso
         val t = q.trim(); if (t.isEmpty() || busy) return
         chatLog += Msg(true, t); text = ""; busy = true
         scope.launch {
-            val hist = chatLog.takeLast(8).joinToString("\n") { (if (it.mine) "User: " else "$name: ") + it.text }
-            val a = ask(container, system, "Conversation so far:\n$hist\n\nReply to the user's last message as $name.")
+            val hist = chatLog.takeLast(6).joinToString("\n") { (if (it.mine) "User: " else "$name: ") + it.text.take(600) }
+            val a = ask(container, system, "Conversation so far:\n$hist\n\nReply to the user's last message as $name.", fast = true)
             chatLog += Msg(false, a); busy = false
         }
     }
     Column(Modifier.fillMaxSize().imePadding()) {
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list, contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (chatLog.isEmpty()) item {
-                Caption("Ask me anything about food — what to eat before the gym, a diabetic-friendly breakfast, how much roti fits your goal, Ramadan sehri ideas…")
+                Caption(intro)
                 Spacer(Modifier.height(8.dp))
-                listOf("What should I eat after a workout?", "Make me a high-protein desi breakfast", "Is biryani OK on a diet?").forEach { q ->
+                starters.forEach { q ->
                     GlassButton(q, { send(q) }, Modifier.fillMaxWidth().padding(vertical = 3.dp), height = 42.dp)
                 }
             }
@@ -391,7 +396,11 @@ private fun ChatTab(container: AppContainer, name: String, system: String, perso
                     if (!m.mine) { CoachPortrait(look, false, 34.dp); Spacer(Modifier.width(6.dp)) }
                     Column(Modifier.fillMaxWidth(0.86f).clip(RoundedCornerShape(18.dp)).background(if (m.mine) th.accent.copy(alpha = 0.22f) else th.text.copy(alpha = 0.06f)).padding(12.dp)) {
                         Text(m.text, style = FitType.body, color = th.text)
-                        if (!m.mine) Icon(Duo.VolumeUp, "Read aloud", tint = th.textDim, modifier = Modifier.align(Alignment.End).size(28.dp).clickableNoRipple { container.pipVoice.speak(m.text, force = true, persona = persona) }.padding(4.dp))
+                        if (!m.mine) Row(Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
+                            com.myfit.tracker.ui.components.AiReportLink(container, m.text, reportWhere)
+                            Spacer(Modifier.width(8.dp))
+                            Icon(Duo.VolumeUp, "Read aloud", tint = th.textDim, modifier = Modifier.size(28.dp).clickableNoRipple { container.pipVoice.speak(m.text, force = true, persona = persona) }.padding(4.dp))
+                        }
                     }
                 }
             }
@@ -412,8 +421,8 @@ private fun ChatTab(container: AppContainer, name: String, system: String, perso
 
 private fun systemPrompt(name: String, t: Nutritionist.Totals, g: Nutritionist.Goals, halal: Boolean): String {
     val h = HealthProfile.summary()
-    return "You are $name, a warm, practical sports nutritionist for people in Pakistan (a fictional character in the MyFit app). " +
-        "Recommend Pakistani home food and local options in household units (roti, katori, cup, glass, plate) and local names. " +
+    return "You are $name, a warm, practical sports nutritionist (a fictional character in the MyFit app). The user eats ${com.myfit.tracker.domain.FoodRegion.current().name} food. " +
+        "Recommend home food and local options from that region in household units (roti, katori, cup, glass, plate, slice) and local names. " +
         "Be specific and brief (under 120 words unless asked for a plan), use simple English or Roman Urdu if the user writes that way. " +
         "Values are typical estimates. Never prescribe medicines, supplements doses or insulin; for medical conditions suggest checking with their doctor. " +
         (if (h.isNotBlank()) "The user's health profile: $h — never suggest foods that conflict with it and offer safe swaps. " else "") +
@@ -423,11 +432,12 @@ private fun systemPrompt(name: String, t: Nutritionist.Totals, g: Nutritionist.G
 }
 
 /** One cloud answer within the daily free allowance; friendly text on failure. */
-private suspend fun ask(container: AppContainer, system: String, user: String): String {
+internal suspend fun ask(container: AppContainer, system: String, user: String, fast: Boolean = false): String {
     val ai = com.myfit.tracker.ai.ondevice.OnDeviceAi.get(container.app)
     return try {
         ai.quota.require(com.myfit.tracker.ai.ondevice.AiQuota.Kind.CHAT)
-        val r = container.aiRouter.text(system, user, 40_000)
+        // R36: chat = fastest providers first (Groq), and a stuck provider gives up after 12 s instead of 40
+        val r = if (fast) container.aiRouter.text(system, user, 12_000, fast = true) else container.aiRouter.text(system, user, 40_000)
         ai.quota.consume(com.myfit.tracker.ai.ondevice.AiQuota.Kind.CHAT)
         r.trim()
     } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {

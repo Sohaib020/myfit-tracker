@@ -10,7 +10,7 @@ plugins {
 // Online features (accounts, friends, leaderboards) need app/google-services.json, written by CI from a secret.
 // Without it the app still builds and simply hides those features.
 val socialEnabled = file("google-services.json").exists()
-if (socialEnabled) apply(plugin = "com.google.gms.google-services")
+if (socialEnabled) { apply(plugin = "com.google.gms.google-services"); apply(plugin = "com.google.firebase.crashlytics") }   // R35: crash + ANR reports
 
 android {
     namespace = "com.myfit.tracker"
@@ -116,6 +116,8 @@ android {
         // sherpa-onnx and ONNX Runtime both ship libonnxruntime.so — kept at the same API level (1.28.x), so either copy works
         jniLibs { pickFirsts += listOf("**/libc++_shared.so", "**/libonnxruntime.so") }
     }
+    // R35: exported Room schemas (app/schemas) are assets for SchemaTest (unit tests run on the debug variant)
+    sourceSets { getByName("debug").assets.srcDir("$projectDir/schemas") }   // debug builds only: never in a release APK
     // MediaPipe memory-maps its .task models straight from the APK
     androidResources { noCompress += "task" }
     lint {
@@ -124,33 +126,18 @@ android {
     }
 }
 
+// R35: the sideloaded GitHub APK compresses its native libraries (89 MB of .so → ~34 MB, APK ~151 → ~96 MB).
+// Play/Galaxy builds keep them stored: the stores deliver per-device splits compressed already.
+androidComponents {
+    onVariants(selector().withFlavor("store" to "github")) { v -> v.packaging.jniLibs.useLegacyPackaging.set(true) }
+}
+
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
-// R17: MediaPipe models (~30 MB pose heavy + ~4 MB face) are downloaded into assets/pose at build time (not committed).
-val fetchPoseModels by tasks.registering {
-    val dir = file("src/main/assets/pose")
-    val models = mapOf(
-        "pose_landmarker_heavy.task" to "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task",
-        "face_landmarker.task" to "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-    )
-    outputs.files(models.keys.map { File(dir, it) })
-    doLast {
-        dir.mkdirs()
-        models.forEach { (name, url) ->
-            val f = File(dir, name)
-            if (f.exists() && f.length() > 100_000) return@forEach
-            runCatching {
-                val tmp = File(dir, "$name.part")
-                URI(url).toURL().openStream().use { input -> tmp.outputStream().use { out -> input.copyTo(out) } }
-                tmp.renameTo(f)
-                logger.lifecycle("Fetched $name (${f.length() / 1024} KB)")
-            }.onFailure { logger.warn("Could not fetch $name — the camera coach will fall back to ML Kit: ${it.message}") }
-        }
-    }
-}
-tasks.named("preBuild") { dependsOn(fetchPoseModels) }
+// R29: the camera coach is back on Google ML Kit pose detection (base, bundled in the SDK) — no model fetch needed.
+
 
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.09.02")
@@ -160,10 +147,11 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.material:material-icons-extended")   // used (Icons.Rounded.* in ~10 screens); R8 keeps only those icons
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")   // R35: installs src/main/baseline-prof.txt (AOT-compiled hot code)
     implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
@@ -172,7 +160,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-process:2.8.6")
-    implementation("androidx.navigation:navigation-compose:2.8.1")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     // on-device LLM (Gemma via LiteRT-LM; the model itself is an optional in-app download, never bundled)
@@ -194,7 +181,11 @@ dependencies {
     implementation("org.apache.commons:commons-compress:1.27.1")
     // Google code scanner: barcode scanning UI without a camera permission
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
-    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.zxing:core:3.5.3")   // invite QR codes; R8 trims it to the QR writer only
+    // R21 real-time 3D coaches (capable phones only; GLBs download on demand)
+    val filament = "1.56.0"
+    implementation("com.google.android.filament:filament-android:$filament")
+    implementation("com.google.android.filament:gltfio-android:$filament")
     // food camera: live preview, on-device food detection
     val camerax = "1.4.2"
     implementation("androidx.camera:camera-core:$camerax")
@@ -203,14 +194,13 @@ dependencies {
     implementation("androidx.camera:camera-view:$camerax")
     implementation("com.google.mlkit:image-labeling:17.0.9")
     // pro trainer camera mode: on-device body landmarks for rep counting and form checks (no images leave the phone)
-    implementation("com.google.mlkit:pose-detection-accurate:18.0.0-beta5")   // fallback tracker
-    // R17 camera coach: MediaPipe Pose Landmarker (heavy) + Face Landmarker for head pose — models fetched at build time
-    implementation("com.google.mediapipe:tasks-vision:0.10.14")
+    implementation("com.google.mlkit:pose-detection:18.0.0-beta5")   // R29 camera coach: ML Kit pose (base) — smooth on old phones
     // R18 offline food recogniser (MobileCLIP image encoder, downloaded in the background)
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.28.0")   // same ORT API level (1.28) as sherpa-onnx 1.13.8 bundles
     // accounts, friends & leaderboards
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-crashlytics")   // R35: field crash/ANR reports (no-op without google-services.json)
     implementation("com.google.firebase:firebase-firestore")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
     implementation("androidx.credentials:credentials:1.3.0")
@@ -219,6 +209,8 @@ dependencies {
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("androidx.room:room-testing:2.6.1")   // R35: schema / migration test
+    testImplementation("androidx.test:core:1.6.1")
     testImplementation(composeBom)
     testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("org.robolectric:robolectric:4.14.1")

@@ -1,14 +1,7 @@
 {
  "prefix": "",
- "suffix": ". Adult character, not a real person, original design, no text, no logo, no brand logos, no watermark, the whole figure in frame.",
+ "suffix": ". Not a real person, original character, no text, no logo, no watermark, the whole figure in frame.",
  "steps": 4,
  "w": 512,
- "h": 768,
- "init": {
-  "l3x_blaze_0": "init/blaze_l1.jpg",
-  "l3x_blaze_1": "init/blaze_l1.jpg",
-  "l3x_frost_0": "init/frost_l1.jpg",
-  "l3x_frost_1": "init/frost_l1.jpg"
- },
- "strength": 0.82
+ "h": 704
 }

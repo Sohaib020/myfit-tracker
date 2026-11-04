@@ -1,5 +1,5 @@
 name: Character art samples
-# FLUX.1-schnell character art samples (prompts in tools/charart). Push to branch charart-run to start.
+# FLUX.1-schnell realistic 3D coach & nutritionist renders (prompts in tools/charart). Push to branch charart-run to start.
 # Results land on branch charart-assets (coach/<id>.webp + sheet.jpg).
 on:
   push:

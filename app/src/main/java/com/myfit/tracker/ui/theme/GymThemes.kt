@@ -3,7 +3,7 @@ package com.myfit.tracker.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * R17 theme set — 12 themes, no families. Six dark "gym" themes share the look of Carbon & Lime and Web Crimson
+ * R17 theme set — 12 themes (R19: + Kinetic Mint = 13), no families. Six dark "gym" themes share the look of Carbon & Lime and Web Crimson
  * (deep gradient, a fine technical pattern, two soft light ribbons, one accent glow) but each has its own pattern
  * and colour story; three light versions of that look; two calm plain/gradient themes; and True Black.
  * Every theme keeps the same background in Glass and Flat — the style only changes the cards.
@@ -31,6 +31,9 @@ object GymThemes {
     // ---------------- gym dark (the two favourites + four new patterns)
     val CarbonLime = MoreThemes.CarbonLime
     val WebCrimson = MoreThemes.WebCrimson
+    /** R19: Kinetic Mint is back — same mint, new gym background: heart-rate pulse lines over a fine grid. */
+    val KineticMint = dark("kinetic_pulse", "Kinetic Mint", BackdropArt.PULSE, 0xFF071613, 0xFF020807,
+        listOf(0xFF1FE0B0, 0xFF0D3A31, 0xFF071613, 0xFF7CF2C4), 0xFF2EE6B6, 0xFF8CF5DA, 0xFF00261C, 0x149FFFE6, 0xF0081512)
     val VoltCyan = dark("volt_cyan", "Volt Cyan", BackdropArt.HEX, 0xFF06131B, 0xFF02070A,
         listOf(0xFF00B8F0, 0xFF0E3A4A, 0xFF06131B, 0xFF5CF2FF), 0xFF22D3EE, 0xFF7DEBFF, 0xFF00222B, 0x149FEFFF, 0xF0081419)
     val EmberForge = dark("ember_forge", "Ember Forge", BackdropArt.SPEED, 0xFF170C06, 0xFF070403,
@@ -57,7 +60,7 @@ object GymThemes {
     val TrueBlack = MoreThemes.TrueBlack
 
     val all: List<FitTheme> by lazy {
-        listOf(CarbonLime, WebCrimson, VoltCyan, EmberForge, Ultraviolet, IronGold, Chalk, ArcticSteel, CoralCourt, Slate, Dusk, TrueBlack)
+        listOf(CarbonLime, WebCrimson, KineticMint, VoltCyan, EmberForge, Ultraviolet, IronGold, Chalk, ArcticSteel, CoralCourt, Slate, Dusk, TrueBlack)
     }
 
     /** Every retired theme id → the closest R17 theme (keeps people on a similar colour). */

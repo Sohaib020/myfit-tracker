@@ -66,6 +66,7 @@ class ThemeStyleShotTest {
     }
 
     @Test fun g_carbonlime() = shot("carbon_lime", false)
+    @Test fun g_kineticpulse() = shot("kinetic_pulse", false)
     @Test fun g_webcrimson() = shot("web_crimson", false)
     @Test fun g_voltcyan() = shot("volt_cyan", false)
     @Test fun g_emberforge() = shot("ember_forge", false)

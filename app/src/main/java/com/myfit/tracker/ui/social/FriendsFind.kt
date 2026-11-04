@@ -151,7 +151,7 @@ fun FindFriendsCard(social: Social, refreshKey: Int, onChanged: () -> Unit) {
                 Text("Find friends", style = FitType.section, color = th.text)
                 Caption("Search their @username or MyFit ID.")
                 Spacer(Modifier.height(10.dp))
-                GlassSearchField(q, { q = it.take(24) }, "@username or ID")
+                GlassSearchField(q, { q = it.take(24) }, "Search")
                 val r = results
                 if (searching) { Spacer(Modifier.height(8.dp)); Caption("Searching…") }
                 else if (r != null && r.isEmpty()) { Spacer(Modifier.height(8.dp)); Caption("No one found. Check the spelling, or share your invite instead.") }

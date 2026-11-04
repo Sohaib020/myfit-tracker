@@ -1,6 +1,7 @@
 package com.myfit.tracker.ui.components
 
 import androidx.compose.animation.core.Animatable
+import com.myfit.tracker.ui.theme.awakeFloat
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -76,8 +77,8 @@ fun NeonTile(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val t = rememberInfiniteTransition(label = "neon")
-    val spin by t.animateFloat(0f, 360f, infiniteRepeatable(tween(7000, easing = LinearEasing)), label = "spin")
-    val breath by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breath")
+    val spin by t.awakeFloat(0f, 360f, infiniteRepeatable(tween(7000, easing = LinearEasing)), label = "spin")
+    val breath by t.awakeFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breath", rest = 0.5f)
     Glass(modifier, shape = RoundedCornerShape(corner), onClick = onClick, pressScale = 0.95f) {
         val holder = LocalCardAccent.current
         SideEffect { if (holder != null && holder.value != neon.a) holder.value = neon.a }
@@ -112,7 +113,7 @@ private fun Color.toArgbInt(): Int = android.graphics.Color.argb((alpha * 255).t
 @Composable
 fun IconOrb(icon: ImageVector, neon: Neon, size: Dp = 46.dp, float: Boolean = true, phase: Float = 0f) {
     val t = rememberInfiniteTransition(label = "orb")
-    val bob by t.animateFloat(0f, 1f, infiniteRepeatable(tween(3000, easing = LinearEasing)), label = "bob")
+    val bob by t.awakeFloat(0f, 1f, infiniteRepeatable(tween(3000, easing = LinearEasing)), label = "bob")
     val dy = if (float) sin((bob + phase) * 2 * PI).toFloat() * 2.2f else 0f
     Box(Modifier.size(size).graphicsLayer { translationY = dy * density }, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {

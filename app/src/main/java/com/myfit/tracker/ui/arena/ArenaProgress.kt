@@ -6,10 +6,10 @@ import java.time.LocalDate
 
 /** Arena tiers (every few levels), each fronted by a cast member. */
 enum class Tier(val label: String, val from: Int, val mascot: Mascot) {
-    ROOKIE("Rookie", 1, Mascot.MOTU), WALKER("Walker", 4, Mascot.CHAKOR), JOGGER("Jogger", 8, Mascot.KHARGOSH),
-    EXPLORER("Explorer", 12, Mascot.KAMI), TREKKER("Trekker", 16, Mascot.TAJ), CLIMBER("Climber", 20, Mascot.SAKEEN),
-    RUNNER("Runner", 25, Mascot.LOMRI), SPRINTER("Sprinter", 30, Mascot.ZARA), CHAMPION("Champion", 36, Mascot.BHOORI),
-    FALCON("Falcon", 42, Mascot.SHAHEEN), HERO("Hero", 48, Mascot.MOR), LEGEND("Legend", 55, Mascot.YAKU),
+    ROOKIE("Rookie", 1, Mascot.MOTU), WALKER("Walker", 4, Mascot.KAMI), JOGGER("Jogger", 8, Mascot.TAJ),
+    EXPLORER("Explorer", 12, Mascot.ZARA), TREKKER("Trekker", 16, Mascot.KALA), CLIMBER("Climber", 20, Mascot.BULHAN),
+    RUNNER("Runner", 25, Mascot.BHOORI), SPRINTER("Sprinter", 30, Mascot.SEHI), CHAMPION("Champion", 36, Mascot.GOGI),
+    FALCON("Falcon", 42, Mascot.MONAL), HERO("Hero", 48, Mascot.MOR), LEGEND("Legend", 55, Mascot.YAKU),
 }
 
 data class Level(val n: Int, val tier: Tier, val into: Int, val span: Int, val total: Int) {

@@ -42,7 +42,7 @@ fun MascotFace(m: Mascot, size: Dp = 56.dp, modifier: Modifier = Modifier, happy
             Mascot.ZARA -> listOf(-0.5f to -0.3f, 0.55f to -0.2f, -0.1f to -0.65f, 0.3f to 0.55f, -0.6f to 0.4f).forEach { (x, y) -> drawCircle(m.accent.copy(alpha = 0.5f), r * 0.09f, Offset(c.x + x * r, c.y + y * r)) }
             Mascot.MOTU -> for (s in listOf(-1f, 1f)) drawOval(m.accent, Offset(c.x + s * r * 0.38f - r * 0.2f, c.y - r * 0.32f), Size(r * 0.4f, r * 0.5f))
             Mascot.PIP -> drawRect(Color(0xFF1C4157), Offset(c.x - r * 0.95f, c.y - r * 0.62f), Size(r * 1.9f, r * 0.25f))
-            Mascot.SHAHEEN -> {
+            Mascot.MONAL -> {
                 val beak = Path().apply { moveTo(c.x - r * 0.18f, c.y + r * 0.05f); lineTo(c.x + r * 0.18f, c.y + r * 0.05f); lineTo(c.x, c.y + r * 0.42f); close() }
                 drawPath(beak, m.accent)
             }
@@ -55,7 +55,7 @@ fun MascotFace(m: Mascot, size: Dp = 56.dp, modifier: Modifier = Modifier, happy
             if (happy && m != Mascot.MOTU) drawArc(Color(0xFF15181C), 200f, 140f, false, Offset(ex - r * 0.14f, eyeY - r * 0.1f), Size(r * 0.28f, r * 0.24f), style = Stroke(w * 0.035f, cap = StrokeCap.Round))
             else { drawCircle(if (m == Mascot.MOTU) Color.White else Color(0xFF15181C), r * 0.12f, Offset(ex, eyeY)); if (m == Mascot.MOTU) drawCircle(Color(0xFF15181C), r * 0.07f, Offset(ex, eyeY)) }
         }
-        if (m != Mascot.SHAHEEN) drawArc(Color(0xFF15181C), 20f, 140f, false, Offset(c.x - r * 0.22f, c.y + r * 0.12f), Size(r * 0.44f, r * 0.3f), style = Stroke(w * 0.035f, cap = StrokeCap.Round))
+        if (m != Mascot.MONAL) drawArc(Color(0xFF15181C), 20f, 140f, false, Offset(c.x - r * 0.22f, c.y + r * 0.12f), Size(r * 0.44f, r * 0.3f), style = Stroke(w * 0.035f, cap = StrokeCap.Round))
         for (s in listOf(-1f, 1f)) drawCircle(Color(0xFFFF9AAE).copy(alpha = 0.55f), r * 0.13f, Offset(c.x + s * r * 0.62f, c.y + r * 0.2f))
     }
 }

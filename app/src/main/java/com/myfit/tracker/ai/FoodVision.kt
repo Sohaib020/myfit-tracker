@@ -34,6 +34,8 @@ class FoodVision(private val c: AppContainer) {
         val alternatives: List<Item> = emptyList(),
         /** True for the instant on-phone recogniser result (before any AI refinement). */
         val instant: Boolean = false,
+        /** The recogniser's confidence in its top dish (0..1), for instant results. */
+        val score: Float = 0f,
     )
 
     class NotFood(msg: String) : Exception(msg)
@@ -68,9 +70,16 @@ class FoodVision(private val c: AppContainer) {
         val full = async { runCatching { enrich(parse(c.aiRouter.vision(PROMPT + note, big.await(), fast = false, perProviderMs = 28_000))) } }
         var early: Result? = null
         quick.await().onSuccess { early = it.copy(alternatives = instant?.let { r -> r.items + r.alternatives }.orEmpty().filter { a -> it.items.none { i -> i.catalogUuid == a.catalogUuid } }.take(4)); onEarly?.invoke(early!!) }
+        // R20: the phone was sure and the quick AI pass agrees → done, no need to wait for the slow pass
+        val agree = instant != null && instant.score >= 0.55f && early?.items?.firstOrNull()?.catalogUuid == instant.items.first().catalogUuid
         // once a quick answer is on screen, give the accuracy pass a little longer — but never leave the user waiting long
-        val best = withTimeoutOrNull(if (early != null) 14_000L else 32_000L) { full.await() }
+        val best = if (agree) null else withTimeoutOrNull(if (early != null) 12_000L else 30_000L) { full.await() }
         if (best == null) full.cancel()
+        // R21: an AI pass said "no food" and none found any → say what it saw (the phone's dish guess on a chair is meaningless)
+        if (best?.getOrNull() == null && early == null) {
+            val nf = (best?.exceptionOrNull() as? NotFood) ?: (quick.await().exceptionOrNull() as? NotFood)
+            if (nf != null) { ai.quota.consume(AiQuota.Kind.PHOTO); throw nf }
+        }
         val out = best?.getOrNull()?.let { r -> r.copy(alternatives = early?.alternatives.orEmpty()) } ?: early ?: instant ?: run {
             val e = best?.exceptionOrNull() ?: quick.await().exceptionOrNull() ?: IllegalStateException("Couldn't read the photo")
             throw e
@@ -121,7 +130,11 @@ class FoodVision(private val c: AppContainer) {
             )
         }
         if (items.isEmpty()) return null
-        return Result(listOf(items[0]), "Recognised on your phone — tap another dish below if it's not right.", items.drop(1).take(4), instant = true)
+        // a dish you corrected before wins over the recogniser's own label
+        val top = personal(items[0]) ?: items[0]
+        val sure = g[0].score >= 0.25f
+        return Result(listOf(top), if (sure) "Recognised on your phone — tap another dish below if it's not right."
+            else "Not sure — this may be a dish outside my list. Tap the right one below, or rename it.", items.drop(1).take(4), instant = true, score = g[0].score)
     }
 
     /** Start loading the on-phone model while the camera is open, when it's the one that will answer. */
@@ -132,7 +145,9 @@ class FoodVision(private val c: AppContainer) {
 
     /** Swap in catalog values (per gram) for dishes MyFit knows; keep the AI estimate for the rest. */
     private suspend fun enrich(r: Result): Result = r.copy(items = r.items.map { it0 ->
-        val f = runCatching { c.nutritionRepo.matchDish(it0.name) }.getOrNull() ?: return@map it0
+        personal(it0)?.let { return@map it }
+        // R20: strict match — dishes outside the catalogue keep the AI's own name and estimate instead of a wrong lookalike
+        val f = runCatching { c.nutritionRepo.matchDish(it0.name, strict = true) }.getOrNull() ?: return@map it0
         val sg = f.servingGrams?.takeIf { it > 0 }
         val grams = if (it0.grams > 0) it0.grams else sg ?: 0.0
         val k = when {
@@ -146,6 +161,16 @@ class FoodVision(private val c: AppContainer) {
             catalogUuid = f.uuid, photo = c.nutritionRepo.meta(f)?.photo,
         )
     })
+
+    /** Your remembered correction for this dish name, scaled to the item's grams (or your usual portion). */
+    private fun personal(it0: Item): Item? {
+        val d = PersonalDishes.lookup(c.app, it0.name) ?: return null
+        val g = if (it0.grams > 0) it0.grams else d.grams
+        if (g <= 0) return null
+        val k = g / 100.0
+        return it0.copy(name = d.name, grams = g, portion = "${Math.round(g)} g", kcal = d.kcal100 * k, protein = d.p100 * k, carbs = d.c100 * k, fat = d.f100 * k,
+            confidence = "high", catalogUuid = null)
+    }
 
     /** True when the last [analyze] was answered by the offline brain. */
     var onDevice: Boolean = false
@@ -175,7 +200,7 @@ class FoodVision(private val c: AppContainer) {
     private fun parse(raw: String, compact: Boolean = false): Result {
         val txt = raw.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
         val o = JSONObject(txt.substring(txt.indexOf('{').coerceAtLeast(0), txt.lastIndexOf('}') + 1))
-        if (!o.optBoolean("is_food", true)) throw NotFood(o.optString("note").ifBlank { "I couldn't see any food in that photo." })
+        if (!o.optBoolean("is_food", true)) throw NotFood(o.optString("note").ifBlank { "I couldn't see any food in that photo." }.take(240))
         val arr = o.optJSONArray("items") ?: throw NotFood("I couldn't recognise the food — try a closer, brighter photo.")
         val items = (0 until arr.length()).map { arr.getJSONObject(it) }.map { j ->
             Item(
@@ -196,21 +221,22 @@ class FoodVision(private val c: AppContainer) {
     companion object {
         /** Short answer format: much faster to generate (on the phone especially) — nutrition comes from the catalog. */
         private val COMPACT = """
-Identify each food or drink clearly visible in this photo. Use common Pakistani / South Asian dish names (e.g. chicken karahi, daal mash, aloo paratha, chicken biryani, chapli kebab, nihari, chai, lassi).
+Identify each food or drink clearly visible in this photo — from ANY cuisine worldwide. Name it specifically (e.g. pad thai, margherita pizza, sushi roll, shawarma, caesar salad). For Pakistani / South Asian dishes use the usual local name (chicken karahi, daal mash, aloo paratha, chicken biryani, chapli kebab, nihari, chai, lassi).
 Estimate the visible portion in grams (use plate, utensils and hands for scale) and total kcal for that portion.
-Reply ONLY with JSON: {"is_food": true, "items": [{"name": "...", "grams": 250, "kcal": 400}]}
-If there is no food: {"is_food": false, "items": []}
+Reply ONLY with JSON: {"is_food": true, "items": [{"name": "...", "grams": 250, "kcal": 400, "protein_g": 20, "carbs_g": 45, "fat_g": 15}]}
+If there is no food: {"is_food": false, "items": [], "note": "one friendly sentence saying what you see instead, e.g. I don't see any food — I see a grey chair, a table and a phone on it"}
+Describe objects and the scene only; never describe people's faces, bodies or identity.
 """.trim()
-        private const val QUICK = "Name the foods or dishes clearly visible in this photo (Pakistani / South Asian dishes by their usual names). Reply ONLY with JSON: {\"foods\": [\"name\", ...]} — at most 4, empty list if there is no food."
+        private const val QUICK = "Name the foods or dishes clearly visible in this photo, from any cuisine (Pakistani / South Asian dishes by their usual local names). Reply ONLY with JSON: {\"foods\": [\"name\", ...]} — at most 4, empty list if there is no food."
         private val PROMPT = """
 You are a careful nutrition estimator inside a fitness app used mostly in Pakistan.
 Look at the photo and identify every distinct food or drink item that is clearly visible.
-Know South Asian / Pakistani dishes well (biryani, pulao, karahi, qorma, nihari, haleem, daal, sabzi, roti, naan, paratha, chai, lassi, kebabs, samosa, halwa puri...).
+Know South Asian / Pakistani dishes well (biryani, pulao, karahi, qorma, nihari, haleem, daal, sabzi, roti, naan, paratha, chai, lassi, kebabs, samosa, halwa puri...), but recognise food from every cuisine — Chinese, Thai, Japanese, Arab, Turkish, Italian, Mexican, American fast food, desserts, packaged snacks, fruit — and name it specifically.
 For each item estimate the portion visible (use plate size, utensils and hands as scale) and the nutrition FOR THAT PORTION, using typical home/restaurant recipes (include cooking oil/ghee).
 Be realistic, not optimistic. If unsure, give your best estimate and set confidence "low".
 Reply ONLY with JSON in exactly this shape:
 {"is_food": true, "items": [{"name": "Chicken biryani", "portion": "1 plate (~350 g)", "grams": 350, "calories": 600, "protein_g": 28, "carbs_g": 70, "fat_g": 22, "fiber_g": 3, "confidence": "high|medium|low"}], "note": "one short tip or caveat, optional"}
-If there is no food in the photo, reply {"is_food": false, "items": [], "note": "what you see instead"}.
+If there is no food in the photo, reply {"is_food": false, "items": [], "note": "one friendly sentence saying what you see instead, e.g. I don't see any food — I see a grey chair, a table and a phone on it"}. Describe objects and the scene only; never describe people's faces, bodies or identity.
 """.trim()
     }
 }

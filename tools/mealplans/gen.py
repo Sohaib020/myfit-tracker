@@ -58,9 +58,17 @@ ADD_ORDER = ["roti", "phulka", "rice_white", "chicken_karahi", "chicken_handi", 
 def kcal(items): return sum(F[i]['kcal'] * q for i, q, *_ in items)
 def prot(items): return sum(F[i]['p'] * q for i, q, *_ in items)
 
-def fit(day, target):
+def fit(day, target, ADD_ORDER=ADD_ORDER):
+    ADD_ORDER = list(ADD_ORDER)
     meals = {m: [list(x) for x in items] for m, items in day["meals"].items()}
     allitems = [x for m in meals.values() for x in m]
+    # R32: portion ranges stretch with the band (bigger days may double a portion, small days may halve it)
+    hi_k = max(1.0, target / 2000) ** 1.3; lo_k = min(1.0, (target / 2000) ** 1.5)
+    for x in allitems:
+        if x[2] > 0:
+            x[4] = max(x[4], round(x[4] * hi_k / x[2]) * x[2])
+            if lo_k < 1 and x[3] > 0: x[3] = max(x[2], round(x[3] * lo_k / x[2]) * x[2]) if x[3] >= x[2] else x[3]
+            x[1] = min(max(x[1], x[3]), x[4])
     for _ in range(200):
         k = kcal(allitems)
         if abs(k - target) <= 60: break
@@ -70,7 +78,7 @@ def fit(day, target):
         order = ADD_ORDER if up else list(reversed(ADD_ORDER))
         cands.sort(key=lambda x: order.index(x[0]) if x[0] in order else 99)
         # pick the candidate whose step gets closest to target, among the first few in priority
-        best = min(cands[:6], key=lambda x: abs((k + (1 if up else -1) * F[x[0]]['kcal'] * x[2]) - target))
+        best = min(cands[:10], key=lambda x: abs((k + (1 if up else -1) * F[x[0]]['kcal'] * x[2]) - target))
         best[1] = round(best[1] + (best[2] if up else -best[2]), 2)
         # spread: rotate so the same item isn't always grown
         ADD_ORDER.append(ADD_ORDER.pop(ADD_ORDER.index(best[0]))) if up and best[0] in ADD_ORDER else None
@@ -95,16 +103,27 @@ def label(i, q):
     if not s: return f"{qty_text(n)} {PL.get(nm, nm) if n > 1 else nm}"
     return f"{qty_text(n)} {s if n <= 1 else p} {name.lower()}"
 
-out = {"note": "Typical home portions. 1 katori ≈ 200–250 g; 1 cup cooked rice ≈ 160 g; roti ≈ 40 g (6-inch).", "plans": []}
-for b in BANDS:
-    days = []
-    for d in DAYS:
-        meals = fit(d, b)
-        md = []
-        for m, items in meals.items():
-            its = [{"id": i, "q": q, "label": label(i, q), "kcal": round(F[i]['kcal'] * q), "p": round(F[i]['p'] * q, 1)} for i, q, *_ in items if q > 0]
-            md.append({"type": m, "items": its, "kcal": sum(x["kcal"] for x in its), "p": round(sum(x["p"] for x in its), 1)})
-        days.append({"name": d["name"], "meals": md, "kcal": sum(m["kcal"] for m in md), "p": round(sum(m["p"] for m in md), 1)})
-    out["plans"].append({"kcal": b, "days": days})
-    print(b, [dd["kcal"] for dd in days], [dd["p"] for dd in days])
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from regions import build
+REGIONS = build(I, DAYS)
+missing = sorted({x[0] for r in REGIONS.values() for d in r["days"] for m in d["meals"].values() for x in m if x[0] not in F})
+if missing: sys.exit("unknown food ids: " + ", ".join(missing))
+
+out = {"regions": []}
+for rid, r in REGIONS.items():
+    order = r["grow"] or ADD_ORDER
+    plans = []
+    for b in BANDS:
+        days = []
+        for d in r["days"]:
+            meals = fit(d, b, order)
+            md = []
+            for m, items in meals.items():
+                its = [{"id": i, "q": q, "label": label(i, q), "kcal": round(F[i]['kcal'] * q), "p": round(F[i]['p'] * q, 1)} for i, q, *_ in items if q > 0]
+                md.append({"type": m, "items": its, "kcal": sum(x["kcal"] for x in its), "p": round(sum(x["p"] for x in its), 1)})
+            days.append({"name": d["name"], "meals": md, "kcal": sum(m["kcal"] for m in md), "p": round(sum(m["p"] for m in md), 1)})
+        plans.append({"kcal": b, "days": days})
+        print(rid, b, [dd["kcal"] for dd in days])
+    out["regions"].append({"id": rid, "name": r["name"], "note": r["note"], "plans": plans})
 json.dump(out, open(os.path.join(ROOT, 'app/src/main/assets/meal_plans.json'), 'w'), ensure_ascii=False, separators=(',', ':'))

@@ -15,26 +15,19 @@ import kotlin.math.roundToLong
  */
 enum class Mascot(val id: String, val label: String, val tagline: String, val color: Color, val accent: Color, val unlock: Int) {
     PIP("pip", "Pip", "Your buddy — never misses a day", Color(0xFFA9E9CF), Color(0xFF1C4157), 1),
-    MOTU("motu", "Motu the Panda", "Slow and steady wins", Color(0xFFF4F4F4), Color(0xFFE2445C), 1),
-    KAMI("kami", "Kami the Camel", "Endurance for the long haul", Color(0xFFE8C07D), Color(0xFFE0662B), 3),
-    CHAKOR("chakor", "Chakor the Partridge", "Pakistan's national bird — loyal to the end", Color(0xFFC9B7A0), Color(0xFFC8102E), 4),
-    TAJ("taj", "Taj the Markhor", "King of the mountains", Color(0xFFC9A27A), Color(0xFF0E8F4A), 6),
-    KHARGOSH("khargosh", "Khargosh the Hare", "Quick feet, desert heart", Color(0xFFD6B98C), Color(0xFFE84393), 8),
-    ZARA("zara", "Zara the Snow Leopard", "Sprints, climbs, never gives up", Color(0xFFE6E8EC), Color(0xFF2E6FD8), 10),
-    BHALU("bhalu", "Bhalu the Brown Bear", "Big strength, bigger hugs", Color(0xFF8A5A3C), Color(0xFFF28C28), 12),
-    LOMRI("lomri", "Lomri the Red Fox", "Clever pacing wins races", Color(0xFFE2752C), Color(0xFF2C7BE5), 14),
-    SHAHEEN("shaheen", "Shaheen the Falcon", "Fast and focused", Color(0xFF8FA3B8), Color(0xFFF2B42E), 15),
-    NEVLA("nevla", "Nevla the Mongoose", "Fearless and quick", Color(0xFFA89B85), Color(0xFFC0392B), 18),
-    BULHAN("bulhan", "Bulhan the Indus Dolphin", "Swims the Indus, rare and mighty", Color(0xFFA7B4C2), Color(0xFF00A3A3), 20),
-    KALA("kala", "Kala the Blackbuck", "Leaps over every limit", Color(0xFF4A3226), Color(0xFFF2B42E), 22),
-    ULLU("ullu", "Ullu the Owl", "Wise rest, wise training", Color(0xFF9C7A55), Color(0xFF34495E), 25),
-    SAKEEN("sakeen", "Sakeen the Ibex", "Born on the cliffs of Karakoram", Color(0xFFB59870), Color(0xFF6A4BC4), 28),
-    BHOORI("bhoori", "Bhoori the Buffalo", "Power of the Punjab plains", Color(0xFF4A4E57), Color(0xFFE94B3C), 32),
-    SEHI("sehi", "Sehi the Porcupine", "Sharp focus, soft heart", Color(0xFF7A6250), Color(0xFF16A085), 36),
-    GOGI("gogi", "Gogi the Gharial", "Patient hunter of the river", Color(0xFF6B8F4E), Color(0xFFD35400), 40),
-    MONAL("monal", "Monal the Pheasant", "Shines brightest at altitude", Color(0xFF2E8B7A), Color(0xFF8E44AD), 45),
-    MOR("mor", "Mor the Peacock", "Shows off every PR", Color(0xFF1F6FD1), Color(0xFF2DBE60), 50),
-    YAKU("yaku", "Yaku the Yak", "Thrives where others stop", Color(0xFF4E3B30), Color(0xFF1ABC9C), 55),
+    // R26: 12 partners (ids unchanged so saved partners and friends' Firestore rows keep working)
+    MOTU("motu", "Bao the Panda", "Slow and steady wins", Color(0xFFF4F4F4), Color(0xFFE2445C), 1),
+    KAMI("kami", "Sahara the Camel", "Endurance for the long haul", Color(0xFFE8C07D), Color(0xFFE0662B), 3),
+    TAJ("taj", "Atlas the Markhor", "King of the mountains", Color(0xFFC9A27A), Color(0xFF0E8F4A), 6),
+    ZARA("zara", "Echo the Snow Leopard", "Sprints, climbs, never gives up", Color(0xFFE6E8EC), Color(0xFF2E6FD8), 10),
+    KALA("kala", "Dash the Blackbuck", "Leaps over every limit", Color(0xFF4A3226), Color(0xFFF2B42E), 14),
+    BULHAN("bulhan", "Coral the Indus Dolphin", "Rare, smart and mighty", Color(0xFFA7B4C2), Color(0xFF00A3A3), 18),
+    BHOORI("bhoori", "Tank the Buffalo", "Power of the plains", Color(0xFF4A4E57), Color(0xFFE94B3C), 22),
+    SEHI("sehi", "Spike the Porcupine", "Sharp focus, soft heart", Color(0xFF7A6250), Color(0xFF16A085), 28),
+    GOGI("gogi", "Snap the Gharial", "Patient hunter of the river", Color(0xFF6B8F4E), Color(0xFFD35400), 34),
+    MONAL("monal", "Prism the Monal", "Shines brightest at altitude", Color(0xFF2E8B7A), Color(0xFF8E44AD), 40),
+    MOR("mor", "Indigo the Peacock", "Shows off every PR", Color(0xFF1F6FD1), Color(0xFF2DBE60), 48),
+    YAKU("yaku", "Everest the Yak", "Thrives where others stop", Color(0xFF4E3B30), Color(0xFF1ABC9C), 55),
 }
 
 enum class ArenaMetric(val label: String, val unit: String) { STEPS("Steps", "steps"), ACTIVE("Active minutes", "min"), DISTANCE("Distance", "km"), WORKOUTS("Workouts", "workouts"), ACTIVE_DAYS("Active days", "days") }
@@ -79,12 +72,12 @@ fun currentChallenges(today: LocalDate = Clock.today(), b: Baseline): List<Arena
     val mDist = nice((b.distKm * mdays * 1.05).coerceIn(25.0, 250.0), 5.0)
     val mWork = nice((b.workoutsPerWeek * mdays / 7.0 * 1.1).coerceIn(4.0, 24.0), 1.0)
     return listOf(
-        ArenaChallenge("$wk-steps", "${fmtK(wSteps)} Step Week", "Zara is sprinting to ${fmtK(wSteps)} steps by Sunday. Keep up!", Period.WEEK, ArenaMetric.STEPS, wSteps, Mascot.ZARA, ws, we, Scene.MARGALLA),
-        ArenaChallenge("$wk-active", "Get Moving: ${wActive.toInt()} min", "Shaheen's racing for ${wActive.toInt()} active minutes — anything that gets your heart up.", Period.WEEK, ArenaMetric.ACTIVE, wActive, Mascot.SHAHEEN, ws, we, Scene.CLIFTON),
+        ArenaChallenge("$wk-steps", "${fmtK(wSteps)} Step Week", "Echo is sprinting to ${fmtK(wSteps)} steps by Sunday. Keep up!", Period.WEEK, ArenaMetric.STEPS, wSteps, Mascot.ZARA, ws, we, Scene.MARGALLA),
+        ArenaChallenge("$wk-active", "Get Moving: ${wActive.toInt()} min", "Dash is racing for ${wActive.toInt()} active minutes — anything that gets your heart up.", Period.WEEK, ArenaMetric.ACTIVE, wActive, Mascot.KALA, ws, we, Scene.CLIFTON),
         ArenaChallenge("$wk-days", "Never Miss a Day", "Hit ${fmtK(dayBar)} steps on 4 days this week with Pip.", Period.WEEK, ArenaMetric.ACTIVE_DAYS, 4.0, Mascot.PIP, ws, we, Scene.SHALIMAR),
-        ArenaChallenge("$mo-steps", "${fmtK(mSteps)} Month", "Kami's long haul: ${fmtK(mSteps)} steps this month.", Period.MONTH, ArenaMetric.STEPS, mSteps, Mascot.KAMI, ms, me, Scene.DESERT),
-        ArenaChallenge("$mo-dist", "Mountain Trek: ${mDist.toInt()} km", "Taj climbs ${mDist.toInt()} km this month — walking, running and cycling all count.", Period.MONTH, ArenaMetric.DISTANCE, mDist, Mascot.TAJ, ms, me, Scene.K2),
-        ArenaChallenge("$mo-work", "${mWork.toInt()} Workouts", "Motu wants ${mWork.toInt()} workouts this month. Slow and steady!", Period.MONTH, ArenaMetric.WORKOUTS, mWork, Mascot.MOTU, ms, me, Scene.CITY),
+        ArenaChallenge("$mo-steps", "${fmtK(mSteps)} Month", "Sahara's long haul: ${fmtK(mSteps)} steps this month.", Period.MONTH, ArenaMetric.STEPS, mSteps, Mascot.KAMI, ms, me, Scene.DESERT),
+        ArenaChallenge("$mo-dist", "Mountain Trek: ${mDist.toInt()} km", "Atlas climbs ${mDist.toInt()} km this month — walking, running and cycling all count.", Period.MONTH, ArenaMetric.DISTANCE, mDist, Mascot.TAJ, ms, me, Scene.K2),
+        ArenaChallenge("$mo-work", "${mWork.toInt()} Workouts", "Bao wants ${mWork.toInt()} workouts this month. Slow and steady!", Period.MONTH, ArenaMetric.WORKOUTS, mWork, Mascot.MOTU, ms, me, Scene.CITY),
     ).also { dayThreshold = dayBar }
 }
 

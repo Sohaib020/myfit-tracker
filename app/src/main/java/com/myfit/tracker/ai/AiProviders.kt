@@ -241,10 +241,10 @@ class AiRouter(private val c: AppContainer) {
      * One-shot text task (e.g. "adjust this workout"): tries the online providers in order, then the offline brain
      * if it's installed. Throws with a friendly message when nothing can answer.
      */
-    suspend fun text(system: String, user: String, perProviderMs: Long = 45_000): String {
+    suspend fun text(system: String, user: String, perProviderMs: Long = 45_000, fast: Boolean = false): String {
         val s = c.settings.settings.first()
         val errors = mutableListOf<String>()
-        for (p in chain(s)) {
+        for (p in chain(s, fast)) {
             try {
                 val out = withTimeout(perProviderMs) {
                     if (p.id == "gemini") {

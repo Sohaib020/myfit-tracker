@@ -18,9 +18,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +59,9 @@ import androidx.compose.ui.unit.dp
  * every glass surface is drawn as a solid, theme-coloured card instead — far cheaper on low-end phones.
  * (The dock keeps its animations; only its background becomes solid.)
  */
+/** R27: while the camera coach runs, every glass panel draws solid so the GPU is free for the camera. */
+object UiPerf { val camera = kotlinx.coroutines.flow.MutableStateFlow(false) }
+
 val lowFx: Boolean get() = Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2 || com.myfit.tracker.CrashGuard.safeMode
 
 val realBlurSupported: Boolean get() = !lowFx
@@ -121,13 +127,14 @@ fun Glass(
     val bounds = remember { arrayOfNulls<androidx.compose.ui.geometry.Rect>(1) }
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed && onClick != null) pressScale else 1f, spring(0.45f, 700f), label = "glassPress")
+    val scale by animateFloatAsState(if (pressed && onClick != null) pressScale else 1f, spring(0.62f, 820f), label = "glassPress")
     val glow by animateFloatAsState(if (pressed && onClick != null) 1f else 0f, label = "glassGlow")
     val tick = rememberTick()
     // Everything samples a backdrop that was blurred ONCE per frame at low resolution:
     // cards use the shared card blur, the dock (`seeContent`) uses its own dock-blur layer.
     // The per-panel refraction shader only runs in "Smooth" motion — it costs one extra GPU pass per panel.
-    val flat = st.uiStyle == 1 || !UiStyle.glassCapable
+    val cameraOn by UiPerf.camera.collectAsState()
+    val flat = st.uiStyle == 1 || !UiStyle.glassCapable || cameraOn   // R27: solid while the camera coach runs
     val role = remember { mutableStateOf<Color?>(null) }
     val refr = st.refraction
     val lens = !flat && st.motion == 0 && LiquidGlass.supported && refr > 0.01f && !com.myfit.tracker.CrashGuard.safeMode
@@ -145,6 +152,7 @@ fun Glass(
 
     Box(
         modifier
+            .entrance()
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .onGloballyPositioned { pos.value = it.positionInRoot(); if (onClick != null) bounds[0] = it.boundsInRoot() }
             .clip(shape)
@@ -322,5 +330,33 @@ object OpenOrigin {
         val r = rect.takeIf { android.os.SystemClock.uptimeMillis() - at < 700 }
         rect = null
         return r
+    }
+}
+
+/**
+ * R28: a dialog that really is glass — the window behind it is blurred by the system (Android 12+, when the phone
+ * allows cross-window blur), dimmed a little, and the card itself is a translucent tinted pane with a light edge.
+ * Older phones get the same card on a plain dim.
+ */
+@Composable
+fun GlassDialog(onDismiss: () -> Unit, tint: Color, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        val view = androidx.compose.ui.platform.LocalView.current
+        androidx.compose.runtime.SideEffect {
+            val w = (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window ?: return@SideEffect
+            w.setDimAmount(0.35f)
+            if (Build.VERSION.SDK_INT >= 31 && !lowFx) {
+                w.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                w.attributes = w.attributes.apply { blurBehindRadius = 64 }
+            }
+        }
+        androidx.compose.foundation.layout.Column(
+            Modifier.clip(RoundedCornerShape(30.dp))
+                .background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.55f), Color(0xB315171F))))
+                .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f))), RoundedCornerShape(30.dp))
+                .padding(20.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+            content = content,
+        )
     }
 }

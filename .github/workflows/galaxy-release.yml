@@ -16,7 +16,7 @@ jobs:
           echo "MYFIT_VERSION_CODE=$((100000 + ${{ github.run_number }}))" >> "$GITHUB_ENV"
           echo "MYFIT_VERSION_NAME=1.0.${{ github.run_number }}" >> "$GITHUB_ENV"
       - name: Fetch sherpa-onnx AAR
-        run: mkdir -p app/libs && curl -fsSL --retry 4 -o app/libs/sherpa-onnx.aar https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-static-link-onnxruntime-1.13.8.aar
+        run: mkdir -p app/libs && curl -fsSL --retry 4 -o app/libs/sherpa-onnx.aar https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-1.13.8.aar
       - name: Firebase config
         env: { GOOGLE_SERVICES_JSON: "${{ secrets.GOOGLE_SERVICES_JSON }}" }
         run: if [ -n "$GOOGLE_SERVICES_JSON" ]; then printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json; else echo "::warning::GOOGLE_SERVICES_JSON missing — online features would be off"; fi

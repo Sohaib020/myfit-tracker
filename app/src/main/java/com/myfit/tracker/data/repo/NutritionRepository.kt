@@ -32,7 +32,7 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
     private val dao = db.nutritionDao()
 
     /** Extra info for built-in foods: category, search aliases, 3D icon (asset id) and how solid the numbers are. */
-    data class FoodMeta(val category: String, val aliases: List<String>, val photo: String?, val reference: Boolean, val tags: List<String> = emptyList())
+    data class FoodMeta(val category: String, val aliases: List<String>, val photo: String?, val reference: Boolean, val tags: List<String> = emptyList(), val regions: List<String> = emptyList())
 
     /** Ids that have a generated 3D icon in assets/foodicon. */
     private val icons: Set<String> by lazy { runCatching { context.assets.list("foodicon")?.filter { it.endsWith(".webp") }?.map { it.removeSuffix(".webp") }?.toSet() }.getOrNull() ?: emptySet() }
@@ -47,7 +47,9 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
             val icon = id.takeIf { it in icons }
             if (icon != null) iconByName[o.optString("name").lowercase()] = icon
             val tg = o.optJSONArray("tags")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList()
-            ("pkfood:$id") to FoodMeta(o.optString("category", "Basics"), al, icon, o.optString("basis") == "reference", tg)
+            // R32: foods without a region list are the original South Asian catalogue
+            val rg = o.optJSONArray("regions")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: listOf("pk", "in")
+            ("pkfood:$id") to FoodMeta(o.optString("category", "Basics"), al, icon, o.optString("basis") == "reference", tg, rg)
         }
     }
 
@@ -82,7 +84,11 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
      * Best built-in food for a dish name from the photo AI ("chicken karahi", "chana daal"), or null when nothing is
      * close. Uses names and Roman-Urdu aliases; exact alias hits win, then word overlap.
      */
-    suspend fun matchDish(name: String): Food? {
+    /**
+     * [strict] (used for AI photo names): every word the AI used must be in the catalogue name and the catalogue name
+     * may add at most a third more — so "pad thai" or plain "pasta" are NOT forced onto a different Pakistani dish.
+     */
+    suspend fun matchDish(name: String, strict: Boolean = false): Food? {
         val list = cands ?: dao.builtIn().first().map { f ->
             val m = metaMap[f.uuid]
             val all = listOf(f.name) + (m?.aliases ?: emptyList())
@@ -96,6 +102,7 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
         for (c in list) for (n in c.names) {
             val inter = n.intersect(qw).size
             if (inter == 0) continue
+            if (strict && (inter < qw.size || inter.toDouble() / n.size < 0.67)) continue
             // reward covering the query, penalise extra words in the candidate a little
             val score = inter.toDouble() / qw.size * 0.75 + inter.toDouble() / n.size * 0.25
             if (score > bestScore) { bestScore = score; best = c.food }
@@ -103,7 +110,7 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
         return if (bestScore >= 0.6) best else null
     }
 
-    val categories: List<String> get() = listOf("Breakfast", "Breads", "Rice", "Curries", "Daal & Beans", "BBQ & Kebabs", "Vegetables", "Street food", "Fast food", "Restaurant", "Regional", "Sweets", "Drinks", "Fruit", "Dairy & Eggs", "Meat & Fish", "Snacks & Nuts", "Basics", "Indian")
+    val categories: List<String> get() = listOf("Breakfast", "Breads", "Rice", "Curries", "Daal & Beans", "BBQ & Kebabs", "Vegetables", "Street food", "Fast food", "Restaurant", "Regional", "Sweets", "Drinks", "Fruit", "Dairy & Eggs", "Meat & Fish", "Snacks & Nuts", "Basics", "Indian", "Middle Eastern", "British", "American", "Mediterranean", "East Asian", "Southeast Asian")
 
     /** Name/brand search plus Roman-Urdu aliases ("kardi", "nehari", "anda"). */
     fun search(q: String): kotlinx.coroutines.flow.Flow<List<Food>> {
@@ -113,6 +120,11 @@ class NutritionRepository(private val db: AppDatabase, private val context: Cont
         return kotlinx.coroutines.flow.combine(dao.search(q.trim()), dao.byUuids(aliasHits)) { a, b -> (a + b.filter { x -> a.none { it.id == x.id } }).take(80) }
     }
     fun inCategory(cat: String): kotlinx.coroutines.flow.Flow<List<Food>> = dao.builtIn().map { l -> l.filter { metaMap[it.uuid]?.category == cat } }
+    /** R32: built-in foods typical of a region (international dishes first for non-South-Asian regions). */
+    fun inRegion(r: String): kotlinx.coroutines.flow.Flow<List<Food>> = dao.builtIn().map { l ->
+        l.filter { metaMap[it.uuid]?.regions?.contains(r) == true }
+            .sortedWith(compareBy({ if (r == "pk" || r == "in") 0 else if (metaMap[it.uuid]?.regions?.size == 2 && metaMap[it.uuid]?.regions?.contains("pk") == true) 1 else 0 }, { it.name }))
+    }
     val recent = dao.recent()
     val savedMeals = dao.savedMeals()
     val savedSummaries = dao.savedSummaries()

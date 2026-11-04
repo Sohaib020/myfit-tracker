@@ -280,6 +280,23 @@ prog('cali', 'Calisthenics Strength', 'Master your bodyweight', 'Pull-ups, dips 
       D('Push + legs', 'Chest · Triceps · Legs', ('Dips_-_Triceps_Version', 5, 'max', 120, 'm'), ('Decline_Push-Up', 3, 'max', 75), ('Plyo_Push-up', 3, '6-8', 75),
         ('Split_Squats', 3, '12', 60), ('Bodyweight_Walking_Lunge', 3, '12', 60)),
       BW_B], base(10, 'Add a rep to every set each week. When a move gets easy, slow it down or wear a loaded backpack.'))
+# R31 calisthenics programs (new moves come from tools/cali — keys start with cali_)
+prog('park', 'Park Calisthenics', 'A bar, some bars, open air', 'Pull-ups, dips, rows and single-leg work for any park with a bar and parallel bars.', 'intermediate', 'all', BW, [STR, MUS], 8, 45, 'taj',
+     [D('Pull + legs', 'Back · Legs · Core', ('Pullups', 3, '5-8', 90, 'm'), ('cali_split_squat', 3, '8-12', 90), ('Inverted_Row', 3, '8-12', 90),
+        ('cali_single_leg_rdl', 3, '8-10', 60), ('cali_hanging_knee_raise', 3, '8-12', 60)),
+      D('Push + skills', 'Chest · Triceps · Core', ('Parallel_Bar_Dip', 3, '5-10', 90, 'm'), ('cali_straight_bar_dip', 3, '5-8', 90), ('Pushups', 3, 'max', 75),
+        ('cali_bulgarian_split_squat', 3, '8-10', 75), ('cali_tuck_l_sit', 3, '15s', 60)),
+      D('Strength day', 'Full body', ('cali_negative_pull_up', 3, '3-5', 120, 'm'), ('Chin-Up', 3, 'max', 90), ('cali_negative_dip', 3, '3-5', 90),
+        ('cali_box_pistol_squat', 3, '5-8', 75), ('Hanging_Leg_Raise', 3, '6-10', 60), ('cali_support_hold', 2, '30s', 45))],
+     base(8, 'Add a rep each week. For step-by-step progressions that move up automatically, use Train → Calisthenics.'))
+prog('home_cali', 'Home Calisthenics', 'No bar, no gym, real progress', 'Push-up, row, squat and handstand progressions using only the floor, a wall and a sturdy table.', 'beginner', 'all', BW, [STR, TONE], 8, 35, 'pip',
+     [D('Home A', 'Push · Pull · Legs', ('Pushups', 3, 'max', 90, 'm'), ('cali_incline_row', 3, '8-12', 90), ('cali_split_squat', 3, '10-12', 75),
+        ('cali_single_leg_glute_bridge', 3, '10-12', 60), ('cali_hollow_body_hold', 3, '20s', 45)),
+      D('Home B', 'Shoulders · Legs · Core', ('cali_pike_push_up', 3, '6-10', 90, 'm'), ('Bench_Dips', 3, '10-15', 75), ('cali_bulgarian_split_squat', 3, '8-10', 75),
+        ('cali_nordic_curl_negative', 3, '3-5', 90), ('Plank', 3, '45s', 45), ('cali_wall_handstand', 3, '20s', 60)),
+      D('Home C', 'Full body', ('Push-Ups_-_Close_Triceps_Position', 3, 'max', 90, 'm'), ('cali_incline_row', 4, '10-12', 75), ('cali_box_pistol_squat', 3, '5-8', 75),
+        ('Butt_Lift_Bridge', 3, '15-20', 45), ('cali_hollow_body_hold', 3, '30s', 45), ('Mountain_Climbers', 3, '30s', 45))],
+     base(8, 'Add 1–2 reps or 5 seconds each week. Train → Calisthenics moves you to harder steps as you get stronger.'))
 prog('home20', '20-Minute Home', 'For the busiest days', 'Four express sessions. Short enough to always fit.', 'beginner', 'all', DB, [HEALTH, FAT], 6, 20, 'chakor',
      [SHORT, CORE_HOME, d(SHORT, '20-minute express B'), BW_C], fat(6))
 prog('abs', 'Six-Pack Core', 'Core strength that shows', 'Three core sessions alongside your normal training. Abs are built here and revealed by diet.', 'beginner', 'all', HOME, [TONE], 6, 25, 'lomri',
@@ -327,6 +344,9 @@ prog('back_health', 'Healthy Back', 'Strong core, happy spine', 'Core stability,
 assert len({x['id'] for x in P}) == len(P)
 for p in P:
     for ph in p['phases']: assert 1 <= ph['w'][0] <= ph['w'][1] <= p['weeks'], (p['id'], ph)
+# R26 cast cut: retired mascots map to the 12 that remain
+RETIRED = {'shaheen': 'mor', 'bhalu': 'bhoori', 'lomri': 'zara', 'khargosh': 'kala', 'chakor': 'monal', 'nevla': 'sehi', 'sakeen': 'taj', 'ullu': 'motu'}
+for p in P: p['mascot'] = RETIRED.get(p['mascot'], p['mascot'])
 out = os.path.join(ROOT, 'app/src/main/assets/programs.json')
 json.dump(P, open(out, 'w'), separators=(',', ':'), ensure_ascii=False)
 print(len(P), 'programs', sum(len(x['days']) for x in P), 'days', os.path.getsize(out), 'bytes')

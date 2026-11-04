@@ -45,10 +45,10 @@ class PipBrain(private val c: AppContainer) {
     }
 
     /** The user's diets / conditions / injuries, so suggestions never conflict with them (empty when none). */
-    private fun healthNote(): String {
+    /** R35: halal comes from the settings the caller already loaded (no runBlocking on a coroutine thread). */
+    private fun healthNote(halal: Boolean): String {
         com.myfit.tracker.domain.HealthProfile.load(c.app)
         val h = com.myfit.tracker.domain.HealthProfile.summary()
-        val halal = runCatching { kotlinx.coroutines.runBlocking { c.settings.settings.first().muslim == "yes" } }.getOrDefault(false)
         return (if (h.isBlank()) "" else " The user's health profile: $h. Never suggest foods or exercises that conflict with it; when relevant, offer a safer swap.") +
             (if (halal) " The user eats halal only." else "")
     }
@@ -69,7 +69,7 @@ class PipBrain(private val c: AppContainer) {
                 // R18: stable instructions (kept in the model's memory for the whole chat) — no length cap on answers
                 val system = "${com.myfit.tracker.ui.pip.Buddy.persona()} Be warm and practical; answer fully but without padding, at most 2 emoji. " +
                     "For the user's own numbers use ONLY the User data block in their message; if it lacks something, say so. No medical diagnoses. " +
-                    "Units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}." + healthNote()
+                    "Units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}." + healthNote(s.muslim == "yes")
                 val history = c.healthRepo.lastChat(5).dropLast(1).filter { it.source != "local" && it.source != "error" }
                     .takeLast(2).map { (if (it.role == "user") "user" else "model") to it.text.take(400) }
                 val out = ai.llm.chatStream(system, "User data (only what's relevant; may be incomplete):\n$summary\n\nQuestion: $q", history) { partial ->
@@ -122,7 +122,7 @@ class PipBrain(private val c: AppContainer) {
             .filter { it.source != "local" && it.source != "error" }
             .takeLast(8).map { (if (it.role == "user") "user" else "model") to it.text }
         val turn = history + ("user" to "User data (only what's relevant; may be incomplete):\n$summary\n\nQuestion: $q")
-        val system = Gemini.systemPrompt("Use the user's units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}." + healthNote())
+        val system = Gemini.systemPrompt("Use the user's units: ${s.units.weight.label}, ${s.units.length.label}, ${s.units.volume.label}, ${s.units.distance.label}." + healthNote(s.muslim == "yes"))
         var firstError: PipError? = null
         var text: String? = null
         for (p in chain) {

@@ -86,26 +86,9 @@ internal fun CardAction(text: String, icon: ImageVector, color: Color, modifier:
 
 @Composable
 internal fun VitalsCard(container: AppContainer) {
-    val th = LocalFitTheme.current
-    val nav = LocalNav.current
-    val today = remember { Clock.today() }
-    val days by remember { container.db.healthDao().observeDaily(Clock.dateKey(today.minusDays(6)), Clock.dateKey(today)) }.collectAsState(initial = emptyList())
-    val restDay = days.lastOrNull { it.restingHr != null }
-    val hrDay = days.lastOrNull { it.avgHr != null }
-    val spo2 = days.lastOrNull { it.spo2Pct != null }?.spo2Pct
-    val bpm = restDay?.restingHr ?: hrDay?.avgHr
+    // R28: the heart check is a headline feature — beating heart, live ECG sweep, one glowing call to action
     var bpOpen by remember { mutableStateOf(false) }
-    GlassCard(onClick = { nav.push(Overlay.Vitals) }, padding = 14.dp) {
-        HomeCardHeader(Duo.Favorite, "Vitals", th.danger, listOfNotNull(
-            bpm?.let { "$it bpm" + if (restDay != null) " resting" else "" },
-            spo2?.let { "SpO₂ ${Math.round(it)}%" },
-        ).joinToString(" · ").ifBlank { "Heart rate, blood pressure & more" })
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CardAction("Measure heart", Duo.Pulse, th.danger, Modifier.weight(1f)) { nav.push(Overlay.CameraHr) }
-            CardAction("Log BP", Duo.Favorite, th.accentBright, Modifier.weight(1f)) { bpOpen = true }
-        }
-    }
+    com.myfit.tracker.ui.vitals.VitalsHeroCard(container) { bpOpen = true }
     com.myfit.tracker.ui.vitals.BpEntrySheet(container, bpOpen) { bpOpen = false }
 }
 
