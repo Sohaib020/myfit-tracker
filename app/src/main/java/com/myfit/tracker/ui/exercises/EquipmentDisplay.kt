@@ -29,12 +29,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.myfit.tracker.ui.components.clickableNoRipple
+import com.myfit.tracker.ui.theme.Duo
 import com.myfit.tracker.ui.theme.FitType
 import com.myfit.tracker.ui.theme.LocalFitTheme
 import kotlinx.coroutines.Dispatchers
@@ -44,10 +46,6 @@ import kotlinx.coroutines.withContext
 // Equipment image asset loader
 // ---------------------------------------------------------------------------
 
-/**
- * Loads 3D-rendered equipment images from assets/equipment/<name>.webp.
- * Falls back to null so callers can show an icon instead.
- */
 internal object EquipmentImageLoader {
     private val cache = android.util.LruCache<String, ImageBitmap>(24 * 1024 * 1024)
 
@@ -65,10 +63,6 @@ internal object EquipmentImageLoader {
 // Muscle image asset loader
 // ---------------------------------------------------------------------------
 
-/**
- * Loads anatomical muscle images from assets/muscles/<name>.webp.
- * Used for the target muscles filter row and exercise detail.
- */
 internal object MuscleImageLoader {
     private val cache = android.util.LruCache<String, ImageBitmap>(16 * 1024 * 1024)
 
@@ -83,16 +77,31 @@ internal object MuscleImageLoader {
 }
 
 // ---------------------------------------------------------------------------
+// Icon fallback helper (takes String, not Exercise)
+// ---------------------------------------------------------------------------
+
+/** Returns a suitable icon for a raw equipment string. */
+private fun equipmentIconForString(equipment: String): ImageVector = when (equipment) {
+    "barbell", "e-z curl bar", "dumbbell", "kettlebells" -> Duo.FitnessCenter
+    "cable"       -> Duo.Cable
+    "machine"     -> Duo.PrecisionManufacturing
+    "body only"   -> Duo.AccessibilityNew
+    "bands"       -> Duo.LinearScale
+    "medicine ball", "exercise ball" -> Duo.SportsBaseball
+    else          -> Duo.SportsGymnastics
+}
+
+// ---------------------------------------------------------------------------
 // Composables
 // ---------------------------------------------------------------------------
 
 /**
- * Single equipment image card with graceful icon fallback.
+ * Single equipment image with graceful icon fallback.
  *
- * @param equipment  Raw equipment string from the exercise (e.g. "barbell", "dumbbell").
- * @param modifier   Applied to the outer Box.
- * @param showLabel  Whether to draw the human-readable label below the image.
- * @param size       Fixed size when used in a row/grid; if null fills available space.
+ * @param equipment  Raw equipment string (e.g. "barbell", "dumbbell").
+ * @param modifier   Applied to the outer Column.
+ * @param showLabel  Whether to draw the human-readable label below.
+ * @param size       Fixed size; if null fills available space.
  */
 @Composable
 fun EquipmentImage(
@@ -104,22 +113,20 @@ fun EquipmentImage(
     val ctx = LocalContext.current
     val th  = LocalFitTheme.current
 
-    // Map the exercise equipment string to the asset filename (no extension)
     val assetName = when (equipment) {
-        "body only", ""   -> "bodyweight"
-        "kettlebells"      -> "kettlebell"
-        "bands"            -> "resistance_band"
-        "e-z curl bar"     -> "ez_bar"
-        "medicine ball"    -> "medicine_ball"
-        "exercise ball"    -> "stability_ball"
-        "foam roll"        -> "foam_roller"
-        "smith machine"    -> "smith_machine"
-        "trap bar"         -> "trap_bar"
-        "pull-up bar"      -> "pull_up_bar"
-        "suspension"       -> "suspension_trainer"
-        "barbell", "dumbbell", "machine", "cable",
-        "plate", "bench"   -> equipment
-        else               -> equipment.replace(' ', '_').replace('-', '_')
+        "body only", "" -> "bodyweight"
+        "kettlebells"   -> "kettlebell"
+        "bands"         -> "resistance_band"
+        "e-z curl bar"  -> "ez_bar"
+        "medicine ball" -> "medicine_ball"
+        "exercise ball" -> "stability_ball"
+        "foam roll"     -> "foam_roller"
+        "smith machine" -> "smith_machine"
+        "trap bar"      -> "trap_bar"
+        "pull-up bar"   -> "pull_up_bar"
+        "suspension"    -> "suspension_trainer"
+        "barbell", "dumbbell", "machine", "cable", "plate", "bench" -> equipment
+        else            -> equipment.replace(' ', '_').replace('-', '_')
     }
 
     val img by produceState<ImageBitmap?>(null, assetName) {
@@ -136,36 +143,33 @@ fun EquipmentImage(
         val imgMod = Modifier
             .then(if (size != null) Modifier.size(size) else Modifier.fillMaxSize(if (showLabel) 0.82f else 1f))
             .clip(RoundedCornerShape(12.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(th.text.copy(alpha = 0.07f), th.text.copy(alpha = 0.02f))
-                )
-            )
+            .background(Brush.linearGradient(listOf(th.text.copy(alpha = 0.07f), th.text.copy(alpha = 0.02f))))
 
         Box(imgMod, contentAlignment = Alignment.Center) {
             if (img != null) {
                 Image(
-                    bitmap    = img!!,
+                    bitmap             = img!!,
                     contentDescription = equipmentLabel(equipment),
-                    modifier  = Modifier.fillMaxSize().padding(8.dp),
-                    contentScale = ContentScale.Fit,
-                    alpha     = 0.95f,
+                    modifier           = Modifier.fillMaxSize().padding(8.dp),
+                    contentScale       = ContentScale.Fit,
+                    alpha              = 0.95f,
                 )
             } else {
+                // Fallback icon — uses string-based helper, not Exercise object
                 Icon(
-                    imageVector = equipmentIcon(equipment),
+                    imageVector        = equipmentIconForString(equipment),
                     contentDescription = equipmentLabel(equipment),
-                    tint    = th.accentBright,
-                    modifier = Modifier.size(38.dp),
+                    tint               = th.accentBright,
+                    modifier           = Modifier.size(38.dp),
                 )
             }
         }
 
         if (showLabel) {
             Text(
-                text  = equipmentLabel(equipment),
-                style = FitType.caption,
-                color = th.text,
+                text      = equipmentLabel(equipment),
+                style     = FitType.caption,
+                color     = th.text,
                 textAlign = TextAlign.Center,
                 modifier  = Modifier.fillMaxWidth(),
             )
@@ -174,8 +178,7 @@ fun EquipmentImage(
 }
 
 /**
- * Horizontal carousel of equipment images.
- * Used below the muscle section in ExerciseDetailScreen.
+ * Equipment image card shown in ExerciseDetailScreen below the chips.
  */
 @Composable
 fun EquipmentRow(
@@ -184,35 +187,24 @@ fun EquipmentRow(
 ) {
     if (equipment.isBlank() || equipment == "other") return
     val th = LocalFitTheme.current
-
     Column(modifier) {
-        Text(
-            "EQUIPMENT",
-            style    = FitType.overline,
-            color    = th.textDim,
-            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
-        )
+        Text("EQUIPMENT", style = FitType.overline, color = th.textDim,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
         Box(
-            Modifier
-                .fillMaxWidth()
-                .height(110.dp)
+            Modifier.fillMaxWidth().height(110.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(th.text.copy(alpha = 0.04f))
                 .padding(12.dp),
             contentAlignment = Alignment.Center,
         ) {
-            EquipmentImage(
-                equipment = equipment,
-                modifier  = Modifier.fillMaxSize(),
-                showLabel = true,
-            )
+            EquipmentImage(equipment = equipment, modifier = Modifier.fillMaxSize(), showLabel = true)
         }
     }
 }
 
 /**
- * Scrollable equipment filter strip for ExercisesScreen.
- * Replaces plain text chips with image+label tiles.
+ * Scrollable equipment filter strip with 3D image tiles.
+ * Replaces the plain text GlassChip row in ExercisesScreen.
  */
 @Composable
 fun EquipmentFilterRow(
@@ -223,32 +215,22 @@ fun EquipmentFilterRow(
 ) {
     val th = LocalFitTheme.current
     LazyRow(
-        modifier          = modifier,
+        modifier              = modifier,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding    = PaddingValues(horizontal = 4.dp),
+        contentPadding        = PaddingValues(horizontal = 4.dp),
     ) {
-        // "All" chip
+        // "Any" tile
         item {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .width(70.dp)
-                    .clickableNoRipple { onSelect(null) },
+                modifier            = Modifier.width(70.dp).clickableNoRipple { onSelect(null) },
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Box(
-                    Modifier
-                        .size(64.dp)
+                    Modifier.size(64.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            if (selected == null) th.accent.copy(alpha = 0.22f)
-                            else th.text.copy(alpha = 0.07f)
-                        )
-                        .then(
-                            if (selected == null)
-                                Modifier.border(1.5.dp, th.accentBright, RoundedCornerShape(14.dp))
-                            else Modifier
-                        ),
+                        .background(if (selected == null) th.accent.copy(alpha = 0.22f) else th.text.copy(alpha = 0.07f))
+                        .then(if (selected == null) Modifier.border(1.5.dp, th.accentBright, RoundedCornerShape(14.dp)) else Modifier),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text("All", style = FitType.section, color = if (selected == null) th.accentBright else th.textDim)
@@ -262,27 +244,18 @@ fun EquipmentFilterRow(
             val sel = selected == eq
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .width(70.dp)
-                    .clickableNoRipple { onSelect(if (sel) null else eq) },
+                modifier            = Modifier.width(70.dp).clickableNoRipple { onSelect(if (sel) null else eq) },
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Box(
-                    Modifier
-                        .size(64.dp)
+                    Modifier.size(64.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            if (sel) th.accent.copy(alpha = 0.22f)
-                            else th.text.copy(alpha = 0.07f)
-                        )
+                        .background(if (sel) th.accent.copy(alpha = 0.22f) else th.text.copy(alpha = 0.07f))
                         .then(if (sel) Modifier.border(1.5.dp, th.accentBright, RoundedCornerShape(14.dp)) else Modifier)
                         .padding(6.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    EquipmentImage(
-                        equipment = eq,
-                        modifier  = Modifier.fillMaxSize(),
-                    )
+                    EquipmentImage(equipment = eq, modifier = Modifier.fillMaxSize())
                 }
                 Text(
                     equipmentLabel(eq),
