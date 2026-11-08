@@ -21,15 +21,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Archive
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material.icons.rounded.Unarchive
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -125,7 +118,7 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
             Spacer(Modifier.weight(1f))
             GlassIconButton(Duo.Edit, { nav.push(Overlay.ExerciseEditor(e.id)) })
         }
-        // how-to loop (3D animation when available, otherwise the photos crossfading) — like a short looping video
+        // how-to loop
         ExerciseMedia(e, Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(1f))
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(e.name, style = FitType.display.copy(fontSize = FitType.title.fontSize * 1.35f), color = th.text)
@@ -135,8 +128,16 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
                 if (e.level.isNotBlank()) GlassChip(e.level.replaceFirstChar { it.uppercase() }, false, {})
                 GlassChip(measurementLabel(e.measurementType), false, {})
             }
+
+            // ---- equipment image (3D render)
+            if (e.equipment.isNotBlank() && e.equipment != "other") {
+                EquipmentRow(
+                    equipment = e.equipment,
+                    modifier  = Modifier.fillMaxWidth(),
+                )
+            }
+
             val ctxM = androidx.compose.ui.platform.LocalContext.current
-            // the catalog lookup parses a 760 KB file the first time — do it off the main thread
             val pm by androidx.compose.runtime.produceState(emptyList<String>() to emptyList<String>(), e.id) {
                 value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MuscleData.of(ctxM, e) }
             }
@@ -232,12 +233,8 @@ private fun Stat(label: String, value: String) {
     }
 }
 
-// ------------------------------------------------------------------ custom / edit
-
 @Composable
 private fun Label(t: String) = Text(t, style = FitType.label, color = LocalFitTheme.current.textDim)
-
-// ------------------------------------------------------------------ progress & records
 
 private data class Metric(val id: String, val label: String, val estimate: Boolean = false)
 
@@ -273,7 +270,7 @@ private fun ProgressCard(m: String, sessions: List<Session>, history: List<SetRo
     val metrics = metricsFor(m)
     if (metrics.isEmpty()) return
     var metric by remember(m) { mutableStateOf(metrics.first()) }
-    var range by remember { mutableStateOf(2) }   // 0 = 1M, 1 = 3M, 2 = 1Y, 3 = all
+    var range by remember { mutableStateOf(2) }
     val today = Clock.today()
     val from = when (range) { 0 -> today.minusMonths(1); 1 -> today.minusMonths(3); 2 -> today.minusYears(1); else -> null }
     val prSessions = remember(history) {
