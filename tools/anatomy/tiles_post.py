@@ -1,14 +1,15 @@
-"""tiles/out/*.png -> app assets (muscles/<key>.webp) + a contact sheet for review.
+"""Post-process rendered tiles: PNG -> WebP in app assets, plus a contact sheet for review.
 
-The muscle tiles land in app/src/main/assets/muscles/ so MuscleMap.kt finds them by the same
-names it already uses (chest, biceps, abs_core, running, ...)."""
-import os, glob, sys
+The muscle tiles land in app/src/main/assets/muscles/ so the Train screen finds them by the same
+names it already uses (chest, biceps, core, cardio, ...)."""
+import os, glob
 from PIL import Image, ImageDraw
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../..'))
-SRC = os.environ.get('SRC', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out'))
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.abspath(os.path.join(HERE, '../..'))
+SRC = os.environ.get('SRC', os.path.join(HERE, 'out'))
 DST = os.environ.get('DST', os.path.join(ROOT, 'app/src/main/assets/muscles'))
-SHEET = os.environ.get('SHEET', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out/sheet.png'))
+SHEET = os.environ.get('SHEET', os.path.join(HERE, 'out/sheet.png'))
 SIZE = int(os.environ.get('SIZE', '512'))
 QUALITY = int(os.environ.get('QUALITY', '86'))
 
