@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -30,12 +29,14 @@ import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Unarchive
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,7 +44,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.myfit.tracker.AppContainer
 import com.myfit.tracker.data.db.Exercise
@@ -111,30 +114,44 @@ fun bestSet(m: String, rows: List<SetRow>): SetRow? = when (m) {
     else -> null
 }
 
-/** Side-by-side muscle art + equipment art panel shown in exercise details. */
+/**
+ * Side-by-side muscle art + equipment art panel shown in exercise details.
+ * Uses MuscleArtImages (3D art) with MuscleImageLoader fallback, and
+ * EquipmentArtImages (3D art) with EquipmentImageLoader fallback.
+ */
 @Composable
 fun ExerciseVisualsRow(ex: Exercise) {
-    val th = LocalFitTheme.current
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val th  = LocalFitTheme.current
+    val ctx = LocalContext.current
+
     val muscleFile = remember(ex.primaryMuscle) { muscleArtFile(ex.primaryMuscle) }
     val equipFile  = remember(ex.equipment)     { equipmentArtFile(ex.equipment) }
-    val muscleImg  by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, muscleFile)  { value = MuscleArtImages.get(ctx, muscleFile) }
-    val equipImg   by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, equipFile)   { value = EquipmentArtImages.get(ctx, equipFile) }
-    com.myfit.tracker.ui.components.GlassCard {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+
+    // Primary: 3D muscle art; fallback: MuscleImageLoader (also loads from assets/muscles/)
+    val muscleImg by produceState<ImageBitmap?>(null, muscleFile) {
+        value = MuscleArtImages.get(ctx, muscleFile)
+            ?: MuscleImageLoader.load(ctx, muscleFile)
+    }
+    // Primary: 3D equipment art; fallback: EquipmentImageLoader
+    val equipImg by produceState<ImageBitmap?>(null, equipFile) {
+        value = EquipmentArtImages.get(ctx, equipFile)
+            ?: EquipmentImageLoader.load(ctx, equipFile)
+    }
+
+    GlassCard {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             VisualTile(
                 img      = muscleImg,
                 label    = ex.primaryMuscle,
                 accent   = muscleColor(ex.primaryMuscle),
+                fallbackIcon = equipmentIcon(ex),  // muscle group icon as fallback
                 modifier = Modifier.weight(1f),
             )
             VisualTile(
                 img      = equipImg,
                 label    = equipmentLabel(ex.equipment).ifBlank { "Bodyweight" },
                 accent   = th.accentBright,
+                fallbackIcon = equipmentIcon(ex),
                 modifier = Modifier.weight(1f),
             )
         }
@@ -142,7 +159,13 @@ fun ExerciseVisualsRow(ex: Exercise) {
 }
 
 @Composable
-private fun VisualTile(img: androidx.compose.ui.graphics.ImageBitmap?, label: String, accent: androidx.compose.ui.graphics.Color, modifier: Modifier) {
+private fun VisualTile(
+    img: ImageBitmap?,
+    label: String,
+    accent: Color,
+    fallbackIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier,
+) {
     val th = LocalFitTheme.current
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
@@ -156,7 +179,12 @@ private fun VisualTile(img: androidx.compose.ui.graphics.ImageBitmap?, label: St
             if (img != null) {
                 Image(img, null, Modifier.fillMaxSize().padding(10.dp), contentScale = ContentScale.Fit)
             } else {
-                Box(Modifier.size(40.dp).clip(CircleShape).background(accent.copy(alpha = 0.18f)))
+                // Clean icon fallback — no blob
+                Icon(
+                    fallbackIcon, null,
+                    tint     = accent.copy(alpha = 0.6f),
+                    modifier = Modifier.size(48.dp),
+                )
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -193,10 +221,9 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
                 if (e.level.isNotBlank()) GlassChip(e.level.replaceFirstChar { it.uppercase() }, false, {})
                 GlassChip(measurementLabel(e.measurementType), false, {})
             }
-            // R89: muscle art + equipment art side by side in separate glass sections
             ExerciseVisualsRow(e)
-            val ctxM = androidx.compose.ui.platform.LocalContext.current
-            val pm by androidx.compose.runtime.produceState(emptyList<String>() to emptyList<String>(), e.id) {
+            val ctxM = LocalContext.current
+            val pm by produceState(emptyList<String>() to emptyList<String>(), e.id) {
                 value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MuscleData.of(ctxM, e) }
             }
             val (prim, sec) = pm
