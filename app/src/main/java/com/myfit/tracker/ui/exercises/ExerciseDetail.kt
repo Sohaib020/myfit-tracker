@@ -2,6 +2,8 @@ package com.myfit.tracker.ui.exercises
 
 import com.myfit.tracker.ui.theme.Duo
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,10 +21,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Archive
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Unarchive
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +41,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.myfit.tracker.AppContainer
 import com.myfit.tracker.data.db.Exercise
@@ -98,6 +111,59 @@ fun bestSet(m: String, rows: List<SetRow>): SetRow? = when (m) {
     else -> null
 }
 
+/** Side-by-side muscle art + equipment art panel shown in exercise details. */
+@Composable
+fun ExerciseVisualsRow(ex: Exercise) {
+    val th = LocalFitTheme.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val muscleFile = remember(ex.primaryMuscle) { muscleArtFile(ex.primaryMuscle) }
+    val equipFile  = remember(ex.equipment)     { equipmentArtFile(ex.equipment) }
+    val muscleImg  by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, muscleFile)  { value = MuscleArtImages.get(ctx, muscleFile) }
+    val equipImg   by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, equipFile)   { value = EquipmentArtImages.get(ctx, equipFile) }
+    com.myfit.tracker.ui.components.GlassCard {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            VisualTile(
+                img      = muscleImg,
+                label    = ex.primaryMuscle,
+                accent   = muscleColor(ex.primaryMuscle),
+                modifier = Modifier.weight(1f),
+            )
+            VisualTile(
+                img      = equipImg,
+                label    = equipmentLabel(ex.equipment).ifBlank { "Bodyweight" },
+                accent   = th.accentBright,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun VisualTile(img: androidx.compose.ui.graphics.ImageBitmap?, label: String, accent: androidx.compose.ui.graphics.Color, modifier: Modifier) {
+    val th = LocalFitTheme.current
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(18.dp))
+                .background(Brush.radialGradient(listOf(accent.copy(alpha = 0.18f), th.text.copy(alpha = 0.04f)))),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (img != null) {
+                Image(img, null, Modifier.fillMaxSize().padding(10.dp), contentScale = ContentScale.Fit)
+            } else {
+                Box(Modifier.size(40.dp).clip(CircleShape).background(accent.copy(alpha = 0.18f)))
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(label, style = FitType.caption, color = th.textDim, maxLines = 1)
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
@@ -118,7 +184,6 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
             Spacer(Modifier.weight(1f))
             GlassIconButton(Duo.Edit, { nav.push(Overlay.ExerciseEditor(e.id)) })
         }
-        // how-to loop
         ExerciseMedia(e, Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(1f))
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(e.name, style = FitType.display.copy(fontSize = FitType.title.fontSize * 1.35f), color = th.text)
@@ -128,15 +193,8 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
                 if (e.level.isNotBlank()) GlassChip(e.level.replaceFirstChar { it.uppercase() }, false, {})
                 GlassChip(measurementLabel(e.measurementType), false, {})
             }
-
-            // ---- equipment image (3D render)
-            if (e.equipment.isNotBlank() && e.equipment != "other") {
-                EquipmentRow(
-                    equipment = e.equipment,
-                    modifier  = Modifier.fillMaxWidth(),
-                )
-            }
-
+            // R89: muscle art + equipment art side by side in separate glass sections
+            ExerciseVisualsRow(e)
             val ctxM = androidx.compose.ui.platform.LocalContext.current
             val pm by androidx.compose.runtime.produceState(emptyList<String>() to emptyList<String>(), e.id) {
                 value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MuscleData.of(ctxM, e) }
@@ -148,7 +206,6 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
                 MuscleMap(prim, sec, Modifier.fillMaxWidth())
             }
 
-            // ---- your history
             GlassCard {
                 CardHeader(Duo.EmojiEvents, "Your record", th.warning) {
                     if (history.isNotEmpty()) DataBadge(DataKind.RECORDED)
@@ -185,7 +242,6 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
             if (sessions.size >= 2) ProgressCard(e.measurementType, sessions, history)
             if (history.isNotEmpty()) RecordsCard(e.id, e.measurementType, history)
 
-            // ---- how to
             if (e.instructions.isNotBlank()) {
                 GlassCard {
                     Text("How to do it", style = FitType.section, color = th.text)
@@ -203,7 +259,6 @@ fun ExerciseDetailScreen(container: AppContainer, exerciseId: Long) {
                 }
             }
 
-            // ---- personal notes
             GlassCard {
                 Text("Personal notes", style = FitType.section, color = th.text)
                 Spacer(Modifier.height(8.dp))
