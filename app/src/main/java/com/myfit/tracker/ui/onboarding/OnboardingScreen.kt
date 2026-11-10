@@ -150,6 +150,7 @@ private class SetupState(units: UnitPrefs) {
     var followUp by mutableStateOf<String?>(null)
     var focus by mutableStateOf(setOf<String>())
     var bodyLevel by mutableIntStateOf(0)       // 0 = not chosen yet (guessed from BMI on first show)
+    var weightSet by mutableStateOf(false)     // R37: weight page starts at the weight that matches the picked shape
     var pace by mutableIntStateOf(1)
 
     val weightKg get() = Units.toKg(weightDisplay, weightUnit)
@@ -160,7 +161,8 @@ private class SetupState(units: UnitPrefs) {
     fun flow(redo: Boolean): List<Int> = buildList {
         add(0); add(1); add(2); add(3); add(16)
         if (mainGoal == com.myfit.tracker.domain.PlanProfile.LOSE || mainGoal == com.myfit.tracker.domain.PlanProfile.BUILD) add(17)
-        add(18); add(6); add(7); add(19); add(8); add(10); add(11); add(12); add(4); add(5); add(13)
+        // R37: body shape first — the height chart, focus dots and weight figure all draw the shape the user picked
+        add(19); add(6); add(22); add(18); add(8); add(10); add(11); add(12); add(4); add(5); add(13)
         if (com.myfit.tracker.domain.PlanProfile.predict(weightKg, targetKg, pace) != null) add(20)
         add(21)
         if (!redo) add(14)
@@ -383,11 +385,11 @@ private fun ColumnScope.StepBody(st: Int, s: SetupState, container: AppContainer
         }
         6 -> {
             Header("How tall are you?", "Height makes your BMI and calorie targets accurate.")
-            HeightPage(s.heightCm, s.lengthUnit, s.female, { s.heightCm = it }) { s.lengthUnit = it }
+            HeightPage(s.heightCm, s.lengthUnit, s.female, s.bodyLevel, { s.heightCm = it }) { s.lengthUnit = it }
         }
         7 -> {
             Header("What's your current weight?", "This becomes your first weigh-in. You can log more any time.")
-            WeightPicker(s.weightDisplay, s.weightUnit, { s.weightDisplay = it }) { u ->
+            WeightPicker(s.weightDisplay, s.weightUnit, { s.weightDisplay = it; s.weightSet = true }) { u ->
                 s.weightDisplay = round1(Units.kgTo(s.weightKg, u)); s.targetDisplay = round1(Units.kgTo(Units.toKg(s.targetDisplay, s.weightUnit), u)); s.weightUnit = u
             }
             Spacer(Modifier.height(18.dp))
@@ -517,15 +519,20 @@ private fun ColumnScope.StepBody(st: Int, s: SetupState, container: AppContainer
         }
         18 -> {
             Header("Which areas do you want to focus on?", "Pick any — your workouts lean toward them. Full body is a great start.")
-            FocusPage(s.focus, s.female) { s.focus = it }
+            FocusPage(s.focus, s.female, s.bodyLevel) { s.focus = it }
         }
         19 -> {
             Header("Choose your current body shape", "Slide until the character looks most like you today.")
-            if (s.bodyLevel == 0) {
-                val b = com.myfit.tracker.domain.PlanProfile.bmi(s.weightKg, s.heightCm)
-                s.bodyLevel = when { b < 20 -> 2; b < 25 -> 3; b < 28 -> 4; b < 32 -> 5; else -> 6 }
-            }
+            if (s.bodyLevel == 0) s.bodyLevel = 3      // R37: this page runs before height/weight, so start at "Average"
             BodyShapePage(s.bodyLevel, s.female) { s.bodyLevel = it }
+        }
+        22 -> {
+            Header("What's your current weight?", "Drag the slider to set your weight. The character reflects your body shape.")
+            if (!s.weightSet) {
+                s.weightDisplay = round1(Units.kgTo(com.myfit.tracker.domain.PlanProfile.anchorWeightKg(s.bodyLevel.coerceIn(1, 6), s.heightCm), s.weightUnit))
+                s.weightSet = true
+            }
+            WeightPage(s.weightKg, s.female, s.heightCm, s.bodyLevel) { s.weightDisplay = round1(Units.kgTo(it, s.weightUnit)); s.weightSet = true }
         }
         20 -> {
             Spacer(Modifier.height(8.dp))
@@ -637,6 +644,7 @@ private suspend fun prefill(s: SetupState, p: UserProfile, c: AppContainer, ctx:
     s.goals = p.goals.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
     val w = c.logRepo.latestWeight().first()?.weightKg ?: p.startWeightKg
     s.weightDisplay = round1(Units.kgTo(w, s.weightUnit))
+    s.weightSet = true
     p.targetWeightKg?.let { s.hasTarget = true; s.targetDisplay = round1(Units.kgTo(it, s.weightUnit)) } ?: run { s.hasTarget = false }
     val t = c.profileRepo.targets.first(); val d = Clock.today()
     com.myfit.tracker.domain.Targets.on(t, TargetType.WATER_ML, d)?.let { s.waterL = Fmt.num(it / 1000, 1) }

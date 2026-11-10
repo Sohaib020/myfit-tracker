@@ -54,7 +54,7 @@ class OnboardingShotTest {
                         1 -> TriedPage("rebound") {}
                         2 -> MuscleGoalPage("strength", false) {}
                         3 -> FocusPage(setOf("Chest", "Arms", "Abs"), false) {}
-                        4 -> HeightPage(178.0, LengthUnit.IN, false, {}) {}
+                        4 -> HeightPage(178.0, LengthUnit.IN, false, 3, {}) {}
                         5 -> Column { BmiCard(86.0, 178.0) }
                         6 -> BodyShapePage(4, false) {}
                         7 -> BodyShapePage(2, true) {}

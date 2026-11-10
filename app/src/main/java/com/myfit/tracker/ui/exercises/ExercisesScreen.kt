@@ -24,11 +24,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Inventory2
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.History
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,9 +71,7 @@ fun ExercisesScreen(container: AppContainer, bottomPad: Int, embedded: Boolean =
         header = { Header(embedded, onCustom = { nav.push(Overlay.ExerciseEditor(null)) }, onArchive = { nav.push(Overlay.Archive) }) },
         bottomPad = bottomPad,
         onOpen = { nav.push(Overlay.ExerciseDetail(it.id)) },
-        onAdd = { ex ->
-            adding = ex
-        },
+        onAdd = { ex -> adding = ex },
     )
     val ex = adding
     com.myfit.tracker.ui.components.GlassSheet(visible = ex != null, onDismiss = { adding = null }) {
@@ -163,7 +156,6 @@ fun ExerciseBrowser(
         all.filter { (muscle == null || it.primaryMuscle == muscle) && (equipment == null || it.equipment == equipment) && it.matches(query) }
             .sortedWith(compareByDescending<Exercise> { it.isCustom }.thenBy { it.name })
     }
-    // exercises that don't suit your health profile are hidden unless you choose to see them (with a warning)
     val filtered = remember(allMatches, showUnsuitable, healthSel) {
         if (showUnsuitable) allMatches else allMatches.filter { it.judge().verdict != com.myfit.tracker.domain.HealthProfile.Verdict.AVOID }
     }
@@ -186,13 +178,16 @@ fun ExerciseBrowser(
                     Spacer(Modifier.height(4.dp))
                     GlassSearchField(query, { query = it }, "Search")
                     Spacer(Modifier.height(10.dp))
-                    // R36: target muscles with anatomy thumbnails (tap again for all)
+                    // Target muscles with anatomy/muscle thumbnails
                     TargetMuscleRow(muscle) { muscle = it }
-                    Spacer(Modifier.height(8.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        item { GlassChip("Any equipment", equipment == null, { equipment = null }) }
-                        items(equipmentOptions) { e -> GlassChip(equipmentLabel(e), equipment == e, { equipment = if (equipment == e) null else e }) }
-                    }
+                    Spacer(Modifier.height(10.dp))
+                    // Equipment filter with 3D rendered images
+                    EquipmentFilterRow(
+                        equipmentList = equipmentOptions,
+                        selected      = equipment,
+                        onSelect      = { equipment = it },
+                        modifier      = Modifier.fillMaxWidth(),
+                    )
                 }
             }
             if (query.isBlank() && muscle == null && equipment == null && recent.isNotEmpty()) {
@@ -230,7 +225,6 @@ fun ExerciseBrowser(
                 )
             }
         }
-        // "How to": big looping demo + muscles + steps, without leaving the picker
         com.myfit.tracker.ui.components.GlassSheet(visible = preview != null, onDismiss = { preview = null }) {
             val ex = preview
             if (ex != null) {
@@ -270,28 +264,23 @@ fun ExerciseCard(ex: Exercise, logged: Boolean, selectedIndex: Int?, onClick: ()
     Glass(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), onClick = onClick) {
         Column {
             Box {
-                // thumbnails play the movement (start ↔ end frame); cards are slightly out of step so the grid feels alive
                 ExerciseImage(ex, Modifier.fillMaxWidth().aspectRatio(1.35f).clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
                     animate = true, periodMs = 950L + (ex.id % 5) * 110L)
                 if (selectedIndex != null) {
                     Box(Modifier.matchParentSize().drawBehind { drawRect(th.accent.copy(alpha = 0.45f)) })
-                    Box(
-                        Modifier.align(Alignment.TopEnd).padding(8.dp).size(28.dp).clip(CircleShape).drawBehind { drawCircle(th.accent) },
-                        contentAlignment = Alignment.Center,
-                    ) { Text("${selectedIndex + 1}", style = FitType.label, color = th.onAccent) }
+                    Box(Modifier.align(Alignment.TopEnd).padding(8.dp).size(28.dp).clip(CircleShape).drawBehind { drawCircle(th.accent) }, contentAlignment = Alignment.Center) {
+                        Text("${selectedIndex + 1}", style = FitType.label, color = th.onAccent)
+                    }
                 }
                 if (onAdd != null) {
-                    Box(
-                        Modifier.align(Alignment.TopEnd).padding(8.dp).size(34.dp).clip(CircleShape)
-                            .drawBehind { drawCircle(Brush.verticalGradient(listOf(th.accentBright, th.accent))) }
-                            .clickableNoRipple(onAdd),
-                        contentAlignment = Alignment.Center,
+                    Box(Modifier.align(Alignment.TopEnd).padding(8.dp).size(34.dp).clip(CircleShape)
+                        .drawBehind { drawCircle(Brush.verticalGradient(listOf(th.accentBright, th.accent))) }
+                        .clickableNoRipple(onAdd), contentAlignment = Alignment.Center,
                     ) { Icon(Duo.Add, "Add to workout", tint = th.onAccent, modifier = Modifier.size(20.dp)) }
                 }
                 if (onPreview != null) {
-                    Row(
-                        Modifier.align(Alignment.BottomStart).padding(8.dp).clip(RoundedCornerShape(12.dp))
-                            .drawBehind { drawRect(Color.Black.copy(alpha = 0.6f)) }.clickableNoRipple(onPreview).padding(horizontal = 8.dp, vertical = 4.dp),
+                    Row(Modifier.align(Alignment.BottomStart).padding(8.dp).clip(RoundedCornerShape(12.dp))
+                        .drawBehind { drawRect(Color.Black.copy(alpha = 0.6f)) }.clickableNoRipple(onPreview).padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Duo.PlayArrow, null, tint = Color.White, modifier = Modifier.size(14.dp))
@@ -335,7 +324,5 @@ private fun MiniExerciseCard(ex: Exercise, selected: Boolean, onClick: () -> Uni
     }
 }
 
-
-/** Does this exercise suit the user's health profile (knee pain, pregnancy, back pain…)? */
 fun Exercise.judge(): com.myfit.tracker.domain.HealthProfile.Judgement =
     com.myfit.tracker.domain.HealthProfile.judgeExercise(com.myfit.tracker.domain.ExerciseTags.of(name, primaryMuscle, equipment, category, level, mechanic))
