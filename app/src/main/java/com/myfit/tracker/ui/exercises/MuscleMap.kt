@@ -72,31 +72,6 @@ private object MapImages {
     }?.also { cache.put(name, it) }
 }
 
-// ------------------------------------------------------------------ R89 Muscle art images
-
-/** Loads the 3D muscle art thumbnails from assets/muscles/. */
-object MuscleArtImages {
-    private val cache = android.util.LruCache<String, ImageBitmap>(8 * 1024 * 1024)
-    suspend fun get(c: Context, name: String): ImageBitmap? = cache.get(name) ?: withContext(Dispatchers.IO) {
-        runCatching { c.assets.open("muscles/$name.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
-    }?.also { cache.put(name, it) }
-}
-
-/** Maps a coarse muscle group to its 3D art file name in assets/muscles/. */
-fun muscleArtFile(group: String): String = when (group) {
-    MuscleGroup.CHEST -> "chest"
-    MuscleGroup.BACK -> "back"
-    MuscleGroup.SHOULDERS -> "shoulders"
-    MuscleGroup.BICEPS -> "biceps"
-    MuscleGroup.TRICEPS -> "triceps"
-    MuscleGroup.CORE -> "abs_core"
-    MuscleGroup.GLUTES -> "glutes"
-    MuscleGroup.LEGS -> "quads"
-    MuscleGroup.CARDIO -> "running"
-    MuscleGroup.OTHER -> "yoga_stretching"
-    else -> "yoga_stretching"
-}
-
 @Composable
 private fun MapLayer(name: String, alpha: Float, modifier: Modifier) {
     val ctx = LocalContext.current
@@ -139,19 +114,6 @@ private fun MuscleChip(name: String, c: Color, primary: Boolean) {
     }
 }
 
-/** How-to media: the exercise photos crossfading smoothly, on a white card with play/pause. */
-@Composable
-fun ExerciseMedia(ex: Exercise, modifier: Modifier = Modifier) {
-    var playing by remember { mutableStateOf(true) }
-    Box(modifier.clip(RoundedCornerShape(26.dp)).background(Color.White)) {
-        PhotoLoop(ex, playing, Modifier.fillMaxSize())
-        Box(Modifier.align(Alignment.BottomEnd).padding(14.dp).size(46.dp).clip(CircleShape).background(Color(0xFF6E6E73)).clickableNoRipple { playing = !playing }, contentAlignment = Alignment.Center) {
-            if (playing) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { repeat(2) { Box(Modifier.width(4.dp).height(16.dp).background(Color.White)) } }
-            else Icon(Duo.PlayArrow, "Play", tint = Color.White, modifier = Modifier.size(24.dp))
-        }
-    }
-}
-
 @Composable
 private fun PhotoLoop(ex: Exercise, playing: Boolean, modifier: Modifier) {
     val ctx = LocalContext.current
@@ -171,17 +133,11 @@ private fun PhotoLoop(ex: Exercise, playing: Boolean, modifier: Modifier) {
 
 // ------------------------------------------------------------------ R36 Target muscles
 
-/**
- * Maps each muscle group to:
- *  - the anatomy base image key (assets/muscles/<view>.webp)
- *  - the overlay asset key (assets/muscles/<name>.webp)
- * Falls back to the old anatomy layers if the new standalone images are absent.
- */
 private data class TargetEntry(
     val group: String,
-    val muscleAsset: String,         // filename in assets/muscles/ (no ext)
-    val anatomyView: String,         // legacy anatomy key
-    val anatomyMuscles: List<String> // legacy anatomy overlays
+    val muscleAsset: String,
+    val anatomyView: String,
+    val anatomyMuscles: List<String>
 )
 
 private val TARGET_ENTRIES: List<TargetEntry> = listOf(
@@ -196,7 +152,6 @@ private val TARGET_ENTRIES: List<TargetEntry> = listOf(
     TargetEntry(MuscleGroup.CARDIO,    "running",    "cardio_front", listOf("quadriceps", "calves")),
 )
 
-// Cardio activities that also get standalone images
 private val CARDIO_ACTIVITIES: List<Pair<String, String>> = listOf(
     "Running"       to "running",
     "Cycling"       to "cycling",
@@ -219,7 +174,6 @@ private val OTHER_ENTRIES: List<Pair<String, String>> = listOf(
     "Calves"        to "calves",
 )
 
-/** Bounding box of highlighted pixels — used to zoom legacy anatomy thumbnails. */
 private object MuscleBox {
     private val cache = HashMap<String, android.graphics.RectF>()
     fun of(bmps: List<ImageBitmap>, key: String): android.graphics.RectF = cache.getOrPut(key) {
@@ -242,10 +196,6 @@ private object MuscleBox {
     }
 }
 
-/**
- * Thumbnail that prefers the new standalone muscle image (assets/muscles/<asset>.webp)
- * and falls back to the old anatomy-overlay approach if the file is missing.
- */
 @Composable
 private fun TargetThumb(
     label: String,
@@ -259,12 +209,10 @@ private fun TargetThumb(
     val th  = LocalFitTheme.current
     val ctx = LocalContext.current
 
-    // 1. Try the new standalone muscle image
     val muscleImg by produceState<ImageBitmap?>(null, muscleAsset) {
         value = MuscleImageLoader.load(ctx, muscleAsset)
     }
 
-    // 2. Fall back to legacy anatomy overlay images
     val legacyImgs by produceState<Pair<ImageBitmap?, List<ImageBitmap>>?>(null, anatomyView, anatomyMuscles) {
         value = MapImages.get(ctx, anatomyView) to
             anatomyMuscles.mapNotNull { MapImages.get(ctx, anatomyView + "_" + it.replace(' ', '_')) }
@@ -295,14 +243,12 @@ private fun TargetThumb(
                 ),
         ) {
             when {
-                // --- new standalone muscle image available ---
                 muscleImg != null -> Image(
-                    bitmap           = muscleImg!!,
+                    bitmap             = muscleImg!!,
                     contentDescription = label,
-                    modifier         = Modifier.fillMaxSize().padding(4.dp),
-                    contentScale     = ContentScale.Fit,
+                    modifier           = Modifier.fillMaxSize().padding(4.dp),
+                    contentScale       = ContentScale.Fit,
                 )
-                // --- fall back to legacy anatomy-overlay canvas ---
                 legacyImgs?.first != null -> {
                     val p   = legacyImgs!!
                     val box = MuscleBox.of(p.second, anatomyView + anatomyMuscles.joinToString())
@@ -323,7 +269,6 @@ private fun TargetThumb(
                         p.second.forEach { draw(it, 1f) }
                     }
                 }
-                // --- nothing loaded yet, show nothing (loading state) ---
                 else -> {}
             }
         }
@@ -332,7 +277,6 @@ private fun TargetThumb(
     }
 }
 
-/** Icon-only thumb for categories without a dedicated muscle image (Other). */
 @Composable
 private fun IconThumb(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, selected: Boolean, size: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
     val th = LocalFitTheme.current
@@ -356,19 +300,12 @@ private fun IconThumb(label: String, icon: androidx.compose.ui.graphics.vector.I
     }
 }
 
-/**
- * "Target muscles" strip for the exercise library.
- * Now uses standalone muscle images (assets/muscles/) for richer thumbnails.
- * Falls back to legacy anatomy overlays gracefully.
- */
 @Composable
 fun TargetMuscleRow(selected: String?, onSelect: (String?) -> Unit) {
     val th = LocalFitTheme.current
-    val groups = remember { TARGET_ART.map { it.first } + listOf(MuscleGroup.CARDIO, MuscleGroup.OTHER) }
     Column {
         Text("TARGET MUSCLES", style = FitType.overline, color = th.textDim, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
         androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            // Main muscle group entries
             items(TARGET_ENTRIES.size) { i ->
                 val e = TARGET_ENTRIES[i]
                 TargetThumb(
@@ -381,7 +318,6 @@ fun TargetMuscleRow(selected: String?, onSelect: (String?) -> Unit) {
                     onClick        = { onSelect(if (selected == e.group) null else e.group) },
                 )
             }
-            // Other category
             item {
                 IconThumb(
                     label    = MuscleGroup.OTHER,
