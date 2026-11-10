@@ -2,23 +2,18 @@ package com.myfit.tracker.ui.exercises
 
 import com.myfit.tracker.ui.theme.Duo
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.util.LruCache
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccessibilityNew
@@ -48,12 +43,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.myfit.tracker.data.db.Exercise
 import com.myfit.tracker.data.db.MeasurementType
 import com.myfit.tracker.data.db.MuscleGroup
-import com.myfit.tracker.ui.components.clickableNoRipple
 import com.myfit.tracker.ui.theme.FitType
 import com.myfit.tracker.ui.theme.LocalFitTheme
 import kotlinx.coroutines.Dispatchers
@@ -62,204 +55,82 @@ import kotlinx.coroutines.withContext
 
 /** Decoded exercise photos, bounded by memory (bitmaps are ~480 px wide WebP). */
 object ExerciseImages {
-    private val cache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
-        override fun sizeOf(key: String, value: Bitmap) = value.byteCount
+    private val cache = object : android.util.LruCache<String, Bitmap>(24 * 1024 * 1024) {
+        override fun sizeOf(k: String, v: Bitmap) = v.allocationByteCount
     }
 
-    suspend fun load(context: Context, key: String, frame: Int): ImageBitmap? {
-        val id = "$key/$frame"
-        cache.get(id)?.let { return it.asImageBitmap() }
-        return withContext(Dispatchers.IO) {
+    suspend fun start(c: android.content.Context, ex: Exercise): ImageBitmap? = get(c, ex, 0)
+    suspend fun end(c: android.content.Context, ex: Exercise): ImageBitmap? = get(c, ex, 1)
+
+    private suspend fun get(c: android.content.Context, ex: Exercise, idx: Int): ImageBitmap? {
+        val key = "${ex.id}_$idx"
+        return cache.get(key)?.asImageBitmap() ?: withContext(Dispatchers.IO) {
             runCatching {
-                context.assets.open("exercises/$key/$frame.webp").use { BitmapFactory.decodeStream(it) }
-            }.getOrNull()?.also { cache.put(id, it) }?.asImageBitmap()
-        }
+                c.assets.open("exercises/${ex.id}_$idx.webp").use { BitmapFactory.decodeStream(it) }
+            }.getOrNull()
+        }?.also { cache.put(key, it) }?.asImageBitmap()
     }
 }
 
-// ------------------------------------------------------------------ R89 Equipment art images
-
-/** Loads the 3D equipment art thumbnails from assets/equipment/. */
-object EquipmentArtImages {
-    private val cache = android.util.LruCache<String, ImageBitmap>(8 * 1024 * 1024)
-    suspend fun get(c: Context, name: String): ImageBitmap? = cache.get(name) ?: withContext(Dispatchers.IO) {
-        runCatching { c.assets.open("equipment/$name.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
-    }?.also { cache.put(name, it) }
-}
-
-/** Maps an equipment string from the catalog to its 3D art file name in assets/equipment/. */
-fun equipmentArtFile(e: String): String = when (e) {
-    "body only", "" -> "bodyweight"
-    "kettlebells" -> "kettlebell"
-    "bands" -> "resistance_band"
-    "e-z curl bar" -> "ez_bar"
-    "medicine ball" -> "medicine_ball"
-    "exercise ball" -> "stability_ball"
-    "foam roll" -> "foam_roller"
-    "smith machine" -> "smith_machine"
-    "trap bar" -> "trap_bar"
-    "pull-up bar" -> "pull_up_bar"
-    "suspension" -> "suspension_trainer"
-    "plate" -> "weight_plate"
-    "barbell", "dumbbell", "machine", "cable", "bench" -> e
-    else -> "other"
-}
-
-/**
- * Exercise photo. With `animate = true` it alternates the start and end frames, so the card shows
- * the movement. Custom exercises (no photo) get a muscle-coloured icon tile instead.
- */
+/** Exercise card media: two-frame loop if animated=true, otherwise just the start frame. */
 @Composable
-fun ExerciseImage(ex: Exercise, modifier: Modifier = Modifier, animate: Boolean = false, periodMs: Long = 1100) {
-    val ctx = LocalContext.current
-    val key = ex.imageKey
-    // R31: calisthenics moves added by MyFit have no photos — draw the illustrated figure instead
-    if (key != null && key.startsWith("cali_")) {
-        val d = remember { com.myfit.tracker.domain.Cali.data(ctx) }
-        val hit = d.byKey[key]
-        if (hit != null) {
-            val c = Color(hit.first.color)
-            Box(modifier.background(Brush.verticalGradient(listOf(Color(0xFF1C2030), Color(0xFF10131B))))) {
-                com.myfit.tracker.ui.cali.CaliArt(hit.first.steps[hit.second], c, Modifier.fillMaxSize().padding(2.dp), animate = animate)
-            }
-            return
-        }
+fun ExerciseImage(e: Exercise, modifier: Modifier = Modifier, animate: Boolean, periodMs: Long = 1000L) {
+    val th = LocalFitTheme.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val start by produceState<ImageBitmap?>(null, e.id) { value = ExerciseImages.start(ctx, e) }
+    val end by produceState<ImageBitmap?>(null, e.id) { value = ExerciseImages.end(ctx, e) }
+    var frame by remember(e.id) { mutableIntStateOf(0) }
+    LaunchedEffect(animate, e.id) {
+        if (animate) while (true) { delay(periodMs); frame = 1 - frame }
     }
-    if (key == null || ex.imageFrames == 0) {
-        val c = muscleColor(ex.primaryMuscle)
-        Box(
-            modifier.background(Brush.linearGradient(listOf(c.copy(alpha = 0.85f), c.copy(alpha = 0.4f)))),
-            contentAlignment = Alignment.Center,
-        ) { Icon(equipmentIcon(ex), null, tint = Color.White, modifier = Modifier.size(36.dp)) }
-        return
-    }
-    var frame by remember(key) { mutableIntStateOf(0) }
-    if (animate && ex.imageFrames > 1) {
-        LaunchedEffect(key) { while (true) { androidx.compose.runtime.withFrameMillis { }; delay(periodMs); frame = 1 - frame } }
-    }
-    val f0 by produceState<ImageBitmap?>(null, key) { value = ExerciseImages.load(ctx, key, 0) }
-    val f1 by produceState<ImageBitmap?>(null, key, animate) { if (animate && ex.imageFrames > 1) value = ExerciseImages.load(ctx, key, 1) }
-    Box(modifier.background(Color.White)) {
-        Crossfade(targetState = if (frame == 1 && f1 != null) f1 else f0, animationSpec = tween(350), label = "exFrame") { img ->
-            if (img != null) Image(img, ex.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+    val img = if (frame == 0 || !animate) start else end
+    Box(modifier.background(Brush.verticalGradient(listOf(th.text.copy(alpha = 0.08f), th.text.copy(alpha = 0.02f)))), contentAlignment = Alignment.Center) {
+        if (img != null) Crossfade(img, label = "exImg", animationSpec = tween(if (animate) 200 else 0)) {
+            Image(it, e.name, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         }
     }
 }
 
-fun muscleColor(group: String): Color = when (group) {
-    MuscleGroup.CHEST -> Color(0xFFFF5A5F)
-    MuscleGroup.BACK -> Color(0xFF3FA9FF)
-    MuscleGroup.SHOULDERS -> Color(0xFFFFA93B)
-    MuscleGroup.BICEPS -> Color(0xFFB57CFF)
-    MuscleGroup.TRICEPS -> Color(0xFFFF6FB5)
-    MuscleGroup.LEGS -> Color(0xFF2FD37A)
-    MuscleGroup.GLUTES -> Color(0xFFFF7A59)
-    MuscleGroup.CORE -> Color(0xFFFFD34D)
-    MuscleGroup.CARDIO -> Color(0xFF22D3EE)
-    else -> Color(0xFF9AA0AE)
+/** Same as ExerciseImage but without the animate param, for overlays that show static frames. */
+@Composable
+fun ExerciseMedia(e: Exercise, modifier: Modifier = Modifier) = ExerciseImage(e, modifier, animate = true, periodMs = 1200L)
+
+// ------------------------------------------------------------------ Equipment icons
+
+fun equipmentIcon(e: Exercise): ImageVector = when (e.equipment) {
+    "barbell", "e-z curl bar", "dumbbell", "kettlebells" -> Duo.FitnessCenter
+    "cable"       -> Duo.Cable
+    "machine"     -> Duo.PrecisionManufacturing
+    "body only"   -> Duo.AccessibilityNew
+    "bands"       -> Duo.LinearScale
+    "medicine ball", "exercise ball" -> Duo.SportsBaseball
+    else          -> Duo.SportsGymnastics
 }
 
-fun equipmentIcon(ex: Exercise): ImageVector = when {
-    ex.measurementType == MeasurementType.DISTANCE_DURATION || ex.primaryMuscle == MuscleGroup.CARDIO -> Duo.DirectionsRun
-    ex.category == "stretching" -> Duo.SelfImprovement
-    else -> when (ex.equipment) {
-        "barbell", "e-z curl bar", "dumbbell", "kettlebells" -> Duo.FitnessCenter
-        "cable" -> Duo.Cable
-        "machine" -> Duo.PrecisionManufacturing
-        "body only" -> Duo.AccessibilityNew
-        "bands" -> Duo.LinearScale
-        "medicine ball", "exercise ball" -> Duo.SportsBaseball
-        else -> Duo.SportsGymnastics
-    }
+fun equipmentLabel(e: String): String = when (e) {
+    "body only"    -> "Bodyweight"
+    "e-z curl bar" -> "EZ Bar"
+    "kettlebells"  -> "Kettlebell"
+    "medicine ball" -> "Medicine Ball"
+    "exercise ball" -> "Stability Ball"
+    "foam roll"    -> "Foam Roller"
+    else           -> e.split(' ').joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
 }
 
-fun equipmentLabel(e: String) = when (e) {
-    "body only" -> "Bodyweight"; "e-z curl bar" -> "EZ bar"; "kettlebells" -> "Kettlebell"; "bands" -> "Resistance band"
-    "smith machine" -> "Smith machine"; "trap bar" -> "Trap bar"; "pull-up bar" -> "Pull-up bar"; "plate" -> "Weight plate"
-    "suspension" -> "Suspension straps"; "foam roll" -> "Foam roller"
-    else -> e.replaceFirstChar { it.uppercase() }
-}
-
-fun measurementLabel(m: String) = when (m) {
-    MeasurementType.WEIGHT_REPS -> "Weight × reps"
-    MeasurementType.BODYWEIGHT_REPS -> "Reps (+ optional added weight)"
-    MeasurementType.ASSISTED_REPS -> "Reps with assistance weight"
-    MeasurementType.REPS_ONLY -> "Reps only"
-    MeasurementType.DURATION -> "Duration"
-    MeasurementType.DISTANCE_DURATION -> "Distance + duration"
-    MeasurementType.WEIGHT_DURATION -> "Weight + duration"
-    else -> m
-}
-
-val allMeasurementTypes = listOf(
-    MeasurementType.WEIGHT_REPS, MeasurementType.BODYWEIGHT_REPS, MeasurementType.ASSISTED_REPS, MeasurementType.REPS_ONLY,
-    MeasurementType.DURATION, MeasurementType.DISTANCE_DURATION, MeasurementType.WEIGHT_DURATION,
+val equipmentOptions = listOf(
+    "barbell", "dumbbell", "cable", "machine", "body only",
+    "kettlebells", "bands", "medicine ball", "exercise ball",
 )
 
-val equipmentOptions = listOf("barbell", "dumbbell", "machine", "cable", "body only", "kettlebells", "bands", "e-z curl bar", "medicine ball", "exercise ball", "other")
+// ------------------------------------------------------------------ Measurement type labels
 
-/** Everything the Create Exercise picker offers (catalog values + extra gym kit). */
-val equipmentPickerOptions = listOf("body only", "barbell", "dumbbell", "kettlebells", "machine", "cable", "plate", "bands", "suspension",
-    "e-z curl bar", "smith machine", "trap bar", "pull-up bar", "bench", "medicine ball", "exercise ball", "foam roll", "other")
-
-/** 3D equipment art in assets/equipment/<id>.webp (rendered by tools/equipment). */
-fun equipmentArt(e: String): String = "equipment/" + when (e) {
-    "body only", "" -> "none"; "kettlebells" -> "kettlebell"; "bands" -> "band"; "e-z curl bar" -> "ezbar"; "medicine ball" -> "medicineball"
-    "exercise ball" -> "exerciseball"; "foam roll" -> "foamroller"; "smith machine" -> "smith"; "trap bar" -> "trapbar"; "pull-up bar" -> "pullupbar"
-    "barbell", "dumbbell", "machine", "cable", "plate", "suspension", "bench" -> e
-    else -> "other"
-} + ".webp"
-
-/** One-line description for each way of measuring, shown in the exercise-type picker. */
-fun measurementHint(m: String) = when (m) {
-    MeasurementType.WEIGHT_REPS -> "Bench press, curls, leg press"
-    MeasurementType.BODYWEIGHT_REPS -> "Pull-ups, dips, push-ups — add weight if you like"
-    MeasurementType.ASSISTED_REPS -> "Assisted pull-ups or dips (machine or band)"
-    MeasurementType.REPS_ONLY -> "Crunches, jumping jacks"
-    MeasurementType.DURATION -> "Plank, wall sit, stretching"
-    MeasurementType.DISTANCE_DURATION -> "Running, rowing, cycling"
-    MeasurementType.WEIGHT_DURATION -> "Farmer's carry, weighted plank"
-    else -> ""
-}
-
-/** Words-in-any-order search: "bench db" matches "Dumbbell Bench Press". */
-fun Exercise.matches(query: String): Boolean {
-    if (query.isBlank()) return true
-    val hay = (name + " " + primaryMuscle + " " + secondaryMuscles + " " + equipment).lowercase()
-        .replace("dumbbell", "dumbbell db").replace("barbell", "barbell bb")
-    return query.lowercase().split(' ', '-', ',').filter { it.isNotBlank() }.all { hay.contains(it) }
-}
-
-// ------------------------------------------------------------------ R89 Equipment filter thumbnails
-
-/** A single equipment filter thumbnail — 3D equipment art inside a glass-style rounded card. */
-@Composable
-fun EquipmentThumb(equipment: String, label: String, selected: Boolean, size: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
-    val th = LocalFitTheme.current
-    val ctx = LocalContext.current
-    val file = remember(equipment) { equipmentArtFile(equipment) }
-    val img by produceState<ImageBitmap?>(null, file) { value = EquipmentArtImages.get(ctx, file) }
-    val ring by androidx.compose.animation.core.animateFloatAsState(if (selected) 1f else 0f, com.myfit.tracker.ui.theme.Motion.snappy(), label = "equipRing")
-    val accent = th.accentBright
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(size + 8.dp).clickableNoRipple(onClick)) {
-        Box(
-            Modifier.size(size).clip(RoundedCornerShape(size * 0.34f))
-                .background(Brush.radialGradient(listOf(th.text.copy(alpha = 0.16f), th.text.copy(alpha = 0.05f))))
-                .then(if (ring > 0.01f) Modifier.border(androidx.compose.foundation.BorderStroke((2.5f * ring).dp, accent), RoundedCornerShape(size * 0.34f)) else Modifier),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (img != null) {
-                Image(
-                    img!!, null,
-                    Modifier.fillMaxSize().padding(6.dp),
-                    contentScale = ContentScale.Fit,
-                )
-            } else {
-                Box(Modifier.fillMaxSize().padding(6.dp).clip(RoundedCornerShape(size * 0.28f))
-                    .background(accent.copy(alpha = 0.12f)))
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(label, style = FitType.label, color = if (selected) accent else th.text, maxLines = 1)
-    }
+fun measurementLabel(m: String): String = when (m) {
+    MeasurementType.WEIGHT_REPS -> "Weight × Reps"
+    MeasurementType.BODYWEIGHT_REPS -> "Bodyweight reps"
+    MeasurementType.REPS_ONLY -> "Reps only"
+    MeasurementType.DURATION -> "Duration"
+    MeasurementType.WEIGHT_DURATION -> "Weight · Duration"
+    MeasurementType.DISTANCE_DURATION -> "Distance · Duration"
+    MeasurementType.ASSISTED_REPS -> "Assisted reps"
+    else -> m.replaceFirstChar { it.uppercase() }
 }
