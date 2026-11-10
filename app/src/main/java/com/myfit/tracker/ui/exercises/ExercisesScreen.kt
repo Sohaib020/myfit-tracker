@@ -189,9 +189,15 @@ fun ExerciseBrowser(
                     // R36: target muscles with anatomy thumbnails (tap again for all)
                     TargetMuscleRow(muscle) { muscle = it }
                     Spacer(Modifier.height(8.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        item { GlassChip("Any equipment", equipment == null, { equipment = null }) }
-                        items(equipmentOptions) { e -> GlassChip(equipmentLabel(e), equipment == e, { equipment = if (equipment == e) null else e }) }
+                    // R89: equipment filter with 3D art thumbnails
+                    Text("EQUIPMENT", style = FitType.overline, color = th.textDim, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        item {
+                            EquipmentThumb("", "Any", equipment == null, 78.dp) { equipment = null }
+                        }
+                        items(equipmentOptions) { e ->
+                            EquipmentThumb(e, equipmentLabel(e), equipment == e, 78.dp) { equipment = if (equipment == e) null else e }
+                        }
                     }
                 }
             }
@@ -241,7 +247,7 @@ fun ExerciseBrowser(
                 if (ex.instructions.isNotBlank()) {
                     Spacer(Modifier.height(10.dp))
                     ex.instructions.split('\n').map { it.trim() }.filter { it.isNotEmpty() }.take(8).forEachIndexed { i, step ->
-                        Row(Modifier.padding(vertical = 3.dp)) {
+                        Row(Modifier.padding(vertical = 4.dp)) {
                             Text("${i + 1}.", style = FitType.label, color = th.accentBright, modifier = Modifier.width(22.dp))
                             Text(step, style = FitType.body, color = th.text)
                         }

@@ -101,6 +101,47 @@ private fun rememberBody(id: String): ImageBitmap? {
 
 private fun g(female: Boolean) = if (female) "f" else "m"
 
+/**
+ * The body character, drawn from the six 3D renders and morphed between two neighbouring levels.
+ *
+ * [level] may be fractional: the two nearest renders cross-fade while the heavier one widens and the lighter one
+ * narrows, so the figure slides smoothly from lean to heavy instead of popping between six stills. The caller owns
+ * the animation and passes the current (possibly fractional) level in.
+ */
+@Composable
+fun BodyCharacter(
+    level: Float,
+    female: Boolean,
+    modifier: Modifier = Modifier,
+    glow: Boolean = true,
+) {
+    val th = LocalFitTheme.current
+    val imgs = (1..6).map { rememberBody("${g(female)}_bf$it") }
+    Box(modifier, contentAlignment = Alignment.Center) {
+        if (glow) Canvas(Modifier.fillMaxSize()) {
+            val t = ((level - 1f) / 5f).coerceIn(0f, 1f)
+            val c = androidx.compose.ui.graphics.lerp(th.accent, Color(0xFFFF8A65), t)
+            drawCircle(
+                Brush.radialGradient(listOf(c.copy(alpha = 0.30f), Color.Transparent), center, size.minDimension * 0.6f),
+                size.minDimension * 0.6f, center,
+            )
+            drawOval(
+                Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.32f), Color.Transparent), Offset(center.x, size.height * 0.975f), size.width * 0.22f),
+                Offset(center.x - size.width * 0.22f, size.height * 0.95f), Size(size.width * 0.44f, size.height * 0.05f),
+            )
+        }
+        Canvas(Modifier.fillMaxSize()) {
+            val x = level.coerceIn(1f, 6f)
+            val lo = x.toInt().coerceIn(1, 6)
+            val hi = (lo + 1).coerceAtMost(6)
+            val f = x - lo
+            val sm = f * f * (3 - 2 * f)          // smoothstep
+            imgs[lo - 1]?.let { drawBody(it, alpha = 1f - sm, scaleX = 1f + 0.045f * f) }
+            if (hi != lo && f > 0.001f) imgs[hi - 1]?.let { drawBody(it, alpha = sm, scaleX = 1f - 0.045f * (1 - f)) }
+        }
+    }
+}
+
 /** Draws a body image (360×640 canvas) so the canvas fills [dst] height, centred, optionally cropped to its top part. */
 private fun DrawScope.drawBody(img: ImageBitmap, alpha: Float = 1f, topFrac: Float = 0f, bottomFrac: Float = 1f, scaleX: Float = 1f) {
     val srcTop = (img.height * topFrac).toInt(); val srcH = (img.height * (bottomFrac - topFrac)).toInt().coerceAtLeast(1)
@@ -113,9 +154,11 @@ private fun DrawScope.drawBody(img: ImageBitmap, alpha: Float = 1f, topFrac: Flo
 // ====================================================================== goal
 
 private data class GoalOpt(val key: String, val title: String, val body: Int)
+// R37: body levels now come from the 3D renders — 1 very lean · 2 athletic/muscular · 3 average · 4 soft.
+// Build gets the muscular build (2), fit gets the lean one (1), so the four cards read as four different people.
 private val GOALS = listOf(
-    GoalOpt(PlanProfile.LOSE, "Lose weight", 4), GoalOpt(PlanProfile.BUILD, "Build muscle", 1),
-    GoalOpt(PlanProfile.FIT, "Get fit & healthy", 2), GoalOpt(PlanProfile.GAIN, "Gain weight", 3),
+    GoalOpt(PlanProfile.LOSE, "Lose weight", 4), GoalOpt(PlanProfile.BUILD, "Build muscle", 2),
+    GoalOpt(PlanProfile.FIT, "Get fit & healthy", 1), GoalOpt(PlanProfile.GAIN, "Gain weight", 3),
 )
 
 @Composable
@@ -218,17 +261,22 @@ fun MuscleGoalPage(selected: String?, female: Boolean, onPick: (String) -> Unit)
 
 // ====================================================================== focus areas
 
-/** Anchor points on the front body (fractions of the 360×640 canvas) for each callout. */
+/**
+ * Anchor points on the front body (fractions of the 360×640 canvas) for each callout.
+ *
+ * R37: measured against the 3D-rendered characters (tools/meshdeform). They have realistic ~7.5-head
+ * proportions, so shoulders sit at ~24 % of the canvas and the crotch at ~60 % — the old cartoon
+ * values (shoulders 29 %, hips 55 %) put every dot off the body.
+ */
 private val ANCHORS = mapOf(
-    // cartoon proportions (big head): shoulders sit at ~29 % of the canvas, hips at ~55 %
-    "Back" to Offset(0.62f, 0.30f), "Chest" to Offset(0.56f, 0.345f), "Arms" to Offset(0.33f, 0.40f),
-    "Abs" to Offset(0.50f, 0.455f), "Glutes" to Offset(0.43f, 0.555f), "Legs" to Offset(0.45f, 0.72f), "Full body" to Offset(0.55f, 0.90f),
+    "Back" to Offset(0.545f, 0.245f), "Chest" to Offset(0.500f, 0.315f), "Arms" to Offset(0.265f, 0.315f),
+    "Abs" to Offset(0.500f, 0.430f), "Glutes" to Offset(0.500f, 0.545f), "Legs" to Offset(0.500f, 0.685f), "Full body" to Offset(0.360f, 0.880f),
 )
 
 @Composable
-fun FocusPage(selected: Set<String>, female: Boolean, onChange: (Set<String>) -> Unit) {
+fun FocusPage(selected: Set<String>, female: Boolean, bodyLevel: Int = 0, onChange: (Set<String>) -> Unit) {
     val th = LocalFitTheme.current
-    val img = rememberBody("${g(female)}_bf2")
+    val img = rememberBody("${g(female)}_bf${if (bodyLevel in 1..6) bodyLevel else 2}")
     val labels = PlanProfile.FOCUS + "Full body"
     BoxWithConstraints(Modifier.fillMaxWidth().height(470.dp)) {
         val d = LocalDensity.current
@@ -277,11 +325,16 @@ fun FocusPage(selected: Set<String>, female: Boolean, onChange: (Set<String>) ->
 /**
  * Height chart: the character stands next to a wall ruler; drag anywhere (or on the ruler) and they grow or shrink,
  * the line on their head and the big number follow. Works in cm or ft/in.
+ *
+ * R37: the figure is drawn from the 3D-rendered side sprite for the body level the user picked, so a heavier
+ * character keeps its shape while the ruler stretches it.
  */
 @Composable
-fun HeightPage(cm: Double, unit: LengthUnit, female: Boolean, onCm: (Double) -> Unit, onUnit: (LengthUnit) -> Unit) {
+fun HeightPage(cm: Double, unit: LengthUnit, female: Boolean, bodyLevel: Int = 0, onCm: (Double) -> Unit, onUnit: (LengthUnit) -> Unit) {
     val th = LocalFitTheme.current
-    val img = rememberBody("${g(female)}_side")
+    // 0 = not chosen yet; show the fit build rather than a blank chart
+    val lvl = if (bodyLevel in 1..6) bodyLevel else 2
+    val img = rememberBody("${g(female)}_side$lvl")
     val minCm = 120.0; val maxCm = 220.0; val topCm = 230.0
     val shown by animateFloatAsState(cm.toFloat(), spring(0.85f, 500f), label = "h")
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -349,6 +402,75 @@ fun HeightPage(cm: Double, unit: LengthUnit, female: Boolean, onCm: (Double) -> 
     }
 }
 
+// ====================================================================== weight
+
+/**
+ * Weight picker with the 3D character reacting to the number.
+ *
+ * The body shape the user picked is the anchor: at the matching weight the character is exactly that shape, and
+ * dragging the weight slider up fattens it while dragging down leans it out.
+ */
+@Composable
+fun WeightPage(
+    kg: Double,
+    female: Boolean,
+    heightCm: Double,
+    bodyLevel: Int,
+    onKg: (Double) -> Unit,
+) {
+    val th = LocalFitTheme.current
+    val lvl = if (bodyLevel in 1..6) bodyLevel else 3
+    val anchorKg = remember(heightCm, lvl) { PlanProfile.anchorWeightKg(lvl, heightCm) }
+    // the picture follows the weight, one body level per ~2 BMI points either side of the pick
+    val picLevel = remember(kg, anchorKg, heightCm, lvl) {
+        PlanProfile.bodyLevelFor(lvl, anchorKg, kg, heightCm).toFloat()
+    }
+    val shown by animateFloatAsState(picLevel, spring(0.85f, 260f), label = "pic")
+    val bmi = PlanProfile.bmi(kg, heightCm)
+    val minKg = 30.0; val maxKg = 200.0
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.fillMaxWidth().height(300.dp)) {
+            BodyCharacter(shown, female, Modifier.fillMaxSize())
+        }
+        Text(
+            "${kg.roundToInt()} kg",
+            style = FitType.display.copy(fontSize = 40.sp),
+            color = th.text,
+        )
+        Text(
+            "BMI ${"%.1f".format(bmi)} · ${PlanProfile.bodyLevelName(shown.roundToInt().coerceIn(1, 6))}",
+            style = FitType.label,
+            color = th.accentBright,
+        )
+        Spacer(Modifier.height(10.dp))
+        BoxWithConstraints(Modifier.fillMaxWidth().height(44.dp).pointerInput(Unit) {
+            fun at(x: Float) = minKg + (x / size.width).coerceIn(0f, 1f) * (maxKg - minKg)
+            detectDragGestures(
+                onDragStart = { onKg(at(it.x).roundToInt().toDouble()) },
+                onDragEnd = { },
+            ) { ch, _ -> onKg(at(ch.position.x).roundToInt().toDouble()) }
+        }.pointerInput(Unit) {
+            detectTapGestures { onKg((minKg + (it.x / size.width).coerceIn(0f, 1f) * (maxKg - minKg)).roundToInt().toDouble()) }
+        }) {
+            val w = maxWidth
+            Box(Modifier.align(Alignment.Center).fillMaxWidth().height(10.dp).clip(CircleShape)
+                .background(Brush.horizontalGradient(listOf(th.accent, Color(0xFFFFD54F), Color(0xFFFF7043)))))
+            // the anchor tick: where this body shape "lives"
+            val anchorFrac = ((anchorKg - minKg) / (maxKg - minKg)).toFloat().coerceIn(0f, 1f)
+            Box(Modifier.align(Alignment.CenterStart).offset(x = w * anchorFrac - 1.dp).size(width = 2.dp, height = 22.dp)
+                .background(th.text.copy(alpha = 0.55f)))
+            val kgFrac = ((kg - minKg) / (maxKg - minKg)).toFloat().coerceIn(0f, 1f)
+            Box(Modifier.align(Alignment.CenterStart).offset(x = w * kgFrac - 15.dp)
+                .size(30.dp).clip(CircleShape).background(Color.White).border(4.dp, th.accentBright, CircleShape))
+        }
+        Row(Modifier.fillMaxWidth()) {
+            Text("Lighter", style = FitType.caption, color = th.textDim, modifier = Modifier.weight(1f))
+            Text("Heavier", style = FitType.caption, color = th.textDim)
+        }
+        Caption("Drag to set your weight")
+    }
+}
+
 // ====================================================================== BMI
 
 @Composable
@@ -394,25 +516,10 @@ fun BodyShapePage(level: Int, female: Boolean, onLevel: (Int) -> Unit) {
     val th = LocalFitTheme.current
     val v = remember { Animatable(level.toFloat()) }
     LaunchedEffect(level) { if (kotlin.math.abs(v.value - level) > 0.02f && !v.isRunning) v.animateTo(level.toFloat(), spring(0.8f, 260f)) }
-    val imgs = (1..6).map { rememberBody("${g(female)}_bf$it") }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.fillMaxWidth().height(400.dp)) {
-            // soft glow that warms up as body fat goes up
-            Canvas(Modifier.fillMaxSize()) {
-                val t = (v.value - 1f) / 5f
-                val c = androidx.compose.ui.graphics.lerp(th.accent, Color(0xFFFF8A65), t)
-                drawCircle(Brush.radialGradient(listOf(c.copy(alpha = 0.35f), Color.Transparent), center, size.minDimension * 0.6f), size.minDimension * 0.6f, center)
-                drawOval(Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent), Offset(center.x, size.height * 0.975f), size.width * 0.22f),
-                    Offset(center.x - size.width * 0.22f, size.height * 0.95f), Size(size.width * 0.44f, size.height * 0.05f))
-            }
-            Canvas(Modifier.fillMaxSize()) {
-                val x = v.value.coerceIn(1f, 6f)
-                val lo = x.toInt().coerceIn(1, 6); val hi = (lo + 1).coerceAtMost(6); val f = x - lo
-                // liquid morph: the two neighbouring renders cross-fade while the lower one widens / the upper one narrows
-                imgs[lo - 1]?.let { drawBody(it, alpha = 1f - f * f * (3 - 2 * f), scaleX = 1f + 0.045f * f) }
-                if (hi != lo && f > 0.001f) imgs[hi - 1]?.let { drawBody(it, alpha = f * f * (3 - 2 * f), scaleX = 1f - 0.045f * (1 - f)) }
-            }
+            BodyCharacter(v.value, female, Modifier.fillMaxSize())
         }
         Spacer(Modifier.height(6.dp))
         Text(PlanProfile.bodyLevelName(level), style = FitType.title, color = th.text)

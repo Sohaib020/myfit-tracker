@@ -7,6 +7,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -68,6 +70,31 @@ private object MapImages {
     suspend fun get(c: Context, name: String): ImageBitmap? = cache.get(name) ?: withContext(Dispatchers.IO) {
         runCatching { c.assets.open("anatomy/$name.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
     }?.also { cache.put(name, it) }
+}
+
+// ------------------------------------------------------------------ R89 Muscle art images
+
+/** Loads the 3D muscle art thumbnails from assets/muscles/. */
+object MuscleArtImages {
+    private val cache = android.util.LruCache<String, ImageBitmap>(8 * 1024 * 1024)
+    suspend fun get(c: Context, name: String): ImageBitmap? = cache.get(name) ?: withContext(Dispatchers.IO) {
+        runCatching { c.assets.open("muscles/$name.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
+    }?.also { cache.put(name, it) }
+}
+
+/** Maps a coarse muscle group to its 3D art file name in assets/muscles/. */
+fun muscleArtFile(group: String): String = when (group) {
+    MuscleGroup.CHEST -> "chest"
+    MuscleGroup.BACK -> "back"
+    MuscleGroup.SHOULDERS -> "shoulders"
+    MuscleGroup.BICEPS -> "biceps"
+    MuscleGroup.TRICEPS -> "triceps"
+    MuscleGroup.CORE -> "abs_core"
+    MuscleGroup.GLUTES -> "glutes"
+    MuscleGroup.LEGS -> "quads"
+    MuscleGroup.CARDIO -> "running"
+    MuscleGroup.OTHER -> "yoga_stretching"
+    else -> "yoga_stretching"
 }
 
 @Composable
@@ -144,19 +171,55 @@ private fun PhotoLoop(ex: Exercise, playing: Boolean, modifier: Modifier) {
 
 // ------------------------------------------------------------------ R36 Target muscles
 
-/** Coarse filter group → anatomy view + highlighted muscles for its thumbnail. */
-private val TARGET_ART: List<Triple<String, String, List<String>>> = listOf(
-    Triple(MuscleGroup.CHEST, "front", listOf("chest")),
-    Triple(MuscleGroup.BACK, "back", listOf("lats", "middle back", "traps")),
-    Triple(MuscleGroup.SHOULDERS, "front", listOf("shoulders")),
-    Triple(MuscleGroup.BICEPS, "front", listOf("biceps")),
-    Triple(MuscleGroup.TRICEPS, "back", listOf("triceps")),
-    Triple(MuscleGroup.CORE, "front", listOf("abdominals")),
-    Triple(MuscleGroup.GLUTES, "back", listOf("glutes")),
-    Triple(MuscleGroup.LEGS, "front", listOf("quadriceps", "calves")),
+/**
+ * Maps each muscle group to:
+ *  - the anatomy base image key (assets/muscles/<view>.webp)
+ *  - the overlay asset key (assets/muscles/<name>.webp)
+ * Falls back to the old anatomy layers if the new standalone images are absent.
+ */
+private data class TargetEntry(
+    val group: String,
+    val muscleAsset: String,         // filename in assets/muscles/ (no ext)
+    val anatomyView: String,         // legacy anatomy key
+    val anatomyMuscles: List<String> // legacy anatomy overlays
 )
 
-/** Bounding box of the highlighted pixels (cached), used to zoom each thumbnail onto its muscle. */
+private val TARGET_ENTRIES: List<TargetEntry> = listOf(
+    TargetEntry(MuscleGroup.CHEST,     "chest",      "front", listOf("chest")),
+    TargetEntry(MuscleGroup.BACK,      "back",       "back",  listOf("lats", "middle back", "traps")),
+    TargetEntry(MuscleGroup.SHOULDERS, "shoulders",  "front", listOf("shoulders")),
+    TargetEntry(MuscleGroup.BICEPS,    "biceps",     "front", listOf("biceps")),
+    TargetEntry(MuscleGroup.TRICEPS,   "triceps",    "back",  listOf("triceps")),
+    TargetEntry(MuscleGroup.CORE,      "abs_core",   "front", listOf("abdominals")),
+    TargetEntry(MuscleGroup.GLUTES,    "glutes",     "back",  listOf("glutes")),
+    TargetEntry(MuscleGroup.LEGS,      "quads",      "front", listOf("quadriceps", "calves")),
+    TargetEntry(MuscleGroup.CARDIO,    "running",    "cardio_front", listOf("quadriceps", "calves")),
+)
+
+// Cardio activities that also get standalone images
+private val CARDIO_ACTIVITIES: List<Pair<String, String>> = listOf(
+    "Running"       to "running",
+    "Cycling"       to "cycling",
+    "Swimming"      to "swimming",
+    "Rowing"        to "rowing",
+    "HIIT"          to "hiit",
+    "Jump Rope"     to "jump_rope",
+    "Stair Climb"   to "stair_climbing",
+    "Walking"       to "walking",
+    "Boxing"        to "boxing",
+)
+
+private val OTHER_ENTRIES: List<Pair<String, String>> = listOf(
+    "Yoga"          to "yoga_stretching",
+    "Forearms"      to "forearms",
+    "Hamstrings"    to "hamstrings",
+    "Lower Back"    to "lower_back",
+    "Obliques"      to "obliques",
+    "Traps"         to "traps",
+    "Calves"        to "calves",
+)
+
+/** Bounding box of highlighted pixels — used to zoom legacy anatomy thumbnails. */
 private object MuscleBox {
     private val cache = HashMap<String, android.graphics.RectF>()
     fun of(bmps: List<ImageBitmap>, key: String): android.graphics.RectF = cache.getOrPut(key) {
@@ -172,7 +235,6 @@ private object MuscleBox {
             }
         }
         if (r < 0) android.graphics.RectF(0f, 0f, 480f, 800f) else {
-            // square around the muscle with breathing room
             val cx = (l + r) / 2f; val cy = (t + b) / 2f
             val side = maxOf(r - l, b - t) * 1.55f + 40f
             android.graphics.RectF(cx - side / 2, cy - side / 2, cx + side / 2, cy + side / 2)
@@ -180,67 +242,154 @@ private object MuscleBox {
     }
 }
 
+/**
+ * Thumbnail that prefers the new standalone muscle image (assets/muscles/<asset>.webp)
+ * and falls back to the old anatomy-overlay approach if the file is missing.
+ */
 @Composable
-private fun TargetThumb(group: String, view: String, muscles: List<String>, selected: Boolean, size: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
-    val th = LocalFitTheme.current
+private fun TargetThumb(
+    label: String,
+    muscleAsset: String,
+    anatomyView: String,
+    anatomyMuscles: List<String>,
+    selected: Boolean,
+    size: androidx.compose.ui.unit.Dp,
+    onClick: () -> Unit,
+) {
+    val th  = LocalFitTheme.current
     val ctx = LocalContext.current
-    val imgs by produceState<Pair<ImageBitmap?, List<ImageBitmap>>?>(null, view, muscles) {
-        value = MapImages.get(ctx, view) to muscles.mapNotNull { MapImages.get(ctx, view + "_" + it.replace(' ', '_')) }
+
+    // 1. Try the new standalone muscle image
+    val muscleImg by produceState<ImageBitmap?>(null, muscleAsset) {
+        value = MuscleImageLoader.load(ctx, muscleAsset)
     }
-    val ring by androidx.compose.animation.core.animateFloatAsState(if (selected) 1f else 0f, com.myfit.tracker.ui.theme.Motion.snappy(), label = "ring")
+
+    // 2. Fall back to legacy anatomy overlay images
+    val legacyImgs by produceState<Pair<ImageBitmap?, List<ImageBitmap>>?>(null, anatomyView, anatomyMuscles) {
+        value = MapImages.get(ctx, anatomyView) to
+            anatomyMuscles.mapNotNull { MapImages.get(ctx, anatomyView + "_" + it.replace(' ', '_')) }
+    }
+
+    val ring by androidx.compose.animation.core.animateFloatAsState(
+        if (selected) 1f else 0f, com.myfit.tracker.ui.theme.Motion.snappy(), label = "ring"
+    )
     val accent = th.accentBright
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(size + 8.dp).clickableNoRipple(onClick)) {
-        Box(Modifier.size(size).clip(RoundedCornerShape(size * 0.34f))
-            .background(androidx.compose.ui.graphics.Brush.radialGradient(listOf(th.text.copy(alpha = 0.16f), th.text.copy(alpha = 0.05f))))
-            .then(if (ring > 0.01f) Modifier.border(androidx.compose.foundation.BorderStroke((2.5f * ring).dp, accent), RoundedCornerShape(size * 0.34f)) else Modifier)) {
-            val p = imgs
-            if (p?.first != null) {
-                val box = MuscleBox.of(p.second, view + muscles.joinToString())
-                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
-                    val so = androidx.compose.ui.unit.IntOffset(box.left.toInt(), box.top.toInt())
-                    val ss = androidx.compose.ui.unit.IntSize(box.width().toInt(), box.height().toInt())
-                    val ds = androidx.compose.ui.unit.IntSize(this.size.width.toInt(), this.size.height.toInt())
-                    // srcOffset may run past the bitmap edge: clamp by drawing into a matching sub-rect
-                    fun draw(ib: ImageBitmap, a: Float) {
-                        val l = so.x.coerceAtLeast(0); val t = so.y.coerceAtLeast(0)
-                        val r = (so.x + ss.width).coerceAtMost(ib.width); val b = (so.y + ss.height).coerceAtMost(ib.height)
-                        if (r <= l || b <= t) return
-                        val sx = ds.width / ss.width.toFloat(); val sy = ds.height / ss.height.toFloat()
-                        drawImage(ib, androidx.compose.ui.unit.IntOffset(l, t), androidx.compose.ui.unit.IntSize(r - l, b - t),
-                            androidx.compose.ui.unit.IntOffset(((l - so.x) * sx).toInt(), ((t - so.y) * sy).toInt()),
-                            androidx.compose.ui.unit.IntSize(((r - l) * sx).toInt(), ((b - t) * sy).toInt()), alpha = a)
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(size + 8.dp).clickableNoRipple(onClick),
+    ) {
+        Box(
+            Modifier.size(size)
+                .clip(RoundedCornerShape(size * 0.34f))
+                .background(androidx.compose.ui.graphics.Brush.radialGradient(
+                    listOf(th.text.copy(alpha = 0.16f), th.text.copy(alpha = 0.05f))
+                ))
+                .then(
+                    if (ring > 0.01f)
+                        Modifier.border(
+                            androidx.compose.foundation.BorderStroke((2.5f * ring).dp, accent),
+                            RoundedCornerShape(size * 0.34f)
+                        )
+                    else Modifier
+                ),
+        ) {
+            when {
+                // --- new standalone muscle image available ---
+                muscleImg != null -> Image(
+                    bitmap           = muscleImg!!,
+                    contentDescription = label,
+                    modifier         = Modifier.fillMaxSize().padding(4.dp),
+                    contentScale     = ContentScale.Fit,
+                )
+                // --- fall back to legacy anatomy-overlay canvas ---
+                legacyImgs?.first != null -> {
+                    val p   = legacyImgs!!
+                    val box = MuscleBox.of(p.second, anatomyView + anatomyMuscles.joinToString())
+                    androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                        val so = androidx.compose.ui.unit.IntOffset(box.left.toInt(), box.top.toInt())
+                        val ss = androidx.compose.ui.unit.IntSize(box.width().toInt(), box.height().toInt())
+                        val ds = androidx.compose.ui.unit.IntSize(this.size.width.toInt(), this.size.height.toInt())
+                        fun draw(ib: ImageBitmap, a: Float) {
+                            val l = so.x.coerceAtLeast(0); val t = so.y.coerceAtLeast(0)
+                            val r = (so.x + ss.width).coerceAtMost(ib.width); val b = (so.y + ss.height).coerceAtMost(ib.height)
+                            if (r <= l || b <= t) return
+                            val sx = ds.width / ss.width.toFloat(); val sy = ds.height / ss.height.toFloat()
+                            drawImage(ib, androidx.compose.ui.unit.IntOffset(l, t), androidx.compose.ui.unit.IntSize(r - l, b - t),
+                                androidx.compose.ui.unit.IntOffset(((l - so.x) * sx).toInt(), ((t - so.y) * sy).toInt()),
+                                androidx.compose.ui.unit.IntSize(((r - l) * sx).toInt(), ((b - t) * sy).toInt()), alpha = a)
+                        }
+                        draw(p.first!!, 1f)
+                        p.second.forEach { draw(it, 1f) }
                     }
-                    draw(p.first!!, 1f)
-                    p.second.forEach { draw(it, 1f) }
                 }
+                // --- nothing loaded yet, show nothing (loading state) ---
+                else -> {}
             }
         }
         Spacer(Modifier.height(6.dp))
-        Text(group, style = FitType.label, color = if (selected) accent else th.text, maxLines = 1)
+        Text(label, style = FitType.label, color = if (selected) accent else th.text, maxLines = 1)
     }
 }
 
-/** "Target muscles" strip for the exercise library: tap a muscle to filter, tap again for all. */
+/** Icon-only thumb for categories without a dedicated muscle image (Other). */
+@Composable
+private fun IconThumb(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, selected: Boolean, size: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
+    val th = LocalFitTheme.current
+    val ring by androidx.compose.animation.core.animateFloatAsState(if (selected) 1f else 0f, com.myfit.tracker.ui.theme.Motion.snappy(), label = "iconRing")
+    val accent = th.accentBright
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(size + 8.dp).clickableNoRipple(onClick),
+    ) {
+        Box(
+            Modifier.size(size)
+                .clip(RoundedCornerShape(size * 0.34f))
+                .background(if (selected) th.accent.copy(alpha = 0.22f) else th.text.copy(alpha = 0.08f))
+                .then(if (ring > 0.01f) Modifier.border(androidx.compose.foundation.BorderStroke((2.5f * ring).dp, accent), RoundedCornerShape(size * 0.34f)) else Modifier),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, null, tint = if (selected) accent else th.textDim, modifier = Modifier.size(32.dp))
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(label, style = FitType.label, color = if (selected) accent else th.text, maxLines = 1)
+    }
+}
+
+/**
+ * "Target muscles" strip for the exercise library.
+ * Now uses standalone muscle images (assets/muscles/) for richer thumbnails.
+ * Falls back to legacy anatomy overlays gracefully.
+ */
 @Composable
 fun TargetMuscleRow(selected: String?, onSelect: (String?) -> Unit) {
     val th = LocalFitTheme.current
+    val groups = remember { TARGET_ART.map { it.first } + listOf(MuscleGroup.CARDIO, MuscleGroup.OTHER) }
     Column {
         Text("TARGET MUSCLES", style = FitType.overline, color = th.textDim, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
         androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(TARGET_ART.size) { i ->
-                val (g, v, m) = TARGET_ART[i]
-                TargetThumb(g, v, m, selected == g, 78.dp) { onSelect(if (selected == g) null else g) }
+            // Main muscle group entries
+            items(TARGET_ENTRIES.size) { i ->
+                val e = TARGET_ENTRIES[i]
+                TargetThumb(
+                    label          = e.group,
+                    muscleAsset    = e.muscleAsset,
+                    anatomyView    = e.anatomyView,
+                    anatomyMuscles = e.anatomyMuscles,
+                    selected       = selected == e.group,
+                    size           = 78.dp,
+                    onClick        = { onSelect(if (selected == e.group) null else e.group) },
+                )
             }
-            items(listOf(MuscleGroup.CARDIO to Duo.DirectionsRun, MuscleGroup.OTHER to Duo.SportsGymnastics).size) { i ->
-                val (g, icon) = listOf(MuscleGroup.CARDIO to Duo.DirectionsRun, MuscleGroup.OTHER to Duo.SportsGymnastics)[i]
-                val sel = selected == g
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(86.dp).clickableNoRipple { onSelect(if (sel) null else g) }) {
-                    Box(Modifier.size(78.dp).clip(RoundedCornerShape(26.dp)).background(if (sel) th.accent.copy(alpha = 0.25f) else th.text.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
-                        Icon(icon, null, tint = if (sel) th.accentBright else th.textDim, modifier = Modifier.size(32.dp))
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(g, style = FitType.label, color = if (sel) th.accentBright else th.text, maxLines = 1)
-                }
+            // Other category
+            item {
+                IconThumb(
+                    label    = MuscleGroup.OTHER,
+                    icon     = Duo.SportsGymnastics,
+                    selected = selected == MuscleGroup.OTHER,
+                    size     = 78.dp,
+                    onClick  = { onSelect(if (selected == MuscleGroup.OTHER) null else MuscleGroup.OTHER) },
+                )
             }
         }
     }
