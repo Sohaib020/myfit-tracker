@@ -2,18 +2,23 @@ package com.myfit.tracker.ui.exercises
 
 import com.myfit.tracker.ui.theme.Duo
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.LruCache
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccessibilityNew
@@ -43,10 +48,12 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.myfit.tracker.data.db.Exercise
 import com.myfit.tracker.data.db.MeasurementType
 import com.myfit.tracker.data.db.MuscleGroup
+import com.myfit.tracker.ui.components.clickableNoRipple
 import com.myfit.tracker.ui.theme.FitType
 import com.myfit.tracker.ui.theme.LocalFitTheme
 import kotlinx.coroutines.Dispatchers
@@ -55,11 +62,11 @@ import kotlinx.coroutines.withContext
 
 /** Decoded exercise photos, bounded by memory (bitmaps are ~480 px wide WebP). */
 object ExerciseImages {
-    private val cache = object : android.util.LruCache<String, Bitmap>(24 * 1024 * 1024) {
+    private val cache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
     }
 
-    suspend fun load(context: android.content.Context, key: String, frame: Int): ImageBitmap? {
+    suspend fun load(context: Context, key: String, frame: Int): ImageBitmap? {
         val id = "$key/$frame"
         cache.get(id)?.let { return it.asImageBitmap() }
         return withContext(Dispatchers.IO) {
@@ -70,13 +77,63 @@ object ExerciseImages {
     }
 }
 
+// ------------------------------------------------------------------ R89: muscle + equipment art loaders
+
+/** Loads 3D muscle art thumbnails from assets/muscles/. */
+object MuscleArtImages {
+    private val cache = LruCache<String, ImageBitmap>(8 * 1024 * 1024)
+    suspend fun get(c: Context, name: String): ImageBitmap? = cache.get(name) ?: withContext(Dispatchers.IO) {
+        runCatching { c.assets.open("muscles/$name.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
+    }?.also { cache.put(name, it) }
+}
+
+/** Loads 3D equipment art thumbnails from assets/equipment/. */
+object EquipmentArtImages {
+    private val cache = LruCache<String, ImageBitmap>(8 * 1024 * 1024)
+    suspend fun get(c: Context, name: String): ImageBitmap? = cache.get(name) ?: withContext(Dispatchers.IO) {
+        runCatching { c.assets.open("equipment/$name.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
+    }?.also { cache.put(name, it) }
+}
+
+/** Maps a muscle group name to its art file in assets/muscles/. */
+fun muscleArtFile(group: String): String = when (group) {
+    MuscleGroup.CHEST -> "chest"
+    MuscleGroup.BACK -> "back"
+    MuscleGroup.SHOULDERS -> "shoulders"
+    MuscleGroup.BICEPS -> "biceps"
+    MuscleGroup.TRICEPS -> "triceps"
+    MuscleGroup.LEGS -> "legs"
+    MuscleGroup.GLUTES -> "glutes"
+    MuscleGroup.CORE -> "core"
+    MuscleGroup.CARDIO -> "cardio"
+    else -> "full_body"
+}
+
+/** Maps an equipment string to its art file in assets/equipment/. */
+fun equipmentArtFile(e: String): String = when (e) {
+    "body only", "" -> "bodyweight"
+    "kettlebells" -> "kettlebell"
+    "bands" -> "resistance_band"
+    "e-z curl bar" -> "ez_bar"
+    "medicine ball" -> "medicine_ball"
+    "exercise ball" -> "stability_ball"
+    "foam roll" -> "foam_roller"
+    "smith machine" -> "smith_machine"
+    "trap bar" -> "trap_bar"
+    "pull-up bar" -> "pull_up_bar"
+    "suspension" -> "suspension_trainer"
+    "plate" -> "weight_plate"
+    "barbell", "dumbbell", "machine", "cable", "bench" -> e
+    else -> "other"
+}
+
 /**
  * Exercise photo. With `animate = true` it alternates the start and end frames, so the card shows
  * the movement. Custom exercises (no photo) get a muscle-coloured icon tile instead.
  */
 @Composable
 fun ExerciseImage(ex: Exercise, modifier: Modifier = Modifier, animate: Boolean = false, periodMs: Long = 1100) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val ctx = LocalContext.current
     val key = ex.imageKey
     // R31: calisthenics moves added by MyFit have no photos — draw the illustrated figure instead
     if (key != null && key.startsWith("cali_")) {
@@ -110,6 +167,11 @@ fun ExerciseImage(ex: Exercise, modifier: Modifier = Modifier, animate: Boolean 
         }
     }
 }
+
+/** Alias used by ExerciseDetail — same as ExerciseImage with animation on. */
+@Composable
+fun ExerciseMedia(ex: Exercise, modifier: Modifier = Modifier) =
+    ExerciseImage(ex, modifier, animate = true, periodMs = 1100)
 
 fun muscleColor(group: String): Color = when (group) {
     MuscleGroup.CHEST -> Color(0xFFFF5A5F)
