@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -191,14 +192,7 @@ fun ExerciseBrowser(
                     Spacer(Modifier.height(8.dp))
                     // R89: equipment filter with 3D art thumbnails
                     Text("EQUIPMENT", style = FitType.overline, color = th.textDim, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        item {
-                            EquipmentThumb("", "Any", equipment == null, 78.dp) { equipment = null }
-                        }
-                        items(equipmentOptions) { e ->
-                            EquipmentThumb(e, equipmentLabel(e), equipment == e, 78.dp) { equipment = if (equipment == e) null else e }
-                        }
-                    }
+                    EquipmentFilterRow(equipmentOptions, equipment, { equipment = it })
                 }
             }
             if (query.isBlank() && muscle == null && equipment == null && recent.isNotEmpty()) {
