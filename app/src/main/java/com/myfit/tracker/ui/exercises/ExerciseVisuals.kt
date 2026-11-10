@@ -95,36 +95,42 @@ object EquipmentArtImages {
     }?.also { cache.put(name, it) }
 }
 
-/** Maps a muscle group name to its art file in assets/muscles/. */
+/**
+ * Maps a muscle group to its 3D art file in assets/muscles/.
+ * Filenames match the actual webp files committed to the repo.
+ */
 fun muscleArtFile(group: String): String = when (group) {
-    MuscleGroup.CHEST -> "chest"
-    MuscleGroup.BACK -> "back"
+    MuscleGroup.CHEST     -> "chest"
+    MuscleGroup.BACK      -> "back"
     MuscleGroup.SHOULDERS -> "shoulders"
-    MuscleGroup.BICEPS -> "biceps"
-    MuscleGroup.TRICEPS -> "triceps"
-    MuscleGroup.LEGS -> "legs"
-    MuscleGroup.GLUTES -> "glutes"
-    MuscleGroup.CORE -> "core"
-    MuscleGroup.CARDIO -> "cardio"
-    else -> "full_body"
+    MuscleGroup.BICEPS    -> "biceps"
+    MuscleGroup.TRICEPS   -> "triceps"
+    MuscleGroup.LEGS      -> "quads"          // file: quads.webp
+    MuscleGroup.GLUTES    -> "glutes"
+    MuscleGroup.CORE      -> "abs_core"       // file: abs_core.webp
+    MuscleGroup.CARDIO    -> "running"        // file: running.webp
+    else                  -> "yoga_stretching"
 }
 
-/** Maps an equipment string to its art file in assets/equipment/. */
+/**
+ * Maps an equipment string to its 3D art file in assets/equipment/.
+ * Uses the exact filenames already in the repo (no new files needed).
+ */
 fun equipmentArtFile(e: String): String = when (e) {
-    "body only", "" -> "bodyweight"
-    "kettlebells" -> "kettlebell"
-    "bands" -> "resistance_band"
-    "e-z curl bar" -> "ez_bar"
-    "medicine ball" -> "medicine_ball"
-    "exercise ball" -> "stability_ball"
-    "foam roll" -> "foam_roller"
-    "smith machine" -> "smith_machine"
-    "trap bar" -> "trap_bar"
-    "pull-up bar" -> "pull_up_bar"
-    "suspension" -> "suspension_trainer"
-    "plate" -> "weight_plate"
+    "body only", ""  -> "none"          // none.webp
+    "kettlebells"    -> "kettlebell"    // kettlebell.webp
+    "bands"          -> "band"          // band.webp
+    "e-z curl bar"   -> "ezbar"         // ezbar.webp
+    "medicine ball"  -> "medicineball"  // medicineball.webp
+    "exercise ball"  -> "exerciseball"  // exerciseball.webp
+    "foam roll"      -> "foamroller"    // foamroller.webp
+    "smith machine"  -> "smith"         // smith.webp
+    "trap bar"       -> "trapbar"       // trapbar.webp
+    "pull-up bar"    -> "pullupbar"     // pullupbar.webp
+    "suspension"     -> "suspension"    // suspension.webp
+    "plate"          -> "plate"         // plate.webp
     "barbell", "dumbbell", "machine", "cable", "bench" -> e
-    else -> "other"
+    else             -> "other"
 }
 
 /**
