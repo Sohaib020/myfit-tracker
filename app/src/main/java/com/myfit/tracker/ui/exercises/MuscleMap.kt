@@ -7,6 +7,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -68,6 +70,31 @@ private object MapImages {
     suspend fun get(c: Context, name: String): ImageBitmap? = cache.get(name) ?: withContext(Dispatchers.IO) {
         runCatching { c.assets.open("anatomy/$name.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
     }?.also { cache.put(name, it) }
+}
+
+// ------------------------------------------------------------------ R89 Muscle art images
+
+/** Loads the 3D muscle art thumbnails from assets/muscles/. */
+object MuscleArtImages {
+    private val cache = android.util.LruCache<String, ImageBitmap>(8 * 1024 * 1024)
+    suspend fun get(c: Context, name: String): ImageBitmap? = cache.get(name) ?: withContext(Dispatchers.IO) {
+        runCatching { c.assets.open("muscles/$name.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
+    }?.also { cache.put(name, it) }
+}
+
+/** Maps a coarse muscle group to its 3D art file name in assets/muscles/. */
+fun muscleArtFile(group: String): String = when (group) {
+    MuscleGroup.CHEST -> "chest"
+    MuscleGroup.BACK -> "back"
+    MuscleGroup.SHOULDERS -> "shoulders"
+    MuscleGroup.BICEPS -> "biceps"
+    MuscleGroup.TRICEPS -> "triceps"
+    MuscleGroup.CORE -> "abs_core"
+    MuscleGroup.GLUTES -> "glutes"
+    MuscleGroup.LEGS -> "quads"
+    MuscleGroup.CARDIO -> "running"
+    MuscleGroup.OTHER -> "yoga_stretching"
+    else -> "yoga_stretching"
 }
 
 @Composable
@@ -337,6 +364,7 @@ private fun IconThumb(label: String, icon: androidx.compose.ui.graphics.vector.I
 @Composable
 fun TargetMuscleRow(selected: String?, onSelect: (String?) -> Unit) {
     val th = LocalFitTheme.current
+    val groups = remember { TARGET_ART.map { it.first } + listOf(MuscleGroup.CARDIO, MuscleGroup.OTHER) }
     Column {
         Text("TARGET MUSCLES", style = FitType.overline, color = th.textDim, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
         androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

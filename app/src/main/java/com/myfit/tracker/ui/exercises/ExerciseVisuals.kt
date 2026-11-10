@@ -10,10 +10,16 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.Cable
@@ -25,6 +31,7 @@ import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.SportsBaseball
 import androidx.compose.material.icons.rounded.SportsGymnastics
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -45,6 +53,9 @@ import androidx.compose.ui.unit.dp
 import com.myfit.tracker.data.db.Exercise
 import com.myfit.tracker.data.db.MeasurementType
 import com.myfit.tracker.data.db.MuscleGroup
+import com.myfit.tracker.ui.components.clickableNoRipple
+import com.myfit.tracker.ui.theme.FitType
+import com.myfit.tracker.ui.theme.LocalFitTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -64,6 +75,34 @@ object ExerciseImages {
             }.getOrNull()?.also { cache.put(id, it) }?.asImageBitmap()
         }
     }
+}
+
+// ------------------------------------------------------------------ R89 Equipment art images
+
+/** Loads the 3D equipment art thumbnails from assets/equipment/. */
+object EquipmentArtImages {
+    private val cache = android.util.LruCache<String, ImageBitmap>(8 * 1024 * 1024)
+    suspend fun get(c: Context, name: String): ImageBitmap? = cache.get(name) ?: withContext(Dispatchers.IO) {
+        runCatching { c.assets.open("equipment/$name.webp").use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
+    }?.also { cache.put(name, it) }
+}
+
+/** Maps an equipment string from the catalog to its 3D art file name in assets/equipment/. */
+fun equipmentArtFile(e: String): String = when (e) {
+    "body only", "" -> "bodyweight"
+    "kettlebells" -> "kettlebell"
+    "bands" -> "resistance_band"
+    "e-z curl bar" -> "ez_bar"
+    "medicine ball" -> "medicine_ball"
+    "exercise ball" -> "stability_ball"
+    "foam roll" -> "foam_roller"
+    "smith machine" -> "smith_machine"
+    "trap bar" -> "trap_bar"
+    "pull-up bar" -> "pull_up_bar"
+    "suspension" -> "suspension_trainer"
+    "plate" -> "weight_plate"
+    "barbell", "dumbbell", "machine", "cable", "bench" -> e
+    else -> "other"
 }
 
 /**
@@ -189,4 +228,38 @@ fun Exercise.matches(query: String): Boolean {
     val hay = (name + " " + primaryMuscle + " " + secondaryMuscles + " " + equipment).lowercase()
         .replace("dumbbell", "dumbbell db").replace("barbell", "barbell bb")
     return query.lowercase().split(' ', '-', ',').filter { it.isNotBlank() }.all { hay.contains(it) }
+}
+
+// ------------------------------------------------------------------ R89 Equipment filter thumbnails
+
+/** A single equipment filter thumbnail — 3D equipment art inside a glass-style rounded card. */
+@Composable
+fun EquipmentThumb(equipment: String, label: String, selected: Boolean, size: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
+    val th = LocalFitTheme.current
+    val ctx = LocalContext.current
+    val file = remember(equipment) { equipmentArtFile(equipment) }
+    val img by produceState<ImageBitmap?>(null, file) { value = EquipmentArtImages.get(ctx, file) }
+    val ring by androidx.compose.animation.core.animateFloatAsState(if (selected) 1f else 0f, com.myfit.tracker.ui.theme.Motion.snappy(), label = "equipRing")
+    val accent = th.accentBright
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(size + 8.dp).clickableNoRipple(onClick)) {
+        Box(
+            Modifier.size(size).clip(RoundedCornerShape(size * 0.34f))
+                .background(Brush.radialGradient(listOf(th.text.copy(alpha = 0.16f), th.text.copy(alpha = 0.05f))))
+                .then(if (ring > 0.01f) Modifier.border(androidx.compose.foundation.BorderStroke((2.5f * ring).dp, accent), RoundedCornerShape(size * 0.34f)) else Modifier),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (img != null) {
+                Image(
+                    img!!, null,
+                    Modifier.fillMaxSize().padding(6.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            } else {
+                Box(Modifier.fillMaxSize().padding(6.dp).clip(RoundedCornerShape(size * 0.28f))
+                    .background(accent.copy(alpha = 0.12f)))
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(label, style = FitType.label, color = if (selected) accent else th.text, maxLines = 1)
+    }
 }
